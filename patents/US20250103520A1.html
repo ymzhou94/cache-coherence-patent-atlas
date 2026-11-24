@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US20250103520A1 标签流水线发出前预留重试槽 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US20250103520A1</code><span>美国公开申请</span></p>
+  <h1>标签流水线发出前预留重试槽</h1>
+  <p class="english-title" lang="en">Memory Controller Reservation of Retry Queue</p>
+  <p class="document-question">标签查询后如果要重试，控制器怎样确保本地队列有地方存请求？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">标签流水线第一次处理请求时，可能碰到地址冲突或仍在进行的一致性事务。控制器若事先留好重试条目，就可以在本地等待冲突解除。</p>
+    <p>内存控制器先为获准的请求预留一个重试队列条目，再发入标签流水线。如果首次处理后要重试，控制器用该条目保留请求。</p>
+    <ol class="walkthrough"><li><h3>网络请求等待仲裁</h3><p>网络接口可分别缓冲命令与数据。仲裁器同时查看待处理请求和本地重试队列的空位。</p></li><li><h3>先留槽，再发入标签流水线</h3><p>为获选请求预留一个 retry queue 条目。队列没有空位时，请求留在流水线入口等候。</p></li><li><h3>发生冲突时保存请求状态</h3><p>首次标签处理遇到地址锁或必须等待 snoop 等情况时，控制器用预留条目保存重试要用的上下文。</p></li><li><h3>重试或释放预留</h3><p>阻塞解除后，控制器在本地重新发出请求。第一次处理就结束的请求可以放掉预留。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>本地只剩一个重试槽。已发入流水线的 A 等待一致性操作完成，占着这个槽。B 到达时还不知道标签查询结果。</dd></div><div><dt>处理结果</dt><dd>B 留在入口。A 释放条目后，B 先预留再进入流水线。若 B 也要重试，就使用自己的预留条目。</dd></div><div><dt>结果解读</dt><dd>B 因缺槽等在入口，省去了因此退回网络再提交的过程。即使 B 本可一次办完，也要等空位。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">仲裁器先留重试条目</a></li><li><a href="#fig-2">同一预留条目用于本地重试</a></li><li><a href="#fig-3">首次处理结果决定怎样用槽</a></li><li><a href="#fig-4">只剩一个重试槽时的等待位置</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">仲裁器先留重试条目</h3></div>
+    <a class="paper-open" href="../figures/US20250103520A1/US20250103520A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 仲裁器先留重试条目 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="仲裁器先留重试条目">
+    <img class="paper-image" src="../figures/US20250103520A1/US20250103520A1-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="仲裁器先留重试条目。标签流水线启动前，请求已预留重试条目。遇到冲突时，控制器可用它在本地重试。">
+  </div>
+  <figcaption>
+    <span>标签流水线启动前，请求已预留重试条目。遇到冲突时，控制器可用它在本地重试。</span>
+    <span class="figure-evidence">图 1A、图 2、图 3B，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="https://patentimages.storage.googleapis.com/45/b9/be/eeb628828fa385/US20250103520A1.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">同一预留条目用于本地重试</h3></div>
+    <a class="paper-open" href="../figures/US20250103520A1/US20250103520A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 同一预留条目用于本地重试 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一预留条目用于本地重试">
+    <img class="paper-image" src="../figures/US20250103520A1/US20250103520A1-fig-2.svg" width="762" height="446"
+         style="--paper-width:762px" alt="同一预留条目用于本地重试。控制器在标签结果未知时先留槽。首次处理受阻时用这个槽等候，无需因缺槽退回网络。">
+  </div>
+  <figcaption>
+    <span>控制器在标签结果未知时先留槽。首次处理受阻时用这个槽等候，无需因缺槽退回网络。</span>
+    <span class="figure-evidence">图 6A，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>。 · <a href="https://patentimages.storage.googleapis.com/45/b9/be/eeb628828fa385/US20250103520A1.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">首次处理结果决定怎样用槽</h3></div>
+    <a class="paper-open" href="../figures/US20250103520A1/US20250103520A1-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 首次处理结果决定怎样用槽 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="首次处理结果决定怎样用槽">
+    <img class="paper-image" src="../figures/US20250103520A1/US20250103520A1-fig-3.svg" width="672" height="206"
+         style="--paper-width:672px" alt="首次处理结果决定怎样用槽。根据标签处理结果，控制器可以释放条目，或用它保留地址冲突及等待 snoop 的上下文。">
+  </div>
+  <figcaption>
+    <span>根据标签处理结果，控制器可以释放条目，或用它保留地址冲突及等待 snoop 的上下文。</span>
+    <span class="figure-evidence">图 3B、图 7、图 11，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="https://patentimages.storage.googleapis.com/45/b9/be/eeb628828fa385/US20250103520A1.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">只剩一个重试槽时的等待位置</h3></div>
+    <a class="paper-open" href="../figures/US20250103520A1/US20250103520A1-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 只剩一个重试槽时的等待位置 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="只剩一个重试槽时的等待位置">
+    <img class="paper-image" src="../figures/US20250103520A1/US20250103520A1-fig-4.svg" width="671" height="206"
+         style="--paper-width:671px" alt="只剩一个重试槽时的等待位置。A 占着唯一的重试槽。在不同方案下，B 可能等在标签流水线之前，也可能到需要重试时才受阻。">
+  </div>
+  <figcaption>
+    <span>A 占着唯一的重试槽。在不同方案下，B 可能等在标签流水线之前，也可能到需要重试时才受阻。</span>
+    <span class="figure-evidence">图 4A、图 6A，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>；工程对照。 · <a href="https://patentimages.storage.googleapis.com/45/b9/be/eeb628828fa385/US20250103520A1.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>首次标签处理有一定概率要重试且网络往返成本高时，预留槽可以让重复处理在控制器内完成。</dd></div><div><dt>代价和限制</dt><dd>长时间未解除的冲突占满重试队列时，一次就能完成的命中也可能被挡在入口。</dd></div><div><dt>验证指标</dt><dd>分别记录入口等待、首次处理即完成的比例、重试条目平均占用，以及因缺槽而退回网络的次数。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#admission">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、12、17 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>共同封装芯片中的内存控制器要检查能否预留重试槽，才允许发出请求，以避免因重试队列缺槽而退回网络。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></dt><dd>从网络收到请求后，预留重试条目并进行仲裁。标签流水线按此条件启动处理。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></dt><dd>标签处理前先预留重试槽。公开权项保证请求无需因重试队列缺槽退回网络。</dd></div><div><dt>图 1A、图 3B、图 6A</dt><dd>图 1A、图 3B 与图 6A 分别给出预留、重试队列与仲裁发出的相关结构和步骤。</dd></div><div><dt>公开从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>从属项还包括 snoop 完成通知、相关地址冲突，以及冲突缓解后在控制器内重发。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US20250103520A1/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2023-09-22</dd></div>
+    <div><dt>美国申请日</dt><dd>2024-08-29</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2025-03-27</dd></div>
+    <div><dt>美国申请号</dt><dd>US18/819,755</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US20250103520A1/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 21 项权利要求。</p>
+  <p>核对过的图号为 图 1A、图 2、图 3B、图 6A、图 7、图 11、图 4A。</p>
+  </details>
+  <h2>同族对照</h2><ul class="related"><li><a href="US12619558B2.html"><code>US12619558B2</code> 仅预留命中所需的内存控制器资源</a></li></ul>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

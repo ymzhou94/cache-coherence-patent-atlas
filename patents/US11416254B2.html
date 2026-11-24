@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11416254B2 同一解码组内的零额外周期 load 旁路 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
+  <p class="document-id"><code>US11416254B2</code><span>美国授权专利</span></p>
+  <h1>同一解码组内的零额外周期 load 旁路</h1>
+  <p class="english-title" lang="en">Zero cycle load bypass in a decode group</p>
+  <p class="document-question">同一解码组内，哪些条件允许 load 复用较早 store 的源物理寄存器？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">同组 store 与后续 load 即使需要传递同一份数据，常规取数也可能经过地址生成和 store queue。若解码阶段就能确认这种依赖，重命名即可把后续消费者接到现有的生产者。</p>
+    <p>硬件比较同一解码周期内的较早 store 和后续 load，同时检查其间是否有指令改写寻址寄存器。条件满足后，重命名器把 load 的目的寄存器映射到 store 数据源使用的物理寄存器。</p>
+    <ol class="walkthrough"><li><h3>在同一解码组找 store 与 load</h3><p>解码器同拍给出组内操作。比较电路找出较老的 store 和其后可能相关的 load，并以这组指令判断旁路资格。</p></li><li><h3>检查中间指令是否改写寻址寄存器</h3><p>只要一条中间指令改写影响地址的架构寄存器，比较器就不能沿用旧 store 的等址判断。</p></li><li><h3>复用 store 数据源的物理编号</h3><p>通过资格检查后，重命名器让 load 的目的映射使用 store 数据源的物理寄存器号。一种实现还可以跳过从 free list 取新编号。</p></li><li><h3>消费者等源寄存器就绪</h3><p>之后读 load 目的值的指令都等这个源寄存器。省下的是普通 load 的数据路径，最早可消费时间仍由生产者何时写出该值决定。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定同一组依次解码 store [X1] ← X2、一条独立操作和 load X3 ← [X1]。两次访存均满足资格，中间操作不写 X1，X2 当前映射到 P17。</dd></div><div><dt>处理结果</dt><dd>重命名器可将 X3 也映射到 P17。后续读取 X3 的指令便从 P17 获得数据。若中间操作改写 X1，这个匹配分支便不能使用。</dd></div><div><dt>结果解读</dt><dd>这个序列采用相同的寻址形式，并假定其他资格满足。跨组、地址别名或操作宽度不同时，需要按各自条件判断。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">组内检查通过后复用物理寄存器</a></li><li><a href="#fig-2">load 的目的 X3 也映射到 P17</a></li><li><a href="#fig-3">同组、跨组和寻址寄存器被改写</a></li><li><a href="#fig-4">跳过普通 load 取数路径</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">组内检查通过后复用物理寄存器</h3></div>
+    <a class="paper-open" href="../figures/US11416254B2/US11416254B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 组内检查通过后复用物理寄存器 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="组内检查通过后复用物理寄存器">
+    <img class="paper-image" src="../figures/US11416254B2/US11416254B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="组内检查通过后复用物理寄存器。比较器检查同一解码组。在该组内匹配成功后，映射器可以使用较老 store 的源物理寄存器号。">
+  </div>
+  <figcaption>
+    <span>比较器检查同一解码组。在该组内匹配成功后，映射器可以使用较老 store 的源物理寄存器号。</span>
+    <span class="figure-evidence">说明书图 2、4–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="https://patentimages.storage.googleapis.com/9d/c4/33/706cc8d7bdecdd/US11416254.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">load 的目的 X3 也映射到 P17</h3></div>
+    <a class="paper-open" href="../figures/US11416254B2/US11416254B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 load 的目的 X3 也映射到 P17 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="load 的目的 X3 也映射到 P17">
+    <img class="paper-image" src="../figures/US11416254B2/US11416254B2-fig-2.svg" width="762" height="354"
+         style="--paper-width:762px" alt="load 的目的 X3 也映射到 P17。P17 是 store 的源物理寄存器，X3 是 load 的架构目的寄存器。后续消费者按新映射等待 P17。">
+  </div>
+  <figcaption>
+    <span>P17 是 store 的源物理寄存器，X3 是 load 的架构目的寄存器。后续消费者按新映射等待 P17。</span>
+    <span class="figure-evidence">图 4–7、权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。寄存器名为算例。 · <a href="https://patentimages.storage.googleapis.com/9d/c4/33/706cc8d7bdecdd/US11416254.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">同组、跨组和寻址寄存器被改写</h3></div>
+    <a class="paper-open" href="../figures/US11416254B2/US11416254B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 同组、跨组和寻址寄存器被改写 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="同组、跨组和寻址寄存器被改写">
+    <img class="paper-image" src="../figures/US11416254B2/US11416254B2-fig-3.svg" width="672" height="206"
+         style="--paper-width:672px" alt="同组、跨组和寻址寄存器被改写。是否旁路还取决于权利要求所列的存储和地址依赖条件。">
+  </div>
+  <figcaption>
+    <span>是否旁路还取决于权利要求所列的存储和地址依赖条件。</span>
+    <span class="figure-evidence">说明书图 6–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>。 · <a href="https://patentimages.storage.googleapis.com/9d/c4/33/706cc8d7bdecdd/US11416254.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">跳过普通 load 取数路径</h3></div>
+    <a class="paper-open" href="../figures/US11416254B2/US11416254B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 跳过普通 load 取数路径 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="跳过普通 load 取数路径">
+    <img class="paper-image" src="../figures/US11416254B2/US11416254B2-fig-4.svg" width="670" height="206"
+         style="--paper-width:670px" alt="跳过普通 load 取数路径。映射复用省去普通 load 的取数步骤。若 store 源值尚未就绪，消费者仍需等待。">
+  </div>
+  <figcaption>
+    <span>映射复用省去普通 load 的取数步骤。若 store 源值尚未就绪，消费者仍需等待。</span>
+    <span class="figure-evidence">图 2、4 与权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>，工程示意。 · <a href="https://patentimages.storage.googleapis.com/9d/c4/33/706cc8d7bdecdd/US11416254.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>两次访存在同一个解码组且 store 源数据就绪时，消费者可通过重命名直接取值。</dd></div><div><dt>代价和限制</dt><dd>跨组、寻址寄存器被改写或寻址复杂时，适用的匹配减少。组内比较逻辑也要满足解码时序。</dd></div><div><dt>验证指标</dt><dd>统计通过资格的比例、各类未通过原因、跳过的 free-list 读取次数，以及消费者何时实际拿到源值。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>同组内检测 store 后的 load，只考察该组并确认间隔指令不改写寻址寄存器，然后做物理寄存器重命名。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>方法独立案也将组内比较、无寻址寄存器改写与重命名结合。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>在同一解码组内寻找符合资格的一对 store 和 load，并检查期间是否有操作改写寻址寄存器。符合条件时，两者使用同一个物理寄存器编号传值。</dd></div><div><dt>说明书图 4–7</dt><dd>图中给出了物理寄存器映射，以及在同一解码组内检查零周期旁路资格的流程。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>相邻操作和 opcode 比较是进一步限定。在使用重命名旁路时，还可跳过 free-list 读取。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US11416254B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2019-12-05</dd></div>
+    <div><dt>美国申请日</dt><dd>2019-12-05</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2022-08-16</dd></div>
+    <div><dt>美国申请号</dt><dd>US16/705,023</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US11416254B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 美国专利授权全文，Google Patents 转载，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

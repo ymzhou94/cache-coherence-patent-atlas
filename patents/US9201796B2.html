@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9201796B2 查标签期间提前准备 SLC 缺失队列 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US9201796B2</code><span>美国授权专利</span></p>
+  <h1>查标签期间提前准备 SLC 缺失队列</h1>
+  <p class="english-title" lang="en">System cache with speculative read engine</p>
+  <p class="document-question">标签检查还在进行时，SLC 可以提前完成缺失处理的哪些步骤？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">SLC 缺失后总要准备下层请求。串行处理需要先等标签出结果，再准备缺失队列。有空位时，可以在标签检查尚未结束的阶段先准备，但要等确认后才允许对外发出。</p>
+    <p>标签查询启动后、结果出来前，控制器可把推测读送到缺失队列等候。标签命中时撤销该条目，确认缺失后才可发送外存访问。</p>
+    <ol class="walkthrough"><li><h3>收到读请求，启动标签检查</h3><p>控制器触发 SLC 的 tag lookup，确认数据是否已在片上。</p></li><li><h3>筛选哪些读可以预占队列</h3><p>候选资格依权项或实施策略而定，可以考虑低延迟 QoS、读写依赖、未完成推测数或同组历史命中率。</p></li><li><h3>准备队列条目并等待结果</h3><p>合格读在 tag lookup 结束前进入缺失队列。条目要保持到标签给出结果，此时尚未访问外部内存。</p></li><li><h3>按命中结果撤销或允许下发</h3><p>命中时取消准备好的条目。缺失确认后才能送下层。资格如果提前被取消，也可丢弃准备项或回到通常流程。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>标签查询用 4 个时间单位，队列准备需 2 个，且队列有空位。标签在 t0 开始检查。合格的读于 t1 开始准备队列，t3 就绪。</dd></div><div><dt>处理结果</dt><dd>若标签确认缺失且没有别的仲裁等待，顺序准备从 t4 开始，到 t6 可发。提前准备在 t4 就能取得发送资格。若 t4 的结果是命中，控制器在此时撤销条目，外存读不会发出。</dd></div><div><dt>结果解读</dt><dd>时点用于比较准备有多少可以重叠。实际等待还取决于队列调度、命中率和撤销成本。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">标签检查与缺失队列准备重叠</a></li><li><a href="#fig-2">队列就绪后仍要等标签结果</a></li><li><a href="#fig-3">哪些推测读能提前，结果怎样处理</a></li><li><a href="#fig-4">确认缺失后最早何时可发</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">标签检查与缺失队列准备重叠</h3></div>
+    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 标签检查与缺失队列准备重叠 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="标签检查与缺失队列准备重叠">
+    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="标签检查与缺失队列准备重叠。控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。">
+  </div>
+  <figcaption>
+    <span>控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。</span>
+    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-2-title">队列就绪后仍要等标签结果</h3></div>
+    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 队列就绪后仍要等标签结果 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="队列就绪后仍要等标签结果">
+    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-2.svg" width="900" height="414"
+         style="--paper-width:900px" alt="队列就绪后仍要等标签结果。标签在 t0 开始检查，t4 给出结果。提前准备从 t1 到 t3，缺失确认后可在 t4 发出。顺序准备等到 t4 才开始，到 t6 可发。若 t4 确认为命中，控制器撤销队列项。">
+  </div>
+  <figcaption>
+    <span>标签在 t0 开始检查，t4 给出结果。提前准备从 t1 到 t3，缺失确认后可在 t4 发出。顺序准备等到 t4 才开始，到 t6 可发。若 t4 确认为命中，控制器撤销队列项。</span>
+    <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>；同轴教学对照，和实验室的 t1 启动条件一致。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">哪些推测读能提前，结果怎样处理</h3></div>
+    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 哪些推测读能提前，结果怎样处理 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="哪些推测读能提前，结果怎样处理">
+    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-3.svg" width="671" height="249"
+         style="--paper-width:671px" alt="哪些推测读能提前，结果怎样处理。部分权项按 QoS、读写依赖或未完成数筛选。标签确认命中时撤销，确认缺失时允许送往外存。">
+  </div>
+  <figcaption>
+    <span>部分权项按 QoS、读写依赖或未完成数筛选。标签确认命中时撤销，确认缺失时允许送往外存。</span>
+    <span class="figure-evidence">图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-4-title">确认缺失后最早何时可发</h3></div>
+    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 确认缺失后最早何时可发 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="确认缺失后最早何时可发">
+    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-4.svg" width="655" height="179"
+         style="--paper-width:655px" alt="确认缺失后最早何时可发。沿用 t0 起算、标签检查 4 单位、准备 2 单位的设定。图中比较首次取得发送资格的时点，片外仲裁另计。">
+  </div>
+  <figcaption>
+    <span>沿用 t0 起算、标签检查 4 单位、准备 2 单位的设定。图中比较首次取得发送资格的时点，片外仲裁另计。</span>
+    <span class="figure-evidence">图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>；教学算例，非实测。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>缺失率较高、请求对延迟敏感且队列有余量时，提前准备可以让缺失更早获得发送资格。</dd></div><div><dt>代价和限制</dt><dd>命中率高或队列拥挤时，最后会被撤销的请求可能占着槽位，推迟其他读。已确认的缺失也可能要等片外仲裁。</dd></div><div><dt>验证指标</dt><dd>分别计量到达控制器、开始标签查询、取得队列空位、获得标签结果和向片外发出等时点，并记录命中撤销率与额外的队列占用。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#probe-ahead">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、12、17 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>标签检查开始后、结束前，将请求送入用于片外访问的缺失队列。片外访问要等到缺失确认。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></dt><dd>按低延迟 QoS 参数决定是否提前送入缺失队列。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>控制器将请求分别送往并行处理的标签逻辑和推测读引擎，再按标签的命中或缺失结果控制队列。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>控制器在标签检查开始后、完成前把请求送到缺失队列，待缺失确认后才访问外部内存。</dd></div><div><dt>图 6–8</dt><dd>图 6–8 给出推测路径、结果确认和候选筛选。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></dt><dd>从属项约束低延迟 QoS、依赖与未完成量等筛选条件，以及命中撤销和缺失转发。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US9201796B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2012-09-27</dd></div>
+    <div><dt>美国申请日</dt><dd>2012-09-27</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2015-12-01</dd></div>
+    <div><dt>美国申请号</dt><dd>US13/629,172</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US9201796B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 22 项权利要求。</p>
+  <p>核对过的图号为 图 3、图 6、图 7、图 8。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

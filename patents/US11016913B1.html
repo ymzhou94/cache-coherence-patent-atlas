@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11016913B1 汇聚节点把写回响应转成跨簇回填 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
+  <p class="document-id"><code>US11016913B1</code><span>美国授权专利</span></p>
+  <h1>汇聚节点把写回响应转成跨簇回填</h1>
+  <p class="english-title" lang="en">Inter cluster snoop latency reduction</p>
+  <p class="document-question">最新数据在另一个簇，回送给一致性控制器的途中能否先交给读请求者？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">请求簇发出读请求时，还不知道最新副本的位置。数据来源由一致性点查找。若数据在另一个簇，回填从哪里发出，决定了数据回到请求簇还要经过哪些链路。</p>
+    <p>内存控制器作为一致性点，发现目标块有远端修改副本后，向持有簇发出回送请求。携数据的响应经过汇聚节点时，节点用响应里的数据为原读请求构造回填。</p>
+    <ol class="walkthrough"><li><h3>在一致性点查副本</h3><p>请求簇 A 的读先到内存控制器。控制器查找副本信息，确定 B 持有修改副本。</p></li><li><h3>请 B 回送修改数据</h3><p>控制器向 B 发 copy-back 请求。B 取出最新数据，放入 copy-back 响应。</p></li><li><h3>节点构造给 A 的回填</h3><p>B 的响应进入汇聚节点的上行队列。节点识别它对应 A 之前发出的读，用响应数据构造给 A 的 fill，并把 fill 放进下行队列。</p></li><li><h3>向控制器转送原响应</h3><p>节点还可将原 copy-back 响应送往控制器。控制器得知节点已发回填时，可以抑制本来要发出的第二份回填。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>设 B 到汇聚节点、节点到 A 各用 2 个单位。节点与控制器之间单向各用 5 个单位，控制器处理和节点转换各需 1 个单位。</dd></div><div><dt>处理结果</dt><dd>从 B 发出响应起，常规路径用 2+5+1+5+2=15 个单位，节点旁路用 2+1+2=5 个单位。原响应若并行上行，控制器在第 7 个单位收到。</dd></div><div><dt>结果解读</dt><dd>这里用无排队、链路对称的教学模型。A 收到回填和控制器收到原响应是两个独立的计时终点。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">汇聚节点把 B 的数据回填给 A</a></li><li><a href="#fig-2">查出修改副本后，节点直接回填</a></li><li><a href="#fig-3">从 B 发响应到 A 收到数据</a></li><li><a href="#fig-4">什么响应可以在节点转换</a></li><li><a href="#fig-5">旁路缩短 A 收到数据的路径</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">汇聚节点把 B 的数据回填给 A</h3></div>
+    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 汇聚节点把 B 的数据回填给 A 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="汇聚节点把 B 的数据回填给 A">
+    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-1.svg" width="750" height="450"
+         style="--paper-width:750px" alt="汇聚节点把 B 的数据回填给 A。A 的读请求和 B 的响应都经过汇聚节点。节点可用 B 的数据回填 A，同时向内存控制器转发原响应。">
+  </div>
+  <figcaption>
+    <span>A 的读请求和 B 的响应都经过汇聚节点。节点可用 B 的数据回填 A，同时向内存控制器转发原响应。</span>
+    <span class="figure-evidence">图 1–2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">查出修改副本后，节点直接回填</h3></div>
+    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 查出修改副本后，节点直接回填 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="查出修改副本后，节点直接回填">
+    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-2.svg" width="762" height="435"
+         style="--paper-width:762px" alt="查出修改副本后，节点直接回填。控制器确认簇 B 持有修改数据后发回送请求。节点用 B 的响应构造 A 所需的回填。">
+  </div>
+  <figcaption>
+    <span>控制器确认簇 B 持有修改数据后发回送请求。节点用 B 的响应构造 A 所需的回填。</span>
+    <span class="figure-evidence">图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-3-title">从 B 发响应到 A 收到数据</h3></div>
+    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 从 B 发响应到 A 收到数据 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="从 B 发响应到 A 收到数据">
+    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-3.svg" width="655" height="220"
+         style="--paper-width:655px" alt="从 B 发响应到 A 收到数据。模型中，B 到节点、节点到 A 各用 2 个单位，节点与控制器间单向各用 5 个单位，转换用 1 个单位。常规路径用 15，旁路用 5。橙色虚线柱以控制器收到原响应为终点。">
+  </div>
+  <figcaption>
+    <span>模型中，B 到节点、节点到 A 各用 2 个单位，节点与控制器间单向各用 5 个单位，转换用 1 个单位。常规路径用 15，旁路用 5。橙色虚线柱以控制器收到原响应为终点。</span>
+    <span class="figure-evidence">图 3–4 的路径对照；合成算例，非测量 · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">什么响应可以在节点转换</h3></div>
+    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 什么响应可以在节点转换 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="什么响应可以在节点转换">
+    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-4.svg" width="671" height="206"
+         style="--paper-width:671px" alt="什么响应可以在节点转换。当回送响应携带修改数据，且节点能把它与原读请求关联时，节点可以在回程生成 fill。">
+  </div>
+  <figcaption>
+    <span>当回送响应携带修改数据，且节点能把它与原读请求关联时，节点可以在回程生成 fill。</span>
+    <span class="figure-evidence">图 5–6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-5-title">旁路缩短 A 收到数据的路径</h3></div>
+    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-5.svg" target="_blank" rel="noopener" aria-label="打开 旁路缩短 A 收到数据的路径 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="旁路缩短 A 收到数据的路径">
+    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-5.svg" width="900" height="338"
+         style="--paper-width:900px" alt="旁路缩短 A 收到数据的路径。以 B 发出携带数据的响应为起点。在无排队的模型中，A 第 15 个时间单位经一致性控制器收到数据，经汇聚节点转换回填可提前到第 5 个单位。原响应若并行送往控制器，第 7 个单位到达。">
+  </div>
+  <figcaption>
+    <span>以 B 发出携带数据的响应为起点。在无排队的模型中，A 第 15 个时间单位经一致性控制器收到数据，经汇聚节点转换回填可提前到第 5 个单位。原响应若并行送往控制器，第 7 个单位到达。</span>
+    <span class="figure-evidence">图 2–4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>；可用旁路原型复算。非产品测量。 · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>汇聚点离控制器较远、被读数据又在另一簇修改时，给读簇的回填可以明显提前。</dd></div><div><dt>代价和限制</dt><dd>控制器若靠近汇聚点、旁路下行拥塞，或者大量请求走普通的干净数据路径，整体收益会缩小。</dd></div><div><dt>验证指标</dt><dd>以 B 发出响应为起点，分别测 A 收回填和控制器收原响应的时刻。另记录可旁路比例和互连队列延迟。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#bypass">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、15 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>远端执行 copy-back，回送修改后的数据。互连中的第一个汇聚节点把响应转换成回填，发给原请求者。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>第一汇聚节点用含修改数据的响应生成给请求者的回填。权 10 还规定上、下行队列和旁路电路。</dd></div><div><dt>图 2–4</dt><dd>图 2 给出节点内部的队列和旁路电路，图 3–4 分别展示旁路回填与常规回填。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>节点可以继续向控制器转发原响应。控制器可因节点已经回填而抑制重复回填。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US11016913B1/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2020-03-30</dd></div>
+    <div><dt>美国申请日</dt><dd>2020-03-30</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2021-05-25</dd></div>
+    <div><dt>美国申请号</dt><dd>US16/834,148</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US11016913B1/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 授权全文，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 1、2、3、4、5、6。</p>
+  </details>
+  <h2>同族对照</h2><ul class="related"><li><a href="US11537538B2.html"><code>US11537538B2</code> 由一致性点发出跨簇数据旁路指示</a></li></ul>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

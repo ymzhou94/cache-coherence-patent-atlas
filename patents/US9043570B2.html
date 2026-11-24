@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9043570B2 按组配额限占并允许总配额超配 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US9043570B2</code><span>美国授权专利</span></p>
+  <h1>按组配额限占并允许总配额超配</h1>
+  <p class="english-title" lang="en">System cache with quota-based control</p>
+  <p class="document-question">不同客户端错峰使用 SLC 时，怎样限制单组占用，同时保留共享空间？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">几个组的需求高峰可能出现在不同时间。允许配额总和超出物理行数，可以给每组留较高上限。实际分配仍要在目标 set 找到合格行。</p>
+    <p>缓存按组记录占用，可按配置启用配额。各组配额总和允许超过物理行数。分配请求缺失时，本组是否达到上限决定到哪个组找牺牲行。</p>
+    <ol class="walkthrough"><li><h3>按组记录当前占用</h3><p>缓存标签保存组归属和行状态。控制器统计每组的行数，再读出配额是否启用。</p></li><li><h3>缺失时查本组上限</h3><p>要分配新行的请求缺失后，控制器将请求所属组的当前行数与其配额比较。</p></li><li><h3>按比较结果选搜索范围</h3><p>本组已到上限时，从本组找牺牲行以限制占用。尚未到上限时，可以从其他组找候选。两种情况都受 set 范围和行状态约束。</p></li><li><h3>更新占用，按配置清理</h3><p>替换完成后更新相应组的占用。一些实现还会在关闭配额后按配置执行 flush 或 drop。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>缓存有 8 条可用行，A 和 B 的配额都是 6。当前 A 占 6 条，B 占 2 条。假定相关组里有可替换的普通行。</dd></div><div><dt>处理结果</dt><dd>新来的 A 缺失从 A 组找牺牲行，A 仍占 6 条。此时 B 尚未到 6，可在另一组找合格行，把一行空间让给 B。</dd></div><div><dt>结果解读</dt><dd>两个上限合计 12，但最多仍只能放下 8 条。搜索范围由发出缺失请求的组是否达到上限决定。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">组占用怎样影响替换候选</a></li><li><a href="#fig-2">从 A 占 6 行、B 占 2 行开始</a></li><li><a href="#fig-3">该从本组还是其他组找牺牲行</a></li><li><a href="#fig-4">配额合计 12，缓存最多装 8 行</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">组占用怎样影响替换候选</h3></div>
+    <a class="paper-open" href="../figures/US9043570B2/US9043570B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 组占用怎样影响替换候选 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="组占用怎样影响替换候选">
+    <img class="paper-image" src="../figures/US9043570B2/US9043570B2-fig-1.svg" width="982" height="462"
+         style="--paper-width:982px" alt="组占用怎样影响替换候选。控制器在分配缺失时比较请求组的占用与上限，再搜索符合条件的 ways。">
+  </div>
+  <figcaption>
+    <span>控制器在分配缺失时比较请求组的占用与上限，再搜索符合条件的 ways。</span>
+    <span class="figure-evidence">图 3、图 4、图 6–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">从 A 占 6 行、B 占 2 行开始</h3></div>
+    <a class="paper-open" href="../figures/US9043570B2/US9043570B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 从 A 占 6 行、B 占 2 行开始 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="从 A 占 6 行、B 占 2 行开始">
+    <img class="paper-image" src="../figures/US9043570B2/US9043570B2-fig-2.svg" width="813" height="267"
+         style="--paper-width:813px" alt="从 A 占 6 行、B 占 2 行开始。物理容量为 8 行，两组的配额都是 6。A 从本组替换时占用量不变。B 从另一组替换时，两组占用随之调整。">
+  </div>
+  <figcaption>
+    <span>物理容量为 8 行，两组的配额都是 6。A 从本组替换时占用量不变。B 从另一组替换时，两组占用随之调整。</span>
+    <span class="figure-evidence">图 8、图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>；教学轨迹。 · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">该从本组还是其他组找牺牲行</h3></div>
+    <a class="paper-open" href="../figures/US9043570B2/US9043570B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 该从本组还是其他组找牺牲行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="该从本组还是其他组找牺牲行">
+    <img class="paper-image" src="../figures/US9043570B2/US9043570B2-fig-3.svg" width="672" height="206"
+         style="--paper-width:672px" alt="该从本组还是其他组找牺牲行。配额决定候选组，sticky 状态和具体 set 再缩小实际候选范围。">
+  </div>
+  <figcaption>
+    <span>配额决定候选组，sticky 状态和具体 set 再缩小实际候选范围。</span>
+    <span class="figure-evidence">图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>。 · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">配额合计 12，缓存最多装 8 行</h3></div>
+    <a class="paper-open" href="../figures/US9043570B2/US9043570B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 配额合计 12，缓存最多装 8 行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="配额合计 12，缓存最多装 8 行">
+    <img class="paper-image" src="../figures/US9043570B2/US9043570B2-fig-4.svg" width="672" height="206"
+         style="--paper-width:672px" alt="配额合计 12，缓存最多装 8 行。此例允许两组上限合计为 12，任一时刻的驻留总量仍受 8 个物理行限制。">
+  </div>
+  <figcaption>
+    <span>此例允许两组上限合计为 12，任一时刻的驻留总量仍受 8 个物理行限制。</span>
+    <span class="figure-evidence">图 6、图 8；模型对照。 · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>各组忙闲错开，且有其他组合格的牺牲行时，超配让不同组在各自的忙碌窗口使用更大的空间。</dd></div><div><dt>代价和限制</dt><dd>各组同一时段大量访问时，物理容量仍是固定的。就算本组尚未用完配额，目标 set 没有合格行也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录各组逐期占用、驱逐来源和目标组、请求未分配次数及总命中率。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#quota">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、5、9、18 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按行的组归属和各组计数施加配额。配额总和 M 大于物理行数 N。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>缺失时，本组若已达到配额，则查找本组牺牲行。尚未达到配额时，查找另一组的候选。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>第 1 项给出配额统计及 M&gt;N 的情形。第 5 项按缺失时本组是否达到配额决定查找组。</dd></div><div><dt>图 6、图 8、图 9</dt><dd>图 6 描述配额表，图 8 给出超配例子，图 9 展示缺失后的候选分支。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>从属项进一步涉及逐 way 搜索及清理配额时的 flush 或 drop。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US9043570B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2012-09-11</dd></div>
+    <div><dt>美国申请日</dt><dd>2012-09-11</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2015-05-26</dd></div>
+    <div><dt>美国申请号</dt><dd>US13/610,642</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US9043570B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 22 项权利要求。</p>
+  <p>核对过的图号为 图 3、图 4、图 6、图 7、图 8、图 9。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

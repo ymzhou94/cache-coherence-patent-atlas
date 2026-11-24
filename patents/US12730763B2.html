@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12730763B2 关键读触发提前结束写服务轮次 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US12730763B2</code><span>美国授权专利</span></p>
+  <h1>关键读触发提前结束写服务轮次</h1>
+  <p class="english-title" lang="en">Mechanisms for processing memory requests based on criticality</p>
+  <p class="document-question">写轮次中到达的关键读，怎样才能让控制器提早切到读轮次？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">内存控制器通常成批执行写命令，以减少读写转向。批量写尚未做完时，CPU 可能已经被新到的 load 卡住。处理器提供关键性，控制器据此判断能否打断当前写轮次。</p>
+    <p>处理器给出请求的关键性。内存系统在写轮次里收到关键读后，检查指定优先级的写队列还有多少空位。空位达到下限并满足其他启用条件时，控制器可以提前进入读轮次。</p>
+    <ol class="walkthrough"><li><h3>处理器给出请求的关键性</h3><p>处理器或 LLC 逻辑判断请求是否关键。实施例包括阻住队头的 load、地址转换表遍历，以及 I-cache 未命中队列的队首。</p></li><li><h3>在写轮次收到读请求</h3><p>内存系统读取关键性字段，有些实施方式则另行询问。普通读继续等待可获读服务的时点。</p></li><li><h3>检查写队列空位</h3><p>控制器检查指定优先级的写队列是否达到空位下限。实施例还可能考虑当前写轮次的进度、过去的写压力或实时流量是否升级。</p></li><li><h3>按启用条件决定是否切轮</h3><p>条件满足时，控制器可以提前结束写轮次。其余情形可继续原轮次。切到读轮次后，仲裁器再按读队列的服务规则选请求。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>设每轮计划处理 8 个写槽。关键读在第 2 个写槽服务完后到达。模型要求至少服务 2 槽，指定写队列至少有 3 个空位。分别比较有 4 个和 1 个空位的情况。</dd></div><div><dt>处理结果</dt><dd>空位为 4 且其他条件满足时，可以提前切换，关键读最多绕过后续 6 个写服务机会。只有 1 个空位时继续原轮次，让写侧继续排出请求。</dd></div><div><dt>结果解读</dt><dd>6 是剩余计划写槽数。若要算读延迟，还要计入总线转向、读请求间的竞争和 DRAM 行状态。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">处理器怎样通知内存控制器</a></li><li><a href="#fig-2">关键读在哪个写槽之后可以切换</a></li><li><a href="#fig-3">提前切换要符合哪些条件</a></li><li><a href="#fig-4">读请求还要等多少计划写槽</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">处理器怎样通知内存控制器</h3></div>
+    <a class="paper-open" href="../figures/US12730763B2/US12730763B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 处理器怎样通知内存控制器 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="处理器怎样通知内存控制器">
+    <img class="paper-image" src="../figures/US12730763B2/US12730763B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="处理器怎样通知内存控制器。控制器收到关键读标记后，还要检查指定写队列的空位，才知道能否提前结束写轮次。">
+  </div>
+  <figcaption>
+    <span>控制器收到关键读标记后，还要检查指定写队列的空位，才知道能否提前结束写轮次。</span>
+    <span class="figure-evidence">图 1、图 2、图 4、图 5，权 1。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-2-title">关键读在哪个写槽之后可以切换</h3></div>
+    <a class="paper-open" href="../figures/US12730763B2/US12730763B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 关键读在哪个写槽之后可以切换 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="关键读在哪个写槽之后可以切换">
+    <img class="paper-image" src="../figures/US12730763B2/US12730763B2-fig-2.svg" width="900" height="338"
+         style="--paper-width:900px" alt="关键读在哪个写槽之后可以切换。原计划处理 8 个写槽。关键读在第 2 槽结束后到达。写队列空位达标且其他条件满足时，可在边界 2 获得切换资格。空位不足的情形按计划处理完剩余写槽，到边界 8 再切换。图上标的是获得切换资格的时点。总线周转、命令仲裁和读返回另计。">
+  </div>
+  <figcaption>
+    <span>原计划处理 8 个写槽。关键读在第 2 槽结束后到达。写队列空位达标且其他条件满足时，可在边界 2 获得切换资格。空位不足的情形按计划处理完剩余写槽，到边界 8 再切换。图上标的是获得切换资格的时点。总线周转、命令仲裁和读返回另计。</span>
+    <span class="figure-evidence">图 5–7，权利要求 1、4；计划写槽教学例，非 DRAM 时钟与实测。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">提前切换要符合哪些条件</h3></div>
+    <a class="paper-open" href="../figures/US12730763B2/US12730763B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 提前切换要符合哪些条件 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="提前切换要符合哪些条件">
+    <img class="paper-image" src="../figures/US12730763B2/US12730763B2-fig-3.svg" width="672" height="249"
+         style="--paper-width:672px" alt="提前切换要符合哪些条件。权利要求 1 规定了空位下限。其他条件由具体权项或实施方式给出。">
+  </div>
+  <figcaption>
+    <span>权利要求 1 规定了空位下限。其他条件由具体权项或实施方式给出。</span>
+    <span class="figure-evidence">图 5、图 6，权 1–5。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-4-title">读请求还要等多少计划写槽</h3></div>
+    <a class="paper-open" href="../figures/US12730763B2/US12730763B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 读请求还要等多少计划写槽 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="读请求还要等多少计划写槽">
+    <img class="paper-image" src="../figures/US12730763B2/US12730763B2-fig-4.svg" width="655" height="179"
+         style="--paper-width:655px" alt="读请求还要等多少计划写槽。此例每轮计划处理 8 个写槽，读在处理完 2 槽后到达。统计范围是切换前仍需服务的计划写槽。总线转向与读仲裁另计。">
+  </div>
+  <figcaption>
+    <span>此例每轮计划处理 8 个写槽，读在处理完 2 槽后到达。统计范围是切换前仍需服务的计划写槽。总线转向与读仲裁另计。</span>
+    <span class="figure-evidence">图 6、权 1、4；教学模型，非实测。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>写压力暂时低于饱和时，提前开启读轮次能缩短关键读等待写批次完成的时间。</dd></div><div><dt>代价和限制</dt><dd>频繁切换会增加读写转向，并可能降低写吞吐。写队列接近满载时，需要一起衡量积压。</dd></div><div><dt>验证指标</dt><dd>用相同的到达序列比较关键读 p95、p99、写队列峰值、总写吞吐和读写转向次数。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#read-turn">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、13 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 1</dt><dd>处理器标记关键读。写轮次中收到关键读，且指定优先级的写队列空位达到下限等启用条件满足时，提前切入读轮次。</dd></div><div class="claim"><dt>权 9</dt><dd>根据先前写轮次的填充情况判断是否允许切换。</dd></div><div class="claim"><dt>权 13</dt><dd>一种服务轮次中收到另一种类型的请求时，询问处理器该请求的关键性，并可根据答复提前切换。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 1</dt><dd>已标记的关键读在写轮次到达且满足启用条件时，可以触发提前切换。条件包括指定优先级写队列的空位下限。</dd></div><div><dt>图 2、图 5、图 6</dt><dd>图 2 标出关键性来源，图 5、图 6 描述切换判断。图 6 的槽数是实施例参数。</dd></div><div><dt>从属权 2–5</dt><dd>从属项还涉及写槽填充情况、实时流量升级，以及条件未满足时继续当前写轮次。</dd></div></dl>
+    <p class="source-links"><a href="https://patentsgazette.uspto.gov/week36/OG/html/1550-2/US12730763-20260908.html">专利原文</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">审读全文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2024-09-20</dd></div>
+    <div><dt>美国申请日</dt><dd>2024-12-12</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2026-09-08</dd></div>
+    <div><dt>美国申请号</dt><dd>US18/978,516</dd></div>
+  </dl>
+  <p><a href="https://patentsgazette.uspto.gov/week36/OG/html/1550-2/US12730763-20260908.html">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 授权全文（Patsnap 与 Justia 转录，USPTO Gazette 核对），共记录 17 项权利要求。</p>
+  <p>核对过的图号为 图 1、图 2、图 4、图 5、图 6、图 7、图 8。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

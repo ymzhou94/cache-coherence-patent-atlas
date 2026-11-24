@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11144476B2 多端口缓存的 LRU 排名更新 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
+  <p class="document-id"><code>US11144476B2</code><span>美国授权专利</span></p>
+  <h1>多端口缓存的 LRU 排名更新</h1>
+  <p class="english-title" lang="en">Least recently used ranking in a multi-port cache</p>
+  <p class="document-question">两个端口同拍命中同一组的不同 way，哪一路先升到 MRU？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">多端口缓存可以并行读数据，同一组却通常只有一份替换状态。两个端口都读到数据时，如果本拍只能改一次排名，另一路的更新就要等。</p>
+    <p>控制器按组记录各 way 的替换排名。同组两路同时命中时，控制器用旧排名和阈值选出本拍先更新的一路。部分实现还把另一路的标识写进反馈寄存器。</p>
+    <ol class="walkthrough"><li><h3>先看组号</h3><p>标签比较完成后，控制器拿到两个访问的组号和 way 号。命中不同组时，各端口可以分别更新所在组的排名。两个命中落在同一组的不同 way 时，才会竞争同一份状态。</p></li><li><h3>用旧排名选一路</h3><p>控制器比较各 way 的旧排名和组阈值。图 4 中，数值越小越接近 LRU。这样的行可能更早被逐出，所以先更新。</p></li><li><h3>把选中的 way 提到 MRU</h3><p>控制器更新旧位置和 MRU 之间各行的排名，区间外的行保持原来的相对顺序。这个过程只改排名，数据留在原来的 way。</p></li><li><h3>用反馈寄存器记住另一路</h3><p>如果另一路也满足阈值，控制器可先记下它的 way 标识。后续某拍没有符合阈值的新命中抢占更新时，控制器补做这次提升，再清除反馈项。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定一组有四路，从 LRU 到 MRU 排成 A、B、C、D，阈值覆盖最旧两路。两个端口同拍命中 A 和 B，反馈寄存器为空。</dd></div><div><dt>处理结果</dt><dd>控制器先提升 A 并记录 B，排名变成 B、C、D、A。下一拍没有符合阈值的新命中时，再提升 B，得到 C、D、A、B。</dd></div><div><dt>结果解读</dt><dd>如果两次更新之间发生缺失，B 仍可能位于淘汰端。若严格 LRU 已按访问顺序提交两次更新，此时最旧的行会不同。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">双端口命中同组时如何更新排名</a></li><li><a href="#fig-2">先提升更老的 way，再处理反馈项</a></li><li><a href="#fig-3">同组与跨组命中的更新规则</a></li><li><a href="#fig-4">延后更新时哪一路可能被逐出</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">双端口命中同组时如何更新排名</h3></div>
+    <a class="paper-open" href="../figures/US11144476B2/US11144476B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 双端口命中同组时如何更新排名 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="双端口命中同组时如何更新排名">
+    <img class="paper-image" src="../figures/US11144476B2/US11144476B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="双端口命中同组时如何更新排名。两个命中结果先归到被访问的组。控制器读取旧排名，再从两个命中的 way 中选一路更新。">
+  </div>
+  <figcaption>
+    <span>两个命中结果先归到被访问的组。控制器读取旧排名，再从两个命中的 way 中选一路更新。</span>
+    <span class="figure-evidence">原文图 1–2，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>。 · <a href="https://patentimages.storage.googleapis.com/2a/6b/3d/4f0b17a9868fdf/US11144476.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">先提升更老的 way，再处理反馈项</h3></div>
+    <a class="paper-open" href="../figures/US11144476B2/US11144476B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 先提升更老的 way，再处理反馈项 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="先提升更老的 way，再处理反馈项">
+    <img class="paper-image" src="../figures/US11144476B2/US11144476B2-fig-2.svg" width="633" height="225"
+         style="--paper-width:633px" alt="先提升更老的 way，再处理反馈项。按图 4 的 t₂ 至 t₄，先提升靠近 LRU 的 112g。后续有更新机会时，再提升反馈项记录的 112e。">
+  </div>
+  <figcaption>
+    <span>按图 4 的 t₂ 至 t₄，先提升靠近 LRU 的 112g。后续有更新机会时，再提升反馈项记录的 112e。</span>
+    <span class="figure-evidence">说明书图 4，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>。横轴按图中的动作分段。 · <a href="https://patentimages.storage.googleapis.com/2a/6b/3d/4f0b17a9868fdf/US11144476.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">同组与跨组命中的更新规则</h3></div>
+    <a class="paper-open" href="../figures/US11144476B2/US11144476B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 同组与跨组命中的更新规则 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="同组与跨组命中的更新规则">
+    <img class="paper-image" src="../figures/US11144476B2/US11144476B2-fig-3.svg" width="670" height="249"
+         style="--paper-width:670px" alt="同组与跨组命中的更新规则。两个命中落在同一组时，用阈值决定先更新哪一路。若落在不同组，各组可分别更新。">
+  </div>
+  <figcaption>
+    <span>两个命中落在同一组时，用阈值决定先更新哪一路。若落在不同组，各组可分别更新。</span>
+    <span class="figure-evidence">原文图 3–7，图 6 有不同的非急迫处理实施。 · <a href="https://patentimages.storage.googleapis.com/2a/6b/3d/4f0b17a9868fdf/US11144476.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">延后更新时哪一路可能被逐出</h3></div>
+    <a class="paper-open" href="../figures/US11144476B2/US11144476B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 延后更新时哪一路可能被逐出 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="延后更新时哪一路可能被逐出">
+    <img class="paper-image" src="../figures/US11144476B2/US11144476B2-fig-4.svg" width="671" height="206"
+         style="--paper-width:671px" alt="延后更新时哪一路可能被逐出。按图中从左到右由旧到新的约定，每次提升都把命中的 way 移到队尾。下一次缺失若发生在 B 补升前，B 仍排在最旧的位置。">
+  </div>
+  <figcaption>
+    <span>按图中从左到右由旧到新的约定，每次提升都把命中的 way 移到队尾。下一次缺失若发生在 B 补升前，B 仍排在最旧的位置。</span>
+    <span class="figure-evidence">以图 4 为依据。A、B 等字母是算例中的 way。 · <a href="https://patentimages.storage.googleapis.com/2a/6b/3d/4f0b17a9868fdf/US11144476.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同组双命中频繁、排名写端口又少时，可以优先更新最可能被逐出的行。</dd></div><div><dt>代价和限制</dt><dd>若新命中一直占用更新机会，反馈项会继续等待。期间到来的缺失可能逐出这一路。</dd></div><div><dt>验证指标</dt><dd>在同组和跨组访问轨迹中，分别统计反馈等待了多久、MRU 更新写了几次，以及相对严格 LRU 多了多少缺失。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>多端口缓存为各 way 维护替换排名。同拍访问不同 way 时，控制器比较各路排名和阈值，再更新选定一路。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>按原排名和阈值给相关 way 分类排序，再提升满足阈值的选定 way。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>同拍命中同一组的不同 way 时，控制器用各自的排名和阈值选一路更新。</dd></div><div><dt>说明书图 4</dt><dd>图中先提升较老的 way。没有新的紧迫访问时，才处理反馈寄存器里记录的那一路。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>控制器可先记住未被选中的较急 way，等后续条件满足后再提升。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US11144476B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2020-01-02</dd></div>
+    <div><dt>美国申请日</dt><dd>2020-01-02</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2021-10-12</dd></div>
+    <div><dt>美国申请号</dt><dd>US16/733,187</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US11144476B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 美国专利授权全文，Google Patents 转载，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8、图 9、图 10。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

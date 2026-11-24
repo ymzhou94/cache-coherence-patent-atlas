@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9158685B2 请求侧缓存提示与按来源释放 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US9158685B2</code><span>美国授权专利</span></p>
+  <h1>请求侧缓存提示与按来源释放</h1>
+  <p class="english-title" lang="en">System cache with cache hint control</p>
+  <p class="document-question">数据只会读一次，或已经完成交接时，代理可以怎样提示 SLC 回收空间？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">请求方可能提前知道数据只消费一次，也可能知道所需的数据已接走。请求可以带上普通分配、sticky 分配、不分配或释放提示。是否能释放，还取决于命中行的来源和状态。</p>
+    <p>代理在请求里携带缓存提示。do-not-allocate 缺失时跳过填充，命中时可以保留已有状态。de-allocate 不发起新分配，合格的命中可能释放现有行或提高其被替换的优先级。独立权利要求 1 要求核对请求源和原分配源。</p>
+    <ol class="walkthrough"><li><h3>在请求中带上提示</h3><p>代理发送地址和 cache hint。有的实现还携带组标识。提示描述预计用途，地址照常传送。</p></li><li><h3>查找地址对应的行</h3><p>do-not-allocate 请求缺失时可以完成访问并跳过新行分配，命中时可保留已有行。</p></li><li><h3>核对释放请求的来源</h3><p>de-allocate 请求命中后，控制器按权利要求 1 检查请求来源是否与该行原来的分配来源相同。匹配时才有释放资格。</p></li><li><h3>按行状态处置</h3><p>干净行可以失效。对脏行，有的实施方式将它列为优先替换候选，或通过一致性事务转移所有权，以保住修改过的值。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>干净行 X 由 CPU 代理 A 分配，另一个地址 Y 此时不在 SLC。A 对 X 发 de-allocate，对 Y 发 do-not-allocate。</dd></div><div><dt>处理结果</dt><dd>X 命中且来源匹配，可以释放。Y 从合适来源取得值，并跳过在 SLC 分配。</dd></div><div><dt>结果解读</dt><dd>如果后面还频繁读 X，提前释放会增加重取。比较提示收益时，要把这些后续访问也放进测试序列。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">释放请求怎样核对行的来源</a></li><li><a href="#fig-2">不分配提示在命中和缺失时的处理</a></li><li><a href="#fig-3">命中后还要看来源是否匹配</a></li><li><a href="#fig-4">省下的填充与后续重取</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">释放请求怎样核对行的来源</h3></div>
+    <a class="paper-open" href="../figures/US9158685B2/US9158685B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 释放请求怎样核对行的来源 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="释放请求怎样核对行的来源">
+    <img class="paper-image" src="../figures/US9158685B2/US9158685B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="释放请求怎样核对行的来源。代理同时给出地址和提示。控制器结合命中、来源及行的脏净状态决定后续处理。">
+  </div>
+  <figcaption>
+    <span>代理同时给出地址和提示。控制器结合命中、来源及行的脏净状态决定后续处理。</span>
+    <span class="figure-evidence">图 4–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>。 · <a href="https://patentimages.storage.googleapis.com/de/ce/da/29fbdc3c2be1ee/US9158685.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">不分配提示在命中和缺失时的处理</h3></div>
+    <a class="paper-open" href="../figures/US9158685B2/US9158685B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 不分配提示在命中和缺失时的处理 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="不分配提示在命中和缺失时的处理">
+    <img class="paper-image" src="../figures/US9158685B2/US9158685B2-fig-2.svg" width="781" height="267"
+         style="--paper-width:781px" alt="不分配提示在命中和缺失时的处理。命中时可以保留已有行，缺失时可以完成请求并跳过分配。">
+  </div>
+  <figcaption>
+    <span>命中时可以保留已有行，缺失时可以完成请求并跳过分配。</span>
+    <span class="figure-evidence">图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；实施时序示意。 · <a href="https://patentimages.storage.googleapis.com/de/ce/da/29fbdc3c2be1ee/US9158685.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-3-title">命中后还要看来源是否匹配</h3></div>
+    <a class="paper-open" href="../figures/US9158685B2/US9158685B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 命中后还要看来源是否匹配 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="命中后还要看来源是否匹配">
+    <img class="paper-image" src="../figures/US9158685B2/US9158685B2-fig-3.svg" width="762" height="389"
+         style="--paper-width:762px" alt="命中后还要看来源是否匹配。控制器先查地址，再查来源以判断能否释放。脏行按其状态和一致性协议处理。">
+  </div>
+  <figcaption>
+    <span>控制器先查地址，再查来源以判断能否释放。脏行按其状态和一致性协议处理。</span>
+    <span class="figure-evidence">图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>；授权装置行为简化。 · <a href="https://patentimages.storage.googleapis.com/de/ce/da/29fbdc3c2be1ee/US9158685.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">省下的填充与后续重取</h3></div>
+    <a class="paper-open" href="../figures/US9158685B2/US9158685B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 省下的填充与后续重取 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="省下的填充与后续重取">
+    <img class="paper-image" src="../figures/US9158685B2/US9158685B2-fig-4.svg" width="671" height="206"
+         style="--paper-width:671px" alt="省下的填充与后续重取。判断提示带来的节省时，要同时记录这次绕过的填充和因早释放而增加的重取。">
+  </div>
+  <figcaption>
+    <span>判断提示带来的节省时，要同时记录这次绕过的填充和因早释放而增加的重取。</span>
+    <span class="figure-evidence">图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；工程对照。 · <a href="https://patentimages.storage.googleapis.com/de/ce/da/29fbdc3c2be1ee/US9158685.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>一次性请求较多时，跳过填充可以减少对活跃行的替换。知道行已用完且符合归属条件时，代理可以早点交还空间。</dd></div><div><dt>代价和限制</dt><dd>误判复用会损失之后的命中。处理脏行还可能要写回或转移所有权。</dd></div><div><dt>验证指标</dt><dd>按每种 hint 分别统计省去的填充、释放后重取、释放或降低驻留优先级的次数，以及写回流量。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、14、19 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>带相应分配提示的请求命中时，如果来源与行的原分配者相同且满足其余条件，可触发行释放。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>缓存接收请求者给出的提示，按提示类别与命中结果处理分配。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>带释放提示的请求命中后，要满足请求来源与原分配来源一致等条件才可释放该行。</dd></div><div><dt>图 5–7</dt><dd>图中列出请求字段和提示种类，并按命中与缺失画出处理路径。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 与 8</dt><dd>从属项描述缺失时跳过分配，以及另外支持的 hint 类型。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US9158685B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2012-09-11</dd></div>
+    <div><dt>美国申请日</dt><dd>2012-09-11</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2015-10-13</dd></div>
+    <div><dt>美国申请号</dt><dd>US13/610,829</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US9158685B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 24 项权利要求。</p>
+  <p>核对过的图号为 图 4、图 5、图 6、图 7。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12775463B2 分级存储队列与地址解析 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
+  <p class="document-id"><code>US12775463B2</code><span>美国授权专利</span></p>
+  <h1>分级存储队列与地址解析</h1>
+  <p class="english-title" lang="en">Hierarchical store queue circuit</p>
+  <p class="document-question">主 store queue 满时，后到的 store 在哪里等待，又从哪一级继续执行？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">在途 store 要保存在队列里，依赖它的 load 还要能查到比缓存更新的值。若每个槽都支持相同数量的查询端口，增加容量的成本也会增加。</p>
+    <p>主队列有空槽就接收 store，满后由次队列接收。次队列可以先做地址解析。主队列释放槽位后，次队列把条目移回主队列，由主队列执行和提交。回迁时解析进度决定从哪一级继续。</p>
+    <ol class="walkthrough"><li><h3>主队列满后由次队列接收</h3><p>有空槽时，较早的 store 先进入主队列。主槽暂满时，后续 store 还可进入次队列。</p></li><li><h3>次队列提前求地址</h3><p>图 4 给出了与两级队列对应的地址解析阶段。store 留在次队列等待空槽期间，就可能开始解析。</p></li><li><h3>主槽释放后回迁</h3><p>较早的 store 退休并释放主槽后，可以把次队列中的请求移到主队列。相应从属权利要求规定优先迁移最旧条目。</p></li><li><h3>按已完成的阶段继续</h3><p>回迁时地址若已解析，可从后面的阶段继续。地址若尚未解析，条目需进入第一解析阶段。如果旧 store 只覆盖 load 的部分字节，还须另行决定转发、组合或重放。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定主队列只有两槽，已由 S0 和 S1 占用，S2 只能先进次队列。S0 正等待退休，S2 在对应主槽释放前完成地址解析。</dd></div><div><dt>处理结果</dt><dd>S0 退休释放主槽后，S2 携已解析的地址回迁。主队列仍负责把 S2 写入缓存。</dd></div><div><dt>结果解读</dt><dd>如果 S2 回迁时地址尚未解析，就要走另一个分支，先完成判址。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">主队列提交，次队列先接收并解析</a></li><li><a href="#fig-2">S2 的解析与 S0 的退休等待重叠</a></li><li><a href="#fig-3">主队列、次队列和缓存如何为 load 提供数据</a></li><li><a href="#fig-4">说明书示例中的两条转发路径</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">主队列提交，次队列先接收并解析</h3></div>
+    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 主队列提交，次队列先接收并解析 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="主队列提交，次队列先接收并解析">
+    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="主队列提交，次队列先接收并解析。主队列满时由次队列接收 store。次队列可以先求地址，再把条目交回主队列提交。">
+  </div>
+  <figcaption>
+    <span>主队列满时由次队列接收 store。次队列可以先求地址，再把条目交回主队列提交。</span>
+    <span class="figure-evidence">原文图 1–4，权 1、9、15。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">S2 的解析与 S0 的退休等待重叠</h3></div>
+    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 S2 的解析与 S0 的退休等待重叠 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="S2 的解析与 S0 的退休等待重叠">
+    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-2.svg" width="813" height="225"
+         style="--paper-width:813px" alt="S2 的解析与 S0 的退休等待重叠。示例中，S2 等待主槽期间就完成了地址解析。S0 释放主槽后，S2 保留解析结果回迁。">
+  </div>
+  <figcaption>
+    <span>示例中，S2 等待主槽期间就完成了地址解析。S0 释放主槽后，S2 保留解析结果回迁。</span>
+    <span class="figure-evidence">原文图 4、6，权 9–14、17–19。横轴是逻辑阶段。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">主队列、次队列和缓存如何为 load 提供数据</h3></div>
+    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 主队列、次队列和缓存如何为 load 提供数据 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="主队列、次队列和缓存如何为 load 提供数据">
+    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-3.svg" width="673" height="249"
+         style="--paper-width:673px" alt="主队列、次队列和缓存如何为 load 提供数据。旧 store 只覆盖部分请求字节且缓存命中时，组合结果用较新的 store 字节覆盖缓存中对应的旧字节。">
+  </div>
+  <figcaption>
+    <span>旧 store 只覆盖部分请求字节且缓存命中时，组合结果用较新的 store 字节覆盖缓存中对应的旧字节。</span>
+    <span class="figure-evidence">说明书图 5A 的 501–504 示例。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-4-title">说明书示例中的两条转发路径</h3></div>
+    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 说明书示例中的两条转发路径 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="说明书示例中的两条转发路径">
+    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-4.svg" width="655" height="179"
+         style="--paper-width:655px" alt="说明书示例中的两条转发路径。图 2 的部分实施例为主队列设置并行 load 管线，次队列只有单路查询。柱形是说明书中选取的示例时间。">
+  </div>
+  <figcaption>
+    <span>图 2 的部分实施例为主队列设置并行 load 管线，次队列只有单路查询。柱形是说明书中选取的示例时间。</span>
+    <span class="figure-evidence">图 2 的说明书示例数，用于对照选定路径。范围限定为该示例。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>较多 store 等待退休时，次队列可以吸收积压。地址解析有空闲资源时，还能提前处理部分条目。</dd></div><div><dt>代价和限制</dt><dd>load 经常命中次队列时，转发可能较慢，或只能接受更少并发查询。可用主槽何时释放也会影响回迁等待。</dd></div><div><dt>验证指标</dt><dd>记录队列满的概率、回迁等待、已解析回迁的比例和两条路径的 load 转发时间。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 1</dt><dd>主队列有空槽时接收 store。主队列满时，次队列接收请求并启动地址解析。主队列释放槽位后，条目可回迁。</dd></div><div class="claim"><dt>权 9</dt><dd>主、次队列分别开始求目标地址。主队列中对应的地址就绪后，可执行该 store。</dd></div><div class="claim"><dt>权 15</dt><dd>主、次队列的请求进入不同地址解析级。主队列对应地址就绪后，store 转入执行。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>独立权利要求 1</dt><dd>主队列满时，后续 store 进次队列并启动地址解析。主队列有空槽且次队列有请求时，可以回迁。</dd></div><div><dt>说明书图 4、图 5A–5B</dt><dd>图 4 给出地址解析流水级，图 5 比较了组合、转发和部分覆盖。</dd></div><div><dt>从属权利要求 17–19</dt><dd>地址已在上游解析完成时，条目可转入执行。地址尚未解析时，须进第一解析阶段。若该阶段资源不足，条目可暂留。</dd></div></dl>
+    <p class="source-links"><a href="https://patentsgazette.uspto.gov/week43/OG/html/1551-4/US12775463-20261027.html">专利原文</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">审读全文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2023-07-26</dd></div>
+    <div><dt>美国申请日</dt><dd>2025-04-10</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2026-10-27</dd></div>
+    <div><dt>美国申请号</dt><dd>US19/175,328</dd></div>
+  </dl>
+  <p><a href="https://patentsgazette.uspto.gov/week43/OG/html/1551-4/US12775463-20261027.html">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 授权全文转载，与 USPTO 公报和 Justia 授权全文对核，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5A、图 5B、图 6、图 7、图 8、图 9。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

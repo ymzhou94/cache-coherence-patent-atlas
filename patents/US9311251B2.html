@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9311251B2 按数据流保留 sticky 缓存行 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US9311251B2</code><span>美国授权专利</span></p>
+  <h1>按数据流保留 sticky 缓存行</h1>
+  <p class="english-title" lang="en">System cache with sticky allocation</p>
+  <p class="document-question">多个数据流共用 SLC 时，怎样给重要数据多留一次复用机会？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">单次使用的数据也要占一行，没来得及复用的共享数据可能因此被逐出。标签上的 sticky 状态和 group ID 分别表示行的保护状态和替换时应尊重的组边界。</p>
+    <p>缓存标签保存行状态和数据流组 ID。sticky 状态可阻止普通分配或其他组逐出受保护的行。带 sticky 提示的请求若命中普通行，该行仍保留原状态。</p>
+    <ol class="walkthrough"><li><h3>读取提示和组号</h3><p>请求方可带 sticky 提示与 group ID。请求进入 SLC 后，缓存先查 tag，取得已有行的状态。</p></li><li><h3>命中普通行时保持原状态</h3><p>带 sticky 提示的请求若命中普通行，缓存继续把它记作普通行。</p></li><li><h3>缺失时考虑普通候选</h3><p>sticky 请求缺失时，可用普通行优先承接分配。只有新分配的行写入 sticky 状态。</p></li><li><h3>检查是否允许同组替换</h3><p>没有普通候选时，实施例检查组内替换配置。启用且能找到合格的同组保护行时可以替换，否则可从内存返回数据并跳过在 SLC 分配。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>一个两路缓存组有 A、B 两行。A 是组 1 的 sticky 行，B 是组 2 的普通行。组 2 先带 sticky 提示访问 B，再读一个新地址 C。</dd></div><div><dt>处理结果</dt><dd>第一次命中后，B 仍是普通行。第二次若为 sticky 缺失且 B 符合条件，可以在 B 的位置分配 sticky 行 C，同时保留 A。</dd></div><div><dt>结果解读</dt><dd>这个例子的组相联度设为两路。普通行不会因为一次命中的提示就被算进保护容量。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">请求携带组号，标签保存行状态</a></li><li><a href="#fig-2">命中 B 时保留普通状态</a></li><li><a href="#fig-3">sticky 缺失时去哪里找牺牲行</a></li><li><a href="#fig-4">B 保留普通状态后的两次访问</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">请求携带组号，标签保存行状态</h3></div>
+    <a class="paper-open" href="../figures/US9311251B2/US9311251B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 请求携带组号，标签保存行状态 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="请求携带组号，标签保存行状态">
+    <img class="paper-image" src="../figures/US9311251B2/US9311251B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="请求携带组号，标签保存行状态。命中时可以读出已有行状态。满足分配或替换条件时，请求提示才决定新行状态。">
+  </div>
+  <figcaption>
+    <span>命中时可以读出已有行状态。满足分配或替换条件时，请求提示才决定新行状态。</span>
+    <span class="figure-evidence">图 3–5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="https://patentimages.storage.googleapis.com/08/55/c1/d27f4d97c756d7/US9311251.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">命中 B 时保留普通状态</h3></div>
+    <a class="paper-open" href="../figures/US9311251B2/US9311251B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 命中 B 时保留普通状态 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="命中 B 时保留普通状态">
+    <img class="paper-image" src="../figures/US9311251B2/US9311251B2-fig-2.svg" width="762" height="435"
+         style="--paper-width:762px" alt="命中 B 时保留普通状态。同一代理先命中普通行，再访问一个缺失的新地址。只有后者分配的新行可设 sticky。">
+  </div>
+  <figcaption>
+    <span>同一代理先命中普通行，再访问一个缺失的新地址。只有后者分配的新行可设 sticky。</span>
+    <span class="figure-evidence">图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>；教学顺序。 · <a href="https://patentimages.storage.googleapis.com/08/55/c1/d27f4d97c756d7/US9311251.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">sticky 缺失时去哪里找牺牲行</h3></div>
+    <a class="paper-open" href="../figures/US9311251B2/US9311251B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 sticky 缺失时去哪里找牺牲行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="sticky 缺失时去哪里找牺牲行">
+    <img class="paper-image" src="../figures/US9311251B2/US9311251B2-fig-3.svg" width="671" height="249"
+         style="--paper-width:671px" alt="sticky 缺失时去哪里找牺牲行。普通候选不足时，配置决定能否置换同组保护行。其他组的受保护行不在候选之列。">
+  </div>
+  <figcaption>
+    <span>普通候选不足时，配置决定能否置换同组保护行。其他组的受保护行不在候选之列。</span>
+    <span class="figure-evidence">图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="https://patentimages.storage.googleapis.com/08/55/c1/d27f4d97c756d7/US9311251.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">B 保留普通状态后的两次访问</h3></div>
+    <a class="paper-open" href="../figures/US9311251B2/US9311251B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 B 保留普通状态后的两次访问 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="B 保留普通状态后的两次访问">
+    <img class="paper-image" src="../figures/US9311251B2/US9311251B2-fig-4.svg" width="672" height="206"
+         style="--paper-width:672px" alt="B 保留普通状态后的两次访问。A 一直受保护。B 即使被带 sticky 提示的请求命中，仍可成为下次缺失的普通候选。">
+  </div>
+  <figcaption>
+    <span>A 一直受保护。B 即使被带 sticky 提示的请求命中，仍可成为下次缺失的普通候选。</span>
+    <span class="figure-evidence">图 7、图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>；教学状态。 · <a href="https://patentimages.storage.googleapis.com/08/55/c1/d27f4d97c756d7/US9311251.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>重要数据流在短时间内反复使用同一批数据，且普通容量仍充足时，保留 sticky 行能减少无关流造成的逐出。</dd></div><div><dt>代价和限制</dt><dd>保护行过多时，普通流更容易找不到可替换行。关闭同组替换或遇到跨组保护时，新的 sticky 请求也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录保护行留存时间、普通请求命中率、找不到替换候选的次数，以及行移交其他组后的驻留情况。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、14、20 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>数据和标签分开存储，标签保存状态和组 ID。普通分配不能替换 sticky 行。带 sticky 提示的请求命中普通行时，该行保留原状态。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>组内 sticky 行受保护，其他组取入的行不能替换它。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>带 sticky 提示的请求缺失时，可把普通行替换为 sticky 行。若命中普通行，则保留其普通状态。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>第 1 项限制对 sticky 行的替换，并要求带 sticky 提示的请求在命中普通行时保留行状态。第 8 项规定跨组保护。</dd></div><div><dt>图 7、图 8</dt><dd>图 7 分开处理命中和缺失，图 8 给出缺失时的候选查找。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>从属项规定何时允许同组的 sticky 行相互替换。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US9311251B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2012-08-27</dd></div>
+    <div><dt>美国申请日</dt><dd>2012-08-27</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2016-04-12</dd></div>
+    <div><dt>美国申请号</dt><dd>US13/594,932</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US9311251B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 图 3、图 4、图 5、图 7、图 8、图 2。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

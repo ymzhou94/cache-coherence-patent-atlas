@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11586552B2 部分有效缓存行的读补齐 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US11586552B2</code><span>美国授权专利</span></p>
+  <h1>部分有效缓存行的读补齐</h1>
+  <p class="english-title" lang="en">Memory cache with partial cache line valid states</p>
+  <p class="document-question">读到一条部分有效的缓存行时，怎样补齐空缺并保留缓存里的新值？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">代理可以只改写缓存行的一部分。此时内存有缺失条目的值，缓存则保存某些位置的新值。整行都从内存复制会盖掉缓存中的修改。</p>
+    <p>控制器按有效位掩码合并本地数据和下层返回的数据。它只填无效条目，保留缓存中已修改的条目，再用合并后的值应答。</p>
+    <ol class="walkthrough"><li><h3>从 tag 识别部分有效状态</h3><p>读请求命中处于 partial 状态的区段。这个区段至少有一个无效部分，以及一个相对内存已修改的部分。</p></li><li><h3>读取条目掩码</h3><p>掩码标出哪些位置要补齐、哪些位置可沿用缓存中的值。有效位表示本地条目可用，写回状态另行处理。</p></li><li><h3>用下层数据补齐</h3><p>控制器向内存取回对应内容。下层返回值只填进掩码标出的无效位置，已有效且修改过的值继续保留。</p></li><li><h3>返回合并后的值</h3><p>控制器用合并结果应答。需要写回时可另发下行请求，读合并的独立权项允许先返回结果。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>假设缓存行有四个条目，缓存里是 [9, 未知, 8, 未知]，有效位为 [1,0,1,0]。内存内容是 [7, 2, 6, 4]，第 0、2 项已在片内改为 9 和 8。</dd></div><div><dt>处理结果</dt><dd>内存结果到达后，控制器只填第 1、3 项，返回 [9, 2, 8, 4]。若把整段内存结果覆盖进来，第 0、2 项会退回 7 和 6。</dd></div><div><dt>结果解读</dt><dd>实际总线仍可能返回整段。片内只填两个位置，片外传输了多少字节还要看下层事务。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">掩码控制读合并</a></li><li><a href="#fig-2">下层取数和片内合并</a></li><li><a href="#fig-3">不同事务怎样改变有效位</a></li><li><a href="#fig-4">合并器逐字选择数据来源</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">掩码控制读合并</h3></div>
+    <a class="paper-open" href="../figures/US11586552B2/US11586552B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 掩码控制读合并 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="掩码控制读合并">
+    <img class="paper-image" src="../figures/US11586552B2/US11586552B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="掩码控制读合并。控制器用部分有效状态和逐条目掩码选择数据来源。缓存中较新的有效条目继续保留。">
+  </div>
+  <figcaption>
+    <span>控制器用部分有效状态和逐条目掩码选择数据来源。缓存中较新的有效条目继续保留。</span>
+    <span class="figure-evidence">图 1、图 2、图 3，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">下层取数和片内合并</h3></div>
+    <a class="paper-open" href="../figures/US11586552B2/US11586552B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 下层取数和片内合并 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="下层取数和片内合并">
+    <img class="paper-image" src="../figures/US11586552B2/US11586552B2-fig-2.svg" width="762" height="389"
+         style="--paper-width:762px" alt="下层取数和片内合并。部分有效的读请求命中后，控制器向下层取数。数据到达合并器后，只写入原先无效的位置。">
+  </div>
+  <figcaption>
+    <span>部分有效的读请求命中后，控制器向下层取数。数据到达合并器后，只写入原先无效的位置。</span>
+    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同事务怎样改变有效位</h3></div>
+    <a class="paper-open" href="../figures/US11586552B2/US11586552B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 不同事务怎样改变有效位 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="不同事务怎样改变有效位">
+    <img class="paper-image" src="../figures/US11586552B2/US11586552B2-fig-3.svg" width="672" height="206"
+         style="--paper-width:672px" alt="不同事务怎样改变有效位。局部写入可以增加有效位。外部通知按对应位置更新有效性。">
+  </div>
+  <figcaption>
+    <span>局部写入可以增加有效位。外部通知按对应位置更新有效性。</span>
+    <span class="figure-evidence">图 4、图 5、图 7、图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">合并器逐字选择数据来源</h3></div>
+    <a class="paper-open" href="../figures/US11586552B2/US11586552B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 合并器逐字选择数据来源 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="合并器逐字选择数据来源">
+    <img class="paper-image" src="../figures/US11586552B2/US11586552B2-fig-4.svg" width="670" height="292"
+         style="--paper-width:670px" alt="合并器逐字选择数据来源。缓存行的四项从左到右排列。第 0、2 项有效且已修改，响应沿用缓存里的 9 和 8。第 1、3 项无效，分别取下层返回的 2 和 4。蓝色标出被选中的输入及对应输出。">
+  </div>
+  <figcaption>
+    <span>缓存行的四项从左到右排列。第 0、2 项有效且已修改，响应沿用缓存里的 9 和 8。第 1、3 项无效，分别取下层返回的 2 和 4。蓝色标出被选中的输入及对应输出。</span>
+    <span class="figure-evidence">图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>；数值为自造教学输入。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>只要部分条目已改写，一次合并就能保住这些新值，并补齐缺失部分。</dd></div><div><dt>代价和限制</dt><dd>整段原本就有效时，合并没有缺失条目可填。读路径触发条件、标签位数和掩码读写吞吐都影响实现成本。</dd></div><div><dt>验证指标</dt><dd>核对返回值和无效位变更次数，再记录下层真正读取了多少字节，以及同一区段第二次读取的延迟。</dd></div></dl>
+    <a class="lab-link" href="../lab.html#partial-line">运行对应原型</a>
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>读取同时含无效部分和已修改部分的区段时，从内存取数并只填无效部分，再用合并结果应答。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></dt><dd>从属实现请求将有效条目的值写到内存。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>取回内存中的值后，控制器只更新无效位置，再连同片内已修改部分一起返回。</dd></div><div><dt>图 2、图 3、图 6</dt><dd>图 2 标出有效性元数据，图 3 显示读前后的状态，图 6 给出处理流程。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>从属权 8 涉及单字节有效性和分别维护两部分 tag。独立权项保留了选择实现粒度的空间。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US11586552B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2021-05-13</dd></div>
+    <div><dt>美国申请日</dt><dd>2021-05-13</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2023-02-21</dd></div>
+    <div><dt>美国申请号</dt><dd>US17/320,172</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US11586552B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 20 项权利要求。</p>
+  <p>核对过的图号为 图 1、图 2、图 3、图 6、图 4、图 5、图 7、图 8。</p>
+  </details>
+  <h2>同族对照</h2><ul class="related"><li><a href="US12007901B2.html"><code>US12007901B2</code> 部分写入、有效掩码与回送内存</a></li></ul>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>

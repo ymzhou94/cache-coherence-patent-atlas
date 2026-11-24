@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9218286B2 部分写缺失先建行，暂借 ECC 位标有效 · 缓存与一致性专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css">
+
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>缓存与一致性专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title">
+<div class="frame">
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
+  <p class="document-id"><code>US9218286B2</code><span>美国授权专利</span></p>
+  <h1>部分写缺失先建行，暂借 ECC 位标有效</h1>
+  <p class="english-title" lang="en">System cache with partial write valid states</p>
+  <p class="document-question">局部写未命中时，能否先存新值，到以后再取旧行？</p>
+</div>
+</div>
+<div class="frame article-layout">
+<div class="article-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
+  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+    <h2 id="mechanism-title">工作机制</h2>
+    <p class="section-intro">部分写只提供几个词的新值。如果先取整条旧行，片上写入也得等它返回。缓存可先存新值，用原本留给 ECC 的位标出已经写入的位置。</p>
+    <p>部分写缺失时，缓存先分配行并存新值，同一位置原有的 ECC 位暂用作有效掩码。以后覆盖、读取缺失部分或写回时，再用掩码判断哪些词可用。</p>
+    <ol class="walkthrough"><li><h3>部分写未命中时先分配</h3><p>控制器确认本次请求只写部分词且地址未命中。它先分配空间存新值，不读取旧整行。</p></li><li><h3>标签标为 partial dirty</h3><p>标签状态决定同一组存储位怎样解释。处于 partial dirty 时，用这些位记录哪些词已写入并有效。</p></li><li><h3>继续合并后续局部写</h3><p>同一行再被部分写命中时，控制器只覆盖指定的词，并更新对应掩码。未写过的词仍无效。</p></li><li><h3>读取部分脏行时先写回</h3><p>按权利要求 14 的读路径，控制器只把有效词写回内存，再从下层取整行应答。未更新位置的内存值要保留。</p></li></ol>
+  </section>
+  <section class="article-section" id="example" aria-labelledby="example-title">
+    <h2 id="example-title">示例</h2>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>内存旧行是 [1,2,3,4]。部分写缺失仅把索引 1 的词改为 9，有效掩码是 [0,1,0,0]。后来请求读取完整一行。</dd></div><div><dt>处理结果</dt><dd>首次写入跳过旧整行读取。全行读到来后，先把索引 1 的 9 写回，内存变成 [1,9,3,4]，再取回完整行应答。</dd></div><div><dt>结果解读</dt><dd>权利要求 14 先在内存更新有效词，再取完整行。US11586552B2 先取回数据，再由缓存按有效位合并。</dd></div></dl>
+  </section>
+  <section class="figure-section" id="figures" aria-labelledby="figures-title">
+    <h2 id="figures-title">图解</h2>
+    <nav class="figure-jump" aria-label="跳到配图"><ul><li><a href="#fig-1">ECC 位何时用来记录有效词</a></li><li><a href="#fig-2">两次部分写可共用一行</a></li><li><a href="#fig-3">先写回有效词，再从内存读整行</a></li><li><a href="#fig-4">首次写与稍后整行读的访问量</a></li></ul></nav>
+    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
+    
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">ECC 位何时用来记录有效词</h3></div>
+    <a class="paper-open" href="../figures/US9218286B2/US9218286B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 ECC 位何时用来记录有效词 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="ECC 位何时用来记录有效词">
+    <img class="paper-image" src="../figures/US9218286B2/US9218286B2-fig-1.svg" width="982" height="462"
+         style="--paper-width:982px" alt="ECC 位何时用来记录有效词。相同的物理存储位在 partial dirty 状态下解释为有效掩码。">
+  </div>
+  <figcaption>
+    <span>相同的物理存储位在 partial dirty 状态下解释为有效掩码。</span>
+    <span class="figure-evidence">图 6、图 7、图 10，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>。 · <a href="https://patentimages.storage.googleapis.com/f4/87/ad/47f73b25ba73a2/US9218286.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">两次部分写可共用一行</h3></div>
+    <a class="paper-open" href="../figures/US9218286B2/US9218286B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 两次部分写可共用一行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="两次部分写可共用一行">
+    <img class="paper-image" src="../figures/US9218286B2/US9218286B2-fig-2.svg" width="781" height="267"
+         style="--paper-width:781px" alt="两次部分写可共用一行。首次部分写跳过旧整行读取。后续部分写可进入同一行，并在掩码中标记已写的词。">
+  </div>
+  <figcaption>
+    <span>首次部分写跳过旧整行读取。后续部分写可进入同一行，并在掩码中标记已写的词。</span>
+    <span class="figure-evidence">图 6–8、图 10，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>；教学轨迹。 · <a href="https://patentimages.storage.googleapis.com/f4/87/ad/47f73b25ba73a2/US9218286.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-3-title">先写回有效词，再从内存读整行</h3></div>
+    <a class="paper-open" href="../figures/US9218286B2/US9218286B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 先写回有效词，再从内存读整行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="先写回有效词，再从内存读整行">
+    <img class="paper-image" src="../figures/US9218286B2/US9218286B2-fig-3.svg" width="762" height="435"
+         style="--paper-width:762px" alt="先写回有效词，再从内存读整行。权利要求 14 的读路径先用写掩码更新内存，再取回一份已有这些更新的整行。">
+  </div>
+  <figcaption>
+    <span>权利要求 14 的读路径先用写掩码更新内存，再取回一份已有这些更新的整行。</span>
+    <span class="figure-evidence">图 9、图 11，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>；流程简化。 · <a href="https://patentimages.storage.googleapis.com/f4/87/ad/47f73b25ba73a2/US9218286.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">首次写与稍后整行读的访问量</h3></div>
+    <a class="paper-open" href="../figures/US9218286B2/US9218286B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 首次写与稍后整行读的访问量 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="首次写与稍后整行读的访问量">
+    <img class="paper-image" src="../figures/US9218286B2/US9218286B2-fig-4.svg" width="672" height="206"
+         style="--paper-width:672px" alt="首次写与稍后整行读的访问量。在 [1,2,3,4] 中将索引 1 改为 9。随后读整行时，先更新内存中的这一词，再得到 [1,9,3,4]。">
+  </div>
+  <figcaption>
+    <span>在 [1,2,3,4] 中将索引 1 改为 9。随后读整行时，先更新内存中的这一词，再得到 [1,9,3,4]。</span>
+    <span class="figure-evidence">图 7、图 10、图 11，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>；教学算例。 · <a href="https://patentimages.storage.googleapis.com/f4/87/ad/47f73b25ba73a2/US9218286.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+  </section>
+  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">收益与代价</h2>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>部分写之后很快写满整行，或可以直接带掩码写回时，首次写入的等待和即时片外读量可能减少。</dd></div><div><dt>代价和限制</dt><dd>随后立即读取部分脏行时，按位写回加整行重取会增加后续开销。复用 ECC 位也会改变保护方式，增加状态管理。</dd></div><div><dt>验证指标</dt><dd>测首次局部写的返回时间、整行读取延迟、有效词写回字节数、部分脏状态留存时间和 ECC 位用途切换。</dd></div></dl>
+    
+  </section>
+  <section class="claim-section" id="claims" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、7、14、18 项。下方列出部分权利要求的中文释义。</p>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>部分写缺失时先分配缓存行，跳过旧行读取，把原来的 ECC 位用作有效位置标记。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>读取部分脏行命中时，只把掩码标为有效的词写回，再重取完整缓存行应答。</dd></div></dl>
+    <h3 class="evidence-heading">原文位置</h3>
+    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>第 1 项限定首次部分写缺失时先建行和重新解释 ECC 位。第 14 项限定读部分脏行时先写回有效词、再重取。</dd></div><div><dt>图 6–11</dt><dd>图 6–11 给出首次写入、第二次部分写入、有效状态标记和后续读写回流程。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>从属项进一步限定 partial dirty 状态、word mask、只写有效词和后续读写分支。</dd></div></dl>
+    <p class="source-links"><a href="https://patents.google.com/patent/US9218286B2/en">专利原文</a></p>
+  </section>
+</div>
+<aside class="record-panel" aria-label="专利记录与来源">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">图解</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+  </nav>
+  <h2>专利记录</h2>
+  <dl class="record-details">
+    <div><dt>最早优先权</dt><dd>2012-09-27</dd></div>
+    <div><dt>美国申请日</dt><dd>2012-09-27</dd></div>
+    <div><dt>公开 / 授权日</dt><dd>2015-12-22</dd></div>
+    <div><dt>美国申请号</dt><dd>US13/629,196</dd></div>
+  </dl>
+  <p><a href="https://patents.google.com/patent/US9218286B2/en">打开专利原件</a></p>
+  <details><summary>全文审读记录</summary>
+  <p>全文来源为 Google Patents 公布全文与图文说明，共记录 23 项权利要求。</p>
+  <p>核对过的图号为 图 6、图 7、图 8、图 10、图 9、图 11。</p>
+  </details>
+  
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-23</span>
+</div></footer>
+</body>
+</html>
