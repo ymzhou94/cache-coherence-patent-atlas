@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11704245B2 把缓存容量动态改作直接寻址 RAM · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
-  <p class="document-id"><code>US11704245B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="document-id"><code>US11704245B2</code><span>美国授权专利</span><time datetime="2023-07-18">2023-07-18</time></p>
   <h1>把缓存容量动态改作直接寻址 RAM</h1>
   <p class="english-title" lang="en">Dynamic allocation of cache memory as RAM</p>
   <p class="document-question">实时任务需要确定的片上空间时，怎样把部分缓存容量留给直接寻址？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">收到地址范围重分配请求后，控制器设置实时内存指示，将选定缓存行用于直接寻址 RAM。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>重分配期间这些行不参加普通缓存操作，因而会减少普通访问可用的缓存容量。</dd></div><div><dt>验证方法</dt><dd>固定访问流，在重分配启用前后读取同一直接寻址范围和普通缓存组。记录地址命中直接寻址路径的次数和减少的可分配路数。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11704245B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">音频和显示代理往往要在固定时限内取到数据。只要分配仍有效，选定的物理容量就能通过特定地址直接访问，并避开常规替换。</p>
     <p>收到指定地址区的重分配请求后，控制器设置实时内存指示，将选定的行转成直接寻址 RAM。专利也描述了另一种办法，用非线性预装让系统内存缓冲区留在缓存中。</p>
     <ol class="walkthrough"><li><h3>选择要启用的地址区</h3><p>软件或处理器提交重分配请求，指定地址区。控制逻辑找出可承担该区域的缓存行或缓存路。</p></li><li><h3>按实现要求清理原有数据</h3><p>转换前可先对选中的位置执行 flush。其余行继续参与常规缓存替换。</p></li><li><h3>设置实时标记和地址映射</h3><p>地址表把该区标成活动状态，选中的容量供直接寻址使用，普通 tag 查找和替换绕开这些位置。实时通路可以获得更高的 QoS。</p></li><li><h3>服务访问并在停用时回收</h3><p>访问落在直接寻址区时，控制器走相应通路。安全区还要检查请求来源。停用后收回空间，之后的访问按当时状态返回数据、默认值或错误。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>假设共享缓存有 8 个等大的 ways。一个实时缓冲区要求把其中 2 个改作直接寻址 RAM。</dd></div><div><dt>处理结果</dt><dd>转换完成后，实时访问根据约定地址找到这 2 个 ways。普通替换最多使用余下的 6 个。若旧位置有脏数据且实现支持 flush，先完成清理。</dd></div><div><dt>结果解读</dt><dd>实际保留比例、清理成本和 QoS 提升幅度取决于实现。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">部分缓存路改作直接寻址区</a></li><li><a href="#fig-2">重分配时的消息顺序</a></li><li><a href="#fig-3">谁可以访问直接寻址区</a></li><li><a href="#fig-4">直接寻址与在缓存中预装</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>小工作集在一段时间内必须常驻时，直接寻址保留可减少普通替换造成的访问抖动。</dd></div><div><dt>代价和限制</dt><dd>实时区扩大后，普通流量能用的缓存缩小，可能增加片外访问。切换时还可能需要 flush 和更新映射。</dd></div><div><dt>验证指标</dt><dd>记录实时访问是否超时，同时测普通流量的命中率、重分配延迟和脏写回量。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设共享缓存有 8 个等大的 ways。一个实时缓冲区要求把其中 2 个改作直接寻址 RAM。</dd></div><div><dt>处理结果</dt><dd>转换完成后，实时访问根据约定地址找到这 2 个 ways。普通替换最多使用余下的 6 个。若旧位置有脏数据且实现支持 flush，先完成清理。</dd></div><div><dt>结果解读</dt><dd>实际保留比例、清理成本和 QoS 提升幅度取决于实现。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11704245B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>控制器根据重分配请求设置实时标记，停止对指定行执行常规缓存操作，改成直接寻址 RAM。</dd></div><div><dt>图 1、图 7</dt><dd>图 1 和图 7 描述地址区状态及转换步骤。图 9 和图 14 描述通过普通缓存驻留缓冲区的实施方式。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US11704245B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11704245B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>从属权项加入实时虚拟通路的优先级、安全检查和转换前 flush 等约束。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11704245B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US11893251B2.html#engineering">按缺失率调整系统内存缓冲区的缓存预装顺序</a>
+<p>普通缓存预装与直寻址</p></li></ul>
+    <p><a href="../index.html?patent=US11704245B2#knowledge">在全量关系图上定位 US11704245B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

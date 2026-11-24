@@ -6,7 +6,8 @@
   const year = document.getElementById("priority-year");
   const status = document.getElementById("result-count");
   const empty = document.getElementById("empty-results");
-  let category = "all";
+  const initial = new URLSearchParams(window.location.search).get("topic");
+  let category = buttons.some(button => button.dataset.filter === initial) ? initial : "all";
 
   function matchesYear(card) {
     if (year.value === "recent-publication") return card.dataset.published >= year.selectedOptions[0].dataset.from;
@@ -18,6 +19,9 @@
   }
 
   function render() {
+    for (const button of buttons) {
+      button.setAttribute("aria-pressed", String(button.dataset.filter === category));
+    }
     const words = search.value.toLowerCase().trim().split(/\s+/u);
     let count = 0;
     for (const card of cards) {
@@ -34,9 +38,6 @@
   for (const button of buttons) {
     button.addEventListener("click", () => {
       category = button.dataset.filter;
-      for (const candidate of buttons) {
-        candidate.setAttribute("aria-pressed", String(candidate === button));
-      }
       render();
     });
   }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250315262A1 把二级 trace cache 的轨迹提前送到前端 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
-  <p class="document-id"><code>US20250315262A1</code><span>美国公开申请</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="document-id"><code>US20250315262A1</code><span>美国公开申请</span><time datetime="2025-10-09">2025-10-09</time></p>
   <h1>把二级 trace cache 的轨迹提前送到前端</h1>
   <p class="english-title" lang="en">Hierarchical Trace Cache</p>
   <p class="document-question">较长的指令轨迹留在远端缓存时，怎样使二级命中赶在前端需要之前返回？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">二级轨迹缓存的预取结果先放入缓冲，前端消费后再按相应执行指标决定是否把轨迹提升出缓冲。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>预取预测须能找到已存的轨迹。能否缩短等待取决于返回是否早于需求，提升还要看执行反馈。</dd></div><div><dt>验证方法</dt><dd>固定循环轨迹、二级读取延迟和预取预测序列，对照缓冲消费即提升与按执行指标提升。记录实际消费、提升和一级热轨迹逐出的次数，再看前端供给等待。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US20250315262A1">原文权利要求 16（全文）</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。</p>
     <p>预测器根据已执行路径的地址签名判断将来会用到的轨迹，提前查二级 trace cache。预取缓冲区可承接查到的轨迹，再按消费结果和执行指标决定是否放入一级。</p>
     <ol class="walkthrough"><li><h3>按地址路径预测候选</h3><p>签名来自执行路径上的指令地址。原文给出与历史签名异或的实现。</p></li><li><h3>二级命中后写入预取缓冲区</h3><p>在较慢二级返回时，缓冲区接收轨迹而不急于替换一级条目。</p></li><li><h3>前端消费</h3><p>前端到达对应路径时，可以直接使用缓冲区内已返回的轨迹。</p></li><li><h3>决定是否将已用轨迹提升</h3><p>部分权项比较消费结果，按实际使用决定是否放入一级。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>同一循环的常用轨迹已进入二级 trace cache，一级中当前没有该轨迹。路径预测器提前识别出即将访问它的路径。</dd></div><div><dt>处理结果</dt><dd>二级查读在需求前启动。若轨迹先到预取缓冲区，前端可直接消费，之后再按指标决定是否提升。</dd></div><div><dt>结果解读</dt><dd>把轨迹命中、及时返回和实际消费分开计数，才能判断是否覆盖前端等待。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">路径签名提前查询二级 trace cache</a></li><li><a href="#fig-2">二级轨迹从预取缓冲区提供给前端</a></li><li><a href="#fig-3">按预测领先时间区分结果</a></li><li><a href="#fig-4">循环轨迹由二级供应</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">二级轨迹从预取缓冲区提供给前端</a></li><li><a href="#fig-1">路径签名提前查询二级 trace cache</a></li><li><a href="#fig-3">按预测领先时间区分结果</a></li><li><a href="#fig-4">循环轨迹由二级供应</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">路径签名提前查询二级 trace cache</h3></div>
-    <a class="paper-open" href="../figures/US20250315262A1/US20250315262A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 路径签名提前查询二级 trace cache 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="路径签名提前查询二级 trace cache">
-    <img class="paper-image" src="../figures/US20250315262A1/US20250315262A1-fig-1.svg" width="750" height="326"
-         style="--paper-width:750px" alt="路径签名提前查询二级 trace cache。分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。">
-  </div>
-  <figcaption>
-    <span>分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。</span>
-    <span class="figure-evidence">图 11–12，权利要求 1–4。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250315262">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250315262A1">专利全文</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">二级轨迹从预取缓冲区提供给前端</h3></div>
     <a class="paper-open" href="../figures/US20250315262A1/US20250315262A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 二级轨迹从预取缓冲区提供给前端 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>把轨迹命中、及时返回和实际消费分开计数，才能判断是否覆盖前端等待。</span>
     <span class="figure-evidence">图 12、19，权利要求 1、16。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250315262">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250315262A1">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">路径签名提前查询二级 trace cache</h3></div>
+    <a class="paper-open" href="../figures/US20250315262A1/US20250315262A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 路径签名提前查询二级 trace cache 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="路径签名提前查询二级 trace cache">
+    <img class="paper-image" src="../figures/US20250315262A1/US20250315262A1-fig-1.svg" width="750" height="326"
+         style="--paper-width:750px" alt="路径签名提前查询二级 trace cache。分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。">
+  </div>
+  <figcaption>
+    <span>分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。</span>
+    <span class="figure-evidence">图 11–12，权利要求 1–4。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250315262">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250315262A1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>预测准确且领先时间足够时，前端可借远端轨迹维持取指带宽。</dd></div><div><dt>代价和限制</dt><dd>二级端口和预取缓冲区有限。预测错误会产生无用查读，激进提升还可能挤掉一级热轨迹。</dd></div><div><dt>验证指标</dt><dd>分开计量一级直接命中、二级预取在使用前到达及二级晚到，另测每次成功预取省下的前端等待周期。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>同一循环的常用轨迹已进入二级 trace cache，一级中当前没有该轨迹。路径预测器提前识别出即将访问它的路径。</dd></div><div><dt>处理结果</dt><dd>二级查读在需求前启动。若轨迹先到预取缓冲区，前端可直接消费，之后再按指标决定是否提升。</dd></div><div><dt>结果解读</dt><dd>把轨迹命中、及时返回和实际消费分开计数，才能判断是否覆盖前端等待。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,17 @@
     <dl class="explanation evidence"><div><dt>图 11–12，权利要求 1–4</dt><dd>预测器根据已执行路径的地址签名判断将来会用到的轨迹，提前查二级 trace cache。预取缓冲区可承接查到的轨迹，再按消费结果和执行指标决定是否放入一级。</dd></div><div><dt>图 12、19，权利要求 1、16</dt><dd>把轨迹命中、及时返回和实际消费分开计数，才能判断是否覆盖前端等待。</dd></div><div><dt>图 12、28，权利要求 14–16</dt><dd>二级端口和预取缓冲区有限。预测错误会产生无用查读，激进提升还可能挤掉一级热轨迹。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US20250315262A1/en">专利原文</a> · <a href="https://eureka.patsnap.com/patent/US20250315262A1">审读全文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12547409B2.html#engineering">支持多种长度的分层 trace cache</a>
+<p>预取识别与长轨迹供给</p></li><li><a href="US20260211681A1.html#engineering">按页定位二级 trace cache 的失效范围</a>
+<p>继续申请聚焦维护</p></li></ul>
+    <p><a href="../index.html?patent=US20250315262A1#knowledge">在全量关系图上定位 US20250315262A1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +141,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11775811B2 按执行依赖提高 CPU、GPU 和神经处理器的重叠 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CLPC 与性能调节</span></p>
-  <p class="document-id"><code>US11775811B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="document-id"><code>US11775811B2</code><span>美国授权专利</span><time datetime="2023-10-03">2023-10-03</time></p>
   <h1>按执行依赖提高 CPU、GPU 和神经处理器的重叠</h1>
   <p class="english-title" lang="en">Scheduling heterogeneous execution on heterogeneous hardware</p>
   <p class="document-question">两个节点都已就绪，为什么先做其中一个能减少不同处理器的空转？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">执行框架按算法依赖和处理器分配生成图，再按拓扑顺序调度。多个节点都已就绪时，优先选择能让更多处理器同时工作的节点。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>前置依赖必须先满足，节点对应可执行其算法的处理器。选择次序改变的是可并行时段，也可能改变跨处理器传输的排队。</dd></div><div><dt>验证方法</dt><dd>在相同依赖图、节点用时与传输代价下，对照就绪节点按固定顺序发出和按并行度择优。记录各处理器忙闲区间、传输等待与端到端完成时间。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11775811B2/en">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">这是异构工作分派，而非专利名称所指的 CLPC。它影响各处理器忙闲分布，也可以为能效策略提供选择空间。</p>
     <p>编译和运行时根据算法输入、输出和依赖生成有向图。每个节点对应一种处理器。框架遍历图时，从可执行节点中选择能让更多处理器并行工作的节点。</p>
     <ol class="walkthrough"><li><h3>提取算法关系</h3><p>把系统功能分解为算法，解析输入、输出和时间依赖，确定哪些节点需先完成。</p></li><li><h3>节点绑定执行引擎</h3><p>图节点带相应处理器信息。运行端可能使用 CPU、GPU、专用神经处理器中的至少两种。</p></li><li><h3>维护合法就绪集合</h3><p>拓扑遍历只让所有前置结果已就绪的节点参与选择。相同处理器不一定能服务两个候选。</p></li><li><h3>动态重新评估</h3><p>有节点完成后，框架重新计算哪些候选会启用更多执行资源。后续仍须维护依赖顺序。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>示例中 A 和 B 都在 CPU 运行，各需 2 拍。只有 A 能解锁 GPU 节点 G，G 需 5 拍。最终合流需两条支路都完成。</dd></div><div><dt>处理结果</dt><dd>先 A 后 B 时，G 可在 t2 开始并与 B 重叠，合流 t7。先 B 后 A 时，G 到 t4 才开始，合流 t9。</dd></div><div><dt>结果解读</dt><dd>纯时序算例不含格式转换和共享资源影响。这里选能够释放并行资源的就绪节点，后续仍要等所有依赖。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">示例 DAG 区分前置依赖和执行资源</a></li><li><a href="#fig-2">拓扑遍历在一个节点完成后更新</a></li><li><a href="#fig-3">选择顺序怎样改变并行区间</a></li><li><a href="#fig-4">同一依赖图的完成时间</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">拓扑遍历在一个节点完成后更新</a></li><li><a href="#fig-1">示例 DAG 区分前置依赖和执行资源</a></li><li><a href="#fig-3">选择顺序怎样改变并行区间</a></li><li><a href="#fig-4">同一依赖图的完成时间</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">示例 DAG 区分前置依赖和执行资源</h3></div>
-    <a class="paper-open" href="../figures/US11775811B2/US11775811B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 示例 DAG 区分前置依赖和执行资源 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="示例 DAG 区分前置依赖和执行资源">
-    <img class="paper-image" src="../figures/US11775811B2/US11775811B2-fig-1.svg" width="750" height="326"
-         style="--paper-width:750px" alt="示例 DAG 区分前置依赖和执行资源。A、B 开始时都就绪，但只有 A 向 GPU 提供依赖。示例与说明书拓扑策略相符。">
-  </div>
-  <figcaption>
-    <span>A、B 开始时都就绪，但只有 A 向 GPU 提供依赖。示例与说明书拓扑策略相符。</span>
-    <span class="figure-evidence">图 3–4，权 1；教学 DAG · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/11775811">专利 PDF</a> · <a href="https://patents.google.com/patent/US11775811B2/en">专利全文</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">拓扑遍历在一个节点完成后更新</h3></div>
     <a class="paper-open" href="../figures/US11775811B2/US11775811B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 拓扑遍历在一个节点完成后更新 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>先释放 G，随后两个引擎各有可执行任务。</span>
     <span class="figure-evidence">图 4、7，权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/11775811">专利 PDF</a> · <a href="https://patents.google.com/patent/US11775811B2/en">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">示例 DAG 区分前置依赖和执行资源</h3></div>
+    <a class="paper-open" href="../figures/US11775811B2/US11775811B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 示例 DAG 区分前置依赖和执行资源 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="示例 DAG 区分前置依赖和执行资源">
+    <img class="paper-image" src="../figures/US11775811B2/US11775811B2-fig-1.svg" width="750" height="326"
+         style="--paper-width:750px" alt="示例 DAG 区分前置依赖和执行资源。A、B 开始时都就绪，但只有 A 向 GPU 提供依赖。示例与说明书拓扑策略相符。">
+  </div>
+  <figcaption>
+    <span>A、B 开始时都就绪，但只有 A 向 GPU 提供依赖。示例与说明书拓扑策略相符。</span>
+    <span class="figure-evidence">图 3–4，权 1；教学 DAG · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/11775811">专利 PDF</a> · <a href="https://patents.google.com/patent/US11775811B2/en">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>依赖图足够宽且空闲执行引擎可以自然重叠时，缩短关键路径。</dd></div><div><dt>代价和限制</dt><dd>跨引擎搬运昂贵或多引擎争用内存时，多用一台执行引擎未必有收益。</dd></div><div><dt>验证指标</dt><dd>对照就绪顺序，检查各引擎忙闲区间、临界路径时间和跨引擎传输量。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>示例中 A 和 B 都在 CPU 运行，各需 2 拍。只有 A 能解锁 GPU 节点 G，G 需 5 拍。最终合流需两条支路都完成。</dd></div><div><dt>处理结果</dt><dd>先 A 后 B 时，G 可在 t2 开始并与 B 重叠，合流 t7。先 B 后 A 时，G 到 t4 才开始，合流 t9。</dd></div><div><dt>结果解读</dt><dd>纯时序算例不含格式转换和共享资源影响。这里选能够释放并行资源的就绪节点，后续仍要等所有依赖。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>权 1、10、19</dt><dd>方法、系统和存储介质分别覆盖节点选择及依赖约束。</dd></div><div><dt>图 2–3</dt><dd>框架组件、DAG 生成和处理器关联。</dd></div><div><dt>图 4–7</dt><dd>拓扑遍历和选择不同资源节点的实施方式。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11775811B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
+<p>跨处理器依赖与 GPU 内部分派</p></li></ul>
+    <p><a href="../index.html?patent=US11775811B2#knowledge">在全量关系图上定位 US11775811B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

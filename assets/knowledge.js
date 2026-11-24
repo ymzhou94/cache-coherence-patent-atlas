@@ -337,7 +337,13 @@
     }
   });
   query.addEventListener("input", () => { status.hidden = true; });
+  const patent = new URLSearchParams(window.location.search).get("patent");
   createOverview();
-  show(start, {spotlight: false});
+  if (Object.hasOwn(patents, patent)) {
+    query.value = patent;
+    show(patent, {zoomTo: true});
+  } else {
+    show(start, {spotlight: false});
+  }
 })();
 

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9158685B2 请求侧缓存提示与按来源释放 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
-  <p class="document-id"><code>US9158685B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="document-id"><code>US9158685B2</code><span>美国授权专利</span><time datetime="2015-10-13">2015-10-13</time></p>
   <h1>请求侧缓存提示与按来源释放</h1>
   <p class="english-title" lang="en">System cache with cache hint control</p>
   <p class="document-question">数据只会读一次，或已经完成交接时，代理可以怎样提示 SLC 回收空间？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">释放提示命中时，控制器核对请求源与原分配源，再决定是否释放已有的缓存行。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>资格检查针对命中的地址及发起者，释放提示不会为缺失请求新分配行。</dd></div><div><dt>验证方法</dt><dd>以同一地址和相同初始缓存状态发出释放提示，只改变请求源是否等于原分配源。记录命中、来源匹配与目标行有效位。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9158685B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">请求方可能提前知道数据只消费一次，也可能知道所需的数据已接走。请求可以带上普通分配、sticky 分配、不分配或释放提示。是否能释放，还取决于命中行的来源和状态。</p>
     <p>代理在请求里携带缓存提示。do-not-allocate 缺失时跳过回填，命中时可以保留已有状态。de-allocate 不发起新分配，合格的命中可能释放现有行或提高其被替换的优先级。独立权利要求 1 要求核对请求源和原分配源。</p>
     <ol class="walkthrough"><li><h3>在请求中带上提示</h3><p>代理发送地址和 cache hint。有的实现还携带组标识。提示描述预计用途，地址照常传送。</p></li><li><h3>查找地址对应的行</h3><p>do-not-allocate 请求缺失时可以完成访问并跳过新行分配，命中时可保留已有行。</p></li><li><h3>核对释放请求的来源</h3><p>de-allocate 请求命中后，控制器按权利要求 1 检查请求来源是否与该行原来的分配来源相同。匹配时才有释放资格。</p></li><li><h3>按行状态处置</h3><p>干净行可以失效。对脏行，有的实施方式将它列为优先替换候选，或通过一致性事务转移所有权，以保住修改过的值。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>干净行 X 由 CPU 代理 A 分配，另一个地址 Y 此时不在 SLC。A 对 X 发 de-allocate，对 Y 发 do-not-allocate。</dd></div><div><dt>处理结果</dt><dd>X 命中且来源匹配，可以释放。Y 从合适来源取得值，并跳过在 SLC 分配。</dd></div><div><dt>结果解读</dt><dd>如果后面还频繁读 X，提前释放会增加重取。比较提示收益时，要把这些后续访问也放进测试序列。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">释放请求怎样核对行的来源</a></li><li><a href="#fig-2">不分配提示在命中和缺失时的处理</a></li><li><a href="#fig-3">命中后还要看来源是否匹配</a></li><li><a href="#fig-4">省下的回填与后续重取</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>一次性请求较多时，跳过回填可以减少对活跃行的替换。知道行已用完且符合归属条件时，代理可以早点交还空间。</dd></div><div><dt>代价和限制</dt><dd>误判复用会损失之后的命中。处理脏行还可能要写回或转移所有权。</dd></div><div><dt>验证指标</dt><dd>按每种缓存提示分别统计省去的回填、释放后重取、释放或降低驻留优先级的次数，以及写回流量。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>干净行 X 由 CPU 代理 A 分配，另一个地址 Y 此时不在 SLC。A 对 X 发 de-allocate，对 Y 发 do-not-allocate。</dd></div><div><dt>处理结果</dt><dd>X 命中且来源匹配，可以释放。Y 从合适来源取得值，并跳过在 SLC 分配。</dd></div><div><dt>结果解读</dt><dd>如果后面还频繁读 X，提前释放会增加重取。比较提示收益时，要把这些后续访问也放进测试序列。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,16 @@
     <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>带释放提示的请求命中后，要满足请求来源与原分配来源一致等条件才可释放该行。</dd></div><div><dt>图 5–7</dt><dd>图中列出请求字段和提示种类，并按命中与缺失画出处理路径。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 与 8</dt><dd>从属项描述缺失时跳过分配，以及另外支持的 hint 类型。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US9158685B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US9311251B2.html#engineering">按数据流保留 sticky 缓存行</a>
+<p>命中提示与持久状态</p></li></ul>
+    <p><a href="../index.html?patent=US9158685B2#knowledge">在全量关系图上定位 US9158685B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +143,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11144476B2 多端口缓存的 LRU 排名更新 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
-  <p class="document-id"><code>US11144476B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="document-id"><code>US11144476B2</code><span>美国授权专利</span><time datetime="2021-10-12">2021-10-12</time></p>
   <h1>多端口缓存的 LRU 排名更新</h1>
   <p class="english-title" lang="en">Least recently used ranking in a multi-port cache</p>
   <p class="document-question">两个端口同拍命中同一组的不同 way，哪一路先升到 MRU？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">缓存控制器对同拍访问的两路比较旧替换排名和阈值，只更新选中的一路。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>两个端口在同一访问周期命中同组的不同路。不同组维护各自的替换状态。</dd></div><div><dt>验证方法</dt><dd>固定初始路排名和双命中序列，分别运行按阈值选一路和按访问总序更新两路的模型。记录该拍写入的替换状态及紧随其后的缺失选择了哪一路。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11144476B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">多端口缓存可以并行读数据，同一组却通常只有一份替换状态。两个端口都读到数据时，如果本拍只能改一次排名，另一路的更新就要等。</p>
     <p>控制器按组记录各 way 的替换排名。同组两路同时命中时，控制器用旧排名和阈值选出本拍先更新的一路。部分实现还把另一路的标识写进反馈寄存器。</p>
     <ol class="walkthrough"><li><h3>先看组号</h3><p>标签比较完成后，控制器拿到两个访问的组号和 way 号。命中不同组时，各端口可以分别更新所在组的排名。两个命中落在同一组的不同 way 时，才会竞争同一份状态。</p></li><li><h3>用旧排名选一路</h3><p>控制器比较各 way 的旧排名和组阈值。图 4 中，数值越小越接近 LRU。这样的行可能更早被逐出，所以先更新。</p></li><li><h3>把选中的 way 提到 MRU</h3><p>控制器更新旧位置和 MRU 之间各行的排名，区间外的行保持原来的相对顺序。这个过程只改排名，数据留在原来的 way。</p></li><li><h3>用反馈寄存器记住另一路</h3><p>如果另一路也满足阈值，控制器可先记下它的 way 标识。后续某拍没有符合阈值的新命中抢占更新时，控制器补做这次提升，再清除反馈项。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定一组有四路，从 LRU 到 MRU 排成 A、B、C、D，阈值覆盖最旧两路。两个端口同拍命中 A 和 B，反馈寄存器为空。</dd></div><div><dt>处理结果</dt><dd>控制器先提升 A 并记录 B，排名变成 B、C、D、A。下一拍没有符合阈值的新命中时，再提升 B，得到 C、D、A、B。</dd></div><div><dt>结果解读</dt><dd>如果两次更新之间发生缺失，B 仍可能位于淘汰端。若严格 LRU 已按访问顺序提交两次更新，此时最旧的行会不同。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">双端口命中同组时如何更新排名</a></li><li><a href="#fig-2">先提升更老的 way，再处理反馈项</a></li><li><a href="#fig-3">同组与跨组命中的更新规则</a></li><li><a href="#fig-4">延后更新时哪一路可能被逐出</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同组双命中频繁、排名写端口又少时，可以优先更新最可能被逐出的行。</dd></div><div><dt>代价和限制</dt><dd>若新命中一直占用更新机会，反馈项会继续等待。期间到来的缺失可能逐出这一路。</dd></div><div><dt>验证指标</dt><dd>在同组和跨组访问轨迹中，分别统计反馈等待了多久、MRU 更新写了几次，以及相对严格 LRU 多了多少缺失。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定一组有四路，从 LRU 到 MRU 排成 A、B、C、D，阈值覆盖最旧两路。两个端口同拍命中 A 和 B，反馈寄存器为空。</dd></div><div><dt>处理结果</dt><dd>控制器先提升 A 并记录 B，排名变成 B、C、D、A。下一拍没有符合阈值的新命中时，再提升 B，得到 C、D、A、B。</dd></div><div><dt>结果解读</dt><dd>如果两次更新之间发生缺失，B 仍可能位于淘汰端。若严格 LRU 已按访问顺序提交两次更新，此时最旧的行会不同。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>同拍命中同一组的不同 way 时，控制器用各自的排名和阈值选一路更新。</dd></div><div><dt>说明书图 4</dt><dd>图中先提升较老的 way。没有新的紧迫访问时，才处理反馈寄存器里记录的那一路。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>控制器可先记住未被选中的较急 way，等后续条件满足后再提升。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11144476B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12222875B1.html#engineering">由关键性选择插入与提升向量</a>
+<p>选更新对象与选新排名</p></li></ul>
+    <p><a href="../index.html?patent=US11144476B2#knowledge">在全量关系图上定位 US11144476B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

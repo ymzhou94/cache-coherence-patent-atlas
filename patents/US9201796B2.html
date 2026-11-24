@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9201796B2 查标签期间提前准备 SLC 缺失队列 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
-  <p class="document-id"><code>US9201796B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="document-id"><code>US9201796B2</code><span>美国授权专利</span><time datetime="2015-12-01">2015-12-01</time></p>
   <h1>查标签期间提前准备 SLC 缺失队列</h1>
   <p class="english-title" lang="en">System cache with speculative read engine</p>
   <p class="document-question">标签检查还在进行时，SLC 可以提前完成缺失处理的哪些步骤？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">标签查询还未完成时，推测读已进入 SLC 缺失队列，确认缺失后才允许发外存请求。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>提前的是缺失队列准备，标签命中时应撤销对应的推测项。</dd></div><div><dt>验证方法</dt><dd>用相同地址流交替比较提前与串行入队。分别记录标签结果、队列分配或撤销、首笔外存请求发出的周期。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9201796B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">SLC 缺失后总要准备下层请求。串行处理需要先等标签出结果，再准备缺失队列。有空位时，可以在标签检查尚未结束的阶段先准备，但要等确认后才允许对外发出。</p>
     <p>标签查询启动后、结果出来前，控制器可把推测读送到缺失队列等候。标签命中时撤销该条目，确认缺失后才可发送外存访问。</p>
     <ol class="walkthrough"><li><h3>收到读请求，启动标签检查</h3><p>控制器触发 SLC 的 tag lookup，确认数据是否已在片上。</p></li><li><h3>筛选哪些读可以预占队列</h3><p>候选资格依权项或实施策略而定，可以考虑低延迟 QoS、读写依赖、未完成推测数或同组历史命中率。</p></li><li><h3>准备队列条目并等待结果</h3><p>合格读在 tag lookup 结束前进入缺失队列。条目要保持到标签给出结果，此时尚未访问外部内存。</p></li><li><h3>按命中结果撤销或允许下发</h3><p>命中时取消准备好的条目。缺失确认后才能送下层。资格如果提前被取消，也可丢弃准备项或回到通常流程。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>标签查询用 4 个时间单位，队列准备需 2 个，且队列有空位。标签在 t0 开始检查。合格的读于 t1 开始准备队列，t3 就绪。</dd></div><div><dt>处理结果</dt><dd>若标签确认缺失且没有别的仲裁等待，顺序准备从 t4 开始，到 t6 可发。提前准备在 t4 就能取得发送资格。若 t4 的结果是命中，控制器在此时撤销条目，外存读不会发出。</dd></div><div><dt>结果解读</dt><dd>时点用于比较准备有多少可以重叠。实际等待还取决于队列调度、命中率和撤销成本。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">标签检查与缺失队列准备重叠</a></li><li><a href="#fig-2">队列就绪后仍要等标签结果</a></li><li><a href="#fig-3">哪些推测读能提前，结果怎样处理</a></li><li><a href="#fig-4">确认缺失后最早何时可发</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">队列就绪后仍要等标签结果</a></li><li><a href="#fig-1">标签检查与缺失队列准备重叠</a></li><li><a href="#fig-3">哪些推测读能提前，结果怎样处理</a></li><li><a href="#fig-4">确认缺失后最早何时可发</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">标签检查与缺失队列准备重叠</h3></div>
-    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 标签检查与缺失队列准备重叠 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="标签检查与缺失队列准备重叠">
-    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-1.svg" width="982" height="450"
-         style="--paper-width:982px" alt="标签检查与缺失队列准备重叠。控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。">
-  </div>
-  <figcaption>
-    <span>控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。</span>
-    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-2-title">队列就绪后仍要等标签结果</h3></div>
     <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 队列就绪后仍要等标签结果 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>标签在 t0 开始检查，t4 给出结果。提前准备从 t1 到 t3，缺失确认后可在 t4 发出。顺序准备等到 t4 才开始，到 t6 可发。若 t4 确认为命中，控制器撤销队列项。</span>
     <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>；同轴教学对照，和实验室的 t1 启动条件一致。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">标签检查与缺失队列准备重叠</h3></div>
+    <a class="paper-open" href="../figures/US9201796B2/US9201796B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 标签检查与缺失队列准备重叠 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="标签检查与缺失队列准备重叠">
+    <img class="paper-image" src="../figures/US9201796B2/US9201796B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="标签检查与缺失队列准备重叠。控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。">
+  </div>
+  <figcaption>
+    <span>控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。</span>
+    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>缺失率较高、请求对延迟敏感且队列有余量时，提前准备可以让缺失更早获得发送资格。</dd></div><div><dt>代价和限制</dt><dd>命中率高或队列拥挤时，最后会被撤销的请求可能占着槽位，推迟其他读。已确认的缺失也可能要等片外仲裁。</dd></div><div><dt>验证指标</dt><dd>分别计量到达控制器、开始标签查询、取得队列空位、获得标签结果和向片外发出等时点，并记录命中撤销率与额外的队列占用。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>标签查询用 4 个时间单位，队列准备需 2 个，且队列有空位。标签在 t0 开始检查。合格的读于 t1 开始准备队列，t3 就绪。</dd></div><div><dt>处理结果</dt><dd>若标签确认缺失且没有别的仲裁等待，顺序准备从 t4 开始，到 t6 可发。提前准备在 t4 就能取得发送资格。若 t4 的结果是命中，控制器在此时撤销条目，外存读不会发出。</dd></div><div><dt>结果解读</dt><dd>时点用于比较准备有多少可以重叠。实际等待还取决于队列调度、命中率和撤销成本。</dd></div></dl>
+    </div>
     <a class="lab-link" href="../lab.html#probe-ahead">运行对应原型</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,18 @@
     <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>控制器在标签检查开始后、完成前把请求送到缺失队列，待缺失确认后才访问外部内存。</dd></div><div><dt>图 6–8</dt><dd>图 6–8 给出推测路径、结果确认和候选筛选。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></dt><dd>从属项约束低延迟 QoS、依赖与未完成量等筛选条件，以及命中撤销和缺失转发。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US9201796B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
+<p>缺失槽提前还是后留</p></li><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
+<p>核内提前与片外门槛</p></li><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
+<p>准备下层事务与合并在途读</p></li></ul>
+    <p><a href="../index.html?patent=US9201796B2#knowledge">在全量关系图上定位 US9201796B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +142,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

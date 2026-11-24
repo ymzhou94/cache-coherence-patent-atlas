@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US8868847B2 按页记录共享范围的多核探测过滤 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US8868847B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US8868847B2</code><span>美国授权专利</span><time datetime="2014-10-21">2014-10-21</time></p>
   <h1>按页记录共享范围的多核探测过滤</h1>
   <p class="english-title" lang="en">Multi-core processor snoop filtering</p>
   <p class="document-question">页状态只有少量共享标志，缓存控制器怎样用它决定向哪些核发探测？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">每核的页状态表记录同封装及跨封装共享，控制器在缓存缺失时据此选择 snoop 广播范围。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>共享状态按页追踪，页内其他缓存行的共享也可能扩大当前行请求的探测范围。</dd></div><div><dt>验证方法</dt><dd>让同一处读缺失分别来自私有页、封装内共享页和跨封装共享页。记录页状态位和实际发出的 snoop 目的地。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US8868847B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">多封装系统逐行向所有核发探测会占用跨封装链路。页共享标志记录可能有副本的范围，让逐行一致性协议只在必要的范围内查找。</p>
     <p>每个核的页状态表记录同封装、跨封装的共享情况以及访问类型。行缺失时，控制器据此确定广播范围。操作系统通知解除页映射后，控制器标记相关缓存行逐出，并停止追踪该页。</p>
     <ol class="walkthrough"><li><h3>查页状态</h3><p>缓存控制器先检查目标行是否命中。发生缺失后，控制器由地址查到所在页的表项。表项分别记录同封装、跨封装共享情况，也可以记访问类型。</p></li><li><h3>查找尚未追踪的页</h3><p>控制器可先发页级 snoop。对端回复是否持有该页的任一缓存行，控制器据此设置或清除相应共享位。</p></li><li><h3>用共享位缩小行级探测范围</h3><p>同页的后续缺失若只有同封装共享位为 1，控制器可仅探测同封装核。已确认未共享时，实施例可以省去广播。</p></li><li><h3>解除映射后停止追踪</h3><p>内核通知解除映射后，控制器标记相关行逐出，并清除该页的共享状态、停止追踪。旧记录便不会沿用到页的新用途。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>设两个封装各有 4 个核。P0 的一个核请求已追踪页中的另一行。该页的同封装共享位为 1，跨封装共享位为 0。</dd></div><div><dt>处理结果</dt><dd>逐核广播需要联系其余 7 个核，限制在同封装后最多联系 3 个。只要该页另一行处于共享状态，即使当前行没有共享，控制器也可能在同封装内发探测。</dd></div><div><dt>结果解读</dt><dd>7 和 3 由示例拓扑决定，计数只覆盖探测目标。实际总线性能还取决于请求分布和总线行为。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">行缺失时如何用页状态选择探测范围</a></li><li><a href="#fig-3">解除映射后标记缓存行逐出，结束页追踪</a></li><li><a href="#fig-2">先确认页状态有效，再读共享位</a></li><li><a href="#fig-4">同封装探测最多发给三个核</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>大量页只在一个封装内访问、且页表项容量足够时，可以减少跨封装广播。</dd></div><div><dt>代价和限制</dt><dd>只要有一行经常共享，整页就可能记为共享。访问同页其他行时仍可能发出额外探测。</dd></div><div><dt>验证指标</dt><dd>统计初次追踪发出的探测数、跨封装 snoop 占比、页状态表有效命中率，以及哪些探测未找到目标行副本。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>设两个封装各有 4 个核。P0 的一个核请求已追踪页中的另一行。该页的同封装共享位为 1，跨封装共享位为 0。</dd></div><div><dt>处理结果</dt><dd>逐核广播需要联系其余 7 个核，限制在同封装后最多联系 3 个。只要该页另一行处于共享状态，即使当前行没有共享，控制器也可能在同封装内发探测。</dd></div><div><dt>结果解读</dt><dd>7 和 3 由示例拓扑决定，计数只覆盖探测目标。实际总线性能还取决于请求分布和总线行为。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US8868847B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US8868847B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US8868847B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>这些权项规定同封装与跨封装共享信息，并说明解除映射后如何处理缓存行和页状态。</dd></div><div><dt>图 6–7、图 17</dt><dd>图 6–7 给出首次追踪与已有页状态时的缺失流程，图 17 给出内核解除映射的通知。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US8868847B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>当页只在同封装内共享时，控制器可把广播范围限制在该封装。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US8868847B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US8856456B2.html#engineering">通过块追踪项过滤缓存一致性探测</a>
+<p>按页与按块过滤 snoop</p></li><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
+<p>解除页映射后的缓存清理</p></li></ul>
+    <p><a href="../index.html?patent=US8868847B2#knowledge">在全量关系图上定位 US8868847B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +141,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

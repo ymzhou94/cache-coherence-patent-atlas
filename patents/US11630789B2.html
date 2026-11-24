@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11630789B2 优先投递给已上电核心的中断控制 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>功耗与热控制</span></p>
-  <p class="document-id"><code>US11630789B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="document-id"><code>US11630789B2</code><span>美国授权专利</span><time datetime="2023-04-18">2023-04-18</time></p>
   <h1>优先投递给已上电核心的中断控制</h1>
   <p class="english-title" lang="en">Scalable interrupts</p>
   <p class="document-question">有多簇可接收中断时，控制器怎样避免为了一个中断提前唤醒整组核心？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">全局中断控制器第一轮只尝试已上电核心。各核簇均返回 Nack 后，才开始允许唤醒核心的第二轮投递。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>核心已上电与核心能接受当前中断是两项不同条件。控制器要收齐第一轮的否定应答才改变投递范围。</dd></div><div><dt>验证方法</dt><dd>保持中断源和亲和性不变，分别让一个已上电核心接受和所有候选拒绝。记录两轮投递、核心上电请求及首次应答时点。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11630789B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">中断控制器按可编程顺序向多个核簇尝试投递。第一轮仅考虑已上电核心。所有核簇都返回拒绝后，第二轮允许核心退出断电状态并接收中断。</p>
     <p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p>
     <ol class="walkthrough"><li><h3>确定第一轮的核簇投递顺序</h3><p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p></li><li><h3>核簇先尝试已上电的核心</h3><p>簇控制器在第一轮只尝试已供电的核心。若已供电者能接收，中断不需要唤醒剩余核心。</p></li><li><h3>两种执行单元都要到可中断点</h3><p>核心可以估算 ROB 提交和 load/store 完成均能否在指定时间到可中断点。若其中之一无法及时到达，该核心可返回 Nack。</p></li><li><h3>全部拒绝后允许核心上电</h3><p>只有第一轮各簇都拒绝才进入第二轮。簇控制器给断电核心上电，并尝试向其核心集合投递。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>假设簇 A 有一个忙于长访存的在线核心，簇 B 有一个能在要求时间内接收的在线核心和两个断电核心。</dd></div><div><dt>处理结果</dt><dd>A 因访问未到可中断点返回 Nack。B 的在线核心随后 Ack，两颗 B 中断电核心可以继续关闭。若 A、B 全都拒绝，则走第二轮。</dd></div><div><dt>结果解读</dt><dd>本例只计一次中断，轮询和唤醒时间由实现决定。簇与核心的次序必须按中断路由约束复算。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">全局投递与核心电源状态的接口</a></li><li><a href="#fig-2">A 拒绝，B 的在线核心接收</a></li><li><a href="#fig-4">核心接受中断的两个局部条件</a></li><li><a href="#fig-3">路由结果何时允许第二轮</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">A 拒绝，B 的在线核心接收</a></li><li><a href="#fig-1">全局投递与核心电源状态的接口</a></li><li><a href="#fig-4">核心接受中断的两个局部条件</a></li><li><a href="#fig-3">路由结果何时允许第二轮</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">全局投递与核心电源状态的接口</h3></div>
-    <a class="paper-open" href="../figures/US11630789B2/US11630789B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 全局投递与核心电源状态的接口 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="全局投递与核心电源状态的接口">
-    <img class="paper-image" src="../figures/US11630789B2/US11630789B2-fig-1.svg" width="982" height="326"
-         style="--paper-width:982px" alt="全局投递与核心电源状态的接口。已在线核心或需要上电的核心都由局部簇控制器管理。">
-  </div>
-  <figcaption>
-    <span>已在线核心或需要上电的核心都由局部簇控制器管理。</span>
-    <span class="figure-evidence">图 1–2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">A 拒绝，B 的在线核心接收</h3></div>
     <a class="paper-open" href="../figures/US11630789B2/US11630789B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 A 拒绝，B 的在线核心接收 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>B 已在线核心接收，整个投递在第一轮结束。关闭的核心未参与该轮。</span>
     <span class="figure-evidence">图 3–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">全局投递与核心电源状态的接口</h3></div>
+    <a class="paper-open" href="../figures/US11630789B2/US11630789B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 全局投递与核心电源状态的接口 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="全局投递与核心电源状态的接口">
+    <img class="paper-image" src="../figures/US11630789B2/US11630789B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="全局投递与核心电源状态的接口。已在线核心或需要上电的核心都由局部簇控制器管理。">
+  </div>
+  <figcaption>
+    <span>已在线核心或需要上电的核心都由局部簇控制器管理。</span>
+    <span class="figure-evidence">图 1–2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>经常可在其他已在线核心处理时，两段试探有机会减少唤醒次数及跃迁能量。</dd></div><div><dt>代价和限制</dt><dd>如果所有在线核心都忙，第一轮会增加接收前的探测时延，且第二轮仍要承担唤醒。</dd></div><div><dt>验证指标</dt><dd>比较固定目的地和两轮投递，在同一中断轨迹测成功落在在线核心的比例、Nack 数、额外唤醒和交付时延尾部。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设簇 A 有一个忙于长访存的在线核心，簇 B 有一个能在要求时间内接收的在线核心和两个断电核心。</dd></div><div><dt>处理结果</dt><dd>A 因访问未到可中断点返回 Nack。B 的在线核心随后 Ack，两颗 B 中断电核心可以继续关闭。若 A、B 全都拒绝，则走第二轮。</dd></div><div><dt>结果解读</dt><dd>本例只计一次中断，轮询和唤醒时间由实现决定。簇与核心的次序必须按中断路由约束复算。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,18 @@
     <dl class="explanation evidence"><div><dt>图 1、3–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></dt><dd>顶层中断控制器和簇控制器共同实现第一、第二遍投递。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>写明按序继续、成功完成和可按来源设次序。</dd></div><div><dt>图 6–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>核心本地估算 ROB 提交和访存进度。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11630789B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12248350B2.html#engineering">跨裸片事务按本端唤醒、远端确认的顺序发出</a>
+<p>应答约束中断和事务发出</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
+<p>中断目标与线程放置</p></li><li><a href="US20250284649A1.html#engineering">CPU 根据可接受中断的时点返回 Ack 或 Nack</a>
+<p>中断路由申请的继续链</p></li></ul>
+    <p><a href="../index.html?patent=US11630789B2#knowledge">在全量关系图上定位 US11630789B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +145,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

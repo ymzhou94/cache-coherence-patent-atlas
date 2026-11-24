@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20260087582A1 GPU 分发硬件根据待运行工作控制子单元电源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CLPC 与性能调节</span></p>
-  <p class="document-id"><code>US20260087582A1</code><span>美国公开申请</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="document-id"><code>US20260087582A1</code><span>美国公开申请</span><time datetime="2026-03-26">2026-03-26</time></p>
   <h1>GPU 分发硬件根据待运行工作控制子单元电源</h1>
   <p class="english-title" lang="en">Graphics Processor Power Management Controlled by Distribution Hardware</p>
   <p class="document-question">某个 shader 子单元正空闲，但已排队的大任务即将用到它，能否提前上电？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">GPU 工作控制电路同时查看主队列和已分发工作的状态，再向电源控制电路请求改变相关 GPU 子单元的供电状态。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>工作仍在主队列中，且其目标分发范围可识别时，实施例可以提前请求上电。已分发的未完成工作仍需纳入供电判断。</dd></div><div><dt>验证方法</dt><dd>固定工作批次及目标子单元，对照工作进入分布式队列后再上电与主队列可见时提前上电。量从工作可见到首条执行的延迟，并统计各子单元通电时间。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US20260087582A1">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">传统做法可以让固件处理器先看见工作，再通知电源处理器。此案把队列和跟踪状态直接接入分发硬件，使电源控件能利用它已经掌握的工作范围。</p>
     <p>GPU 的工作控制硬件同时观察主队列和尚未完成的已分发工作，发出 GPU 子单元的供电状态请求。可以在确认要扩展分发范围时提前唤醒所需子单元。</p>
     <ol class="walkthrough"><li><h3>主机提交并准备调度硬件</h3><p>应用和驱动向主 kick 队列提交，主机可先保证调度逻辑可达。硬件读取队列并准备分配。</p></li><li><h3>观察待发与已发两类工作</h3><p>读取主队列中的 kick 大小、优先级或依赖。跟踪单元同时知道已分发的工作是否还在使用具体子单元。</p></li><li><h3>按所需范围控制电源</h3><p>当较大的 kick 将跨更多 GPU 子单元时，请求唤醒必要部分。没有分发需要时可收小通电范围；迟滞定时器可推迟关闭。</p></li><li><h3>电源就绪后分发</h3><p>需要上电的 shader 在就绪前不能开始执行。部分实施例由硬件直接推动门控，部分仍由电源处理器最终执行。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>一个小 kick 仅需 mGPU0。尚未启动的小任务之后有一项会使用 mGPU0、mGPU1 的大 kick。</dd></div><div><dt>处理结果</dt><dd>系统可让 mGPU1 在小任务期间休眠。若大任务的需求已经可见，就能提前开始唤醒 mGPU1；在就绪前不会向它发送实际执行。</dd></div><div><dt>结果解读</dt><dd>是否省延迟由可预见的提前量和唤醒成本决定。及时获知队列和活跃状态本身不会消除上电时间。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">GPU 工作进度和主队列共同驱动电源控制</a></li><li><a href="#fig-2">大 kick 可见时开始唤醒第二个子单元</a></li><li><a href="#fig-4">队列提前量覆盖部分上电时间</a></li><li><a href="#fig-3">不同队列和跟踪状态需要不同供电范围</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">大 kick 可见时开始唤醒第二个子单元</a></li><li><a href="#fig-1">GPU 工作进度和主队列共同驱动电源控制</a></li><li><a href="#fig-4">队列提前量覆盖部分上电时间</a></li><li><a href="#fig-3">不同队列和跟踪状态需要不同供电范围</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">GPU 工作进度和主队列共同驱动电源控制</h3></div>
-    <a class="paper-open" href="../figures/US20260087582A1/US20260087582A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 GPU 工作进度和主队列共同驱动电源控制 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="GPU 工作进度和主队列共同驱动电源控制">
-    <img class="paper-image" src="../figures/US20260087582A1/US20260087582A1-fig-1.svg" width="1214" height="326"
-         style="--paper-width:1214px" alt="GPU 工作进度和主队列共同驱动电源控制。分发器不必用单个忙闲位猜测有多少 shader 将参与。">
-  </div>
-  <figcaption>
-    <span>分发器不必用单个忙闲位猜测有多少 shader 将参与。</span>
-    <span class="figure-evidence">图 3–4，权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">大 kick 可见时开始唤醒第二个子单元</h3></div>
     <a class="paper-open" href="../figures/US20260087582A1/US20260087582A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 大 kick 可见时开始唤醒第二个子单元 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>已就绪的 mGPU0 可先处理小工作。图中不把唤醒当成即时动作。</span>
     <span class="figure-evidence">图 5–6、权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">GPU 工作进度和主队列共同驱动电源控制</h3></div>
+    <a class="paper-open" href="../figures/US20260087582A1/US20260087582A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 GPU 工作进度和主队列共同驱动电源控制 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="GPU 工作进度和主队列共同驱动电源控制">
+    <img class="paper-image" src="../figures/US20260087582A1/US20260087582A1-fig-1.svg" width="1214" height="326"
+         style="--paper-width:1214px" alt="GPU 工作进度和主队列共同驱动电源控制。分发器不必用单个忙闲位猜测有多少 shader 将参与。">
+  </div>
+  <figcaption>
+    <span>分发器不必用单个忙闲位猜测有多少 shader 将参与。</span>
+    <span class="figure-evidence">图 3–4，权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>工作范围在排队时已可见且不同 kick 的活跃范围差别大，可减轻固件握手或避免空转域。</dd></div><div><dt>代价和限制</dt><dd>电源预测失误、唤醒时间长或缓存状态重建成本高时，频繁切域会拖延短任务。</dd></div><div><dt>验证指标</dt><dd>测 kick 到首条执行的分段延迟、加电域的驻留时间、空闲关门次数和被错唤醒的子单元。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>一个小 kick 仅需 mGPU0。尚未启动的小任务之后有一项会使用 mGPU0、mGPU1 的大 kick。</dd></div><div><dt>处理结果</dt><dd>系统可让 mGPU1 在小任务期间休眠。若大任务的需求已经可见，就能提前开始唤醒 mGPU1；在就绪前不会向它发送实际执行。</dd></div><div><dt>结果解读</dt><dd>是否省延迟由可预见的提前量和唤醒成本决定。及时获知队列和活跃状态本身不会消除上电时间。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,16 @@
     <dl class="explanation evidence"><div><dt>图 3–4、权 1</dt><dd>主队列读取、分发、追踪与电源控制形成的接口。</dd></div><div><dt>图 5–6</dt><dd>展示基于槽管理额外信息的更细颗粒度唤醒时序。</dd></div><div><dt>图 7–8、权 10</dt><dd>提交和分发的事件边界以及控制目标的选择。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US20260087582A1/en">专利原文</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">审读全文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
+<p>GPU 分派进度与资源控制</p></li></ul>
+    <p><a href="../index.html?patent=US20260087582A1#knowledge">在全量关系图上定位 US20260087582A1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +143,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

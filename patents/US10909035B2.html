@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US10909035B2 中间缓存容量为零时仍保留控制路径 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
-  <p class="document-id"><code>US10909035B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="document-id"><code>US10909035B2</code><span>美国授权专利</span><time datetime="2021-02-02">2021-02-02</time></p>
   <h1>中间缓存容量为零时仍保留控制路径</h1>
   <p class="english-title" lang="en">Processing memory accesses while supporting a zero size cache in a cache hierarchy</p>
   <p class="document-question">中间层没有数据阵列时，怎样继续转发请求和处理一致性？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">中间控制器接到指令侧缺失后，仍可用完整地址探测上层数据缓存。零容量配置跳过本地数据阵列。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>指令侧缺失与数据侧是否持有副本是两项判断。图 9 的数据侧命中可能返回较新的指令。</dd></div><div><dt>验证方法</dt><dd>固定指令地址和中间层零容量配置，输入只有下层副本及 L1 数据缓存还存较新副本两种状态。记录上探次数、下层补读次数和返回给指令侧的数据版本。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US10909035B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">L1 指令缓存报告缺失时，L1 数据缓存仍可能保存修改过的指令。中间层即使没有数据阵列，也需要分别检查这两条路径才能选对数据来源。</p>
     <p>中间控制器保留上、下层接口。收到特定的上层缺失指示后，它还能向上层发 snoop，再按探测结果从上层取数据或向下请求。说明书的零容量配置省去了本地数据阵列查询和回填。</p>
     <ol class="walkthrough"><li><h3>省去本地阵列，保留控制器</h3><p>说明书支持本层有阵列或无阵列。零容量配置跳过本地查询及分配，继续运行上下游接口和事务控制。</p></li><li><h3>按完整地址向 L1 数据侧探测</h3><p>收到上层缺失指示后，控制器按所需地址发 snoop。图 9 中，最初是 I-cache 缺失，后续按完整地址查 L1 D-cache。</p></li><li><h3>根据探测结果选数据源</h3><p>上层命中时，控制器可能先取数据，再决定是否写回或失效。上层也无数据时，向下层发请求。本层没有阵列可以接收回填。</p></li><li><h3>按事务类型回送结果</h3><p>图 9 的取指路径中，D-cache 命中脏指令后，可把副本送往下层，再响应 L1 指令侧。图 8 的外部 snoop 则向上传送，并按上层的回复作答。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>在图 9 的零容量配置下，假定 I-cache 查地址 X 缺失，内存仍存指令旧值 7，L1 D-cache 中存更新后的值 9。</dd></div><div><dt>处理结果</dt><dd>中间控制器向 D-cache 发完整地址 X 的探测，并在命中后取得 9。示例中，控制器处理脏状态时先把副本送往下层，再向 L1 指令侧返回所需数据。</dd></div><div><dt>结果解读</dt><dd>7 和 9 用来标明新旧版本。这里采用的是图 9 的取指和探测顺序。具体的自修改代码同步仍须遵守其运行环境的规则。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">零容量中间层仍连接上下游</a></li><li><a href="#fig-2">指令缓存缺失后查 L1 数据缓存</a></li><li><a href="#fig-3">L1 数据侧未命中、干净命中或脏命中</a></li><li><a href="#fig-4">有本地阵列与零容量时分别经过哪些路径</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">指令缓存缺失后查 L1 数据缓存</a></li><li><a href="#fig-1">零容量中间层仍连接上下游</a></li><li><a href="#fig-3">L1 数据侧未命中、干净命中或脏命中</a></li><li><a href="#fig-4">有本地阵列与零容量时分别经过哪些路径</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">零容量中间层仍连接上下游</h3></div>
-    <a class="paper-open" href="../figures/US10909035B2/US10909035B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 零容量中间层仍连接上下游 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="零容量中间层仍连接上下游">
-    <img class="paper-image" src="../figures/US10909035B2/US10909035B2-fig-1.svg" width="750" height="326"
-         style="--paper-width:750px" alt="零容量中间层仍连接上下游。控制器向上探测并向下请求。零容量分支跳过本层数据阵列，并据探测定位数据。">
-  </div>
-  <figcaption>
-    <span>控制器向上探测并向下请求。零容量分支跳过本层数据阵列，并据探测定位数据。</span>
-    <span class="figure-evidence">说明书图 1–2、8–9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>。 · <a href="https://patentimages.storage.googleapis.com/e6/1a/1d/dea2f7586503a7/US10909035.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">指令缓存缺失后查 L1 数据缓存</h3></div>
     <a class="paper-open" href="../figures/US10909035B2/US10909035B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 指令缓存缺失后查 L1 数据缓存 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>L1 D-cache 若保存已修改的指令，控制器可从该处得到新值。</span>
     <span class="figure-evidence">说明书图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>；完整地址探测。 · <a href="https://patentimages.storage.googleapis.com/e6/1a/1d/dea2f7586503a7/US10909035.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">零容量中间层仍连接上下游</h3></div>
+    <a class="paper-open" href="../figures/US10909035B2/US10909035B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 零容量中间层仍连接上下游 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="零容量中间层仍连接上下游">
+    <img class="paper-image" src="../figures/US10909035B2/US10909035B2-fig-1.svg" width="750" height="326"
+         style="--paper-width:750px" alt="零容量中间层仍连接上下游。控制器向上探测并向下请求。零容量分支跳过本层数据阵列，并据探测定位数据。">
+  </div>
+  <figcaption>
+    <span>控制器向上探测并向下请求。零容量分支跳过本层数据阵列，并据探测定位数据。</span>
+    <span class="figure-evidence">说明书图 1–2、8–9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>。 · <a href="https://patentimages.storage.googleapis.com/e6/1a/1d/dea2f7586503a7/US10909035.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一套控制器可以用于不同容量配置，零容量版本省去本地阵列并保留一致性事务转发。</dd></div><div><dt>代价和限制</dt><dd>本地阵列关闭后，无法就地取数，也少了部分请求过滤机会。若模拟时漏掉上探，就可能把旧副本当成返回值。</dd></div><div><dt>验证指标</dt><dd>在有阵列和无阵列的配置中，分别统计本地读、跳过的分配、按完整地址向上探测及下层数据返回次数。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>在图 9 的零容量配置下，假定 I-cache 查地址 X 缺失，内存仍存指令旧值 7，L1 D-cache 中存更新后的值 9。</dd></div><div><dt>处理结果</dt><dd>中间控制器向 D-cache 发完整地址 X 的探测，并在命中后取得 9。示例中，控制器处理脏状态时先把副本送往下层，再向 L1 指令侧返回所需数据。</dd></div><div><dt>结果解读</dt><dd>7 和 9 用来标明新旧版本。这里采用的是图 9 的取指和探测顺序。具体的自修改代码同步仍须遵守其运行环境的规则。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>控制器具有上下游接口，收到较高层不存数据的指示后可继续发上行 snoop。</dd></div><div><dt>说明书图 8–9</dt><dd>外部 snoop 可以绕开本层阵列。取指缺失时先探测 D-cache，结果决定是否取脏值或向下层请求。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>上探也缺失时可请求下层。进一步限定包括本层不存回填，以及在失效前取出数据并处理不可缓存提示。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US10909035B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
+<p>阵列停用与失效维护</p></li></ul>
+    <p><a href="../index.html?patent=US10909035B2#knowledge">在全量关系图上定位 US10909035B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

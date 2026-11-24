@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20260211681A1 按页定位二级 trace cache 的失效范围 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
-  <p class="document-id"><code>US20260211681A1</code><span>美国公开申请</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="document-id"><code>US20260211681A1</code><span>美国公开申请</span><time datetime="2026-07-23">2026-07-23</time></p>
   <h1>按页定位二级 trace cache 的失效范围</h1>
   <p class="english-title" lang="en">Maintenance Operations for Hierarchical Trace Cache</p>
   <p class="document-question">内核触发取指缓存维护时，如何避免二级 trace cache 每次全清？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">维护电路把取指组的哈希物理页号放入过滤器，并随二级轨迹表项保存。过滤器命中后扫描二级轨迹，找出匹配项并据扫描结果重建过滤器。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>这是与物理页号关联的维护路径。跨页轨迹要检查其各取指组。哈希碰撞可带来额外扫描。</dd></div><div><dt>验证方法</dt><dd>预放相同的跨页和单页轨迹，分别运行全量二级失效与按页筛选。检查目标页关联轨迹是否都被清除，记录扫描条目数、保留的轨迹数及首次重新取指延迟。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008">原文权利要求 8</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">一条指令轨迹（trace）可能由不同物理页上的取指组组成。维护操作影响其中任一页，就可能使已解码或合并的轨迹不再可用。</p>
     <p>维护逻辑按操作类型核对缓存或地址转换变化。对指令缓存失效的一个实施例，二级 trace cache 保留取指组的哈希物理页号并以过滤器判定是否需要扫描。命中后扫描，失效匹配轨迹，并重建过滤器。</p>
     <ol class="walkthrough"><li><h3>记录二级轨迹覆盖的页</h3><p>二级存储写入轨迹时，过滤器记录相关取指组的物理页哈希。</p></li><li><h3>按维护类型查询候选</h3><p>维护操作送来目标页信息。指令缓存失效与地址翻译维护的索引可不同。</p></li><li><h3>检查二级轨迹标签</h3><p>在过滤器命中时扫描二级条目，按哈希物理页号检查要失效的轨迹。</p></li><li><h3>分别处理一级和二级</h3><p>权 16 的方法先全部失效一级，再由过滤器确定二级部分。</p></li><li><h3>重建过滤器</h3><p>扫描后依据剩余的二级轨迹重新填充过滤器，供后续维护查询。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>轨迹 X 由物理页 P 和 Q 上的取指组组成，轨迹 Y 只覆盖物理页 R。软件更新物理页 P 上的代码并触发对应缓存维护。</dd></div><div><dt>处理结果</dt><dd>二级过滤器命中页 P 后，维护逻辑检查并失效匹配轨迹 X。轨迹 Y 可保留，除非发生其他失效条件或哈希碰撞。</dd></div><div><dt>结果解读</dt><dd>判断作用范围时要看轨迹覆盖的所有取指组，不能只看轨迹入口 PC。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">对二级轨迹维护的页号筛选</a></li><li><a href="#fig-2">过滤器命中后扫描二级轨迹</a></li><li><a href="#fig-3">维护操作与页号索引</a></li><li><a href="#fig-4">页代码更新后的保留范围</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">过滤器命中后扫描二级轨迹</a></li><li><a href="#fig-1">对二级轨迹维护的页号筛选</a></li><li><a href="#fig-3">维护操作与页号索引</a></li><li><a href="#fig-4">页代码更新后的保留范围</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">对二级轨迹维护的页号筛选</h3></div>
-    <a class="paper-open" href="../figures/US20260211681A1/US20260211681A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 对二级轨迹维护的页号筛选 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="对二级轨迹维护的页号筛选">
-    <img class="paper-image" src="../figures/US20260211681A1/US20260211681A1-fig-1.svg" width="750" height="326"
-         style="--paper-width:750px" alt="对二级轨迹维护的页号筛选。一条指令轨迹（trace）可能由不同物理页上的取指组组成。维护操作影响其中任一页，就可能使已解码或合并的轨迹不再可用。">
-  </div>
-  <figcaption>
-    <span>一条指令轨迹（trace）可能由不同物理页上的取指组组成。维护操作影响其中任一页，就可能使已解码或合并的轨迹不再可用。</span>
-    <span class="figure-evidence">图 19–23，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260211681">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">过滤器命中后扫描二级轨迹</h3></div>
     <a class="paper-open" href="../figures/US20260211681A1/US20260211681A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 过滤器命中后扫描二级轨迹 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>判断作用范围时要看轨迹覆盖的所有取指组，不能只看轨迹入口 PC。</span>
     <span class="figure-evidence">图 20–22，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00016" aria-label="原文权利要求 16">16</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260211681">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">对二级轨迹维护的页号筛选</h3></div>
+    <a class="paper-open" href="../figures/US20260211681A1/US20260211681A1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 对二级轨迹维护的页号筛选 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="对二级轨迹维护的页号筛选">
+    <img class="paper-image" src="../figures/US20260211681A1/US20260211681A1-fig-1.svg" width="750" height="326"
+         style="--paper-width:750px" alt="对二级轨迹维护的页号筛选。一条指令轨迹（trace）可能由不同物理页上的取指组组成。维护操作影响其中任一页，就可能使已解码或合并的轨迹不再可用。">
+  </div>
+  <figcaption>
+    <span>一条指令轨迹（trace）可能由不同物理页上的取指组组成。维护操作影响其中任一页，就可能使已解码或合并的轨迹不再可用。</span>
+    <span class="figure-evidence">图 19–23，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260211681">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>保留未受维护影响的远端轨迹，可减少维护后重新构建与取指的工作。</dd></div><div><dt>代价和限制</dt><dd>过滤器误判可能造成额外扫描或失效。权限更新、TLB 失效和指令缓存失效各有不同的匹配键。</dd></div><div><dt>验证指标</dt><dd>统计每次维护扫描的条目数、被保留的有效二级项、维护完成延迟及之后的前端缺失。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>轨迹 X 由物理页 P 和 Q 上的取指组组成，轨迹 Y 只覆盖物理页 R。软件更新物理页 P 上的代码并触发对应缓存维护。</dd></div><div><dt>处理结果</dt><dd>二级过滤器命中页 P 后，维护逻辑检查并失效匹配轨迹 X。轨迹 Y 可保留，除非发生其他失效条件或哈希碰撞。</dd></div><div><dt>结果解读</dt><dd>判断作用范围时要看轨迹覆盖的所有取指组，不能只看轨迹入口 PC。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>图 19–23，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>维护逻辑按操作类型核对缓存或地址转换变化。对指令缓存失效的一个实施例，二级 trace cache 保留取指组的哈希物理页号并以过滤器判定是否需要扫描。命中后扫描，失效匹配轨迹，并重建过滤器。</dd></div><div><dt>图 20–22，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00016" aria-label="原文权利要求 16">16</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>判断作用范围时要看轨迹覆盖的所有取指组，不能只看轨迹入口 PC。</dd></div><div><dt>图 21–23，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260211681A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></dt><dd>过滤器误判可能造成额外扫描或失效。权限更新、TLB 失效和指令缓存失效各有不同的匹配键。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US20260211681A1/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US20250315262A1.html#engineering">把二级 trace cache 的轨迹提前送到前端</a>
+<p>继续申请聚焦维护</p></li></ul>
+    <p><a href="../index.html?patent=US20260211681A1#knowledge">在全量关系图上定位 US20260211681A1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

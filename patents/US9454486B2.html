@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9454486B2 预取与需求读共享待处理请求槽 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
-  <p class="document-id"><code>US9454486B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="document-id"><code>US9454486B2</code><span>美国授权专利</span><time datetime="2016-09-27">2016-09-27</time></p>
   <h1>预取与需求读共享待处理请求槽</h1>
   <p class="english-title" lang="en">Cache pre-fetch merge in pending request buffer</p>
   <p class="document-question">需求读和在途预取指向同一缓存行时，怎样共用下层读取？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">对同一缓存行的需求读关联到在途预取的地址槽，返回数据在独立缓冲中暂存并用于重放。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>需求读到达时，原预取尚未完成且对应地址槽有效。两次指向同一缓存行，即使字内偏移不同也可匹配。</dd></div><div><dt>验证方法</dt><dd>固定预取发出拍和下层服务时间，比较合并与为需求读另建读取。按缓存行计下层读次数，并量需求到达到正确返回之间的延迟。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9454486B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">某一行的预取请求已经发出、数据还没回来时，新的需求读仍可能指向同一行。如果能先查到这笔在途请求，就可以共用一次下层读取。</p>
     <p>预取缺失时，缓存先用地址缓冲保存请求地址和状态。稍后到达的同一行需求读可以接到原地址槽。下层返回的缓存行进入另一个数据缓冲，再用来重放请求。</p>
     <ol class="walkthrough"><li><h3>预取缺失后登记地址</h3><p>仲裁器选出预取请求并查缓存。命中即可结束，缺失时分配地址 PRB 表项，并设置至少一个预取状态位。</p></li><li><h3>用单独的缓冲接收返回行</h3><p>预取请求发到下层后，地址槽保存等待状态。下层回来的缓存行可以放入数据 PRB。</p></li><li><h3>把后到的同址需求读接到原槽</h3><p>核心的需求读若指向同一缓存行，就写入原来的地址槽。图 7 中的实现可以覆盖该项的来源及依赖标记。</p></li><li><h3>等数据到齐后重放</h3><p>返回数据可从数据 PRB 供重放或需求路径取用。没有匹配的在途预取项时，按普通需求路径分配。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定预取 X 在 t=0 发出，预计 t=12 返回。同一行的需求读在 t=7 到达时，原来的地址项仍有效。</dd></div><div><dt>处理结果</dt><dd>需求读接到原地址项。数据再等 5 个时间单位就可用，随后可重放需求读。模型只需一笔下层读取。</dd></div><div><dt>结果解读</dt><dd>5 是无其他停顿时的最少等待。实际重放还可能受仲裁、下层响应延迟或缓存权限影响。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">地址 PRB 记录在途请求，数据 PRB 接收返回行</a></li><li><a href="#fig-2">需求读接到尚未完成的预取 X</a></li><li><a href="#fig-4">请求合并后还要等原有读取返回</a></li><li><a href="#fig-3">地址 PRB 按缓存行决定是否复用</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">需求读接到尚未完成的预取 X</a></li><li><a href="#fig-1">地址 PRB 记录在途请求，数据 PRB 接收返回行</a></li><li><a href="#fig-4">请求合并后还要等原有读取返回</a></li><li><a href="#fig-3">地址 PRB 按缓存行决定是否复用</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">地址 PRB 记录在途请求，数据 PRB 接收返回行</h3></div>
-    <a class="paper-open" href="../figures/US9454486B2/US9454486B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 地址 PRB 记录在途请求，数据 PRB 接收返回行 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="地址 PRB 记录在途请求，数据 PRB 接收返回行">
-    <img class="paper-image" src="../figures/US9454486B2/US9454486B2-fig-1.svg" width="750" height="450"
-         style="--paper-width:750px" alt="地址 PRB 记录在途请求，数据 PRB 接收返回行。预取和后到需求按同一行地址关联。下层数据回到独立缓冲后，供需求重放。">
-  </div>
-  <figcaption>
-    <span>预取和后到需求按同一行地址关联。下层数据回到独立缓冲后，供需求重放。</span>
-    <span class="figure-evidence">图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">需求读接到尚未完成的预取 X</h3></div>
     <a class="paper-open" href="../figures/US9454486B2/US9454486B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 需求读接到尚未完成的预取 X 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>后到需求沿用在途预取的地址槽。数据回到数据 PRB 后，需求路径可以重放。</span>
     <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">地址 PRB 记录在途请求，数据 PRB 接收返回行</h3></div>
+    <a class="paper-open" href="../figures/US9454486B2/US9454486B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 地址 PRB 记录在途请求，数据 PRB 接收返回行 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="地址 PRB 记录在途请求，数据 PRB 接收返回行">
+    <img class="paper-image" src="../figures/US9454486B2/US9454486B2-fig-1.svg" width="750" height="450"
+         style="--paper-width:750px" alt="地址 PRB 记录在途请求，数据 PRB 接收返回行。预取和后到需求按同一行地址关联。下层数据回到独立缓冲后，供需求重放。">
+  </div>
+  <figcaption>
+    <span>预取和后到需求按同一行地址关联。下层数据回到独立缓冲后，供需求重放。</span>
+    <span class="figure-evidence">图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>预取经常比需求读略早发出时，两者可能共享同一地址槽，减少重复下层读取和缓冲竞争。</dd></div><div><dt>代价和限制</dt><dd>如果预取很少被使用，或需求到达时数据早已在缓存，这类合并就少。地址匹配和覆盖旧状态仍要消耗标签及仲裁资源。</dd></div><div><dt>验证指标</dt><dd>统计同址需求合并率、少发的下层读、需求到达到重放的时间，以及地址槽的峰值占用。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定预取 X 在 t=0 发出，预计 t=12 返回。同一行的需求读在 t=7 到达时，原来的地址项仍有效。</dd></div><div><dt>处理结果</dt><dd>需求读接到原地址项。数据再等 5 个时间单位就可用，随后可重放需求读。模型只需一笔下层读取。</dd></div><div><dt>结果解读</dt><dd>5 是无其他停顿时的最少等待。实际重放还可能受仲裁、下层响应延迟或缓存权限影响。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>预取缺失先建地址项，后来的同一行请求使用原项。返回的数据另存，用于重放。</dd></div><div><dt>图 5–7</dt><dd>图中区分地址 PRB 与数据 PRB，并给出预取和需求访问各自的决策流程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>这些项规定地址字段及预取与需求候选之间的仲裁，还允许用内容寻址比较。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US9454486B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
+<p>撤销预取与合并读</p></li><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
+<p>准备下层事务与合并在途读</p></li></ul>
+    <p><a href="../index.html?patent=US9454486B2#knowledge">在全量关系图上定位 US9454486B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +144,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

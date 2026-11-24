@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12332792B2 把早到探测吸收到同地址在途请求 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US12332792B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US12332792B2</code><span>美国授权专利</span><time datetime="2025-06-17">2025-06-17</time></p>
   <h1>把早到探测吸收到同地址在途请求</h1>
   <p class="english-title" lang="en">Scalable cache coherency protocol</p>
   <p class="document-question">代理收到同址探测时，本地请求还在等回填。探测信息存到哪里？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">目标代理把早到的同块 snoop 类型写入本地在途请求的缓冲项，从原请求完成点继续处理。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>复用条件是两笔事务针对同一块，且本地请求仍在途。</dd></div><div><dt>验证方法</dt><dd>重放原请求等待回填的序列，比较同块 snoop 与异块 snoop。记录缓冲项分配数、吸收标记和 snoop 实际重放周期。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12332792B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">精确目录可以较早处理后续的同址事务。较晚发出的 snoop 若先于回填到达，代理可以把它记在已经等待该块的请求项上。</p>
     <p>一致性控制器维护缓存块的持有者和状态。代理收到针对同块的第二条探测时，可以把探测类型等字段写进先前本地请求的缓冲项，等本地请求完成后再处理探测。</p>
     <ol class="walkthrough"><li><h3>分配本地请求项</h3><p>代理 A 请求块 X，在 request buffer 里创建一项，保存本地请求字段。一致性控制器可据此发出第一条探测。</p></li><li><h3>按块地址确认冲突</h3><p>第二条 snoop 抵达 A 时，代理把它的地址与在途请求比较。找到 X 的请求项且符合吸收条件时，就在原项加上探测信息。</p></li><li><h3>写入探测类型及转发目标</h3><p>原缓冲项至少要记下探测类型。适用的转发从属方案还要记第三方目标 ID，前序事务完成后才能按该标识发数据。</p></li><li><h3>本地请求完成后执行探测</h3><p>A 取得前序事务返回的数据或状态后，从同一项读出探测字段。转发类探测可以送出数据块，失效类探测则将该行置为 I。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>A 读 X，对应缓冲项 R0 还在等回填。这时 A 收到一条要求把 X 转发给 C 的 Fwd 探测。</dd></div><div><dt>处理结果</dt><dd>A 在 R0 中记 Fwd 类型和 C 的目标 ID。A 的读完成后，它取得所需状态和数据，再把 X 发给 C。</dd></div><div><dt>结果解读</dt><dd>同址匹配和本地请求在途是此例的合并条件。A 先保存供数方向，等有可用数据后再向 C 发送。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">同一缓冲项保存本地请求和后到探测</a></li><li><a href="#fig-2">R0 等待回填时可以接收同址转发探测</a></li><li><a href="#fig-4">完成计数与探测重放共用在途项</a></li><li><a href="#fig-3">请求完成后按探测类型处理</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">R0 等待回填时可以接收同址转发探测</a></li><li><a href="#fig-1">同一缓冲项保存本地请求和后到探测</a></li><li><a href="#fig-4">完成计数与探测重放共用在途项</a></li><li><a href="#fig-3">请求完成后按探测类型处理</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">同一缓冲项保存本地请求和后到探测</h3></div>
-    <a class="paper-open" href="../figures/US12332792B2/US12332792B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 同一缓冲项保存本地请求和后到探测 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一缓冲项保存本地请求和后到探测">
-    <img class="paper-image" src="../figures/US12332792B2/US12332792B2-fig-1.svg" width="982" height="450"
-         style="--paper-width:982px" alt="同一缓冲项保存本地请求和后到探测。代理按块地址找到对应项，在其中写入探测类型。本地请求完成后，代理再从该项读取。">
-  </div>
-  <figcaption>
-    <span>代理按块地址找到对应项，在其中写入探测类型。本地请求完成后，代理再从该项读取。</span>
-    <span class="figure-evidence">图 5、9–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/7a/fe/5d/24a8900890c0eb/US12332792B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">R0 等待回填时可以接收同址转发探测</h3></div>
     <a class="paper-open" href="../figures/US12332792B2/US12332792B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 R0 等待回填时可以接收同址转发探测 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>在适用的从属方案中，R0 还记下目的代理 ID。A 收到回填数据后，再把数据转发给目标代理。</span>
     <span class="figure-evidence">图 3、7–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/7a/fe/5d/24a8900890c0eb/US12332792B2.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">同一缓冲项保存本地请求和后到探测</h3></div>
+    <a class="paper-open" href="../figures/US12332792B2/US12332792B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 同一缓冲项保存本地请求和后到探测 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一缓冲项保存本地请求和后到探测">
+    <img class="paper-image" src="../figures/US12332792B2/US12332792B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="同一缓冲项保存本地请求和后到探测。代理按块地址找到对应项，在其中写入探测类型。本地请求完成后，代理再从该项读取。">
+  </div>
+  <figcaption>
+    <span>代理按块地址找到对应项，在其中写入探测类型。本地请求完成后，代理再从该项读取。</span>
+    <span class="figure-evidence">图 5、9–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/7a/fe/5d/24a8900890c0eb/US12332792B2.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同址访问多、且消息可能沿不同通路反序时，代理可用已分配的请求项暂存后到的探测，减少占用独立槽位。</dd></div><div><dt>代价和限制</dt><dd>若原项放不下必要字段，或前序请求迟迟未完成，仍可能产生回压。</dd></div><div><dt>验证指标</dt><dd>统计吸收比例和各类缓冲项的占用周期。记录同址请求链的完成速率及实际经过互连的消息数。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>A 读 X，对应缓冲项 R0 还在等回填。这时 A 收到一条要求把 X 转发给 C 的 Fwd 探测。</dd></div><div><dt>处理结果</dt><dd>A 在 R0 中记 Fwd 类型和 C 的目标 ID。A 的读完成后，它取得所需状态和数据，再把 X 发给 C。</dd></div><div><dt>结果解读</dt><dd>同址匹配和本地请求在途是此例的合并条件。A 先保存供数方向，等有可用数据后再向 C 发送。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,18 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></dt><dd>在同一个本地在途请求项保存同块探测及其类型。前序请求完成后才处理后到探测。</dd></div><div><dt>图 5、图 9–10</dt><dd>分别给出请求缓冲字段、同址请求链和吸收步骤。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332792B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>覆盖前送目标 ID、失效状态、只使用原项的范围、非吸收项的分配和同址冲突判断。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US12332792B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
+<p>供数指令早于回填</p></li><li><a href="US12737296B2.html#engineering">统一地址空间中分散的相邻内存块</a>
+<p>地址分区目录与在途探测处理</p></li><li><a href="US11544193B2.html#engineering">用预期缓存状态处理探测与回填竞态</a>
+<p>列入参考文献</p></li></ul>
+    <p><a href="../index.html?patent=US12332792B2#knowledge">在全量关系图上定位 US12332792B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +145,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

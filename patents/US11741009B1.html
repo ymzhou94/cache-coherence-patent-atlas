@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11741009B1 缓存中设备请求的两级令牌排序 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US11741009B1</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US11741009B1</code><span>美国授权专利</span><time datetime="2023-08-29">2023-08-29</time></p>
   <h1>缓存中设备请求的两级令牌排序</h1>
   <p class="english-title" lang="en">Request ordering in a cache</p>
   <p class="document-question">设备请求分散在多条管线的缓冲里，发送端怎样按原次序找到它们？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">两级令牌分别记录请求所在的缓冲和管线，发送端据此从分散的队列取出要求保序的设备请求。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>管线由地址选定，管线内的缓冲由可用条目决定，令牌次序须与该类请求的接收次序对应。</dd></div><div><dt>验证方法</dt><dd>让连续三个保序请求走不同管线，并给第一条管线注入等待。记录两级令牌队头、请求序号和发往设备的周期。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11741009B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">即使请求被分到不同设备和管线，处理器仍可能要求它们按接收次序发出。把位置和顺序分开记录，便可用多组缓冲承载同一保序流。</p>
     <p>地址决定请求进入哪条管线，空位决定请求放在哪个缓冲。第一级令牌记下缓冲编号，第二级令牌记下管线编号。发送端先找管线，再找缓冲。</p>
     <ol class="walkthrough"><li><h3>按地址选管线</h3><p>Bank 选择电路根据请求地址选定处理管线。</p></li><li><h3>在管线内找空位</h3><p>选中管线后，硬件按缓冲占用情况放入请求。严格保序的请求要登记两级位置令牌。</p></li><li><h3>分别记录跨管线和管线内的次序</h3><p>二级令牌记录管线编号，反映请求跨管线的顺序。每条管线各有一级令牌，记录本管线内的缓冲编号及其顺序。</p></li><li><h3>用队头令牌找到请求</h3><p>发送端按二级队头选中含最老请求的管线，再读它的一级队头找到实际缓冲。请求发出后更新令牌和缓冲。允许有限重排的实施例可以另外使用一组一级令牌。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>X、Y、Z 要严格按接收顺序发出。假设 X 在 P1/B3，Y 在 P0/B1，Z 在 P1/B2。</dd></div><div><dt>处理结果</dt><dd>二级队列依次记 P1、P0、P1。P1 的一级队列记 B3、B2，P0 的一级队列记 B1。发送端因此依次找出 X、Y、Z。</dd></div><div><dt>结果解读</dt><dd>调整缓冲位置后，只要令牌随之更新，发出顺序便可保留。示例追踪的是设备访问的发出顺序。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">令牌记录位置，请求留在缓冲</a></li><li><a href="#fig-2">用两级队头找到最老请求</a></li><li><a href="#fig-4">三笔请求按接收顺序发出</a></li><li><a href="#fig-3">严格保序与有限重排</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>地址分布不均、且每条管线有多个缓冲时，按空位分配可以提高利用率，同时保留必要的发送次序。</dd></div><div><dt>代价和限制</dt><dd>最老请求的目的设备产生回压时，即使其他缓冲空闲，同一保序请求流也可能受阻。</dd></div><div><dt>验证指标</dt><dd>比较各管线的占用率、队头阻塞周期、跨设备的顺序违规次数和每周期发出的请求数。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>X、Y、Z 要严格按接收顺序发出。假设 X 在 P1/B3，Y 在 P0/B1，Z 在 P1/B2。</dd></div><div><dt>处理结果</dt><dd>二级队列依次记 P1、P0、P1。P1 的一级队列记 B3、B2，P0 的一级队列记 B1。发送端因此依次找出 X、Y、Z。</dd></div><div><dt>结果解读</dt><dd>调整缓冲位置后，只要令牌随之更新，发出顺序便可保留。示例追踪的是设备访问的发出顺序。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>用地址选管线、用空位选缓冲，再用两级令牌找出待发请求。</dd></div><div><dt>图 3A–3B</dt><dd>给出严格保序请求登记两级令牌以及从最老条目开始发送的过程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>，图 4A–4B</dt><dd>指定的可重排请求可走独立的一级令牌组。另有从属配置将令牌存储实现为 FIFO。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11741009B1/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
+<p>两级令牌顺序与异类事务依赖</p></li><li><a href="US12216578B2.html#engineering">用两级令牌保持缓存请求的发出顺序</a>
+<p>继续申请突出两级令牌</p></li></ul>
+    <p><a href="../index.html?patent=US11741009B1#knowledge">在全量关系图上定位 US11741009B1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +144,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

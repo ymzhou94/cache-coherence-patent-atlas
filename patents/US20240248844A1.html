@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20240248844A1 宽 load 按原子元素检查转发来源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CPU 缓存与 LSU</span></p>
-  <p class="document-id"><code>US20240248844A1</code><span>美国公开申请</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="document-id"><code>US20240248844A1</code><span>美国公开申请</span><time datetime="2024-07-25">2024-07-25</time></p>
   <h1>宽 load 按原子元素检查转发来源</h1>
   <p class="english-title" lang="en">Decoupling Atomicity from Operation Size</p>
   <p class="document-question">一条访存操作比 ISA 所需原子性粒度更宽时，存储队列的转发边界在哪里？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">LSU 在执行宽 load 时逐个验证原子元素，确认每个元素的全部字节均由同一笔 store 或另一完整数据源提供后，才允许存储队列转发。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>操作宽度大于原子性粒度。不同元素可来自不同源，但单个元素内部若混合覆盖，相关转发资格不成立。</dd></div><div><dt>验证方法</dt><dd>保持 load 地址、对齐和宽度相同，把 store 覆盖从完整原子元素改为部分元素。跟踪各字节数据来源、转发许可、重放次数和 load 的完成时点。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">成对或向量 load 的访问宽度可覆盖多个 ISA 原子元素。要判断是否可转发，先看每个元素字节对应的数据来源。</p>
     <p>加载/存储单元（LSU）按原子元素验证整组字节取自同一笔 store 或另一完整数据源。不同元素可有不同来源。发生原子性或操作顺序违例时，实施例以阻止完成或重放维护内存一致性约束。</p>
     <ol class="walkthrough"><li><h3>译码形成宽操作</h3><p>一条 load 指令可译为比原子性粒度更宽的内存操作。</p></li><li><h3>并行寻址到数据缓存</h3><p>缓存路径给出正常数据，LSU 同时核对存储队列可转发字节。</p></li><li><h3>逐元素确认来源</h3><p>按原子性尺寸分组，判断是否每组都完整来自一笔 store 或另一来源。</p></li><li><h3>处理部分覆盖和顺序冲突</h3><p>阻止有混合来源的元素完成。权 17 的重放路径涉及 ROB 位置与按序发出。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>一条配对 load 有两个原子元素 A、B。A 的所有字节来自同一笔较早的 store，B 的所有字节来自缓存。</dd></div><div><dt>处理结果</dt><dd>LSU 按元素确认 A 和 B 各自完整后才允许转发。</dd></div><div><dt>结果解读</dt><dd>若 A 的部分字节来自旧 store、其余来自缓存，须额外处理。元素边界和缓存行边界各自独立。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">LSU 在宽操作内检查原子元素</a></li><li><a href="#fig-2">来源验证早于 load 完成</a></li><li><a href="#fig-3">不同来源的元素能否转发</a></li><li><a href="#fig-4">配对 load 中两个元素的对照</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在内存顺序模型允许时，可保持较宽的单次 LSU 访问与转发。</dd></div><div><dt>代价和限制</dt><dd>跨缓存行、字节掩码不齐和多微操作分解会增加验证与重放成本。</dd></div><div><dt>验证指标</dt><dd>按元素宽度和地址对齐分组，测 load 重放率、转发成功率及结果可用的周期。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>一条配对 load 有两个原子元素 A、B。A 的所有字节来自同一笔较早的 store，B 的所有字节来自缓存。</dd></div><div><dt>处理结果</dt><dd>LSU 按元素确认 A 和 B 各自完整后才允许转发。</dd></div><div><dt>结果解读</dt><dd>若 A 的部分字节来自旧 store、其余来自缓存，须额外处理。元素边界和缓存行边界各自独立。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,16 @@
     <dl class="explanation evidence"><div><dt>图 2、6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></dt><dd>加载/存储单元（LSU）按原子元素验证整组字节取自同一笔 store 或另一完整数据源。不同元素可有不同来源。发生原子性或操作顺序违例时，实施例以阻止完成或重放维护内存一致性约束。</dd></div><div><dt>图 3、7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>若 A 的部分字节来自旧 store、其余来自缓存，须额外处理。元素边界和缓存行边界各自独立。</dd></div><div><dt>图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></dt><dd>跨缓存行、字节掩码不齐和多微操作分解会增加验证与重放成本。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US20240248844A1/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12775463B2.html#engineering">分级存储队列与地址解析</a>
+<p>宽加载的数据来源与队列搜索</p></li></ul>
+    <p><a href="../index.html?patent=US20240248844A1#knowledge">在全量关系图上定位 US20240248844A1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +140,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

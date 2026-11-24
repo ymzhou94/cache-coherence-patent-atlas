@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11275697B2 合并 TLB 失效请求时保留电源状态边界 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US11275697B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US11275697B2</code><span>美国授权专利</span><time datetime="2022-03-15">2022-03-15</time></p>
   <h1>合并 TLB 失效请求时保留电源状态边界</h1>
   <p class="english-title" lang="en">Translation lookaside buffer invalidation for merged invalidation requests across power boundaries</p>
   <p class="document-question">目标 CPU 或 GPU 在合并请求期间进入低功耗状态时，哪些 TLB 失效仍须发送？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">TLB 维护逻辑合并清除请求，在检测到目标处理器转入指定非活动状态后可丢弃被覆盖的合并请求。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>只在已确认的状态转换覆盖相关维护时才可省去该批消息，目标核恢复后的新请求需根据其时间区间判断。</dd></div><div><dt>验证方法</dt><dd>以相同请求地址分别将一组失效请求放在目标状态转换之前和之后。对齐状态转换、合并判定及实际发出到目标的失效消息。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11275697B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">CPU 与 GPU 可以处于不同电源域。内核更新页表时，需要按地址转换缓存状态清除可能过时的 TLB 条目。多个失效请求合并后，目标处理器可能已完成一次清除这些条目的电源状态转换。</p>
     <p>合并前给每条 TLB 失效请求关联接收时间，并与目标处理器的活动时间线比较。在原文的转换会清除 TLB 的实施例中，可丢弃被该转换覆盖的请求。同一批中属于后续活动区间的请求仍需发出。</p>
     <ol class="walkthrough"><li><h3>记录两条失效请求</h3><p>分别关联接收时间。合并结构保留能够比较时间先后的信息。</p></li><li><h3>读取电源状态指示</h3><p>按目标处理器的活动和非活动指示建立时间线。</p></li><li><h3>判断是否已清除受影响状态</h3><p>原文相关实施方式在进入非活动状态时清除 TLB，可以覆盖较早请求。</p></li><li><h3>保留后续活动区间的请求</h3><p>如果同批还有目标重新活动后的请求，则依据它继续发送 TLBI。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>T0 和 T1 收到两个失效。目标处理器随后进入会清空 TLB 的非活动状态，恢复后又收到第三个失效。</dd></div><div><dt>处理结果</dt><dd>合并时可以略过已由清除覆盖的前两个请求，第三个仍发往目标。</dd></div><div><dt>结果解读</dt><dd>目标转换是否使 TLB 内容无效取决于电源域和实现。单凭线程睡眠或空闲状态标签无法确认为同一转换。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">目标电源域的状态进入 TLBI 合并判断</a></li><li><a href="#fig-2">同一批中保留转换后的请求</a></li><li><a href="#fig-3">按活动区间比较请求的作用</a></li><li><a href="#fig-4">调度事件与硬件状态事件分别观察</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>可减少发送给已清除地址转换状态的组件的冗余维护事务。</dd></div><div><dt>代价和限制</dt><dd>如果目标域保留 TLB 条目，丢弃请求可能保留旧映射。状态通知和请求时间线都要可比较。</dd></div><div><dt>验证指标</dt><dd>按目标电源域记录失效请求、合并次数、实际发送次数及映射更新至失效完成的延迟。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>T0 和 T1 收到两个失效。目标处理器随后进入会清空 TLB 的非活动状态，恢复后又收到第三个失效。</dd></div><div><dt>处理结果</dt><dd>合并时可以略过已由清除覆盖的前两个请求，第三个仍发往目标。</dd></div><div><dt>结果解读</dt><dd>目标转换是否使 TLB 内容无效取决于电源域和实现。单凭线程睡眠或空闲状态标签无法确认为同一转换。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>从属项给出接收时间戳与电源状态时间线之间的比较。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></dt><dd>活动区间的新请求仍发出，另一个从属项明确转换包括清除 TLB。</dd></div><div><dt>原图 1–3</dt><dd>给出 CPU/GPU 电源域、失效请求时间线和筛选流程。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11275697B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
+<p>电源状态改变后的失效</p></li><li><a href="US12229561B1.html#engineering">TLBI 后的数据同步屏障等待目标核在途访问</a>
+<p>TLB 失效合并与后续 DSB 应答</p></li></ul>
+    <p><a href="../index.html?patent=US11275697B2#knowledge">在全量关系图上定位 US11275697B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +141,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

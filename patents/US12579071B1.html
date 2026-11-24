@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12579071B1 按初始 PC 复用被逐出的访问图 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
-  <p class="document-id"><code>US12579071B1</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="document-id"><code>US12579071B1</code><span>美国授权专利</span><time datetime="2026-03-17">2026-03-17</time></p>
   <h1>按初始 PC 复用被逐出的访问图</h1>
   <p class="english-title" lang="en">Pattern match prefetcher with supplemental program-counter-based learning</p>
   <p class="document-question">同一条指令访问新区域时，预取器怎样用已经逐出的访问图？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">辅助表按首次触及访问图的指令 PC 积累逐出样本，用命中的历史生成新区域的起始图。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>主表需要分配新图，且辅助表命中可用记录。按首触偏移对齐是可选的实施细节。</dd></div><div><dt>验证方法</dt><dd>清空各轮主表并保留同一训练历史，比较默认起始图和按 PC 恢复的起始图。逐区域记录第一笔被后续需求使用的预取何时发出，再统计无用候选。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12579071B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">切换数据区域后，旧区域的访问图可能被逐出。同一条指令若继续访问结构相似的区域，从旧图学到的相对偏移还可能用得上。</p>
     <p>主表按数据区域记录各偏移的访问类型。图被逐出时，辅助表按第一次触及该图的指令 PC 保存其特征。后续逐出的图若有同一初始 PC，便可用于更新记录。以后为新区域分配图时，匹配的记录可提供起始模式。</p>
     <ol class="walkthrough"><li><h3>按区域和偏移记录访问</h3><p>主表用数据地址找对应区域，再按偏移记录需求读、预取结果等类型。预取器比较这些符号以预测下一批偏移。</p></li><li><h3>逐出时送出训练样本</h3><p>主表把初次触及该图的指令 PC 和各偏移类别送给辅助表。图 4 的实现还可检查样本是否充分。</p></li><li><h3>按初始 PC 汇总已对齐的样本</h3><p>后续逐出的图如果初始 PC 相同，辅助表会用它更新计数。以首触地址为基准对齐后，不同绝对地址上的同类偏移可以归入同一计数。达到要求后，记录进入可用状态。</p></li><li><h3>用已就绪的记录初始化新图</h3><p>需求访问需要分配新图时，预取器用指令 PC 查辅助表。匹配且已就绪便用偏移计数生成起始符号，其余情况用默认图。由此生成的候选仍受正常发出资源限制。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>指令 PC 为 P 的 load 先后访问多个区域。各自以首触处为偏移 0，随后都访问 +2。已逐出的样本让 +2 的计数达到门槛，随后 P 第一次触及新区域 R3。</dd></div><div><dt>处理结果</dt><dd>主表若需要为 R3 分配新图，辅助表命中 P 后可把 +2 写进起始图。资源允许时，预取器可在 R3 的实际 +2 访问发生前发出候选。</dd></div><div><dt>结果解读</dt><dd>已有图仍有效时会继续使用。若 P 在 R3 访问的是另一类结构，历史 +2 也可能用不上。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">主表按区域索引，辅助表按初始 PC 学习</a></li><li><a href="#fig-2">旧图逐出后怎样影响新区域</a></li><li><a href="#fig-3">什么时候用辅助表生成起始图</a></li><li><a href="#fig-4">从各区域的首触位置对齐 +2</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">旧图逐出后怎样影响新区域</a></li><li><a href="#fig-1">主表按区域索引，辅助表按初始 PC 学习</a></li><li><a href="#fig-3">什么时候用辅助表生成起始图</a></li><li><a href="#fig-4">从各区域的首触位置对齐 +2</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">主表按区域索引，辅助表按初始 PC 学习</h3></div>
-    <a class="paper-open" href="../figures/US12579071B1/US12579071B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 主表按区域索引，辅助表按初始 PC 学习 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="主表按区域索引，辅助表按初始 PC 学习">
-    <img class="paper-image" src="../figures/US12579071B1/US12579071B1-fig-1.svg" width="982" height="326"
-         style="--paper-width:982px" alt="主表按区域索引，辅助表按初始 PC 学习。主表按数据地址查区域。图被逐出后，辅助表用首次触及它的指令 PC 归类样本，供后续分配时查找。">
-  </div>
-  <figcaption>
-    <span>主表按数据地址查区域。图被逐出后，辅助表用首次触及它的指令 PC 归类样本，供后续分配时查找。</span>
-    <span class="figure-evidence">说明书图 1–2，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。</span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">旧图逐出后怎样影响新区域</h3></div>
     <a class="paper-open" href="../figures/US12579071B1/US12579071B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 旧图逐出后怎样影响新区域 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>辅助表只用初次访问 PC 匹配的样本更新偏移计数，新区域用这些计数生成自己的起始图。</span>
     <span class="figure-evidence">说明书图 3–5、16，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>。</span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">主表按区域索引，辅助表按初始 PC 学习</h3></div>
+    <a class="paper-open" href="../figures/US12579071B1/US12579071B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 主表按区域索引，辅助表按初始 PC 学习 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="主表按区域索引，辅助表按初始 PC 学习">
+    <img class="paper-image" src="../figures/US12579071B1/US12579071B1-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="主表按区域索引，辅助表按初始 PC 学习。主表按数据地址查区域。图被逐出后，辅助表用首次触及它的指令 PC 归类样本，供后续分配时查找。">
+  </div>
+  <figcaption>
+    <span>主表按数据地址查区域。图被逐出后，辅助表用首次触及它的指令 PC 归类样本，供后续分配时查找。</span>
+    <span class="figure-evidence">说明书图 1–2，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。</span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>循环或遍历在新区域反复产生相似的相对访问时，可缩短每次重新学习的时间。</dd></div><div><dt>代价和限制</dt><dd>同一 PC 访问不同数据结构时，辅助表可能混合不同模式的样本，继而发出更多无用预取。</dd></div><div><dt>验证指标</dt><dd>固定需求轨迹，测量首个有效预取提前多久。再统计起始图生成的额外候选中，及时命中和迟到的比例。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>指令 PC 为 P 的 load 先后访问多个区域。各自以首触处为偏移 0，随后都访问 +2。已逐出的样本让 +2 的计数达到门槛，随后 P 第一次触及新区域 R3。</dd></div><div><dt>处理结果</dt><dd>主表若需要为 R3 分配新图，辅助表命中 P 后可把 +2 写进起始图。资源允许时，预取器可在 R3 的实际 +2 访问发生前发出候选。</dd></div><div><dt>结果解读</dt><dd>已有图仍有效时会继续使用。若 P 在 R3 访问的是另一类结构，历史 +2 也可能用不上。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,18 @@
     <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>保存首访问 PC，再用初始 PC 匹配的后续逐出图更新条目。之后 PC 命中时，条目可以提供起始图。</dd></div><div><dt>说明书图 3–5</dt><dd>按偏移记录的训练计数会映射回图上的符号。命中且已就绪时用学习结果，其余情况用默认图。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>这几项分别约束计数、起始符号、以首访问偏移为基准对齐和存储粒度。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US12579071B1/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
+<p>从候选生成到否决</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
+<p>按区域恢复和按 PC 学习</p></li><li><a href="US20260072843A1.html#engineering">按活动访问图数量调整预取限制</a>
+<p>候选生成和发出限制</p></li></ul>
+    <p><a href="../index.html?patent=US12579071B1#knowledge">在全量关系图上定位 US12579071B1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +142,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

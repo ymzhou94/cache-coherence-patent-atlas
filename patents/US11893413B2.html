@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11893413B2 用写表缩短虚拟通道的请求缓冲驻留 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US11893413B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US11893413B2</code><span>美国授权专利</span><time datetime="2024-02-06">2024-02-06</time></p>
   <h1>用写表缩短虚拟通道的请求缓冲驻留</h1>
   <p class="english-title" lang="en">Virtual channel support using write table</p>
   <p class="document-question">写操作交给桥以后，源端还要把什么留到最终应答？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">桥接收写请求且写表分配成功后，发起端提前回收通用请求缓冲项。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>写表项省略至少部分写入数据，相关完成状态仍需保留到写请求应答。</dd></div><div><dt>验证方法</dt><dd>用同一读写混合负载增大桥接收到完成应答的间隔，记录通用缓冲项分配及回收周期、写表在途条目数和读请求等待。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11893413B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">读、写和控制事务可能共用同一组待处理请求缓冲（PRB）。写数据一旦交给桥，源端只须保留能识别这笔写并跟踪应答的信息。</p>
     <p>处理电路先把请求放入通用缓冲，另在写表登记用于追踪它的条目。当桥接收写请求、写表也登记成功后，处理电路释放通用缓冲项。写表继续跟踪这笔写，直到收到完成应答。</p>
     <ol class="walkthrough"><li><h3>在 PRB 保留完整请求</h3><p>源端先分配一个待处理请求项，保存目标、数据和控制信息。</p></li><li><h3>在写表登记</h3><p>准备发往桥时，源端可按地址或地址哈希登记跟踪项。权 1 要求写表项省略至少一部分写数据。</p></li><li><h3>释放 PRB 项</h3><p>桥收到请求、写表分配成功后，源端才回收 PRB 项。写表保留跟踪项，直到收到完成应答。</p></li><li><h3>处理写表冲突</h3><p>某些实施例会比较新地址的哈希与在途写表项。发生冲突时先保留 PRB 项，等原写完成再进桥。写表已满时，也可以根据 PRB 剩余容量决定是否暂用 PRB 跟踪。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>设 PRB 有 4 项。每笔写交给桥后要等 8 个时间单位才完成。写表有空位，暂时没有同址冲突。</dd></div><div><dt>处理结果</dt><dd>一笔写进入桥并登记进写表后，源端可以用释放出来的 PRB 项接收下一笔读或写。若新写的哈希与在途写冲突，则要等旧写完成。</dd></div><div><dt>结果解读</dt><dd>4 项和 8 个时间单位是示例参数。PRB 可以提前释放，单笔写在桥或内存中的执行时间由后续路径决定。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">写数据交给桥，源端保留应答信息</a></li><li><a href="#fig-2">两种条目在什么时刻释放</a></li><li><a href="#fig-4">PRB 提前释放后的写事务</a></li><li><a href="#fig-3">哈希碰撞和写表已满</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">两种条目在什么时刻释放</a></li><li><a href="#fig-1">写数据交给桥，源端保留应答信息</a></li><li><a href="#fig-4">PRB 提前释放后的写事务</a></li><li><a href="#fig-3">哈希碰撞和写表已满</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">写数据交给桥，源端保留应答信息</h3></div>
-    <a class="paper-open" href="../figures/US11893413B2/US11893413B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 写数据交给桥，源端保留应答信息 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="写数据交给桥，源端保留应答信息">
-    <img class="paper-image" src="../figures/US11893413B2/US11893413B2-fig-1.svg" width="982" height="326"
-         style="--paper-width:982px" alt="写数据交给桥，源端保留应答信息。桥负责发送写事务。只有桥接收写且写表完成登记，处理电路才会释放通用 PRB 项。">
-  </div>
-  <figcaption>
-    <span>桥负责发送写事务。只有桥接收写且写表完成登记，处理电路才会释放通用 PRB 项。</span>
-    <span class="figure-evidence">图 1–2、6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> · <a href="https://patentimages.storage.googleapis.com/be/8c/05/59ce81245374a4/US11893413.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">两种条目在什么时刻释放</h3></div>
     <a class="paper-open" href="../figures/US11893413B2/US11893413B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 两种条目在什么时刻释放 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>写进桥之后，源端继续用写表项跟踪。它收到写完成应答，才回收该写表项。</span>
     <span class="figure-evidence">图 3–5、7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> · <a href="https://patentimages.storage.googleapis.com/be/8c/05/59ce81245374a4/US11893413.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">写数据交给桥，源端保留应答信息</h3></div>
+    <a class="paper-open" href="../figures/US11893413B2/US11893413B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 写数据交给桥，源端保留应答信息 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="写数据交给桥，源端保留应答信息">
+    <img class="paper-image" src="../figures/US11893413B2/US11893413B2-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="写数据交给桥，源端保留应答信息。桥负责发送写事务。只有桥接收写且写表完成登记，处理电路才会释放通用 PRB 项。">
+  </div>
+  <figcaption>
+    <span>桥负责发送写事务。只有桥接收写且写表完成登记，处理电路才会释放通用 PRB 项。</span>
+    <span class="figure-evidence">图 1–2、6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> · <a href="https://patentimages.storage.googleapis.com/be/8c/05/59ce81245374a4/US11893413.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>写完成得慢、通用缓冲又紧张时，提前回收能减少每笔写占用 PRB 的时间。</dd></div><div><dt>代价和限制</dt><dd>写表满或哈希位数不足时，等待可能转移到写表。桥的容量也会限制整体吞吐。</dd></div><div><dt>验证指标</dt><dd>分别测 PRB 项的平均占用周期、哈希碰撞次数和桥的写入吞吐。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>设 PRB 有 4 项。每笔写交给桥后要等 8 个时间单位才完成。写表有空位，暂时没有同址冲突。</dd></div><div><dt>处理结果</dt><dd>一笔写进入桥并登记进写表后，源端可以用释放出来的 PRB 项接收下一笔读或写。若新写的哈希与在途写冲突，则要等旧写完成。</dd></div><div><dt>结果解读</dt><dd>4 项和 8 个时间单位是示例参数。PRB 可以提前释放，单笔写在桥或内存中的执行时间由后续路径决定。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>权 1、15 要求桥接收与写表登记均成功后才能释放 PRB 项。权 1 还要求写表项省略至少一部分写数据。</dd></div><div><dt>图 3–5</dt><dd>图 3–5 分别给出写表条目以及哈希命中、写表已满时的缓冲占用。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></dt><dd>覆盖计算地址哈希、发生碰撞时保留 PRB 项、旧写完成后才分配的流程。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11893413B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
+<p>写请求缓冲释放与事务排序</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
+<p>事务缓冲的释放与准入</p></li></ul>
+    <p><a href="../index.html?patent=US11893413B2#knowledge">在全量关系图上定位 US11893413B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +144,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

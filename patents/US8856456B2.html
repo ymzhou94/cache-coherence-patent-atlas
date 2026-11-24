@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US8856456B2 通过块追踪项过滤缓存一致性探测 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>Snoop 与一致性</span></p>
-  <p class="document-id"><code>US8856456B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="document-id"><code>US8856456B2</code><span>美国授权专利</span><time datetime="2014-10-07">2014-10-07</time></p>
   <h1>通过块追踪项过滤缓存一致性探测</h1>
   <p class="english-title" lang="en">Systems, methods, and devices for cache block coherence</p>
   <p class="document-question">共享内存的代理如何判断缺失的缓存行是否需要探测对端？</p>
@@ -28,19 +30,21 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">代理侧块跟踪表按行组决定是否向另一内存共享设备发出 snoop，一致性接口另存该组可能共享的状态。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>本地表与接口表处于不同位置。缩小跟踪单位会改变表项所覆盖的地址范围。</dd></div><div><dt>验证方法</dt><dd>同样的行请求下，让目标组分别处于已知不共享和可能共享状态。记录两张表命中情况与外发 snoop 数。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US8856456B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">共享内存的代理可能只在一小段地址范围内访问相同数据。把一个块拆成若干组后，每组记录的共享状态可以给多条行复用。</p>
     <p>代理侧的块跟踪表把块内的缓存行分组，依据对应组的状态决定是否向对端发探测。中间的一致性接口另有一张表，按块记录可能共享的组。</p>
     <ol class="walkthrough"><li><h3>按块分组记录</h3><p>一个块级表项含多个组的缓存状态。每组对应一条或多条缓存行。代理侧和一致性接口侧各维护一张表。</p></li><li><h3>在行缺失时查块和组</h3><p>代理先查目标块，再按组索引检查与缺失行关联的状态。只有有效状态明确指示可以跳过时，才省去对端探测。</p></li><li><h3>用应答更新整块记录</h3><p>对端收到探测且未持有目标行时，可以返回同块各组的状态，请求端据此补齐表项。若等待应答超时，请求端可把整块改为需要探测。</p></li><li><h3>按争用计数拆分或合并</h3><p>计数超过上阈值时可拆分争用块，低于下阈值时可合并相邻跟踪项。拆得越细，记录的可能共享范围越精确，但要用更多表空间。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>设块 B 有 8 条行，前 4 条归 G0，后 4 条归 G1。代理 A 的有效表项记录 G1 无需探测，G0 可能共享。</dd></div><div><dt>处理结果</dt><dd>A 请求第 6 条行而缺失时，可跳过对端 B 的探测。第 1 条行落在 G0，仍须保守查询对端。若该探测超时，A 可以把整块标成需要探测。</dd></div><div><dt>结果解读</dt><dd>8 条行和每组 4 条是示例设定。只有有效表项能支撑过滤，组状态可能覆盖实际共享位置周围的其他行。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
+    <h2 id="figures-title">图解与对照</h2>
     <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">代理侧与一致性接口各维护一张跟踪表</a></li><li><a href="#fig-2">有效条目可以跳过探测，超时则恢复整块探测</a></li><li><a href="#fig-3">争用计数决定何时拆分和合并</a></li><li><a href="#fig-4">跟踪范围缩小时需要更多表项</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一区域反复访问、组的共享状态较稳定时，一个表项可以省去多次探测。</dd></div><div><dt>代价和限制</dt><dd>高争用区域可能需要更多细粒度表项。频繁超时也会扩大保守探测的范围。</dd></div><div><dt>验证指标</dt><dd>统计有效表项覆盖率、跳过探测的比例、超时后整块改为需探测的次数，以及拆分增加的状态字节。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>设块 B 有 8 条行，前 4 条归 G0，后 4 条归 G1。代理 A 的有效表项记录 G1 无需探测，G0 可能共享。</dd></div><div><dt>处理结果</dt><dd>A 请求第 6 条行而缺失时，可跳过对端 B 的探测。第 1 条行落在 G0，仍须保守查询对端。若该探测超时，A 可以把整块标成需要探测。</dd></div><div><dt>结果解读</dt><dd>8 条行和每组 4 条是示例设定。只有有效表项能支撑过滤，组状态可能覆盖实际共享位置周围的其他行。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,17 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></dt><dd>独立权项分别规定两张表、有效状态下的过滤，以及超时后将相关块改为需要探测。</dd></div><div><dt>图 5、图 24–25</dt><dd>给出组状态的布局，以及依据争用计数拆分、合并跟踪项的实施例。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></dt><dd>一条探测可请求目标缓存行、块级跟踪项，或两种信息一起请求。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US8856456B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12423235B2.html#engineering">在缓存代理保存一致性目录 way 标识</a>
+<p>跳过探测与少查目录</p></li><li><a href="US8868847B2.html#engineering">按页记录共享范围的多核探测过滤</a>
+<p>按页与按块过滤 snoop</p></li></ul>
+    <p><a href="../index.html?patent=US8856456B2#knowledge">在全量关系图上定位 US8856456B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +144,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

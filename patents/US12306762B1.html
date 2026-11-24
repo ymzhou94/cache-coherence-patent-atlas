@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12306762B1 抑制曾经无用的预取地址 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
-  <p class="document-id"><code>US12306762B1</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="document-id"><code>US12306762B1</code><span>美国授权专利</span><time datetime="2025-05-20">2025-05-20</time></p>
   <h1>抑制曾经无用的预取地址</h1>
   <p class="english-title" lang="en">Deny list for a memory prefetcher circuit</p>
   <p class="document-question">预取行到被逐出都没被用过，下一次预取同一地址时会发生什么？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">缓存回报逐出前从未被需求触碰的预取行，限制表据此建项。下一笔预取命中活动表项时被拦截。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>记录未激活时仍可发出，匹配活动记录才抑制预取。需求读沿其正常路径。</dd></div><div><dt>验证方法</dt><dd>以相同的先冷后热地址流比较开关限制表。分别统计活动期拦下的请求、下层实际预取读数，以及需求首次访问时仍未回填的次数。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12306762B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">预取数据即使从未被需求读命中，也用掉了缓存空间、请求槽和返回带宽。逐出时已能确定这次驻留有没有被利用。</p>
     <p>缓存逐出一条从未被触碰的预取行时，把地址报告给限制表。以后再预取该地址，若查到的记录已生效，电路可拒绝请求。</p>
     <ol class="walkthrough"><li><h3>在标签中记录有无使用</h3><p>标签可标记一行是由预取填充、尚未被触碰的。之后若有需求访问命中，缓存可据此更新未使用状态。</p></li><li><h3>未使用就逐出时回报地址</h3><p>更换缓存行时，缓存检查该标记。若预取行仍未被使用，缓存把地址报告给限制表。部分实施例累加计数，达到门槛才激活记录。</p></li><li><h3>下一次预取前检查记录</h3><p>预取候选先按目标地址查表，再检查记录是否活动。记录已建立但计数还没到门槛时，仍能放行。</p></li><li><h3>确定一条记录覆盖多少地址</h3><p>有的实现让一条表项覆盖多条缓存行，也可加入信用值，或在发出队列内做检查。表项覆盖的地址和信用规则会影响误抑制。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>假定地址 0x1000 的缓存行由预取填充，每次都在需求访问命中前被逐出。选用计数到 2 才激活的实现，并让这一过程发生两次。</dd></div><div><dt>处理结果</dt><dd>第二次报告激活表项。后来再预取 0x1000 时，电路会拒绝候选。对这个地址的需求读仍走普通请求路径。</dd></div><div><dt>结果解读</dt><dd>2 是示例门槛。如果地址后来变热，活动记录可能让需求读失去预取带来的提前量。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">未触碰的预取行被逐出时训练限制表</a></li><li><a href="#fig-2">一次逐出回报如何影响后续预取</a></li><li><a href="#fig-4">拦截位置可在入队前或已入队之后</a></li><li><a href="#fig-3">记录存在与记录生效是两个条件</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">一次逐出回报如何影响后续预取</a></li><li><a href="#fig-1">未触碰的预取行被逐出时训练限制表</a></li><li><a href="#fig-4">拦截位置可在入队前或已入队之后</a></li><li><a href="#fig-3">记录存在与记录生效是两个条件</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">未触碰的预取行被逐出时训练限制表</h3></div>
-    <a class="paper-open" href="../figures/US12306762B1/US12306762B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 未触碰的预取行被逐出时训练限制表 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="未触碰的预取行被逐出时训练限制表">
-    <img class="paper-image" src="../figures/US12306762B1/US12306762B1-fig-1.svg" width="982" height="326"
-         style="--paper-width:982px" alt="未触碰的预取行被逐出时训练限制表。缓存逐出预取行时检查标签。若该行从未使用，缓存回报其地址，后续预取先用目标地址查限制表。">
-  </div>
-  <figcaption>
-    <span>缓存逐出预取行时检查标签。若该行从未使用，缓存回报其地址，后续预取先用目标地址查限制表。</span>
-    <span class="figure-evidence">原文图 1–2、5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>。 · <a href="https://patentimages.storage.googleapis.com/a2/f0/0b/79419ccd4163e8/US12306762B1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">一次逐出回报如何影响后续预取</h3></div>
     <a class="paper-open" href="../figures/US12306762B1/US12306762B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 一次逐出回报如何影响后续预取 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>缓存先确认此次驻留无人访问，再回报逐出的地址。后来的预取候选只有命中活动记录才被拦截。</span>
     <span class="figure-evidence">图 6–8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。事件距离无固定周期。 · <a href="https://patentimages.storage.googleapis.com/a2/f0/0b/79419ccd4163e8/US12306762B1.pdf">专利 PDF</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">未触碰的预取行被逐出时训练限制表</h3></div>
+    <a class="paper-open" href="../figures/US12306762B1/US12306762B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 未触碰的预取行被逐出时训练限制表 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="未触碰的预取行被逐出时训练限制表">
+    <img class="paper-image" src="../figures/US12306762B1/US12306762B1-fig-1.svg" width="982" height="326"
+         style="--paper-width:982px" alt="未触碰的预取行被逐出时训练限制表。缓存逐出预取行时检查标签。若该行从未使用，缓存回报其地址，后续预取先用目标地址查限制表。">
+  </div>
+  <figcaption>
+    <span>缓存逐出预取行时检查标签。若该行从未使用，缓存回报其地址，后续预取先用目标地址查限制表。</span>
+    <span class="figure-evidence">原文图 1–2、5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>。 · <a href="https://patentimages.storage.googleapis.com/a2/f0/0b/79419ccd4163e8/US12306762B1.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一批预取地址反复出现、预取行却从不被使用时，限制表可以省下队列和填充资源。</dd></div><div><dt>代价和限制</dt><dd>工作集转热后，旧记录可能挡住变得有用的预取。表项粒度较粗时，影响还可能波及邻近地址。</dd></div><div><dt>验证指标</dt><dd>记录哪些地址因未触碰就逐出而被登记、哪些候选随后被挡住，随后首次需求缺失的次数，以及误抑制持续多久。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定地址 0x1000 的缓存行由预取填充，每次都在需求访问命中前被逐出。选用计数到 2 才激活的实现，并让这一过程发生两次。</dd></div><div><dt>处理结果</dt><dd>第二次报告激活表项。后来再预取 0x1000 时，电路会拒绝候选。对这个地址的需求读仍走普通请求路径。</dd></div><div><dt>结果解读</dt><dd>2 是示例门槛。如果地址后来变热，活动记录可能让需求读失去预取带来的提前量。</dd></div></dl>
+    </div>
     <a class="lab-link" href="../lab.html#deny-list">运行对应原型</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,18 @@
     <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>用未触碰预取行的逐出报告建立跟踪项。后续候选地址命中活动记录时，拒绝这次预取。</dd></div><div><dt>说明书图 6–8</dt><dd>图中检查预取候选能否发出，也说明如何用逐出报告更新限制表。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></dt><dd>可以按报告次数激活表项，并在逐出时读取预取标记。表项可覆盖多行，拒绝候选时可以扣除信用值。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US12306762B1/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
+<p>撤销预取与合并读</p></li><li><a href="US12579071B1.html#engineering">按初始 PC 复用被逐出的访问图</a>
+<p>从候选生成到否决</p></li><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
+<p>陈旧命中与无用预取</p></li></ul>
+    <p><a href="../index.html?patent=US12306762B1#knowledge">在全量关系图上定位 US12306762B1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +145,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

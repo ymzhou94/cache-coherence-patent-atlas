@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12619558B2 仅预留命中所需的内存控制器资源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>SLC 与内存控制器</span></p>
-  <p class="document-id"><code>US12619558B2</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="document-id"><code>US12619558B2</code><span>美国授权专利</span><time datetime="2026-05-05">2026-05-05</time></p>
   <h1>仅预留命中所需的内存控制器资源</h1>
   <p class="english-title" lang="en">Memory controller reservation of resources for cache hit</p>
   <p class="document-question">缺失资源用完时，控制器怎样让本来会命中的请求继续查标签？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">标签结果未知时，控制器只预留基本命中路径使用的一组资源，确认缺失后再申请缺失路径资源。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>命中组的必要条目须全部可用才能启动查询，申请缺失资源的等待留在结果之后。</dd></div><div><dt>验证方法</dt><dd>保持命中组有空位并填满缺失组，重放一条命中和一条缺失。记录标签启动、结果可见和缺失组分配的周期。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12619558B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">查标签之前，请求可能直接命中，也可能需要 snoop 或访问下层。如果一开始就为所有结果占资源，缺失队列满时连直接命中也进不了流水线。</p>
     <p>结果未知时，控制器尝试预留基本命中路径所需的整组条目。只有第一组齐备才启动查询。之后发现缺失时，再申请缺失路径资源。</p>
     <ol class="walkthrough"><li><h3>预留直接命中所需的全部条目</h3><p>调度电路尝试预留第一组条目，其中包含基本命中需要的资源。整组齐备才发入流水线。</p></li><li><h3>用目录和标签判断结果</h3><p>查询把事务分成直接命中、命中但需 snoop、以及缺失。查到结果之后才能确定要用哪组后续资源。</p></li><li><h3>为已知的分支补资源</h3><p>纯命中可以用第一组完成，随后释放保留的重试条目。需要 snoop 时申请探测组，发生缺失时申请缺失路径所需的另一组。</p></li><li><h3>缺失资源不足时留在重试队列</h3><p>后续组没有空位时，请求可存进先前预留的 retry queue 条目等候。可以继续处理时，释放用不到的初始条目。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>第一组空 1 项，缺失组空 0 项，探测组空 1 项。用同一初始状态，分别单独检查纯命中、需 snoop 的命中和缺失。</dd></div><div><dt>处理结果</dt><dd>纯命中用第一组完成。需 snoop 的命中做完标签查询后申请探测条目。缺失也能启动查询，但第二组没有空位时，等在预留的重试位置。</dd></div><div><dt>结果解读</dt><dd>三笔请求分别运行，比较启动标签查询和完成各分支所需的条件。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">不同查询结果使用哪些资源组</a></li><li><a href="#fig-2">先预留基础条目，再查标签</a></li><li><a href="#fig-4">写缺失如何把数据从命中组移入下层队列</a></li><li><a href="#fig-3">各阶段对资源可用性的要求</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">先预留基础条目，再查标签</a></li><li><a href="#fig-1">不同查询结果使用哪些资源组</a></li><li><a href="#fig-4">写缺失如何把数据从命中组移入下层队列</a></li><li><a href="#fig-3">各阶段对资源可用性的要求</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">不同查询结果使用哪些资源组</h3></div>
-    <a class="paper-open" href="../figures/US12619558B2/US12619558B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 不同查询结果使用哪些资源组 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="不同查询结果使用哪些资源组">
-    <img class="paper-image" src="../figures/US12619558B2/US12619558B2-fig-1.svg" width="982" height="450"
-         style="--paper-width:982px" alt="不同查询结果使用哪些资源组。第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。">
-  </div>
-  <figcaption>
-    <span>第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。</span>
-    <span class="figure-evidence">图 7–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">先预留基础条目，再查标签</h3></div>
     <a class="paper-open" href="../figures/US12619558B2/US12619558B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 先预留基础条目，再查标签 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>初始组齐备时启动查询。标签与目录结果出来后，才知道要进入哪条分支。</span>
     <span class="figure-evidence">图 11–12，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">不同查询结果使用哪些资源组</h3></div>
+    <a class="paper-open" href="../figures/US12619558B2/US12619558B2-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 不同查询结果使用哪些资源组 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="不同查询结果使用哪些资源组">
+    <img class="paper-image" src="../figures/US12619558B2/US12619558B2-fig-1.svg" width="982" height="450"
+         style="--paper-width:982px" alt="不同查询结果使用哪些资源组。第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。">
+  </div>
+  <figcaption>
+    <span>第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。</span>
+    <span class="figure-evidence">图 7–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
@@ -95,8 +99,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>命中率高、缺失资源也常满时，纯命中可以避开缺失路径的回压。</dd></div><div><dt>代价和限制</dt><dd>第一组满时查询仍不能启动。缺失多时，请求可能长时间占用重试队列。</dd></div><div><dt>验证指标</dt><dd>分资源组记录利用率，分别测各类查询从到达到启动及完成的等待，并记下每次缺失的重试次数和成功比例。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>第一组空 1 项，缺失组空 0 项，探测组空 1 项。用同一初始状态，分别单独检查纯命中、需 snoop 的命中和缺失。</dd></div><div><dt>处理结果</dt><dd>纯命中用第一组完成。需 snoop 的命中做完标签查询后申请探测条目。缺失也能启动查询，但第二组没有空位时，等在预留的重试位置。</dd></div><div><dt>结果解读</dt><dd>三笔请求分别运行，比较启动标签查询和完成各分支所需的条件。</dd></div></dl>
+    </div>
     <a class="lab-link" href="../lab.html#admission">运行对应原型</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -107,10 +115,18 @@
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>标签结果出来前只预留第一组。确认缺失后才申请缺失所需的资源。</dd></div><div><dt>图 7、图 11–12</dt><dd>图 7 比较不同结果所需资源，图 11–12 给出命中、探测和缺失的预留流程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>这些权项分别涉及探测分配、纯命中释放、缺失资源可用和资源不足时借助重试队列。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US12619558B2/en">专利原文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
+<p>缺失槽提前还是后留</p></li><li><a href="US20250103520A1.html#engineering">标签流水线发出前预留重试槽</a>
+<p>启动与重试的保留项</p></li><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
+<p>启动准入与服务优先级</p></li></ul>
+    <p><a href="../index.html?patent=US12619558B2#knowledge">在全量关系图上定位 US12619558B2</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -129,6 +145,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

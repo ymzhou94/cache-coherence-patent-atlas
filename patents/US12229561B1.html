@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12229561B1 TLBI 后的数据同步屏障等待目标核在途访问 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?exhibits=1">
+<link rel="stylesheet" href="../assets/site.css?edition=research">
 
 </head>
 <body>
@@ -12,6 +12,8 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
+    <a href="../topics.html">工程专题</a>
+    <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
   </nav>
@@ -19,8 +21,8 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>访存延迟与预取</span></p>
-  <p class="document-id"><code>US12229561B1</code><span>美国授权专利</span></p>
+  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="document-id"><code>US12229561B1</code><span>美国授权专利</span><time datetime="2025-02-18">2025-02-18</time></p>
   <h1>TLBI 后的数据同步屏障等待目标核在途访问</h1>
   <p class="english-title" lang="en">Processing of data synchronization barrier instructions</p>
   <p class="document-question">远端核接收高速地址转换缓冲区失效（TLBI）后的数据同步屏障（DSB）时，哪些访问需要在确认前处理？</p>
@@ -28,35 +30,24 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
-  <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
+    <h2 id="engineering-title">工程要点</h2>
+    <p class="engineering-change">目标核收到发起核在 TLBI 之后执行 DSB 的指示，检查已完成虚实地址转换、仍未退休的访存指令，等相关指令退休后再回复。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>等待对象是接收指示时已完成转换且仍在途的访问。实施例可用标志位区分接收指示前后的转换。</dd></div><div><dt>验证方法</dt><dd>固定双核 TLBI 与 DSB 的发送拍，只改变目标核上已转换访存的退休拍。分别记录 TLB 失效完成、目标核回复和发起核 DSB 完成时点。</dd></div></dl>
+    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12229561B1">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
+  </section>
+  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</p>
     <p>远端核收到后续 DSB 指示，检查已完成虚实地址转换但仍未退休的指令。实施例用标志位翻转区分屏障之前和之后的转换。确认发出前，需等待符合条件的指令退休。</p>
     <ol class="walkthrough"><li><h3>发起跨核同步</h3><p>权 1 指定本地 DSB 指令跟在欲使 TLB 项失效的 TLBI 之后。</p></li><li><h3>确定待确认指令</h3><p>远端目标核检查有无虚拟地址已经转换为物理地址而尚未退休的指令。</p></li><li><h3>跟踪待处理项的退休</h3><p>实施例可用位标识区分 DSB 到达前后完成地址转换的指令。</p></li><li><h3>生成远端确认</h3><p>需等待的相关指令退休后，目标核才发出确认。</p></li><li><h3>发送核观察同步完成</h3><p>确认回到发起核，与具体内核软件是否使用这个实现无关。</p></li></ol>
   </section>
-  <section class="article-section" id="example" aria-labelledby="example-title">
-    <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>核 A 发出 TLBI 后执行 DSB。核 B 在收到 DSB 指示前已有一条地址完成转换的 load，但该 load 尚未退休。</dd></div><div><dt>处理结果</dt><dd>核 B 记录该在途 load，待满足退休条件后回复核 A。</dd></div><div><dt>结果解读</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div></dl>
-  </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">远端屏障用在途地址转换状态决定何时回复</a></li><li><a href="#fig-2">收到 DSB 后等待有关指令退休</a></li><li><a href="#fig-3">确认前需要等待的访问</a></li><li><a href="#fig-4">双核地址转换失效示例</a></li></ul></nav>
+    <h2 id="figures-title">图解与对照</h2>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">收到 DSB 后等待有关指令退休</a></li><li><a href="#fig-1">远端屏障用在途地址转换状态决定何时回复</a></li><li><a href="#fig-3">确认前需要等待的访问</a></li><li><a href="#fig-4">双核地址转换失效示例</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">远端屏障用在途地址转换状态决定何时回复</h3></div>
-    <a class="paper-open" href="../figures/US12229561B1/US12229561B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 远端屏障用在途地址转换状态决定何时回复 的独立 SVG">打开 SVG</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="远端屏障用在途地址转换状态决定何时回复">
-    <img class="paper-image" src="../figures/US12229561B1/US12229561B1-fig-1.svg" width="750" height="326"
-         style="--paper-width:750px" alt="远端屏障用在途地址转换状态决定何时回复。仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。">
-  </div>
-  <figcaption>
-    <span>仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</span>
-    <span class="figure-evidence">图 4–5、7，权利要求 1–2。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
-  </figcaption>
-</figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">收到 DSB 后等待有关指令退休</h3></div>
     <a class="paper-open" href="../figures/US12229561B1/US12229561B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 收到 DSB 后等待有关指令退休 的独立 SVG">打开 SVG</a>
@@ -68,6 +59,19 @@
   <figcaption>
     <span>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</span>
     <span class="figure-evidence">图 7–9，权利要求 1–3。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">远端屏障用在途地址转换状态决定何时回复</h3></div>
+    <a class="paper-open" href="../figures/US12229561B1/US12229561B1-fig-1.svg" target="_blank" rel="noopener" aria-label="打开 远端屏障用在途地址转换状态决定何时回复 的独立 SVG">打开 SVG</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="远端屏障用在途地址转换状态决定何时回复">
+    <img class="paper-image" src="../figures/US12229561B1/US12229561B1-fig-1.svg" width="750" height="326"
+         style="--paper-width:750px" alt="远端屏障用在途地址转换状态决定何时回复。仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。">
+  </div>
+  <figcaption>
+    <span>仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</span>
+    <span class="figure-evidence">图 4–5、7，权利要求 1–2。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -92,8 +96,12 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">收益与代价</h2>
+    <h2 id="evaluation-title">实验与取舍</h2>
     <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>远端回复所等待的指令集合由实际在途转换限定，有机会减少整条流水线同步的等待。</dd></div><div><dt>代价和限制</dt><dd>远端慢速访存可能仍然主导 DSB 确认尾延迟。访存指令、TLBI 和 DSB 的时序需要各自核对。</dd></div><div><dt>验证指标</dt><dd>从发送核发出 DSB 到收齐远端确认计时，另计每个远端的已翻译未退休指令数和最晚退休时间。</dd></div></dl>
+    <div id="example" class="article-example">
+      <h3>教学算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>核 A 发出 TLBI 后执行 DSB。核 B 在收到 DSB 指示前已有一条地址完成转换的 load，但该 load 尚未退休。</dd></div><div><dt>处理结果</dt><dd>核 B 记录该在途 load，待满足退休条件后回复核 A。</dd></div><div><dt>结果解读</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div></dl>
+    </div>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
@@ -104,10 +112,18 @@
     <dl class="explanation evidence"><div><dt>图 4–5、7，权利要求 1–2</dt><dd>远端核收到后续 DSB 指示，检查已完成虚实地址转换但仍未退休的指令。实施例用标志位翻转区分屏障之前和之后的转换。确认发出前，需等待符合条件的指令退休。</dd></div><div><dt>图 7–9，权利要求 1–3</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div><div><dt>图 9–10，权利要求 1–2</dt><dd>远端慢速访存可能仍然主导 DSB 确认尾延迟。访存指令、TLBI 和 DSB 的时序需要各自核对。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US12229561B1/en">专利原文</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">审读全文</a></p>
   </section>
+  <section class="article-section" id="related" aria-labelledby="related-title">
+    <h2 id="related-title">关联专利</h2>
+    <ul class="article-related"><li><a href="US12639070B2.html#engineering">指令同步屏障前后的投机取指</a>
+<p>远端确认和核内取指</p></li><li><a href="US12321746B2.html#engineering">跨处理器数据同步屏障可排除指定地址区间</a>
+<p>DSB 应答等待对象</p></li><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
+<p>跨设备失效的完成边界</p></li></ul>
+    <p><a href="../index.html?patent=US12229561B1#knowledge">在全量关系图上定位 US12229561B1</a></p>
+  </section>
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
@@ -126,6 +142,7 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>
