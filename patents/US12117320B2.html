@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12117320B2 常开岛检测音频并保留仅内存唤醒路径 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12117320B2</code><span>美国授权专利</span><time datetime="2024-10-15">2024-10-15</time></p>
   <h1>常开岛检测音频并保留仅内存唤醒路径</h1>
   <p class="english-title" lang="en">System on a chip with always-on component with powered-down configurations to process audio samples</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">常开岛可以独立于主 CPU 域和内存控制域工作。它将捕获、模式判定和存储溢出拆成不同动作，让达到容量阈值的流量可以只唤醒存储路径。</p>
     <p>传感器捕获模块把音频采样写入岛内存储，此时 CPU 和控制外部内存的控制器都可以断电。</p>
     <ol class="walkthrough"><li><h3>AON 域捕获并暂存采样</h3><p>传感器捕获模块把音频采样写入岛内存储，此时 CPU 和控制外部内存的控制器都可以断电。</p></li><li><h3>用岛内处理器匹配模式</h3><p>常开处理器查询岛内采样中的预定模式。捕获和识别发生在相同的独立域内。图 3 区分 capture 与 process 状态。</p></li><li><h3>没有匹配但容量逼近时进入仅内存模式</h3><p>缓冲达到阈值且未检出模式时，常开岛使内存控制器与到它的通信通路上电，向第一内存拷贝采样，CPU 继续断电。</p></li><li><h3>检测到目标时按另一条路径唤醒</h3><p>从属权项描述命中预定模式可以同时唤醒 CPU 与内存控制器。岛内没有任务时，捕获器和小处理器还可以单独门控。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12117320B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 规定未匹配且缓冲触线时只启用内存路径，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12117320B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 另外允许模式命中后恢复处理器。缓冲水位和识别状态各决定的是不同的唤醒范围。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>长时间驻留在监听且仅少量事件需要 CPU 时，减少主域上电就有价值。</dd></div><div><dt>代价和限制</dt><dd>常开存储太小会导致频繁打开内存域。岛内模式识别也消耗能量，需要分别计入常开和批量转存。</dd></div><div><dt>验证指标</dt><dd>在等采样输入下测主域唤醒次数、内存路径驻留、岛内缓存高水位和匹配到主域接管的延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>将每次转存能耗拆成控制器恢复、从本地缓冲写入内存和控制器重新休眠。更大的转存阈值可减少唤醒次数，但是缩减上电期间用于继续采样的空余容量。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>保持平均采样速率，加入短时采样或写带宽突发。若内存控制器首笔写恢复前出现缺样，在不改变检测阈值的条件下检查本地空余容量和恢复时长。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设岛内缓冲阈值为 32 个块。输入持续而本次未匹配关键词，另外一次输入则在阈值前匹配。</dd></div><div><dt>处理结果</dt><dd>持续无匹配到 32 时激活内存路径转存，CPU 没有因为转存而启动。匹配时可按从属项启动 CPU 与内存控制器。</dd></div><div><dt>结果解读</dt><dd>32 块是假设。实际容量应考虑采样速率、上电恢复时间以及在转存期间到达的新采样。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12211506B2.html#engineering">常开音频域跨越处理器和内存控制器唤醒保留样本</a>
-<p>常开音频的两种唤醒路径</p></li><li><a href="US12609141B2.html#engineering">按客户端状态调节内存时钟与电源门控</a>
-<p>内存唤醒事件与常驻下限</p></li></ul>
+<p>两件文献都允许在 CPU 和内存控制器关闭时缓存音频。US12117320B2 在未匹配声音模式且本地缓存达到阈值时，仅唤醒内存路径以转存。US12211506B2 的权利要求 1 针对模式命中后同时唤醒处理器与内存控制器，并在其可写之前保留匹配样本、之前的样本及随后收到的样本。</p></li><li><a href="US12609141B2.html#engineering">按客户端状态调节内存时钟与电源门控</a>
+<p>US12117320B2 由常开音频域在缓存达阈值后开启到内存控制器的路径，并保持 CPU 关闭。US12609141B2 用多个客户端的活动参数确定内存资源的最低可用状态，并在该约束下进行时钟或电源门控。比较两者可区分收到具体转存需求后才唤醒内存，与按客户状态提前保留一定服务能力。</p></li></ul>
     <p><a href="../index.html?patent=US12117320B2#knowledge">在全量关系图上定位 US12117320B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

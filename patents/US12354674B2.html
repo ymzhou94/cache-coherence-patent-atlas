@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12354674B2 用忙闲状态拦截非易失存储电源复位 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12354674B2</code><span>美国授权专利</span><time datetime="2025-07-08">2025-07-08</time></p>
   <h1>用忙闲状态拦截非易失存储电源复位</h1>
   <p class="english-title" lang="en">Non-volatile memory power cycle protection mechanism</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">闪存已经保存的数据是非易失的，进行中的编程或擦除对供电中断却敏感。PMIC 要判断在复位时点能否撤掉供电，判断信号需要独立于即将重启的主处理域。</p>
     <p>PMIC 收到电源复位请求时，读取 NVM 活动输出的二值信息。专利将编程和擦除列为活动例。</p>
     <ol class="walkthrough"><li><h3>采样专用活动输出</h3><p>PMIC 收到电源复位请求时，读取 NVM 活动输出的二值信息。专利将编程和擦除列为活动例。</p></li><li><h3>按忙闲分别处理</h3><p>输出显示空闲时允许立刻重置供电。输出仍活跃时，先阻止对该电源轨的复位。</p></li><li><h3>等待活动结束或按超时处理</h3><p>可以在输出变为空闲时执行。另一些从属项允许预设定时器届满后复位，应将此路径单列。</p></li><li><h3>多器件共轨时汇总状态</h3><p>共享轨上的一个忙器件会改变全部器件共同复位的判断。说明书描述多独立轨和组活动输出的实现。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 的从忙到闲可以解除复位抑制，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 还覆盖等待到期后的复位路径。因此最大等待到期与存储操作已完成属于两个独立判据，测试需区分。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在 PMIC 仍有能力维持电源且忙信号可靠时，保护活动运作不被可控复位打断。</dd></div><div><dt>代价和限制</dt><dd>误报活跃时重置会滞后；误报空闲时保护失效。采用超时应审核最慢编程时延与超时的关系。</dd></div><div><dt>验证指标</dt><dd>统计忙时复位抑制率、编程完成到复位的延迟、超时分支次数，并独立记录实际掉电场景。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>等待可减少未完成编程或擦除遭断电的概率，也延长设备恢复。记录复位请求到供电轨动作的时长、存储提交状态和恢复后数据校验错误。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让一次编程维持至预定等待间隔之后，在满足超时路径的实现中独立检查忙信号、供电轨和写后数据。若超时仍触发复位，单靠忙信号不能保证完成所有写入。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设复位请求于 t1 到达，器件 A 正在编程到 t3，B 空闲，两者共享轨。此例定时器不会先到期。</dd></div><div><dt>处理结果</dt><dd>PMIC 从 t1 保持供电，到 t3 得到 A 已空闲的信息后才复位。若电源故障先于 t3，状态门控不能补充能量。</dd></div><div><dt>结果解读</dt><dd>轨保持量、检查间隔与超时均与实现有关。主张的机制是抑制复位，和抵抗所有物理掉电原因有别。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
-<p>存储中断前的放行条件</p></li></ul>
+<p>US12354674B2 用非易失性闪存的专用活动位阻止忙时电源复位。US12332723B2 先按预定的共享内存不可用事件计算读写容忍值，等远端裸片确认代理电路能承受这段停顿再放行。是否正在执行存储操作与缓冲能否吸收一个确定长度的停顿，是两种不同的安全判据。</p></li></ul>
     <p><a href="../index.html?patent=US12354674B2#knowledge">在全量关系图上定位 US12354674B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

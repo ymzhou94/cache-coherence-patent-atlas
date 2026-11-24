@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12332723B2 多 die 内存暂停前的读写容忍确认 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12332723B2</code><span>美国授权专利</span><time datetime="2025-06-17">2025-06-17</time></p>
   <h1>多 die 内存暂停前的读写容忍确认</h1>
   <p class="english-title" lang="en">Blocking latency events in multi-die architecture</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">DRAM 可用性暂停会同时冲击不同方向的缓冲。读代理需要足够已存数据，写代理需要足够空位。哪个条件真正限制暂停，要看所有相关代理中最紧的一项。</p>
     <p>主 die 检测影响共享内存可用性的事件。电源协调逻辑估算此次暂停所需的最小读、写容忍时间。</p>
     <ol class="walkthrough"><li><h3>估算暂停对读写的最低要求</h3><p>主 die 检测影响共享内存可用性的事件。电源协调逻辑估算此次暂停所需的最小读、写容忍时间。</p></li><li><h3>汇总不同方向的可承受间隔</h3><p>代理报告不再补充数据时可读多久，或不能向内存排出时还能写多久。实施例先收集各 die 的最小值，再汇总为系统值。</p></li><li><h3>容忍不足时延迟并准备</h3><p>读代理可以先多取数据增加缓冲深度，写代理可以先写回腾出空间。预备方向相反，两者都要满足该事件需要。</p></li><li><h3>拿到确认后再开始事件</h3><p>主 die 将门槛送给从 die，并在收到至少必要确认前暂停事件。确认来自代理更新后的可承受值。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 分开管理读缓冲已存数据和写缓冲剩余空间。允许切换的是能度过暂停的保守余量，同样的周期数会对应不同消费速率和写入速率。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,12 +100,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在带实时音视频代理的多 die 共用内存上，可以为切换事件分别证实已备妥的数据与空间。</dd></div><div><dt>代价和限制</dt><dd>最慢代理限制整个暂停事件。额外预取和排空消耗带宽，某个代理强烈忙碌时也会推迟省电机会。</dd></div><div><dt>验证指标</dt><dd>对固定访问轨迹记录 read/write 最小容忍、准备阶段新增流量、事件等待以及缓冲欠载和溢出次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>等待确认期间，读侧预取占用内存带宽，写侧提前排空增加写请求。需分开统计暂停准备时间、真正停服时间，以及切换前对争用事务带来的等待。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>确认后增加读代理消费速率或写入突发，但保持暂停时长相同。若停服期间发生下溢或溢出，代理采用的速率假设失效，可用缓冲水位轨迹定位。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学假设读端每拍消费 2 项，缓冲有 6 项。写端每拍产生 1 项，还剩 6 个空位。预计内存暂停 4 拍。</dd></div><div><dt>处理结果</dt><dd>读端只能撑 3 拍，写端能撑 6 拍。读端预先增加 2 项，使库存达到 8 后，两端才同时满足 4 拍。</dd></div><div><dt>结果解读</dt><dd>单位仅为缓冲模型，预备和确认时间未计入内存暂停本身。实际时钟、读写容忍值和代理范围由实现确定。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#memory-pause">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#memory-pause">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12609141B2.html#engineering">按客户端状态调节内存时钟与电源门控</a>
-<p>内存地板与停服</p></li><li><a href="US11592889B2.html#engineering">跨 die 互连按本地和全局状态门控</a>
-<p>活动门槛与缓冲</p></li><li><a href="US12444474B2.html#engineering">内存工作点切换至目标电压前重复校准接口时序</a>
-<p>电压斜坡校准与内存停服确认</p></li></ul>
+<p>US12609141B2 根据异构客户端的操作参数设置共享内存状态下限，约束实际时钟和电源门控深度。US12332723B2 从一次即将减少内存可用性的事件出发，等其他裸片上的代理确认能扛过相应的读写暂停后才放行。内存可以降到哪一档，和这次切换的停服时间能否被缓存吸收，需要分别判断。</p></li><li><a href="US11592889B2.html#engineering">跨 die 互连按本地和全局状态门控</a>
+<p>两个裸片各自观察局部状态时，都不能凭单边的空闲判定启动共享资源的低功耗动作。US11592889B2 交换互连活动信息，仍有在途事务的对端可以拒绝门控。US12332723B2 交换特定停服时长所需的读写容忍度，读端须补货、写端须腾空位；现有事务变少也未必意味着可以停服。</p></li><li><a href="US12444474B2.html#engineering">内存工作点切换至目标电压前重复校准接口时序</a>
+<p>US12444474B2 处理电压过渡期间的接口时序，用多次测量调整时钟或选通延迟。US12332723B2 处理会暂时阻断内存服务的事件，用读写缓冲余量决定是否获准执行。接口能在过渡期间传输多少数据，与外设能容忍多久无服务，是两项不同验证。</p></li></ul>
     <p><a href="../index.html?patent=US12332723B2#knowledge">在全量关系图上定位 US12332723B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

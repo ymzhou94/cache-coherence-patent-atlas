@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9201796B2 查标签期间提前准备 SLC 缺失队列 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US9201796B2</code><span>美国授权专利</span><time datetime="2015-12-01">2015-12-01</time></p>
   <h1>查标签期间提前准备 SLC 缺失队列</h1>
   <p class="english-title" lang="en">System cache with speculative read engine</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">SLC 缺失后总要准备下层请求。串行处理需要先等标签出结果，再准备缺失队列。有空位时，可以在标签检查尚未结束的阶段先准备，但要等确认后才允许对外发出。</p>
     <p>标签查询启动后、结果出来前，控制器可把推测读送到缺失队列等候。标签命中时撤销该条目，确认缺失后才可发送外存访问。</p>
     <ol class="walkthrough"><li><h3>收到读请求，启动标签检查</h3><p>控制器触发 SLC 的 tag lookup，确认数据是否已在片上。</p></li><li><h3>筛选哪些读可以预占队列</h3><p>候选资格依权项或实施策略而定，可以考虑低延迟 QoS、读写依赖、未完成推测数或同组历史命中率。</p></li><li><h3>准备队列条目并等待结果</h3><p>合格读在 tag lookup 结束前进入缺失队列。条目要保持到标签给出结果，此时尚未访问外部内存。</p></li><li><h3>按命中结果撤销或允许下发</h3><p>命中时取消准备好的条目。缺失确认后才能送下层。资格如果提前被取消，也可丢弃准备项或回到通常流程。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 对推测准备增加三项条件，低延迟 QoS、无读后写依赖、在途推测读数低于门槛。提前进入缺失队列也仍要等待标签缺失确认为真。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>缺失率较高、请求对延迟敏感且队列有余量时，提前准备可以让缺失更早获得发送资格。</dd></div><div><dt>代价和限制</dt><dd>命中率高或队列拥挤时，最后会被撤销的请求可能占着槽位，推迟其他读。已确认的缺失也可能要等片外仲裁。</dd></div><div><dt>验证指标</dt><dd>分别计量到达控制器、开始标签查询、取得队列空位、获得标签结果和向片外发出等时点，并记录命中撤销率与额外的队列占用。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>在适合重叠的流上，预准备能减少标签结果之后的队列工作。读后写检测和在途推测计数进入发出逻辑，因此可通过依赖状态与入队统计分开诊断。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若同一地址刚有未完成写、临界读随即到来，无读后写依赖的条件会把它挡在推测分支外。即使整条流的 SLC 缺失率很高，也不能据此下结论说每个读都能提前准备。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>标签查询用 4 个时间单位，队列准备需 2 个，且队列有空位。标签在 t0 开始检查。合格的读于 t1 开始准备队列，t3 就绪。</dd></div><div><dt>处理结果</dt><dd>若标签确认缺失且没有别的仲裁等待，顺序准备从 t4 开始，到 t6 可发。提前准备在 t4 就能取得发送资格。若 t4 的结果是命中，控制器在此时撤销条目，外存读不会发出。</dd></div><div><dt>结果解读</dt><dd>时点用于比较准备有多少可以重叠。实际等待还取决于队列调度、命中率和撤销成本。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#probe-ahead">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#probe-ahead">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>缺失槽提前还是后留</p></li><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
-<p>核内提前与片外门槛</p></li><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
-<p>准备下层事务与合并在途读</p></li></ul>
+<p>两件把标签结果出来前的准备时间用在不同路径。US9201796B2 让符合条件的读先占缺失队列项，确认缺失后才准许片外访问，确认命中后取消。US12619558B2 先留满命中所需的那一组资源，缺失确定后再留专用资源，使缺失队列紧张时命中仍有机会启动。</p></li><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
+<p>顺序流水线等待 A 的数据时可推测执行后续指令，先发 B 的缺失请求，之后从 A 按序重执行。在下层 SLC，合格的推测读可趁标签未出先排进缺失队列，片外读仍等缺失确认。放在同一条访存路径上看，前者提前发出第二笔请求，后者提前准备这一笔请求到外存的队列资源。</p></li><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
+<p>US9201796B2 让标签查找与缺失队列准备重叠，只有确认缺失后才可发片外读。US9454486B2 处理已经发出且尚未完成的同址预取，将需求读记入已有条目并复用返回数据。第一个方案移动占位时间，第二个方案减少重复事务。</p></li></ul>
     <p><a href="../index.html?patent=US9201796B2#knowledge">在全量关系图上定位 US9201796B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

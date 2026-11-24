@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11921640B2 停止优先保留不再关键的行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US11921640B2</code><span>美国授权专利</span><time datetime="2024-03-05">2024-03-05</time></p>
   <h1>停止优先保留不再关键的行</h1>
   <p class="english-title" lang="en">Mitigating retention of previously-critical cache lines</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">提高关键行的保留优先级有助于减少当前阶段的等待。进入下一执行阶段后，先前的关键行可能很少再命中，并继续占用共享缓存容量。</p>
     <p>缓存分别保存替换排名和关键性信息。保护开启时，控制器优先保留关键行，同时跟踪它们的命中率。命中率低于阈值等信号满足时，控制器可以停止优先保留或加快退出。</p>
     <ol class="walkthrough"><li><h3>分别保存关键性和替换排名</h3><p>开启保护时，关键性让一部分行更难被逐出。替换控制器还要用排名在允许逐出的行中选择。</p></li><li><h3>统计受保护行的命中</h3><p>控制器监测关键行的命中情况。说明书允许重点统计接近淘汰端的关键行。命中率低时，这些行可能已过了高复用阶段。</p></li><li><h3>检查退出信号</h3><p>关键行命中率低于阈值时，控制器可发出退出信号。图 10 也讨论了 snoop 转发率高、协处理器请求增多和下一级空间紧张时的处理。</p></li><li><h3>撤销或减弱关键性保护</h3><p>退出保护后，逐出选择和插入／提升都可以忽略关键性。对容量不足的情况，另有分支可将多档关键性压到最低关键档。两种处理先改变选择规则，在之后选逐出对象时才会用到。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的统计范围可以缩到替换次序上靠近 LRU 的多条受保护行。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 另以导致数据转发的 snoop 命中率作为退出信号，两项统计的对象不同。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>阶段切换使原先的关键行很少再命中时，退出保护可以给新流量腾出空间。</dd></div><div><dt>代价和限制</dt><dd>如果监测窗口恰好遇到短暂停顿，仍会复用的关键行也可能失去保护，并在下一批替换中被逐出。</dd></div><div><dt>验证指标</dt><dd>记录关键行命中率、退出模式持续多久、保护期间普通行的额外逐出次数，以及保护退出后的关键行缺失次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>仅盯住靠近逐出端的关键行，可更集中地观察保护实际挡住了哪些替换。一直位于高排名的热点即使命中很多，也很少检验这项额外保护是否有用。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若关键行由 CPU 很少读却反复被其他代理通过 snoop 请求，需求命中率和实际转发活跃度可能背离。两种信号各自触发什么动作，需要按权项和实现区分。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定一组有四条缓存行。关键行 K 最旧，普通行 N 次旧。一段窗口内，关键行命中率为 2%，低于假设的 5% 阈值。</dd></div><div><dt>处理结果</dt><dd>退出保护后，下一次填充可以按常规排名选 K。若此时没有填充或其他需要替换的请求，K 可继续留在缓存中。</dd></div><div><dt>结果解读</dt><dd>2% 和 5% 是演示比例。专利把阈值留给具体实现。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12222875B1.html#engineering">由关键性选择插入与提升向量</a>
-<p>关键性更新与退出</p></li><li><a href="US11822480B2.html#engineering">按关键性插入并概率保护缓存行</a>
-<p>共享临时申请</p></li><li><a href="US20250307167A1.html#engineering">把缓存行关键性传给下一级替换策略</a>
-<p>同一申请链扩展到下一级</p></li></ul>
+<p>同一缓存行的旧排名保持不变时，关键性仍可使控制器选用不同的插入或提升向量，改变它在下一次逐出时的位置。另一件专利跟踪被标关键的行有多常命中，低于门槛时退出优先保留。前者定义标记如何影响排名，后者定义何时停止信任这批标记。</p></li><li><a href="US11822480B2.html#engineering">按关键性插入并概率保护缓存行</a>
+<p>两件文献的说明书均主张 US63/239,258 的优先权。对比两者可区分逐次逐出的概率保护，与观察关键行命中表现后停止保护。</p></li><li><a href="US20250307167A1.html#engineering">把缓存行关键性传给下一级替换策略</a>
+<p>说明书首段列出 US18/422,584 与 US17/727,031 的连续申请关系。US11921640B2 依据关键行命中表现决定是否继续保留，后续公开 US20250307167A1 权 21、35 进一步描述用第一级关键性初始化第二级保留优先级。</p></li></ul>
     <p><a href="../index.html?patent=US11921640B2#knowledge">在全量关系图上定位 US11921640B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

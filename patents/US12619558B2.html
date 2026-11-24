@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12619558B2 仅预留命中所需的内存控制器资源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US12619558B2</code><span>美国授权专利</span><time datetime="2026-05-05">2026-05-05</time></p>
   <h1>仅预留命中所需的内存控制器资源</h1>
   <p class="english-title" lang="en">Memory controller reservation of resources for cache hit</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">查标签之前，请求可能直接命中，也可能需要 snoop 或访问下层。如果一开始就为所有结果占资源，缺失队列满时连直接命中也进不了流水线。</p>
     <p>结果未知时，控制器尝试预留基本命中路径所需的整组条目。只有第一组齐备才启动查询。之后发现缺失时，再申请缺失路径资源。</p>
     <ol class="walkthrough"><li><h3>预留直接命中所需的全部条目</h3><p>调度电路尝试预留第一组条目，其中包含基本命中需要的资源。整组齐备才发入流水线。</p></li><li><h3>用目录和标签判断结果</h3><p>查询把事务分成直接命中、命中但需 snoop、以及缺失。查到结果之后才能确定要用哪组后续资源。</p></li><li><h3>为已知的分支补资源</h3><p>纯命中可以用第一组完成，随后释放保留的重试条目。需要 snoop 时申请探测组，发生缺失时申请缺失路径所需的另一组。</p></li><li><h3>缺失资源不足时留在重试队列</h3><p>后续组没有空位时，请求可存进先前预留的 retry queue 条目等候。可以继续处理时，释放用不到的初始条目。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> 给出缺失后的两条资源路径。第二组可用便回收预留重试项和其他无用条目，第二组缺项时则把请求信息存到重试项，留待重新处理。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,12 +100,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>命中率高、缺失资源也常满时，纯命中可以避开缺失路径的回压。</dd></div><div><dt>代价和限制</dt><dd>第一组满时查询仍不能启动。缺失多时，请求可能长时间占用重试队列。</dd></div><div><dt>验证指标</dt><dd>分资源组记录利用率，分别测各类查询从到达到启动及完成的等待，并记下每次缺失的重试次数和成功比例。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>分组把不必要的预留从纯命中路径移开，但缺失是否能立刻推进由第二组容量决定。标签查询已完成、重试项仍占用和实际下层请求开始是三个时间点。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若缺失不断发生且第二组释放很慢，第一组重试项可能先占满，新的命中也难以开始。权利要求的分组降低了直接绑定，却没有让两组资源在这条重试路径上完全独立。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>第一组空 1 项，缺失组空 0 项，探测组空 1 项。用同一初始状态，分别单独检查纯命中、需 snoop 的命中和缺失。</dd></div><div><dt>处理结果</dt><dd>纯命中用第一组完成。需 snoop 的命中做完标签查询后申请探测条目。缺失也能启动查询，但第二组没有空位时，等在预留的重试位置。</dd></div><div><dt>结果解读</dt><dd>三笔请求分别运行，比较启动标签查询和完成各分支所需的条件。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#admission">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#admission">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>缺失槽提前还是后留</p></li><li><a href="US20250103520A1.html#engineering">标签流水线发出前预留重试槽</a>
-<p>启动与重试的保留项</p></li><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
-<p>启动准入与服务优先级</p></li></ul>
+<p>两件把标签结果出来前的准备时间用在不同路径。US9201796B2 让符合条件的读先占缺失队列项，确认缺失后才准许片外访问，确认命中后取消。US12619558B2 先留满命中所需的那一组资源，缺失确定后再留专用资源，使缺失队列紧张时命中仍有机会启动。</p></li><li><a href="US20250103520A1.html#engineering">标签流水线发出前预留重试槽</a>
+<p>同一标签流水线中，公开申请在仲裁通过前留出本地重试槽，这样首次通过失败不会因为缺重试项而退回网络重发。另件授权在查标签前只尝试保留命中路径需要的资源组，并在确认缺失后申请另一组。从这对权 1 可分清第一次能否启动，以及需要第二次通过时能否留在控制器内。</p></li><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
+<p>US12619558B2 在标签结果未知时只检查命中所需资源，避免缺失队列不足阻挡本可启动的请求。US10795818B1 的请求已通过同一个通道抵达，仲裁器限制敏感请求前可服务的普通请求数。比较时分别量取进入标签流水线前的阻塞，以及已入队探测等待服务的时间。</p></li></ul>
     <p><a href="../index.html?patent=US12619558B2#knowledge">在全量关系图上定位 US12619558B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

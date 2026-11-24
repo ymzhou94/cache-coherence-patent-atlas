@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9710268B2 预测存储队列命中以提前发射依赖访存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US9710268B2</code><span>美国授权专利</span><time datetime="2017-07-18">2017-07-18</time></p>
   <h1>预测存储队列命中以提前发射依赖访存</h1>
   <p class="english-title" lang="en">Reducing latency for pointer chasing loads</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">指针链上，较老 load 读出的值要参与下一次访存的地址计算。如果数据缓存能把该值直接送进地址生成器，后续操作可能少等一段路径。若数据需要从 store queue 取得，短间隔就可能不够。</p>
     <p>核内指令发射逻辑根据较老 load 是否预计命中存储队列，决定何时发射其依赖访存。预计命中存储队列时等待 N 个周期，预计未命中时等待较短的 M 个周期。后一条路径可把 L1 数据缓存返回的指针直接转发给依赖操作的地址生成单元。</p>
     <ol class="walkthrough"><li><h3>找出下一次访存的生产者</h3><p>核内指令发射逻辑识别年轻 load 或 store 对较老 load 的数据依赖，再根据预测的数据可用时间安排发射。</p></li><li><h3>预测较老 load 是否命中 store queue</h3><p>预测器可以用训练信息区分 store 转发和无法在短时间内供数的情况。预测 store queue 缺失后，数据缓存还须另行查询。</p></li><li><h3>给两种预测设置不同间隔</h3><p>预测命中使用较长的 N，预测缺失使用较短的 M。若旧 load 的数据可直接从缓存旁路，返回拍可对齐年轻操作的地址生成阶段。</p></li><li><h3>到地址生成时核对数据是否就绪</h3><p>地址计算使用实际读出的值。预测不准或数据缓存也缺失时，按实现推迟或重发。说明书还考虑了会增加流水阶段的对齐和符号扩展。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把对齐和符号扩展也放进预测条件。存储队列未命中预测只决定可尝试的调度时机，年轻地址生成实际还要接到满足格式要求的旧 load 结果。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>如果指针链规则、缓存命中稳定，每次地址生成少等一拍的效果可以在多个节点间累加。</dd></div><div><dt>代价和限制</dt><dd>频繁命中 store queue 或需要恢复时，早发的年轻访存可能重发，抵消一部分节拍收益。</dd></div><div><dt>验证指标</dt><dd>按缓存命中和缺失分组，记录旧 load 的数据来源、发射间隔、实际数据就绪时间与年轻访存重发率。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>缩短的是旧 load 到年轻访存发射之间的等待。若值还需要扩展或对齐调整，压力会转移到地址生成输入前的处理级，缓存数据阵列本身的读取时间可保持原样。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>同一链表循环可交替读自然对齐的整字指针与需扩展的压缩索引。后一类若使用相同的短间隔，即使都在数据缓存命中，也更容易赶不上年轻操作的地址生成拍。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>较老的指令从节点 p 读出 next，年轻指令访问 next+4。说明书举例比较普通约 4 拍与快速 3 拍或更少。这里取 4 和 3。</dd></div><div><dt>处理结果</dt><dd>旧 load 若在数据缓存命中，并把指针直接送到 LSU 的地址生成单元，年轻 load 可提前一拍发射。旧 load 若需要 store queue 数据，则按较长的 4 拍安排。</dd></div><div><dt>结果解读</dt><dd>独立权利要求只限定 M&lt;N。这里的间隔取自说明书示例，两次访存各自还可能经历其他缓存阶段和等待。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
-<p>预测地址与预测来源</p></li></ul>
+<p>地址学习方案即使算对地址，也要在发现 store queue 有更新数据时取消缓存查询并下调学习置信度。指针追踪方案预测的是旧 load 会不会命中 store queue，据此选择依赖它的年轻访存在第 M 拍还是第 N 拍发射。前者避免提前读到无用的旧值，后者用数据来源预测安排下一次地址生成。</p></li></ul>
     <p><a href="../index.html?patent=US9710268B2#knowledge">在全量关系图上定位 US9710268B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11175917B1 并行重放缓冲加快等待 store 数据的 load · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US11175917B1</code><span>美国授权专利</span><time datetime="2021-11-16">2021-11-16</time></p>
   <h1>并行重放缓冲加快等待 store 数据的 load</h1>
   <p class="english-title" lang="en">Buffer for replayed loads in parallel with reservation station for rapid rescheduling</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">store 的地址和数据由不同操作产生。load 查到应读的旧 store 时，该 store 的数据可能还未写入队列。</p>
     <p>load 命中 store queue 但所需数据未到时，重放缓冲记录两项操作的标识。它与保留站并行工作。保留站发射对应的 store 数据操作时，缓冲可据此触发 load 重执行。</p>
     <ol class="walkthrough"><li><h3>记录阻塞 load 的 store</h3><p>第一次执行时若地址匹配、所需数据还没到，load 必须重放。重放缓冲用这条 load 与阻塞它的 store 的标识定位依赖。</p></li><li><h3>把其余字段留在 load 队列</h3><p>快速匹配只需要一对标识。普通 load 队列可以继续保存完整执行需要的其余状态。</p></li><li><h3>用数据操作发射作为触发点</h3><p>保留站发射 store 数据操作时，缓冲用它的序号找出关联的 load，并可向 load 流水线提前发出重执行请求。</p></li><li><h3>未分到缓冲项时走普通路径</h3><p>若缓冲已满等原因导致这条 load 未分配快速重放项，普通 load 队列等 store 数据写入 store queue 后再调度。两条路径需要转发同一个较新的值。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 允许保留站在首次发射后删除原 load。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把重执行所需字段分在重放缓冲和 load 队列，重新执行时由后者把剩余字段送入流水线。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>load 已经知道依赖哪条 store、只差数据时，提前调度可以减少串行等待。</dd></div><div><dt>代价和限制</dt><dd>缓冲已满、发射口繁忙，或提前唤醒的 load 与可转发数据错开时，收益会缩小。</dd></div><div><dt>验证指标</dt><dd>在同一事件序列中记录地址首次匹配、store 数据操作发射、load 重发和数据转发的时刻，再算缓冲满的比例。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>快唤醒的直接输入是 store 数据操作的发射标识。一条 load 的地址、控制和队列状态仍需在重执行时归并。节省的等待要扣除字段汇合及 load 端口仲裁。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若一笔 store 的数据操作恰好唤醒多条匹配的 load，各项会同时竞争有限的重发端口。即使检测提前，排在后面的 load 也可能已经错过能节省的窗口。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>沿用图 3、4 的时序。load L 首次命中 store S 的地址，但缺数据。分别让 L 使用重放缓冲和普通队列。</dd></div><div><dt>处理结果</dt><dd>快速路径在 store 数据操作发射时匹配标识。图中的 L 比普通路径早 4 个周期发射并收到转发数据。</dd></div><div><dt>结果解读</dt><dd>4 个周期来自该说明书时序。比较两条路径时使用相同的 store 发射拍、依赖关系和转发端口调度。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11416254B2.html#engineering">同一解码组内的零额外周期 load 旁路</a>
-<p>重命名旁路与重放</p></li></ul>
+<p>两件专利都处理 load 等待较早 store 数据的问题。同一解码组内能证明寻址寄存器未被中间指令改写时，前者把 load 目的重命名为 store 的源物理寄存器。后者在执行期才发现 store queue 地址命中、数据未到，用配对标识监听 store 数据操作的发射，再触发 load 重放。两者缩短的是不同阶段的等待，依赖值都仍需就绪。</p></li></ul>
     <p><a href="../index.html?patent=US11175917B1#knowledge">在全量关系图上定位 US11175917B1</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

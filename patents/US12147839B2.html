@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12147839B2 按核簇共享资源饱和度迁移单个线程 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12147839B2</code><span>美国授权专利</span><time datetime="2024-11-19">2024-11-19</time></p>
   <h1>按核簇共享资源饱和度迁移单个线程</h1>
   <p class="english-title" lang="en">CPU cluster shared resource management</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">线程组偏好提供初始核簇放置。总线接口单元（BIU）和矩阵扩展引擎等共享资源的争用可能集中在个别线程。</p>
     <p>控制器用 BIU 请求队列满周期占比判断饱和，再用加载/存储单元（LSU）微操作观测标记相关线程。调度器据此可只迁移被标记的线程。</p>
     <ol class="walkthrough"><li><h3>采样队列占用</h3><p>以 BIU 请求队列为满的周期数作分子，BIU 总周期数作分母。</p></li><li><h3>对饱和判决增加迟滞</h3><p>对队列满占比滤波，再比较可调阈值。</p></li><li><h3>定位共享资源使用者</h3><p>在采样窗口观测 LSU 微操作级指标，给相关线程设置资源使用标记。</p></li><li><h3>迁移单个线程</h3><p>调度器按标记将线程放到另一核簇。同组的其他线程可继续在原核簇执行。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 4 将 LSU 微操作采样置于设置线程标记的调用之前。权 7 允许参考 LLC 加载缺失比例。队列满周期占比、线程归因和放置发生在不同观测时点。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>以线程为粒度绕开局部共享资源饱和，保留同组其他线程的原放置。</dd></div><div><dt>代价和限制</dt><dd>短时拥塞可能经迟滞被吸收。真实迁移要承担调度和缓存局部性损失。</dd></div><div><dt>验证指标</dt><dd>记录 BIU 满周期占比、各线程迁移次数、迁移后缓存缺失率和应用完成时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>迁移可减少原核簇 BIU 排队，也会转移互连和内存控制器压力。评价时分别记录原簇与目标簇满周期占比、LLC 缺失和共享内存服务等待。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让两个核簇都受同一内存控制器带宽约束。对照迁移与保持放置，若原簇 BIU 满占比下降而整体完成时间不降，局部拥塞改善并未解除全局瓶颈。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>同组线程 A 发出大量加载/存储，线程 B 很少使用过载的 BIU。队列满占比连续越过门槛。</dd></div><div><dt>处理结果</dt><dd>控制器给 A 设置标记。调度器可迁移 A 并保留 B 的原核簇放置。</dd></div><div><dt>结果解读</dt><dd>观测系统吞吐与线程级迁移开销。迁移能否奏效还取决于目标核簇当前负载。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12306789B2.html#engineering">按性能需求为同类型 CPU 核簇划分性能岛</a>
-<p>组级放置与单线程迁移</p></li><li><a href="US11630789B2.html#engineering">优先投递给已上电核心的中断控制</a>
-<p>中断目标与线程放置</p></li><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
-<p>GPU 工作组与 OS 线程的放置</p></li></ul>
+<p>性能岛根据线程组的控制量给出首选核簇。实际运行时，若某一核簇的 BIU 请求队列持续饱和，US12147839B2 用 LSU 微操作指标设置线程标记，允许调度器只迁移相关线程。同组其他线程可以维持原来的核簇放置。</p></li><li><a href="US11630789B2.html#engineering">优先投递给已上电核心的中断控制</a>
+<p>US11630789B2 的硬件中断控制器先尝试已上电核心，所有候选核簇拒绝后才允许为其他核心上电。US12147839B2 从核簇总线接口队列饱和与 LSU 指标识别线程，再由 OS 调度器调整线程放置。两者都影响核心上的工作来源，选择对象分别是中断接收核心和可迁移线程。</p></li><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
+<p>US12333339B2 的 GPU 分派硬件从软件给出的初始工作映射开始，在某组已发完原份额后按硬件状态重新分派。US12147839B2 由性能控制逻辑识别核簇共享资源压力，再由 OS 调度器决定具体线程是否迁移。两边的调度对象分别是 GPU 工作组和 CPU 线程，观测点分别在硬件分派器和核簇资源。</p></li></ul>
     <p><a href="../index.html?patent=US12147839B2#knowledge">在全量关系图上定位 US12147839B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12175300B2 GPU 逻辑槽映射给高优先级图形工作预留硬件槽 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12175300B2</code><span>美国授权专利</span><time datetime="2024-12-24">2024-12-24</time></p>
   <h1>GPU 逻辑槽映射给高优先级图形工作预留硬件槽</h1>
   <p class="english-title" lang="en">Software control techniques for graphics hardware that supports logical slots and reservation of graphics hardware based on a priority threshold</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">GPU 使用逻辑槽表示提交工作，使用分布式硬件槽保存待运行工作和配置。软件把工作及优先级交给 GPU 控制电路。</p>
     <p>控制器把工作绑定逻辑槽，选出预留硬件槽，把优先级低于门槛的逻辑槽只映射到非预留槽。</p>
     <ol class="walkthrough"><li><h3>接收软件提交</h3><p>GPU 接收图形工作和软件指定的优先级。</p></li><li><h3>分配逻辑槽</h3><p>逻辑槽保留控制状态。工作在依赖、配置或硬件槽尚未就绪时仍可等待。</p></li><li><h3>限定可映射槽集合</h3><p>达到优先级门槛的工作可以使用预留槽。低于门槛的工作只进入非预留槽。</p></li><li><h3>进入分布式执行</h3><p>工作映射后由对应子单元的 shader 执行。特定软件输入可要求完成后保留映射。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 2 允许按软件输入在一项工作完成后保留逻辑槽与硬件槽的映射，因此完成通知和可重新分配不是同一事件。权 5 另列依赖、配置和槽等待状态。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在 GPU 分配层隔离高低优先级工作对硬件槽的争用。</dd></div><div><dt>代价和限制</dt><dd>预留空间多会限制低优先级吞吐。依赖未满足或下游 shader 饱和时，硬件槽预留仍可能无法降低完成延迟。</dd></div><div><dt>验证指标</dt><dd>按优先级统计提交到槽分配的延迟，并跟踪预留槽空置时间和优先级分组吞吐量。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>高优先级提交时延分成依赖就绪、配置就绪、硬件槽分配和首条 shader 执行。预留直接减少硬件槽竞争，开销可见于通用槽等待和预留闲置。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让高优先级工作的前置依赖一直晚于普通槽释放。若有无预留的首条执行时点相同，但普通工作吞吐下降，预留在该流量下没有缩短关键路径。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>低优先级图形工作陆续占用非预留槽，后来有高优先级工作到达。</dd></div><div><dt>处理结果</dt><dd>低优先级工作不能填入预留槽，因此达到门槛的工作仍能参与其分配。依赖未满足时继续等待。</dd></div><div><dt>结果解读</dt><dd>以 GPU 命令提交到首个执行槽分配为延迟口径。开槽后还需观察实际 shader 启动。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
-<p>预留硬件槽与重分派工作组</p></li><li><a href="US12190151B2.html#engineering">GPU 线程分两级分配到通道与执行流水线</a>
-<p>工作映射与指令发出</p></li></ul>
+<p>US12175300B2 用软件优先级约束逻辑槽到硬件槽的映射，低优先级工作只能使用未预留槽。US12333339B2 在先有的软件映射上允许 GPU 硬件按分派进度重新分配工作组。对照时注意预留槽影响工作能否映射，重分派影响获准进入的工作交给哪组执行资源。</p></li><li><a href="US12190151B2.html#engineering">GPU 线程分两级分配到通道与执行流水线</a>
+<p>US12175300B2 在 GPU 工作映射阶段检查优先级门槛和硬件槽。US12190151B2 在译码前选择线程，在译码后根据目标流水线选择操作，并把执行流水线的背压反馈给第一级。两件使用的队列和控制量不同，验证时分别记录工作提交到槽映射、线程选择到操作发出的时延。</p></li></ul>
     <p><a href="../index.html?patent=US12175300B2#knowledge">在全量关系图上定位 US12175300B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

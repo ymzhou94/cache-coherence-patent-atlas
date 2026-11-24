@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9043570B2 按组配额限占并允许总配额超配 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US9043570B2</code><span>美国授权专利</span><time datetime="2015-05-26">2015-05-26</time></p>
   <h1>按组配额限占并允许总配额超配</h1>
   <p class="english-title" lang="en">System cache with quota-based control</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">几个组的需求高峰可能出现在不同时间。允许配额总和超出物理行数，可以给每组留较高上限。实际分配仍要在目标 set 找到合格行。</p>
     <p>缓存按组记录占用，可按配置启用配额。各组配额总和允许超过物理行数。分配请求缺失时，本组是否达到上限决定到哪个组找替换候选行。</p>
     <ol class="walkthrough"><li><h3>按组记录当前占用</h3><p>缓存标签保存组归属和行状态。控制器统计每组的行数，再读出配额是否启用。</p></li><li><h3>缺失时查本组上限</h3><p>要分配新行的请求缺失后，控制器将请求所属组的当前行数与其配额比较。</p></li><li><h3>按比较结果选搜索范围</h3><p>本组已到上限时，从本组找替换候选行以限制占用。尚未到上限时，可以从其他组找候选。两种情况都受 set 范围和行状态约束。</p></li><li><h3>更新占用，按配置清理</h3><p>替换完成后更新相应组的占用。一些实现还会在关闭配额后按配置执行 flush 或 drop。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 把 sticky 分配的资格再收紧一层。在本组配额已满时只找同组普通行，若找不到合格候选，则该 sticky 请求得不到新缓存行。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>各组忙闲错开，且有其他组合格的替换候选行时，超配让不同组在各自的忙碌窗口使用更大的空间。</dd></div><div><dt>代价和限制</dt><dd>各组同一时段大量访问时，物理容量仍是固定的。就算本组尚未用完配额，目标 set 没有合格行也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录各组逐期占用、引发逐出的请求组和被逐出行所属组、请求未分配次数及总命中率。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>配额比较只决定搜索方向。真正选用哪一路还取决于候选行的状态，观察拒绝分配时应同时记录组占用、普通行候选集合和各组未用配额。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若目标组中的行都受保护，一个 sticky 请求即使优先级高也会因为找不到普通候选而分配失败。这来自权利要求 7，不能把所有未分配都解释成物理容量已用尽。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>缓存有 8 条可用行，A 和 B 的配额都是 6。当前 A 占 6 条，B 占 2 条。假定相关组里有可替换的普通行。</dd></div><div><dt>处理结果</dt><dd>新来的 A 缺失从 A 组找替换候选行，A 仍占 6 条。此时 B 尚未到 6，可在另一组找合格行，把一行空间让给 B。</dd></div><div><dt>结果解读</dt><dd>两个上限合计 12，但最多仍只能放下 8 条。搜索范围由发出缺失请求的组是否达到上限决定。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#quota">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#quota">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9311251B2.html#engineering">按数据流保留 sticky 缓存行</a>
-<p>逐行保护与配额约束</p></li><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
-<p>配额怎么产生与怎么执行</p></li></ul>
+<p>US9311251B2 把 sticky 状态和数据流组号写入标签，禁止其他组的填充替换该组的 sticky 行。US9043570B2 在缓存缺失时比较发起组的占用量和配额，再决定从本组还是其他组查找候选行。前一机制约束哪些行可被替换，后一机制约束到哪个组中搜索。</p></li><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
+<p>US11232033B2 的处理器根据运行时状态和预计的带宽变化计算新配额，再让内存缓存控制器执行。US9043570B2 描述了另一件专利如何在缓存缺失时执行已设定的组配额。比较两种机制时，可把配额更新时点和随后第一次受配额影响的逐出决策分开记录。</p></li></ul>
     <p><a href="../index.html?patent=US9043570B2#knowledge">在全量关系图上定位 US9043570B2</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

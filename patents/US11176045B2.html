@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11176045B2 次预取器回报覆盖，主预取器限量 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US11176045B2</code><span>美国授权专利</span><time datetime="2021-11-16">2021-11-16</time></p>
   <h1>次预取器回报覆盖，主预取器限量</h1>
   <p class="english-title" lang="en">Secondary prefetch circuit that reports coverage to a primary prefetch circuit to limit prefetching by primary prefetch circuit</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">主、次预取器可以识别不同的访问模式，例如区域内偏移和跨区域的大步长。如果两者预测的地址重叠，各自按原数量发出会占用更多带宽。</p>
     <p>主预取器发现需求访问未被自己的跟踪结构覆盖时，会调用次预取器。次预取器判断相应数据可高置信度预取时，会把覆盖结果报回。主预取器据此减少请求数，仍保留一部分。</p>
     <ol class="walkthrough"><li><h3>查主预取器的映射</h3><p>第一预取器先用需求地址查自己的跟踪表。有映射便按主机制处理，表内未命中才调用次预取器。数据缓存另行判断该需求地址是否命中。</p></li><li><h3>让次预取器匹配访问流</h3><p>次预取器用另一套机制匹配流状态。在说明书的大步长示例中，新地址若符合已有步长，会更新匹配流并积累置信度。</p></li><li><h3>把覆盖结果报回对应映射</h3><p>次机制的置信度达到门槛后，向主预取器发回覆盖指示。权利要求 2 规定可带回主访问的标识，便于找到应当减少预取的映射。</p></li><li><h3>减少主预取数</h3><p>主预取器按回报减少本次预取量。独立权利要求保留非零值，部分实施例还按相对覆盖级别调整保留数量。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11176045B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11176045B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 让反馈携带需求访问标识和相对覆盖量。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11176045B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的高置信度回报只约束主预取降到较小的非零值，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11176045B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 又给出了全覆盖编码的停止条件。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>两个预取器频繁预测到重叠地址时，减少主预取量有机会缓解队列和带宽竞争。</dd></div><div><dt>代价和限制</dt><dd>次预取器即使判断准确，数据也可能到得太晚。如果同时压低主预取量，原本及时的候选可能就不会发出。</dd></div><div><dt>验证指标</dt><dd>固定访问轨迹，比较两路各自发出的唯一地址、重合地址、预取过晚时仍发生的需求缺失以及各自占用的带宽。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>相对覆盖量衡量预测涉及多少未来数据。对同一个地址，主、次路径回填时点可以不同，因此覆盖反馈能控制发出量，却无法单凭这个字段判断哪一路更早到。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>当次预取覆盖长步长流的主体，主预取独自覆盖流与流之间的几个边界地址时，两路请求量降了，边界访问却可能缺失。总带宽的下降不能单独解释任一地址的等待。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定主预取器通常针对某个映射发 4 个请求。次预取器在同一需求访问上匹配到大步长流，回报超过门槛的覆盖。</dd></div><div><dt>处理结果</dt><dd>在这个示例中，主预取数从 4 降到 2。次机制无有效覆盖回报时，这条规则不会降低主预取数。</dd></div><div><dt>结果解读</dt><dd>4 和 2 是假设值。若还要去除已在途的重复地址，需要另行检查请求。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US10621100B1.html#engineering">多级缓存共用访问图预取器</a>
-<p>两层反馈与两器协作</p></li></ul>
+<p>多级预取从同一访问图得到候选，用近层和外层各自的准确度调节各自的发出量。另一件专利让主预取器的跟踪缺失调用另一套机制，次机制报出足够置信度后，主机制把同次需求关联的请求数降到较小的非零值。一边分配两个目的层的发出量，一边协调同一数据缓存前的两个预测器。</p></li></ul>
     <p><a href="../index.html?patent=US11176045B2#knowledge">在全量关系图上定位 US11176045B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

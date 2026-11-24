@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11704245B2 把缓存容量动态改作直接寻址 RAM · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11704245B2</code><span>美国授权专利</span><time datetime="2023-07-18">2023-07-18</time></p>
   <h1>把缓存容量动态改作直接寻址 RAM</h1>
   <p class="english-title" lang="en">Dynamic allocation of cache memory as RAM</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">音频和显示代理往往要在固定时限内取到数据。只要分配仍有效，选定的物理容量就能通过特定地址直接访问，并避开常规替换。</p>
     <p>收到指定地址区的重分配请求后，控制器设置实时内存指示，将选定的行转成直接寻址 RAM。专利也描述了另一种办法，用非线性预装让系统内存缓冲区留在缓存中。</p>
     <ol class="walkthrough"><li><h3>选择要启用的地址区</h3><p>软件或处理器提交重分配请求，指定地址区。控制逻辑找出可承担该区域的缓存行或缓存路。</p></li><li><h3>按实现要求清理原有数据</h3><p>转换前可先对选中的位置执行 flush。其余行继续参与常规缓存替换。</p></li><li><h3>设置实时标记和地址映射</h3><p>地址表把该区标成活动状态，选中的容量供直接寻址使用，普通 tag 查找和替换绕开这些位置。实时通路可以获得更高的 QoS。</p></li><li><h3>服务访问并在停用时回收</h3><p>访问落在直接寻址区时，控制器走相应通路。安全区还要检查请求来源。停用后收回空间，之后的访问按当时状态返回数据、默认值或错误。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11704245B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> 将选定缓存路绑定到处理器地址空间内原本未启用的直接寻址区域。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11704245B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 另覆盖区域解除分配后访问所产生的错误。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>小工作集在一段时间内必须常驻时，直接寻址保留可减少普通替换造成的访问抖动。</dd></div><div><dt>代价和限制</dt><dd>实时区扩大后，普通流量能用的缓存缩小，可能增加片外访问。切换时还可能需要 flush 和更新映射。</dd></div><div><dt>验证指标</dt><dd>记录实时访问是否超时，同时测普通流量的命中率、重分配延迟和脏写回量。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>直接寻址把容量保障落实到地址映射。访问路径因此省去了普通替换竞争，但启用与回收之间仍有映射状态及对旧持有者的同步成本。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若 DMA 在地址区回收后仍有请求在途，继续访问可能触发权利要求 7 所述的错误。这个过程可清楚区分映射撤销时点与所有旧访问均已结束的时点。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设共享缓存有 8 个等大的 ways。一个实时缓冲区要求把其中 2 个改作直接寻址 RAM。</dd></div><div><dt>处理结果</dt><dd>转换完成后，实时访问根据约定地址找到这 2 个 ways。普通替换最多使用余下的 6 个。若旧位置有脏数据且实现支持 flush，先完成清理。</dd></div><div><dt>结果解读</dt><dd>实际保留比例、清理成本和 QoS 提升幅度取决于实现。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11893251B2.html#engineering">按缺失率调整系统内存缓冲区的缓存预装顺序</a>
-<p>普通缓存预装与直寻址</p></li></ul>
+<p>US11893251B2 保留系统内存中的缓冲区，通过非线性顺序把内容预装到普通缓存，再按缺失率调整顺序。US11704245B2 把部分缓存物理容量改作直接寻址 RAM，并将这些行排除在普通替换外。两种方式分别需要检查实际驻留与可分配容量。</p></li></ul>
     <p><a href="../index.html?patent=US11704245B2#knowledge">在全量关系图上定位 US11704245B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

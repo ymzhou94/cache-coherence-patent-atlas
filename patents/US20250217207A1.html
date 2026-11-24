@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250217207A1 地址转换屏障约束乱序流水线 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US20250217207A1</code><span>美国公开申请</span><time datetime="2025-07-03">2025-07-03</time></p>
   <h1>地址转换屏障约束乱序流水线</h1>
   <p class="english-title" lang="en">Translation Barrier Instruction</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">连续访存可能跨越页表或权限寄存器更新。屏障如果只依赖程序顺序的指令位置，无法直接确定实际哪些地址转换仍在进行。</p>
     <p>屏障跟踪程序顺序上较老指令的地址转换。在旧侧转换全部完成前，较年轻指令的转换等待。部分权利要求也约束系统寄存器操作或高速地址转换缓冲区（TLB）写入，具体作用取决于相应权项。</p>
     <ol class="walkthrough"><li><h3>辨认程序顺序在前的转换</h3><p>程序顺序以屏障指令为界。已经发出的相关转换计入等待条件。</p></li><li><h3>给年轻侧设置发出限制</h3><p>年轻指令的地址转换须等待屏障完成，即使其操作数已经就绪。</p></li><li><h3>确认等待条件消失</h3><p>屏障控制核对旧侧转换全部完成。特定从属项还跟踪寄存器动作或 TLB 更新。</p></li><li><h3>解除较年轻侧限制</h3><p>屏障完成后，较年轻转换按通常流水线和资源条件继续。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 2 可把指定系统寄存器修改纳入屏障的先后两侧。权 8 又明确屏障完成前阻止年轻推测指令的映射写入 TLB，这是一条可单独检查的状态更新约束。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>精确限定地址转换的同步边界，有助于分析哪些操作可以在屏障周围重叠。</dd></div><div><dt>代价和限制</dt><dd>页表遍历延迟和 TLB 缺失会拖长旧侧完成时间。原文的屏障语义需要按权项区分，不能直接对应通用 ARM 指令。</dd></div><div><dt>验证指标</dt><dd>测量屏障发出到旧侧最后一笔转换完成所需周期，并分开记录年轻侧转换因屏障停顿的时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>若修改的是转换基址或权限寄存器，观察转换发起和完成之外还要检查 TLB 回填的先后。不受屏障定义限制的数据返回可以分别记录，避免把不同等待叠成一次内存访问。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果旧侧所有转换都命中 TLB，但一笔旧侧 load 的数据还在等待远端缓存，屏障与该 load 的返回可以相差较远。反过来，长页表遍历会延长年轻侧转换的等待。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>一条较老的 load 已发起转换且仍在页表遍历。地址转换屏障之后另有一条需要转换的 load。</dd></div><div><dt>处理结果</dt><dd>旧侧遍历完成前，后一条 load 的转换等待。屏障完成后才按正常条件发起。</dd></div><div><dt>结果解读</dt><dd>该实施例的同步对象是转换动作，可据此将屏障停顿和访存数据返回延迟分别归因。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12229561B1.html#engineering">TLBI 后的数据同步屏障等待目标核在途访问</a>
-<p>地址转换屏障与远端完成确认</p></li></ul>
+<p>US20250217207A1 在本核阻止屏障之后的地址转换，直到程序顺序中较早的转换完成。US12229561B1 的目标核收到 TLBI 后的 DSB 指示时，追踪已经转换的在途指令，等有关指令退休再应答。前者处理本核转换的发出顺序，后者处理远端对失效完成的确认。</p></li></ul>
     <p><a href="../index.html?patent=US20250217207A1#knowledge">在全量关系图上定位 US20250217207A1</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

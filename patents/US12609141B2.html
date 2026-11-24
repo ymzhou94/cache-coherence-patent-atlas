@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12609141B2 按客户端状态调节内存时钟与电源门控 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12609141B2</code><span>美国授权专利</span><time datetime="2026-04-21">2026-04-21</time></p>
   <h1>按客户端状态调节内存时钟与电源门控</h1>
   <p class="english-title" lang="en">Adjustable clock and power gating control</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">控制器本地看到的空队列与客户端已经发出的未完成请求处在不同观察点。把未完成事务和工作负载偏好同时送入电源管理电路，可以提前限制对共享资源的深度门控。</p>
     <p>异构客户端通过内存控制器访问缓存、DRAM 控制电路或其他共享内存资源。电源管理电路另收未完成事务、负载类别和 floor enable 等操作参数。</p>
     <ol class="walkthrough"><li><h3>报告客户端条件</h3><p>异构客户端通过内存控制器访问缓存、DRAM 控制电路或其他共享内存资源。电源管理电路另收未完成事务、负载类别和 floor enable 等操作参数。</p></li><li><h3>将条件映射为功耗下限</h3><p>映射电路可以为不同客户端分别产生门槛，图 2 还描述将不同门槛合并的路径。下限高时，资源需要保持在更可用的状态。</p></li><li><h3>用下限约束门控动作</h3><p>控制电路仍可按空闲情况进入许可的时钟或电源门控。下限禁止的深度状态要留在候选之外。不同实施例还把门槛送给 PLL 或内存通道唤醒逻辑。</p></li><li><h3>传递远端或软件请求</h3><p>图 4 将软件地板请求与硬件操作参数并列。图 5 的多 die 实施例还会接收远端 PMU 按其客户端计算的门槛。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12609141B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 允许分别求客户端门槛后形成共同门槛。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12609141B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> 的按通道唤醒还取决于操作参数。一个通道空闲不意味着所有共享供电资源都可下探到同一状态。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>来自 CPU、GPU 或显示的提前信息更新及时时，能减少资源刚下电就被后续事务唤醒的次数。</dd></div><div><dt>代价和限制</dt><dd>任何高地板长期滞留都可能提高静态功耗。异步提示还可能与实际突发脱节，需要验证失效或撤回行为。</dd></div><div><dt>验证指标</dt><dd>把相同跨通道请求轨迹送给固定滞回和地板策略，对比第一次访问等待、门控占空比、被错误阻止的睡眠窗口与唤醒次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>区分内存访问恢复与闲置漏电。分别统计时钟门控比例、供电域驻留、首笔读延迟和邻通道附带唤醒次数，可见状态下限是保护服务还是持续消耗能量。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让硬实时客户端保持注册但很少发请求，同时加入高频短突发。若状态下限持续阻止深门控而首笔尾延迟无变化，客户端声明在该阶段可能高估实际约束。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>CPU 与显示共同访问内存。设三级状态从可服务、仅停时钟到断电，显示在接下来一个间隔还需要按期取数。</dd></div><div><dt>处理结果</dt><dd>若地板为仅停时钟，控制器暂时空闲时可以停钟，但保持深度门控禁止。若 CPU 也发出高性能提示，合并结果可以进一步限制停钟。</dd></div><div><dt>结果解读</dt><dd>这是用于推导门控选择的离散状态例。观察点是从请求到可服务的新增等待，不以某代芯片的 PLL 或供电启动时间为代入参数。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12585469B2.html#engineering">预测 trace cache 未命中时关闭数据读</a>
-<p>单次读与共享门控</p></li><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
-<p>内存地板与停服</p></li><li><a href="US12578774B2.html#engineering">用功耗比调节内存 DVFM</a>
-<p>功率比调节与内存门控约束</p></li></ul>
+<p>Trace cache 预测缺失时只关本次数据阵列读，仍查标签并读取指令缓存，标签意外命中也维持决定。共享内存门控要看异构客户端的运行参数，资源状态须满足功耗下限，从属方案按客户端选择最活跃门槛。两处都减小硬件活动，判断跨度分别是一次取指与共享资源的状态转移。</p></li><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
+<p>US12609141B2 根据异构客户端的操作参数设置共享内存状态下限，约束实际时钟和电源门控深度。US12332723B2 从一次即将减少内存可用性的事件出发，等其他裸片上的代理确认能扛过相应的读写暂停后才放行。内存可以降到哪一档，和这次切换的停服时间能否被缓存吸收，需要分别判断。</p></li><li><a href="US12578774B2.html#engineering">用功耗比调节内存 DVFM</a>
+<p>US12578774B2 用内存功率和计算代理功率的比值选择内存 DVFM 状态，权利要求覆盖访存停顿周期数增加而封装能效改善的切换。US12609141B2 根据异构客户端的运行参数设定内存资源最低允许的功率状态，再限制时钟或电源门控。评估这两种控制时，应分别记录运行点、门控状态和访存停顿周期数。</p></li></ul>
     <p><a href="../index.html?patent=US12609141B2#knowledge">在全量关系图上定位 US12609141B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

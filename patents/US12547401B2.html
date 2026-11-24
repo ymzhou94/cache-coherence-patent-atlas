@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12547401B2 把依赖 load 的比较或运算移入 LSU · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US12547401B2</code><span>美国授权专利</span><time datetime="2026-02-10">2026-02-10</time></p>
   <h1>把依赖 load 的比较或运算移入 LSU</h1>
   <p class="english-title" lang="en">Load instruction fusion</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">传统依赖路径要把 load 结果送给后续执行单元。融合可把特定消费者操作移到已有数据的加载流水线。</p>
     <p>译码或后续映射逻辑识别可融合的 load 与依赖指令。加载/存储单元（LSU）完成取数后直接执行符合条件的比较或算术操作，条件分支仍由分支执行电路处理。</p>
     <ol class="walkthrough"><li><h3>检测紧邻的依赖指令</h3><p>需要识别第一条指令的加载结果是第二条指令的操作数。</p></li><li><h3>发出原始内存访问</h3><p>地址生成和缓存查询仍然发生，融合没有改变给定地址的数据来源。</p></li><li><h3>在 LSU 内执行依赖操作</h3><p>实现允许时，可以就地执行比较或算术，省去部分操作数传递。</p></li><li><h3>将条件结果交给分支处理</h3><p>分支执行单元根据该结果处理控制流，LSU 承担的是比较。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 5 用融合表索引向 LSU 传递融合描述。权 4 规定两个不同目的地时可分别转发 load 值与运算结果。权 8 允许融合态无法完成时改为分别执行。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>数据就绪后的固定依赖路径缩短，条件结果可提前送至分支单元。</dd></div><div><dt>代价和限制</dt><dd>只有能在 LSU 执行的操作可参与。缓存缺失仍会延迟数据到达，LSU 算术电路也占用资源。</dd></div><div><dt>验证指标</dt><dd>在相同缓存命中条件下测数据就绪至比较结果或算术结果可用的周期，并统计可融合比例。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>省下的是把原始 load 值送到另一执行单元做消费操作的等待。若两条指令有不同目的地，融合仍需保留两份结果的交付，并消耗融合表条目与 LSU 运算资源。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>一批可融合的 load 同时在等待回填时，融合表可能持续没有空位。此后即使每对操作都满足依赖条件，也可能只能分别执行，或在融合态无法完成时改走正常路径。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>load 从缓存读到数值，下一条是依赖该值的条件分支，二者满足当前实现的融合条件。</dd></div><div><dt>处理结果</dt><dd>融合操作进入 LSU，读到数值后可在 LSU 内做比较。分支单元收到条件结果并处理分支。</dd></div><div><dt>结果解读</dt><dd>测比较结果何时就绪，不能把少一次操作数传递等同于缓存本身更快。</dd></div></dl>
     </div>
     
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11416254B2.html#engineering">同一解码组内的零额外周期 load 旁路</a>
-<p>移动消费者和复用生产者</p></li><li><a href="US12340222B2.html#engineering">暂存寄存器生产者并融合后续消费者</a>
-<p>融合缓冲与 LSU 内执行</p></li></ul>
+<p>US12547401B2 仍执行原始 load，把后续消费操作的比较或算术移到 LSU 处理。US11416254B2 则在同一解码组识别较早的 store，在地址及依赖条件满足时，把 load 目的映射到 store 数据源物理寄存器。两项机制作用在不同阶段，应分别量化比较结果可用延迟和被省去的数据通路。</p></li><li><a href="US12340222B2.html#engineering">暂存寄存器生产者并融合后续消费者</a>
+<p>US12340222B2 暂存写目的寄存器的生产者，在合适的消费者出现时融合，仍需写回的生产者可发出执行。US12547401B2 在译码阶段识别消费 load 结果的后续操作，把部分比较或算术送到 LSU。比较时记录融合缓冲驻留、核内发射以及消费者取得结果的周期。</p></li></ul>
     <p><a href="../index.html?patent=US12547401B2#knowledge">在全量关系图上定位 US12547401B2</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

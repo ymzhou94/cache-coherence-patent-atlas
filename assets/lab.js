@@ -69,39 +69,44 @@
       },
     },
     {
-      id: "bypass", name: "跨簇回填旁路", title: "跨簇旁路省下哪段回程？",
+      id: "bypass", name: "跨簇回填旁路", title: "跨簇回填旁路何时会被转换队列拖慢？",
       patents: [["US11016913B1", 5, "权 1–3、10，图 2–4"], ["US11537538B2", 2, "同族对照"]],
-      setup: "B 发出携数据响应时记 t0。B 到汇聚点、汇聚点到 A 各需 2 拍，PoC 每跳 1 拍、生成回填用 1 拍。原响应可并行送 PoC。模型为几条链路分别设置一次等待。",
+      setup: "B 连续发出不同缓存行的携数据响应。B 到汇聚点和汇聚点到 A 各需 2 拍。PoC 每跳 1 拍，生成回填用 1 拍。旁路转换单元按 FIFO 串行服务。两种方案各用同样的下行发射间隔。模型为原响应上行预留独立路径。",
       fields: [num("controllerHops", "汇聚点到 PoC 的单程跳数", 5, 0, 16),
         num("mergeWork", "节点转换用时", 1, 0, 20), num("controllerWait", "发往 PoC 前的等待", 0, 0, 20),
-        num("mergeWait", "汇聚点转换前的等待", 0, 0, 25), num("sharedWait", "两路径共用的下行等待", 0, 0, 25)],
-      cases: [["专利图谱算例", {}], ["两条路一样快", { controllerHops: 0 }], ["旁路转换排队", { mergeWait: 12 }], ["共用下行堵塞", { sharedWait: 15 }]],
+        num("mergeWait", "转换前固定等待", 0, 0, 25), num("sharedWait", "下行前固定等待", 0, 0, 25),
+        num("count", "连续响应数", 1, 1, 16), num("gap", "原响应到达间隔", 1, 1, 12),
+        num("downlinkInterval", "下行发射间隔", 1, 1, 12)],
+      cases: [["单笔基线", {}], ["转换队列积压", { count: 8, mergeWork: 3 }, "converter-queue"],
+        ["下行端口受限", { count: 8, downlinkInterval: 3 }]],
       run(v) {
-        const r = t.fillTrace(v);
-        const diff = r.baseline - r.bypass;
-        const foot = diff === 0 ? "两条路径都在同一拍返回数据。" : "采用旁路后，A " + (diff > 0 ? "提前 " : "延后 ") + Math.abs(diff) + " 拍收到数据。";
-        const start = segment("B 到节点", 0, 2);
-        const uplink = [segment("上行等待", 2, 2 + v.controllerWait, "wait"),
-          segment("节点到 PoC", 2 + v.controllerWait, r.toController)];
-        const toA = end => [segment("共用下行等待", end - 2 - v.sharedWait, end - 2, "wait"), segment("节点到 A", end - 2, end)];
+        const { rows } = t.fillTrace(v);
+        const last = rows.at(-1);
+        const firstDiff = rows[0].baseline - rows[0].bypass;
+        const lastDiff = last.baseline - last.bypass;
+        const start = segment("B 到节点", last.sent, last.toMerge);
+        const uplink = [segment("上行等待", last.toMerge, last.toMerge + v.controllerWait, "wait"),
+          segment("节点到 PoC", last.toMerge + v.controllerWait, last.toController)];
+        const toA = (ready, launch, end) => [
+          segment("等下行", ready, launch, "wait"), segment("节点到 A", launch, end),
+        ];
         return {
-          metrics: [["A 收到数据 · 经 PoC / 旁路", r.baseline + " / " + r.bypass + " 拍"],
-            ["原响应抵达 PoC", cycle(r.toController)], ["省下的时间", plus(diff) + " 拍"]],
-          explanation: foot + " PoC 往返链路、上行等待和控制器生成回填共 " +
-            (r.fillAtMerge - 2) + " 拍。旁路改为在节点等待和转换，共 " + (r.localFill - 2) +
-            " 拍。共用下行等待同时推迟两条路径，时间差由前两项决定。",
+          metrics: [["末笔回填延迟 · 经 PoC / 旁路", (last.baseline - last.sent) + " / " + (last.bypass - last.sent) + " 拍"],
+            ["首笔节省", plus(firstDiff) + " 拍"], ["末笔节省", plus(lastDiff) + " 拍"]],
+          explanation: "同轴轨迹显示末笔事务。转换单元在前一笔结束后才开始处理下一笔，末笔因此多等 " +
+            (last.conversionStart - last.toMerge - v.mergeWait) + " 拍。表中回填延迟和 PoC 到达延迟均从各笔原响应发出计时。",
           lanes: [
-            lane("经 PoC 回填", [start, ...uplink, segment("PoC 生成回填", r.toController, r.toController + 1),
-              segment("PoC 返回节点", r.toController + 1, r.fillAtMerge), ...toA(r.baseline)], r.baseline),
-            lane("汇聚点旁路", [start, segment("等转换资源", 2, 2 + v.mergeWait, "wait"),
-              segment("节点转换", 2 + v.mergeWait, r.localFill), ...toA(r.bypass)], r.bypass),
-            lane("并行原响应", [start, ...uplink], r.toController),
+            lane("经 PoC 回填", [start, ...uplink, segment("PoC 生成回填", last.toController, last.toController + 1),
+              segment("PoC 返回节点", last.toController + 1, last.fillAtMerge),
+              ...toA(last.fillAtMerge, last.baselineSend, last.baseline)], last.baseline),
+            lane("汇聚点旁路", [start, segment("等转换资源", last.toMerge, last.conversionStart, "wait"),
+              segment("节点转换", last.conversionStart, last.localFill), ...toA(last.localFill, last.bypassSend, last.bypass)], last.bypass),
+            lane("并行原响应", [start, ...uplink], last.toController),
           ],
-          data: table("关键位置的到达时刻", ["事件", "经 PoC", "旁路"], [
-            ["B 的响应到汇聚点", cycle(r.toMerge), cycle(r.toMerge)],
-            ["回填可从节点下行", cycle(r.fillAtMerge), cycle(r.localFill)],
-            ["A 收到数据", cycle(r.baseline), cycle(r.bypass)],
-          ]),
+          data: table("逐笔对照（拍）", ["事务", "发出时刻", "转换排队", "经 PoC 回填", "旁路回填", "原响应到 PoC"], rows.map((row, index) => [
+            "R" + (index + 1), cycle(row.sent), row.conversionStart - row.toMerge - v.mergeWait,
+            row.baseline - row.sent, row.bypass - row.sent, row.toController - row.sent,
+          ])),
         };
       },
     },
@@ -306,16 +311,33 @@
       },
     },
     {
-      id: "battery-window", name: "供电预测窗", title: "同样 4 A，为什么短脉冲能放行，长脉冲需要收紧？",
+      id: "battery-window", name: "供电预测窗", title: "为什么同样的短脉冲连续出现时会触及截止电压？",
       patents: [["US12573870B2", 4, "权 1、12，图 6–8"]],
-      setup: "教学电池从零极化开始，开路 4 V，截止 3.4 V，串联欧姆电阻 100 mΩ。基线只按瞬时欧姆压降确定限流，预测窗方案对窗口末端的等效阻抗限流。两种方案都用同一个 RC 电路计算端电压。",
+      setup: "模型电池初始开路 4 V，截止 3.4 V，欧姆电阻 100 mΩ。脉冲内恒流，脉冲间零负载。单笔比较瞬时限流与按窗限流。连续脉冲比较每次从零极化估计和持续追踪极化两种策略。",
       fields: [num("horizon", "供电持续时长（ms）", 1000, 50, 5000), num("tau", "极化时间常数（ms）", 1000, 100, 5000),
-        num("polarization", "极化电阻（mΩ）", 200, 0, 350), num("demand", "请求电流（mA）", 4000, 0, 6000)],
-      cases: [["200 ms 脉冲", { horizon: 200 }], ["3 s 持续负载", { horizon: 3000 }], ["关闭极化支路", { polarization: 0 }]],
+        num("polarization", "极化电阻（mΩ）", 200, 0, 350), num("demand", "请求电流（mA）", 4000, 0, 6000),
+        num("count", "脉冲数", 1, 1, 16), num("idle", "脉冲之间的恢复时间（ms）", 50, 0, 10000)],
+      cases: [["单个 200 ms 脉冲", { horizon: 200 }], ["3 s 持续负载", { horizon: 3000 }],
+        ["短脉冲连续到来", { horizon: 200, count: 8 }, "pulse-train"], ["脉冲间充分恢复", { horizon: 200, count: 8, idle: 4000 }]],
       run(v) {
         const r = t.batteryPulseTrace(v);
-        const last = r.rows.at(-1);
         const voltage = value => value.toFixed(3) + " V";
+        if (v.count > 1) {
+          const resetMin = Math.min(...r.pulses.map(row => row.reset.minimum));
+          const trackedMin = Math.min(...r.pulses.map(row => row.tracked.minimum));
+          const misses = r.pulses.filter(row => row.reset.minimum < r.cut - 1e-9).length;
+          return {
+            metrics: [["最低端电压 · 按零估计 / 追踪状态", voltage(resetMin) + " / " + voltage(trackedMin)],
+              ["按零估计的欠压脉冲", misses + " / " + v.count]],
+            explanation: "每次脉冲先承担欧姆压降，再随 RC 状态变化。剩余极化衰减需要时间。追踪状态的预测器用本次起始极化估算限流，表中的实际供电电流给出为守住截止电压付出的代价。",
+            data: table("逐脉冲比较", ["序号", "起始极化（mV）· 按零估计 / 追踪", "实际供电（A）· 按零估计 / 追踪", "最低端电压 · 按零估计 / 追踪"],
+              r.pulses.map(({ reset, tracked }, index) => [index + 1,
+                Math.round(reset.residual * 1000) + " / " + Math.round(tracked.residual * 1000),
+                reset.current.toFixed(2) + " / " + tracked.current.toFixed(2),
+                voltage(reset.minimum) + " / " + voltage(tracked.minimum)])),
+          };
+        }
+        const last = r.rows.at(-1);
         const violated = last.staticVoltage < r.cut - 1e-9;
         return {
           metrics: [["末端电压 · 瞬时 / 按窗限流", voltage(last.staticVoltage) + " / " + voltage(last.windowVoltage)],
@@ -475,6 +497,8 @@
 
   const nav = document.getElementById("lab-nav");
   const lab = document.getElementById("lab");
+  const activeId = location.hash.slice(1);
+  const scenario = new URLSearchParams(location.search).get("scenario");
   for (const experiment of experiments) {
     nav.append(link(experiment.name, "#" + experiment.id));
     const card = element("article", undefined, "lab-model");
@@ -484,7 +508,7 @@
     const presets = element("div", undefined, "lab-presets");
     presets.setAttribute("role", "group");
     presets.setAttribute("aria-label", "实验场景");
-    const buttons = experiment.cases.map(([label, changes]) => {
+    const buttons = experiment.cases.map(([label, changes, id]) => {
       const button = element("button", label);
       button.type = "button";
       button.addEventListener("click", () => {
@@ -492,7 +516,7 @@
         recompute();
       });
       presets.append(button);
-      return { button, changes };
+      return { button, changes, id };
     });
     const results = element("div", undefined, "model-result");
     results.setAttribute("aria-live", "polite");
@@ -531,9 +555,10 @@
     controls.addEventListener("input", recompute);
     controls.addEventListener("change", recompute);
     lab.append(card);
-    recompute();
+    const initial = experiment.id === activeId && buttons.find(item => item.id === scenario);
+    if (initial) initial.button.click();
+    else recompute();
   }
-  const activeId = location.hash.slice(1);
   if (activeId && experiments.some(item => item.id === activeId)) {
     document.getElementById(activeId).scrollIntoView();
   }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US8856456B2 通过块追踪项过滤缓存一致性探测 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US8856456B2</code><span>美国授权专利</span><time datetime="2014-10-07">2014-10-07</time></p>
   <h1>通过块追踪项过滤缓存一致性探测</h1>
   <p class="english-title" lang="en">Systems, methods, and devices for cache block coherence</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">共享内存的代理可能只在一小段地址范围内访问相同数据。把一个块拆成若干组后，每组记录的共享状态可以给多条行复用。</p>
     <p>代理侧的块跟踪表把块内的缓存行分组，依据对应组的状态决定是否向对端发探测。中间的一致性接口另有一张表，按块记录可能共享的组。</p>
     <ol class="walkthrough"><li><h3>按块分组记录</h3><p>一个块级表项含多个组的缓存状态。每组对应一条或多条缓存行。代理侧和一致性接口侧各维护一张表。</p></li><li><h3>在行缺失时查块和组</h3><p>代理先查目标块，再按组索引检查与缺失行关联的状态。只有有效状态明确指示可以跳过时，才省去对端探测。</p></li><li><h3>用应答更新整块记录</h3><p>对端收到探测且未持有目标行时，可以返回同块各组的状态，请求端据此补齐表项。若等待应答超时，请求端可把整块改为需要探测。</p></li><li><h3>按争用计数拆分或合并</h3><p>计数超过上阈值时可拆分争用块，低于下阈值时可合并相邻跟踪项。拆得越细，记录的可能共享范围越精确，但要用更多表空间。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US8856456B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> 指定两类 snoop 应答有相同的总线尺寸。被请求的行不在对端时返回块跟踪项，存在时可返回数据行。接收方须区别状态更新与真正的数据返回。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一区域反复访问、组的共享状态较稳定时，一个表项可以省去多次探测。</dd></div><div><dt>代价和限制</dt><dd>高争用区域可能需要更多细粒度表项。频繁超时也会扩大保守探测的范围。</dd></div><div><dt>验证指标</dt><dd>统计有效表项覆盖率、跳过探测的比例、超时后整块改为需探测的次数，以及拆分增加的状态字节。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>跟踪项的收益主要来自后续查询能排除一些探测。首次获取状态的应答在这组权项中仍占一次与数据行应答等宽的传输，故应分开记录状态应答、数据应答和后来被滤掉的请求。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若同一块只访问一次，返回的跟踪项来不及服务第二次查询，按等宽传输计量可能没有节省。权利要求 9、10 覆盖应答格式，后续复用次数取决于访问序列。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设块 B 有 8 条行，前 4 条归 G0，后 4 条归 G1。代理 A 的有效表项记录 G1 无需探测，G0 可能共享。</dd></div><div><dt>处理结果</dt><dd>A 请求第 6 条行而缺失时，可跳过对端 B 的探测。第 1 条行落在 G0，仍须保守查询对端。若该探测超时，A 可以把整块标成需要探测。</dd></div><div><dt>结果解读</dt><dd>8 条行和每组 4 条是示例设定。只有有效表项能支撑过滤，组状态可能覆盖实际共享位置周围的其他行。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12423235B2.html#engineering">在缓存代理保存一致性目录 way 标识</a>
-<p>跳过探测与少查目录</p></li><li><a href="US8868847B2.html#engineering">按页记录共享范围的多核探测过滤</a>
-<p>按页与按块过滤 snoop</p></li></ul>
+<p>较早的权项在请求代理和一致性接口分别跟踪一组缓存块，代理查组状态决定要不要发探测。较新的权项在目录初次分配时把包含所选 way 的子集提示交给代理，逐出消息带回提示以缩小目录的块 ID 搜索。第一个节省消息，第二个节省一次已有消息触发的目录比较。</p></li><li><a href="US8868847B2.html#engineering">按页记录共享范围的多核探测过滤</a>
+<p>US8868847B2 在每个核的页状态表中区分封装内共享和跨封装共享，缺失时依据共享状态和访问类型选择广播范围。US8856456B2 用块追踪表中的行组状态决定是否向另一共享内存设备发 snoop，并在一致性接口另设一张可能共享状态表。相同共享模式下可比较两个追踪粒度如何影响表项数和 snoop 数量。</p></li></ul>
     <p><a href="../index.html?patent=US8856456B2#knowledge">在全量关系图上定位 US8856456B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

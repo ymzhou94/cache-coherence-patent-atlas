@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12306789B2 按性能需求为同类型 CPU 核簇划分性能岛 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12306789B2</code><span>美国授权专利</span><time datetime="2025-05-20">2025-05-20</time></p>
   <h1>按性能需求为同类型 CPU 核簇划分性能岛</h1>
   <p class="english-title" lang="en">Performance islands for CPU clusters</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">性能岛是性能控制器管理的一组核簇及其控制量范围。相同核类型的两个核簇可以对应不同范围。</p>
     <p>性能控制器依据线程组的控制量（control effort）选择性能岛，并可以通知调度器首选核簇。核簇归属还能随线程组活动变化。</p>
     <ol class="walkthrough"><li><h3>计算线程组控制量</h3><p>性能控制器采样活动线程组，并把控制量与定义好的范围比较。</p></li><li><h3>选择同类型核簇中的性能岛</h3><p>需求较低的组可保留在第一岛，需求更高的组被指向覆盖较高控制量的另一岛。</p></li><li><h3>通知调度器核簇偏好</h3><p>性能控制器更新首选核簇。调度器依据自己的运行条件决定线程实际放置。</p></li><li><h3>按活动情况调整岛成员</h3><p>第一岛没有活动组时，可把其中的核簇转给第二岛，并重新分配线程组。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 7 允许按照温差重分配同类型核簇，权 8 则使用时间与电压的加权关系。两项都是岛成员策略，可影响随后推荐的核簇，实际放置仍由调度器执行。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>让需求差异较大的线程组在同类型核簇之间分开运行。</dd></div><div><dt>代价和限制</dt><dd>核簇数量有限。重新分配核簇或改变线程放置可能增加调度等待和缓存再预热开销。</dd></div><div><dt>验证指标</dt><dd>记录每岛的运行点驻留时间、线程迁移率、完成延迟和每任务能耗。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>比较核簇的性能状态驻留时长、温差和跨簇工作集重新预热开销。高低需求组分开可能减少低需求组的高频驻留，也会增加调度迁移次数。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>维持两组相同工作量和温差阈值，逐步增大共享工作集。若分组后高频驻留下降而 LLC 流量及整机每任务能量上升，跨簇局部性损失可能抵消收益。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>两个活动线程组需要不同控制量，机器有两个同类型 CPU 核簇。</dd></div><div><dt>处理结果</dt><dd>较低需求组维持在第一岛，较高需求组被分配到第二岛。第一岛空闲后可重新分配核簇。</dd></div><div><dt>结果解读</dt><dd>将线程迁移与运行点变化分开观测。核簇归属和线程首选核簇是两种状态。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11579934B2.html#engineering">非对称多处理器的闭环性能控制与热功率约束</a>
-<p>核类型选择与同类型核簇放置</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
-<p>组级放置与单线程迁移</p></li></ul>
+<p>两案都从线程组的控制量形成放置建议。US11579934B2 跨核类型给出核簇和运行点推荐，并处理热功率约束。US12306789B2 将相同核类型的核簇划入控制量范围不同的性能岛，使性能需求不同的线程组可留在同类核上，又不会集中到同一个核簇。</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
+<p>性能岛根据线程组的控制量给出首选核簇。实际运行时，若某一核簇的 BIU 请求队列持续饱和，US12147839B2 用 LSU 微操作指标设置线程标记，允许调度器只迁移相关线程。同组其他线程可以维持原来的核簇放置。</p></li></ul>
     <p><a href="../index.html?patent=US12306789B2#knowledge">在全量关系图上定位 US12306789B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US10909035B2 中间缓存容量为零时仍保留控制路径 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US10909035B2</code><span>美国授权专利</span><time datetime="2021-02-02">2021-02-02</time></p>
   <h1>中间缓存容量为零时仍保留控制路径</h1>
   <p class="english-title" lang="en">Processing memory accesses while supporting a zero size cache in a cache hierarchy</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">L1 指令缓存报告缺失时，L1 数据缓存仍可能保存修改过的指令。中间层即使没有数据阵列，也需要分别检查这两条路径才能选对数据来源。</p>
     <p>中间控制器保留上、下层接口。收到特定的上层缺失指示后，它还能向上层发 snoop，再按探测结果从上层取数据或向下请求。说明书的零容量配置省去了本地数据阵列查询和回填。</p>
     <ol class="walkthrough"><li><h3>省去本地阵列，保留控制器</h3><p>说明书支持本层有阵列或无阵列。零容量配置跳过本地查询及分配，继续运行上下游接口和事务控制。</p></li><li><h3>按完整地址向 L1 数据侧探测</h3><p>收到上层缺失指示后，控制器按所需地址发 snoop。图 9 中，最初是 I-cache 缺失，后续按完整地址查 L1 D-cache。</p></li><li><h3>根据探测结果选数据源</h3><p>上层命中时，控制器可能先取数据，再决定是否写回或失效。上层也无数据时，向下层发请求。本层没有阵列可以接收回填。</p></li><li><h3>按事务类型回送结果</h3><p>图 9 的取指路径中，D-cache 命中脏指令后，可把副本送往下层，再响应 L1 指令侧。图 8 的外部 snoop 则向上传送，并按上层的回复作答。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 把上行探测未持有数据作为发下层请求的依据之一。权 <a class="claim-anchor" href="https://patents.google.com/patent/US10909035B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 则明确下层回来的填充可以不存到同级缓存。控制器保留了事务取数，省去相应数据分配。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一套控制器可以用于不同容量配置，零容量版本省去本地阵列并保留一致性事务转发。</dd></div><div><dt>代价和限制</dt><dd>本地阵列关闭后，无法就地取数，也少了部分请求过滤机会。若模拟时漏掉上探，就可能把旧副本当成返回值。</dd></div><div><dt>验证指标</dt><dd>在有阵列和无阵列的配置中，分别统计本地读、跳过的分配、按完整地址向上探测及下层数据返回次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>中间级不写回填阵列，能省本地存储端口和容量开销。上行探测的请求、回复和必要的一致性动作仍会占用上下游接口，较低容量不直接减少这些消息。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若短工作集反复访问已不在上层的同一批行，零容量中间级无法留下最近的下层回填。上行探测都找不到时，重复下层取数可能抵消省去本地数组的成本。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>在图 9 的零容量配置下，假定 I-cache 查地址 X 缺失，内存仍存指令旧值 7，L1 D-cache 中存更新后的值 9。</dd></div><div><dt>处理结果</dt><dd>中间控制器向 D-cache 发完整地址 X 的探测，并在命中后取得 9。示例中，控制器处理脏状态时先把副本送往下层，再向 L1 指令侧返回所需数据。</dd></div><div><dt>结果解读</dt><dd>7 和 9 用来标明新旧版本。这里采用的是图 9 的取指和探测顺序。具体的自修改代码同步仍须遵守其运行环境的规则。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
-<p>阵列停用与失效维护</p></li></ul>
+<p>两件专利都把数据阵列和一致性操作分开。零容量中间层继续转发探测，取指缺失时仍可查上层数据缓存寻找最新值。空闲核方案面对的是仍保存条目的阵列，由 PMU 记下失效，恢复执行前处理。取数依赖探测返回，空闲阵列的失效则可推迟到唤醒边界。</p></li></ul>
     <p><a href="../index.html?patent=US10909035B2#knowledge">在全量关系图上定位 US10909035B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

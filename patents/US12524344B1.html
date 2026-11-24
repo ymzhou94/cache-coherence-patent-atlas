@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12524344B1 检测读诱发写回后主动清洗脏缓存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US12524344B1</code><span>美国授权专利</span><time datetime="2026-01-13">2026-01-13</time></p>
   <h1>检测读诱发写回后主动清洗脏缓存</h1>
   <p class="english-title" lang="en">Cache writeback circuit</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">一次读缺失如果选中脏行，读请求就会与逐出写共用下层带宽。控制器观察到这种争用后，可把部分脏行写回安排到后续读请求到来之前。</p>
     <p>检测到读请求造成脏数据写入下层易失内存后，控制器启动缓存扫描，从目录中筛出可写回的脏行。写回时保留缓存副本有效。</p>
     <ol class="walkthrough"><li><h3>检测读触发的脏写回</h3><p>监视读访问是否导致脏数据写到下层易失内存。有的实施例还检查脏行数量、性能状态和空闲带宽。</p></li><li><h3>扫描目录找可写回的脏行</h3><p>状态机进入 active，沿目录或标签查找符合条件的条目。扫描本身只找候选。</p></li><li><h3>写回，同时保留有效副本</h3><p>控制器把选中的脏数据写到内存，并保留缓存中的有效行。后来的命中仍可用缓存应答。</p></li><li><h3>带宽不足时暂停</h3><p>高优先级缓存操作到来或带宽暂时不足时暂停，条件恢复后可继续。扫描结束或收到 reset 等事件后退出。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00009" aria-label="原文权利要求 9">9</a> 允许用事务标识限定要扫描清洗的写数据流。图 5D 实施例中一笔匹配的写回提交后才推进相应扫描状态，提交回执与发现脏行不是同一个事件。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>下层内存有空闲带宽、且清理过的行随后确实被读缺失替换时，提前写回可减少读关键路径上的争用。</dd></div><div><dt>代价和限制</dt><dd>内存持续繁忙或行很快变脏时，扫描会占用写带宽并可能产生重复写。暂停条件和候选筛选决定开销。</dd></div><div><dt>验证指标</dt><dd>一起测读 p99、主动写回字节、读缺失触发的逐出写、重脏率及扫描暂停时长。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>限定数据流可避免向下层发送所有脏行，但扫描仍要读取并比对目录状态。记录所访问组路数、符合标识的脏行数和实际写回提交数，可以看清扫描工作与写带宽的比例。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果即将被读缺失逐出的脏行来自其他数据流，筛选后的后台扫描不会消除这批按需写回。权利要求 9 允许按流筛选，哪些流值得纳入需要结合后续逐出归属判断。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>同一数据集里有 3 条已修改行。稍后一次读缺失将选中 A 作为替换候选行，且此前有可用带宽。</dd></div><div><dt>处理结果</dt><dd>扫描器趁空闲先写回 A，同时保持 A 有效。若 A 在读缺失到来前没有被再次写脏，本次替换就无需现场写回 A。</dd></div><div><dt>结果解读</dt><dd>若 A 又被修改，稍后可能仍需写回新值。先前写回就可能变成额外流量。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12730763B2.html#engineering">关键读触发提前结束写服务轮次</a>
-<p>预先写回与提前切换读轮次</p></li></ul>
+<p>US12524344B1 检测到读诱发写回后在后台扫描并清洗脏行，写回后保留缓存副本有效。US12730763B2 在指定写队列有足够空位等条件满足时，允许关键读提前结束写服务轮次。前者在缓存侧提前安排未来的写回，后者在控制器侧改变已经排队的读写服务顺序。</p></li></ul>
     <p><a href="../index.html?patent=US12524344B1#knowledge">在全量关系图上定位 US12524344B1</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

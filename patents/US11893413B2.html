@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11893413B2 用写表缩短虚拟通道的请求缓冲驻留 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11893413B2</code><span>美国授权专利</span><time datetime="2024-02-06">2024-02-06</time></p>
   <h1>用写表缩短虚拟通道的请求缓冲驻留</h1>
   <p class="english-title" lang="en">Virtual channel support using write table</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">读、写和控制事务可能共用同一组待处理请求缓冲（PRB）。写数据一旦交给桥，源端只须保留能识别这笔写并跟踪应答的信息。</p>
     <p>处理电路先把请求放入通用缓冲，另在写表登记用于追踪它的条目。当桥接收写请求、写表也登记成功后，处理电路释放通用缓冲项。写表继续跟踪这笔写，直到收到完成应答。</p>
     <ol class="walkthrough"><li><h3>在 PRB 保留完整请求</h3><p>源端先分配一个待处理请求项，保存目标、数据和控制信息。</p></li><li><h3>在写表登记</h3><p>准备发往桥时，源端可按地址或地址哈希登记跟踪项。权 1 要求写表项省略至少一部分写数据。</p></li><li><h3>释放 PRB 项</h3><p>桥收到请求、写表分配成功后，源端才回收 PRB 项。写表保留跟踪项，直到收到完成应答。</p></li><li><h3>处理写表冲突</h3><p>某些实施例会比较新地址的哈希与在途写表项。发生冲突时先保留 PRB 项，等原写完成再进桥。写表已满时，也可以根据 PRB 剩余容量决定是否暂用 PRB 跟踪。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 2 中传给桥的事务标签指向写表项或通用请求缓冲项。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893413B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 还覆盖写表已满时保留原条目，完成应答须能识别实际承接该事务的存储结构。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>写完成得慢、通用缓冲又紧张时，提前回收能减少每笔写占用 PRB 的时间。</dd></div><div><dt>代价和限制</dt><dd>写表满或哈希位数不足时，等待可能转移到写表。桥的容量也会限制整体吞吐。</dd></div><div><dt>验证指标</dt><dd>分别测 PRB 项的平均占用周期、哈希碰撞次数和桥的写入吞吐。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>单笔写可以在桥侧携带数据、在源端仅保留完成跟踪信息，节省的是源端通用条目的存储及驻留周期。若桥接收仍停滞，两个条件尚未同时满足，源端容量没有提前释放。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若压力完全来自桥的物理输出，每多释放一个通用条目也未必增加相邻两个写事务的下发速率。专利规定条目回收条件，吞吐瓶颈的位置仍需从桥出入计数判断。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设 PRB 有 4 项。每笔写交给桥后要等 8 个时间单位才完成。写表有空位，暂时没有同址冲突。</dd></div><div><dt>处理结果</dt><dd>一笔写进入桥并登记进写表后，源端可以用释放出来的 PRB 项接收下一笔读或写。若新写的哈希与在途写冲突，则要等旧写完成。</dd></div><div><dt>结果解读</dt><dd>4 项和 8 个时间单位是示例参数。PRB 可以提前释放，单笔写在桥或内存中的执行时间由后续路径决定。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
-<p>写请求缓冲释放与事务排序</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>事务缓冲的释放与准入</p></li></ul>
+<p>US11893413B2 在桥接收写请求且写表分配成功时释放通用请求缓冲项，完成应答到达后再释放写表项。US12625723B2 则让 I/O 代理用分类型计数器保留事务依赖，较老的异类事务完成后才清除对新事务的阻塞。两者对应不同的观测时点，一边是通用缓冲驻留结束，另一边是排序依赖解除。</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
+<p>US11893413B2 在桥接收写请求、写表登记成功后释放原缓冲项，写表仍跟踪应答。US12619558B2 用两阶段分配减少启动标签查找前需要同时保留的资源。两者减少通用缓冲占用的时点不同，一个发生在写事务提交后，一个发生在请求进入标签流水线前。</p></li></ul>
     <p><a href="../index.html?patent=US11893413B2#knowledge">在全量关系图上定位 US11893413B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

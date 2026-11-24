@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11899061B2 由远端 ECC 事件冻结的发送电压监测 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#supply">硬件供电与保护</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=supply#catalog">硬件供电与保护</a></p>
   <p class="document-id"><code>US11899061B2</code><span>美国授权专利</span><time datetime="2024-02-13">2024-02-13</time></p>
   <h1>由远端 ECC 事件冻结的发送电压监测</h1>
   <p class="english-title" lang="en">Voltage monitoring circuit for interface</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">链路错误的检测点在接收方，待查的电源扰动却可能在发送方。跨芯粒错误回传形成的延迟决定 FIFO 是否保住之前的样本。</p>
     <p>发送侧实时示波模块在调试模式量化发送器电压并维护滚动 FIFO。远端接收器的 ECC 错误回传后触发停止采样和保留数据，主机可读出事件附近的电压序列。</p>
     <ol class="walkthrough"><li><h3>在发送点不断测量</h3><p>本地 ADC 周期采样 Vdd，FIFO 先入先出。新值顶掉较早的样本，为非持续性错误保留一个滑动窗口。</p></li><li><h3>接收方给出错误标志</h3><p>图 3 的接收方用 ECC 判断错误，把标志跨回链路送到发送端 RTO。图 4 展示两方向独立诊断。</p></li><li><h3>冻结历史</h3><p>收到错误指示后 ADC 可停采。检出和回传并非同时发生，停止时 FIFO 可能已含若干错误后的样本。</p></li><li><h3>主机对照观察</h3><p>把存储的值送到外部调试主机。应校正双向链路及 ECC 延迟再把电压异常与错误时间关联。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 4–6 把采样源放在发送端，把触发源放在接收端。要看到可能导致错码的发送窗口，发送端保留的前触发历史至少须覆盖链路传输、检错和通知返回三段延迟。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>物理接口错误可触发保存本地电压历史，既找到现场附近的波形，又减少持续传输调试数据的需求。</dd></div><div><dt>代价和限制</dt><dd>采样速度、ADC 位宽与 FIFO 面积互相制约。异常波形与错码只是相关，需排除噪声、串扰、接收端电压等因素。</dd></div><div><dt>验证指标</dt><dd>校准检测到停采的延迟，注入可知道时刻的电压扰动，检查留存窗、峰值捕获率和时间对齐。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>对照同一错误事件在接收端的计数和发送端留存波形中所在的位置。采样频率决定电压扰动的时域分辨率，留存窗口决定能回溯多远，两者都影响因果分析。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>向接收端单独注入时钟抖动并使接收 ECC 计数上升。若发送端供电波形仍平稳，应把该组错误保留为独立对照，单靠返回触发无法把故障归因到发送端电压。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学 FIFO 深度为 8，按每拍一个整数样本。错误事件时刻 t10，停止指示在 t13 生效且 t13 不采。</dd></div><div><dt>处理结果</dt><dd>冻结后 FIFO 保留 t5–t12。事件前有 t5–t9 五个样本，事件时有 t10，事后有 t11–t12 两个样本。</dd></div><div><dt>结果解读</dt><dd>若回传延迟达到或超过滚动容量，同一策略会偏向事后，必要时增加深度或纠正触发基准。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11736111B2.html#engineering">双 VCO 检测供电事件并提前降频</a>
-<p>周期保护与故障回看</p></li></ul>
+<p>电压波形可以用来动作，也可以留给故障诊断。US11736111B2 按局部供电事件直接暂时拉长周期。US11899061B2 用远端传输错误作为事件触发，保存发送端附近的电压历史供外部主机查看。错码给出了查找波形的时间锚点，单凭两者同时出现仍无法确认压降是错码的原因。</p></li></ul>
     <p><a href="../index.html?patent=US11899061B2#knowledge">在全量关系图上定位 US11899061B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

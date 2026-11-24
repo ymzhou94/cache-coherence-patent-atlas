@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11775811B2 按执行依赖提高 CPU、GPU 和神经处理器的重叠 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US11775811B2</code><span>美国授权专利</span><time datetime="2023-10-03">2023-10-03</time></p>
   <h1>按执行依赖提高 CPU、GPU 和神经处理器的重叠</h1>
   <p class="english-title" lang="en">Scheduling heterogeneous execution on heterogeneous hardware</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">这是异构工作分派，而非专利名称所指的 CLPC。它影响各处理器忙闲分布，也可以为能效策略提供选择空间。</p>
     <p>编译和运行时根据算法输入、输出和依赖生成有向图。每个节点对应一种处理器。框架遍历图时，从可执行节点中选择能让更多处理器并行工作的节点。</p>
     <ol class="walkthrough"><li><h3>提取算法关系</h3><p>把系统功能分解为算法，解析输入、输出和时间依赖，确定哪些节点需先完成。</p></li><li><h3>节点绑定执行引擎</h3><p>图节点带相应处理器信息。运行端可能使用 CPU、GPU、专用神经处理器中的至少两种。</p></li><li><h3>维护合法就绪集合</h3><p>拓扑遍历只让所有前置结果已就绪的节点参与选择。相同处理器不一定能服务两个候选。</p></li><li><h3>动态重新评估</h3><p>有节点完成后，框架重新计算哪些候选会启用更多执行资源。后续仍须维护依赖顺序。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 1 的并行度决策只发生在就绪集合，依赖决定哪些节点可以成为候选。就绪也不代表输入已经驻留在目标处理器可直接访问的地址空间。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>依赖图足够宽且空闲执行引擎可以自然重叠时，缩短关键路径。</dd></div><div><dt>代价和限制</dt><dd>跨引擎搬运昂贵或多引擎争用内存时，多用一台执行引擎未必有收益。</dd></div><div><dt>验证指标</dt><dd>对照就绪顺序，检查各引擎忙闲区间、临界路径时间和跨引擎传输量。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>时长分解为计算段、加速器队列等待与跨处理器传输。提高多个处理器同时活动的时长只有在缩短依赖链关键路径时才会提高端到端吞吐。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在相同依赖图上逐步增大就绪并行分支的数据搬运量。若更多处理器同时活动，但关键路径的传输排队推高完成时间，并行度启发式即失效。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>示例中 A 和 B 都在 CPU 运行，各需 2 拍。只有 A 能解锁 GPU 节点 G，G 需 5 拍。最终合流需两条支路都完成。</dd></div><div><dt>处理结果</dt><dd>先 A 后 B 时，G 可在 t2 开始并与 B 重叠，合流 t7。先 B 后 A 时，G 到 t4 才开始，合流 t9。</dd></div><div><dt>结果解读</dt><dd>纯时序算例不含格式转换和共享资源影响。这里选能够释放并行资源的就绪节点，后续仍要等所有依赖。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
-<p>跨处理器依赖与 GPU 内部分派</p></li></ul>
+<p>US11775811B2 按运算的依赖图从就绪节点中选择可提高处理器并行活动的工作。US12333339B2 在 GPU 内按照软件映射分派工作组，并允许硬件在某组发完原份额后重新分派。前者决定何时向哪个执行资源提交一项就绪工作，后者决定 GPU 内部由哪组资源接收工作组。</p></li></ul>
     <p><a href="../index.html?patent=US11775811B2#knowledge">在全量关系图上定位 US11775811B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

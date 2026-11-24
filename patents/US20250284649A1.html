@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250284649A1 CPU 根据可接受中断的时点返回 Ack 或 Nack · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US20250284649A1</code><span>美国公开申请</span><time datetime="2025-09-11">2025-09-11</time></p>
   <h1>CPU 根据可接受中断的时点返回 Ack 或 Nack</h1>
   <p class="english-title" lang="en">Scalable Interrupts</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">核簇中断控制器可向核心发出投递请求。核心要先判断自己的流水线和其他子系统能否在规定时间内到达可中断点。</p>
     <p>CPU 的应答控制电路查询重排序缓冲区和加载/存储单元。若任一子系统可能来不及到达可中断点，核心可对该次请求回 Nack。</p>
     <ol class="walkthrough"><li><h3>接收中断投递请求</h3><p>请求进入处理器侧的应答控制电路。此时还未执行中断服务例程。</p></li><li><h3>查询在途指令与访存</h3><p>重排序缓冲区（ROB）检查未退休操作。加载/存储单元可单独回报访问状态，也可向 ROB 提供最老已承诺访存的位置。</p></li><li><h3>判定是否赶得上截止时间</h3><p>潜在长延迟操作、屏蔽中断的操作以及尚未完成的设备地址空间访问都可能阻止核心及时推进。</p></li><li><h3>返回投递应答</h3><p>能够及时到达就应答，预计超时则返回 Nack。系统之后如何重试由中断控制器路径决定。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 给出 LSU 向 ROB 提供最老已承诺访存位置的做法。公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> 针对在途设备地址空间访问。核心的应答状态以预计可中断条件决定，先于软件处理。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>让中断控制器及时获知目标核心的硬件可接收性，减少等待一个暂不能接收中断的核心。</dd></div><div><dt>代价和限制</dt><dd>判定依赖流水线和访存状态。预计时点与实际完成时点偏差会引起额外重试。</dd></div><div><dt>验证指标</dt><dd>记录每次投递应答延迟、Nack 比例、重试次数和中断服务例程开始时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>Nack 可省去为等待该核心浪费的周期，同时可能触发重派。记录可中断预计和实际到达时间的差、重派次数，以及请求到处理程序开始的尾延迟。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让较慢设备访问多数刚超过应答门槛，替代核心也需要跨簇投递。若总中断延迟增加，需分离本核本可完成的剩余等待与跨簇重派开销。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>两颗核均处于上电状态，向其中一颗核发送中断请求。该核心仍有未完成的设备地址空间访问。</dd></div><div><dt>处理结果</dt><dd>如果加载/存储单元不能及时到达可中断点，核心给出 Nack。当前核没有立即进入中断服务例程。</dd></div><div><dt>结果解读</dt><dd>把投递请求到 Ack 或 Nack 的时间，与真正开始执行中断服务例程的延迟分开观测。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11630789B2.html#engineering">优先投递给已上电核心的中断控制</a>
-<p>中断路由申请的继续链</p></li></ul>
+<p>US20250284649A1 经 US18/674,203 和 US18/301,837 追溯至授权为 US11630789B2 的 US17/246,311。US11630789B2 的权利要求 1 要求先尝试已上电核心，全部拒绝后进入允许核心上电的第二轮。继续申请的权利要求 9 则聚焦核心如何按能否及时到达可中断点返回 Nack。</p></li></ul>
     <p><a href="../index.html?patent=US20250284649A1#knowledge">在全量关系图上定位 US20250284649A1</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11829763B2 把地址学习与陈旧缓存数据反馈结合 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US11829763B2</code><span>美国授权专利</span><time datetime="2023-11-28">2023-11-28</time></p>
   <h1>把地址学习与陈旧缓存数据反馈结合</h1>
   <p class="english-title" lang="en">Early load execution via constant address and stride prediction</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">同一条 load 若常访问相同地址，可以提前查数据缓存。较老的未提交 store 若持有更新值，这次 load 仍要从 store queue 读到它。</p>
     <p>独立于数据缓存的学习表按 load 身份保存地址预测和置信度。只有置信度到门槛才采用预测地址。收到对应的缓存值已陈旧的指示时，电路降低该 load 的置信度。部分实施例还验证地址及 store-to-load 数据路径。</p>
     <ol class="walkthrough"><li><h3>按 load 身份学习访问地址</h3><p>学习表保存预测地址和置信度。实施例可以识别常量地址或步长，用实际算出的地址更新条目。</p></li><li><h3>达到门槛后采用预测</h3><p>置信度达标时，才为后续执行选用学到的地址。从属实现还可分配独立预测表，数据值仍由数据缓存或 store queue 提供。</p></li><li><h3>分别验证地址和数据来源</h3><p>核对预测地址与实际算出的地址，再检查是否有较早的 store 要转发。如果必须转发，数据缓存的值对本次 load 就可能已经过时。</p></li><li><h3>收到陈旧指示时降低置信度</h3><p>在相应实施方式中，可以取消缓存查询并改从 store queue 取值。若预测地址本身不符，则走另一条失配和恢复路径。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11829763B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 把学习表选出的预测地址写入另一张预测表。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11829763B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 从该预测表读到的地址若在存储队列命中，可取消缓存查询，同时下调原学习项的置信度。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>地址稳定、绝大多数时候又能直接使用 D-cache 副本的 load，可以提前查询。</dd></div><div><dt>代价和限制</dt><dd>频繁需要 store 转发的 load 即使地址恒定，也容易产生无效的预查。地址误预测还有恢复开销。</dd></div><div><dt>验证指标</dt><dd>按预测地址是否匹配、缓存值是否可用以及实际数据来源分别计数，再比较提前拍数、无效查询及重新发射。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>地址不符和命中陈旧缓存数据都可以给学习表负反馈，原因却分别落在寻址和数据来源。若只数预测地址命中，无法看到已经发出又无法使用的缓存读。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若生产者先写环形缓冲，再由同一消费者指令读取，地址模式始终规则，但写入与读取的相对时序改变后，从缓存供数和从存储队列转发的比例可能反转。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定 PC=0x30 的 load 已跨过置信门槛，预测和实算都是 0x8000。D-cache 存 7，一条程序顺序更早、尚未提交的 store 在同址存了较新的 9。</dd></div><div><dt>处理结果</dt><dd>实算地址与预测一致。D-cache 里的 7 已过时，这次 load 需要 9。采用相应的从属实施方式时，处理器从 store queue 取值，并降低该 load 的预测置信度。</dd></div><div><dt>结果解读</dt><dd>PC 0x30、地址 0x8000、值 7 和 9 都是算例参数。权利要求给出降置信度的条件，下调幅度由实现决定。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9710268B2.html#engineering">预测存储队列命中以提前发射依赖访存</a>
-<p>预测地址与预测来源</p></li><li><a href="US12775463B2.html#engineering">分级存储队列与地址解析</a>
-<p>在队列中找最新数据</p></li><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
-<p>陈旧命中与无用预取</p></li></ul>
+<p>地址学习方案即使算对地址，也要在发现 store queue 有更新数据时取消缓存查询并下调学习置信度。指针追踪方案预测的是旧 load 会不会命中 store queue，据此选择依赖它的年轻访存在第 M 拍还是第 N 拍发射。前者避免提前读到无用的旧值，后者用数据来源预测安排下一次地址生成。</p></li><li><a href="US12775463B2.html#engineering">分级存储队列与地址解析</a>
+<p>预测的缓存地址即使命中，若 store queue 有更新值，load 仍须从队列取数。分级队列中，主队列支持多个 load 并行匹配，次队列每次匹配一笔。部分命中落在不同条目时，还要按字节合并，这些额外步骤会影响转发延迟。</p></li><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
+<p>前者的早期地址查询可能命中却提供陈旧值，store queue 的更新值会让地址预测置信度下调。后者等到预取行逐出且始终无人访问，按地址累计负反馈，达到活动条件后否决同址预取。分别对照一次 load 的数据是否可用，与一次预取驻留是否产生复用。</p></li></ul>
     <p><a href="../index.html?patent=US11829763B2#knowledge">在全量关系图上定位 US11829763B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

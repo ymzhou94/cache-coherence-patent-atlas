@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250315262A1 把二级 trace cache 的轨迹提前送到前端 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US20250315262A1</code><span>美国公开申请</span><time datetime="2025-10-09">2025-10-09</time></p>
   <h1>把二级 trace cache 的轨迹提前送到前端</h1>
   <p class="english-title" lang="en">Hierarchical Trace Cache</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">分层 trace cache 可把容量和访问延迟分开。若等前端一级缺失后才访问二级，长轨迹仍可能晚到。</p>
     <p>预测器根据已执行路径的地址签名判断将来会用到的轨迹，提前查二级 trace cache。预取缓冲区可承接查到的轨迹，再按消费结果和执行指标决定是否放入一级。</p>
     <ol class="walkthrough"><li><h3>按地址路径预测候选</h3><p>签名来自执行路径上的指令地址。原文给出与历史签名异或的实现。</p></li><li><h3>二级命中后写入预取缓冲区</h3><p>在较慢二级返回时，缓冲区接收轨迹而不急于替换一级条目。</p></li><li><h3>前端消费</h3><p>前端到达对应路径时，可以直接使用缓冲区内已返回的轨迹。</p></li><li><h3>决定是否将已用轨迹提升</h3><p>部分权项比较消费结果，按实际使用决定是否放入一级。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 3 用当前地址与上一签名异或更新路径签名，权 4 用该签名做多拍前瞻。权 17 还允许预取目标地址到下一取指预测器，与轨迹数据返回分开处理。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>预测准确且领先时间足够时，前端可借远端轨迹维持取指带宽。</dd></div><div><dt>代价和限制</dt><dd>二级端口和预取缓冲区有限。预测错误会产生无用查读，激进提升还可能挤掉一级热轨迹。</dd></div><div><dt>验证指标</dt><dd>分开计量一级直接命中、二级预取在使用前到达及二级晚到，另测每次成功预取省下的前端等待周期。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>地址预测器能提前知道目标地址，并不能让二级轨迹阵列立即返回。每次候选都要占读取和缓冲资源，评估时可把前瞻产生、目标地址可用及轨迹数据可用区分开。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若不同分支历史在较短签名上相互干扰，同一个签名可能反复给出错误轨迹。即便二级都能找到这些轨迹，错误候选仍占缓冲，可能把随后实际需要的轨迹挤出。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>同一循环的常用轨迹已进入二级 trace cache，一级中当前没有该轨迹。路径预测器提前识别出即将访问它的路径。</dd></div><div><dt>处理结果</dt><dd>二级查读在需求前启动。若轨迹先到预取缓冲区，前端可直接消费，之后再按指标决定是否提升。</dd></div><div><dt>结果解读</dt><dd>把轨迹命中、及时返回和实际消费分开计数，才能判断是否覆盖前端等待。</dd></div></dl>
     </div>
     
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12547409B2.html#engineering">支持多种长度的分层 trace cache</a>
-<p>预取识别与长轨迹供给</p></li><li><a href="US20260211681A1.html#engineering">按页定位二级 trace cache 的失效范围</a>
-<p>继续申请聚焦维护</p></li></ul>
+<p>US12547409B2 的近层与远层允许不同的轨迹长度，远层返回需进入可容纳长轨迹的预取缓冲。US20250315262A1 用执行路径中指令地址形成签名，预测是否要从二级轨迹缓存预取。对照时分别量取预测可提前多少周期，以及返回后前端等待轨迹交付的周期。</p></li><li><a href="US20260211681A1.html#engineering">按页定位二级 trace cache 的失效范围</a>
+<p>US20260211681A1 的说明书首段指向申请 US18/626,929。母申请独权 1 描述用预测结果从二级轨迹缓存提前取轨迹，继续申请独权 1 处理维护操作到来时如何仅使部分二级条目失效。保留到下一次取指的轨迹需要继续满足地址转换和执行权限条件。</p></li></ul>
     <p><a href="../index.html?patent=US20250315262A1#knowledge">在全量关系图上定位 US20250315262A1</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

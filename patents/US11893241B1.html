@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11893241B1 不同距离阵列组的可变且有界命中延迟 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US11893241B1</code><span>美国授权专利</span><time datetime="2024-02-06">2024-02-06</time></p>
   <h1>不同距离阵列组的可变且有界命中延迟</h1>
   <p class="english-title" lang="en">Variable hit latency cache</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">大阵列中，各组的连线长度和经过的返回级数可能不同。统一按最慢组的延迟返回，会让已经就绪的近组数据多等几拍。</p>
     <p>数据阵列按到流水控制器的物理距离分组。近组与远组的结果同拍到达合流出口时，远组先通过，近组的新结果先进入 skid 缓冲，随后再返回。</p>
     <ol class="walkthrough"><li><h3>按阵列到控制器的距离分组</h3><p>各组从阵列返回到流水控制器所需的最少拍数不同。最远组经过更多合流段，其最小延迟可作为该设计的返回时间上限。</p></li><li><h3>沿通路传递各组结果</h3><p>阵列完成查询后把数据送入相连的返回控制电路。靠近控制器的位置既接收本地结果，也会收到从远组传来的上游结果。</p></li><li><h3>同拍争用时让远组先过</h3><p>上游数据与本地新结果同拍到达时，上游数据先通过，本地新结果进入暂存。说明书的示例还规定，已在 skid 中等待的数据优先于新来的本地结果。</p></li><li><h3>在规定的准入速率下排空缓冲</h3><p>说明书的示例每拍发一个请求、返回一个结果。这个速率限制在途访问数量，为随后排空暂存留出机会。多数组、多端口设计还要分别检查自己的调度条件。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 允许用至少暂存两个时钟周期的 skid 缓冲，也允许不同阵列组采用不同条目数。容量要配合各组返回路段及合流优先级，不能仅取近组的最短延迟。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>近组访问占多数、返回竞争少时，已就绪的数据可以沿短路径提前返回。</dd></div><div><dt>代价和限制</dt><dd>准入更密、下游持续背压或缓冲不够时，返回时间取决于额外的调度与容量约束。</dd></div><div><dt>验证指标</dt><dd>枚举每拍最多 1 个请求的各组序列，记录各组平均及最大延迟、缓冲深度和碰撞率。再单独测量超出准入假设的序列。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>合流器要同时决定本拍由上游、本地新结果还是已缓冲结果占用出口。延迟约束因此还依赖结果能否在后续拍排空，近端暂存增加的是待返回数据占用。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>连续几个节拍让远组结果占出口，再以不低于排空速度加入同路近组命中，近端缓冲可能填满。此时能否守住原有上限要看准入规则是否事先阻止了这种序列。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>模型设近组最少 1 拍、远组最少 4 拍。F 在第 0 拍发往远组，N 在第 3 拍发往近组。两者在第 4 拍都要用同一个出口。暂存有空位，下一拍无上游冲突。</dd></div><div><dt>处理结果</dt><dd>F 在第 4 拍通过，N 进入暂存，在第 5 拍送出。从各自发起时算，F 用 4 拍，N 用 2 拍。如果没有和 F 竞争，N 在第 4 拍就能返回。</dd></div><div><dt>结果解读</dt><dd>轨迹采用说明书中 1 至 4 拍的实施例条件。验证最大延迟还需覆盖其他准入序列、缓冲深度和背压。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#hit-arbiter">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#hit-arbiter">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
-<p>延迟上限与排队限额</p></li><li><a href="US11416254B2.html#engineering">同一解码组内的零额外周期 load 旁路</a>
-<p>减少加载依赖链上的等待</p></li></ul>
+<p>近远缓存阵列同拍出数时让远组先过，暂存近组结果，以维护阵列访问延迟上限。一致性探测共享入口时则限制敏感请求之前可服务的普通探测数量，到阈值才提升优先级。读这两张时序图时要分清量纲，前者约束阵列返回时间，后者约束前方服务笔数，换算成时间还需知道每笔占用多久。</p></li><li><a href="US11416254B2.html#engineering">同一解码组内的零额外周期 load 旁路</a>
+<p>US11893241B1 在缓存数据阵列回程仲裁处处理近远阵列同拍返回，近组可能多等一个周期。US11416254B2 在同一解码组中识别安全的 store 到 load 依赖，经寄存器重命名让该 load 使用已有物理寄存器。两项专利优化的是不同位置的加载依赖，适用条件分别是阵列回程争用和可证明的组内地址关系。</p></li></ul>
     <p><a href="../index.html?patent=US11893241B1#knowledge">在全量关系图上定位 US11893241B1</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

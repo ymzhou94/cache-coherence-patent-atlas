@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11579934B2 非对称多处理器的闭环性能控制与热功率约束 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US11579934B2</code><span>美国授权专利</span><time datetime="2023-02-14">2023-02-14</time></p>
   <h1>非对称多处理器的闭环性能控制与热功率约束</h1>
   <p class="english-title" lang="en">Scheduler for amp architecture with closed loop performance and thermal controller</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">CLPC 根据线程组的执行指标提出性能请求。热与功率控制环计算统一的控制量上限，便于对具有不同电压与频率配置的核簇施加约束。</p>
     <p>非对称多处理（AMP）系统的闭环性能控制器（CLPC）用线程组指标计算归一化控制量，推荐核簇类型与 DVFS 运行点。热管理和功率控制提供控制量上限，控制器查核簇功率映射表，确定可下发的运行点。</p>
     <ol class="walkthrough"><li><h3>以线程组为聚合边界</h3><p>将线程执行指标汇入线程组。工作间隔对象 WIO 是说明书中组织相关线程的一种路径。</p></li><li><h3>形成性能建议</h3><p>CLPC 根据线程组样本计算无量纲控制量（control effort）。性能映射表给出推荐的核簇类型和 DVFS 运行点。</p></li><li><h3>根据机身约束计算上限</h3><p>图 4A、4B 展示由热管理与功耗环得出限制。限制器查功率映射表，确定性能核簇和能效核簇可用的运行点。</p></li><li><h3>向核簇下发受约束的运行点</h3><p>多个线程组推荐同一核簇时，控制器汇总对该核簇的 DVFS 运行点请求。权利要求 1 规定，推荐值与按上限计算的运行点不一致时，使用后者。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 12B、17 用核簇各自的功率映射把同一个控制量上限翻译成允许的运行点。相同控制量跨核簇比较时，不能将不同频率表的档号当作同一频率。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,12 +100,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>线程组可以共享功耗反馈，而核簇仍可按不同电压频率表调整。可把调度需求和当前可持续功率分开诊断。</dd></div><div><dt>代价和限制</dt><dd>电压频率特性存在芯片间差异，也会随环境变化。若实际功率偏离映射表，计算出的运行点上限可能过高或过低。核迁移和运行点切换应独立计量。</dd></div><div><dt>验证指标</dt><dd>记录线程组控制量、核簇请求与实际运行点、温度、帧时间尾部以及线程迁移开销。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>把性能差异归因到线程实际核簇驻留与各核簇实际频率驻留，再检查热限制变化。两者的时序不同，测帧完成时间时须保留同周期的迁移和限频记录。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在相近稳态温度下锁定线程放置，给两个工作组相同控制量上限。如果实际频率驻留不同，直接按档号解释吞吐变化就会失准。应测各核簇频率、电压和任务进度。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>用无量纲 effort 表示需求。线程组 A 和 B 向同一 P 簇推荐 0.8 和 0.6。温控预算把该簇上限对应到 0.7。</dd></div><div><dt>处理结果</dt><dd>教学策略先从 A、B 得到最大 0.8 的需求，再受 0.7 的功率映射上限限制。使用独立簇时，则分别处理各簇推荐和上限。</dd></div><div><dt>结果解读</dt><dd>数值和映射均为自设。授权权 1 的重点是依据限制确定实际档位。max 聚合与线程指标采样来自公开实施例。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#clpc-frame">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#clpc-frame">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12530063B2.html#engineering">按生产者和消费者的吞吐量分配 SoC 功率预算</a>
-<p>功率份额与簇档</p></li><li><a href="US20250086009A1.html#engineering">按工作完成窗口选择 CPU 性能状态</a>
-<p>性能请求受功率上限约束</p></li><li><a href="US12681552B2.html#engineering">两层电源管理处理器约束跨域 DVFS 的中间状态</a>
-<p>目标档到切换路径</p></li></ul>
+<p>两个 CLPC 闭合的是不同误差。US12530063B2 根据生产速率和消费者可达速率失衡，把现有系统预算挪给追不上的代理。US11579934B2 根据热功率等限制索引两核簇的 DVFS 映射，用限制档裁决与之冲突的线程组推荐。前者的输出是代理预算，后者已经落到 CPU 核簇档位。</p></li><li><a href="US20250086009A1.html#engineering">按工作完成窗口选择 CPU 性能状态</a>
+<p>US20250086009A1 根据剩余工作量和截止时间估计按时完成所需的 CPU 性能状态。US11579934B2 汇总线程组推荐的运行点，再依据核簇功率映射与控制量上限确定可用运行点。若功率上限使实际运行点低于性能请求，仍须检查工作能否在截止时间前完成。</p></li><li><a href="US12681552B2.html#engineering">两层电源管理处理器约束跨域 DVFS 的中间状态</a>
+<p>US11579934B2 把性能推荐和上限裁决为目的 DVFS 档。US12681552B2 接收目的性能状态以后，逐一检查候选路径上的中间态与其他电源域的现有状态是否兼容。目的档已经获准时，仍可能要绕过特定中间态才能安全抵达。</p></li></ul>
     <p><a href="../index.html?patent=US11579934B2#knowledge">在全量关系图上定位 US11579934B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

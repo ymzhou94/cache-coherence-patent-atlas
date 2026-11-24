@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11062673B2 基于 I/O 吞吐量的 CPU 闭环性能控制 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US11062673B2</code><span>美国授权专利</span><time datetime="2021-07-13">2021-07-13</time></p>
   <h1>基于 I/O 吞吐量的 CPU 闭环性能控制</h1>
   <p class="english-title" lang="en">Closed loop CPU performance control</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">这是 2012 年优先权的历史闭环系列代表，授权公开于 2021 年 7 月。说明书将 CPU 指令类型、GPU 利用率、图形帧率和存储流量分作不同观测。此处按授权权项聚焦存储流量和双积分。</p>
     <p>控制器从内存控制器采样各方向的 I/O 吞吐量，识别进程的工作类型，并分别累积各路吞吐量误差。电源管理器根据控制输出调节 CPU 性能状态。从属权利要求 6、7 给出了比较和使用较大控制信号的方式。</p>
     <ol class="walkthrough"><li><h3>设置观察点</h3><p>内存控制器统计 CPU 与闪存子系统往返的数据流。测量点给出单位时间内的数据量。调度器记录的 CPU 利用率对应执行时间占比。</p></li><li><h3>识别任务并计算差值</h3><p>监控逻辑根据吞吐辨识进程和约束的工作类型。图 5A 的示例给不同方向设阈值，分别输出偏差。</p></li><li><h3>分别累积各路吞吐量误差</h3><p>第一路与第二路分别累积自己的历史差值。说明书也列出四路实现，把 CPU IN／OUT 和闪存 IN／OUT 分开。</p></li><li><h3>选择控制并作用于 CPU</h3><p>电源管理器按输出调节工作模式。从属权 6、7 用反馈较大的路径控制。新的 CPU 性能状态可能改变处理速率与 I/O 吞吐量。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 5A 的各 I/O 方向维护各自的积分历史。权 6 允许比较控制输出大小。该比较依据历史偏差，不会自动判断哪个方向限制应用端到端完成时间。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>若 CPU 提速可以加快数据生成或处理，内存控制器处的 I/O 吞吐量可补充 CPU 利用率观测。</dd></div><div><dt>代价和限制</dt><dd>若下游已饱和，提高 CPU 性能状态可能增加功率而未改善吞吐量。观测延迟或过大的积分增益也会造成性能状态反复切换。</dd></div><div><dt>验证指标</dt><dd>用同一负载比较固定性能状态和反馈控制。记录各方向 I/O 吞吐量、相对目标的偏差、平均功率、性能状态切换频次与收敛时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>把吞吐变化拆成 CPU 产生或消费请求的速率与存储路径服务速率。两者可用队列占用、各方向字节数/秒和 CPU 每字节能耗区分。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>限制闪存端的稳态服务速率，再保持数据量不变扫描 CPU 运行点。若内存控制器队列始终满且吞吐不变，CPU 提速所得数据率无法覆盖其新增能耗。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>两路旧积分为 2 和 1，当前偏差增量为 1 和 4。教学规则直接求和并取大。</dd></div><div><dt>处理结果</dt><dd>第一路更新到 3，第二路更新到 5，由第二路决定教学控制量。即便第一路旧积分更大，新一轮也可能切换主导通道。</dd></div><div><dt>结果解读</dt><dd>积分类控制跨窗保存状态。示例没有建模增益、饱和或抗积分饱和，也不把 5 映射成某个实际档位。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11579934B2.html#engineering">非对称多处理器的闭环性能控制与热功率约束</a>
-<p>闭环性能控制的观测输入</p></li></ul>
+<p>US11062673B2 在内存控制器采样 I/O 吞吐量，对不同方向的吞吐量误差分别积分。US11579934B2 从线程组的执行指标计算控制量，推荐核簇类型及 DVFS 运行点，再应用热与功率约束。对照时先辨认反馈输入，吞吐量和工作间隔执行指标对应不同的瓶颈。</p></li></ul>
     <p><a href="../index.html?patent=US11062673B2#knowledge">在全量关系图上定位 US11062673B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11947457B2 优先由主共享副本向请求方供数 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11947457B2</code><span>美国授权专利</span><time datetime="2024-04-02">2024-04-02</time></p>
   <h1>优先由主共享副本向请求方供数</h1>
   <p class="english-title" lang="en">Scalable cache coherency protocol</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">同一块数据可以有多份共享副本。目录给这些副本记不同的共享状态，读请求因此有明确的候选供数方。</p>
     <p>目录区分 owned、主共享（P）和次共享（S）等状态。主共享副本存在时，控制器指派它直接向请求者发数据。目录里没有主共享副本、但有次共享副本时，控制器从后者中选择一个供数方。</p>
     <ol class="walkthrough"><li><h3>从目录读出各副本状态</h3><p>控制器按块地址查目录项，区分 owned、primary shared 和 secondary shared 等状态。</p></li><li><h3>有主共享副本时直接选它</h3><p>若某代理持有主共享 P，控制器给它发供数 snoop，要求它把数据块直接发给读请求者。</p></li><li><h3>无主共享副本时选择次共享副本</h3><p>目录无 P 但有次共享 S 时，控制器可以指定一个 S 持有者供数。其他副本是否维持原有权限要看请求类型。</p></li><li><h3>根据权限请求维护其他副本</h3><p>共享读可以在适用条件下少发探测。请求独占时，控制器仍可能需要给不负责供数的持有者发撤权或失效消息。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11947457B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11947457B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 限定了全块覆盖的独占请求。目标块在被探测代理中处于修改态时仍要求该代理发送数据，未修改时可只发失效指示。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>共享副本多且读请求只需一份数据时，指定 P 或在无 P 时选 S，可以控制探测量和数据消息量。</dd></div><div><dt>代价和限制</dt><dd>持有者变动频繁时，目录要更常更新。独占请求较多时，还要为其他副本发失效。</dd></div><div><dt>验证指标</dt><dd>看控制器选中哪些供数方。分别记录共享读和独占请求所涉及的探测目标数，以及返回数据经过的路径长度。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>省去数据发送的路径依赖目标副本状态。全块覆盖意图能影响控制消息，却仍须依据目录状态决定发送量。应分别计数失效消息和携带缓存块的应答。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若修改持有者占多数，即使所有独占请求都计划覆盖整块，原权项中的供数分支也会经常触发。所谓全块覆盖必然省去传输的推断可由一次修改态命中反驳。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>D 请求读同一块。第一种教学场景中 A 持有 P，B、C 持有 S。第二种场景中只有 B、C 持有有效的 S。</dd></div><div><dt>处理结果</dt><dd>第一种情况下由 A 前送数据。第二种情况下，控制器选 B 或 C 中的一方。若 D 请求独占，控制器还要依协议维护其他副本的权限。</dd></div><div><dt>结果解读</dt><dd>示例以共享读展示供数次序。P 的权限和旧持有者的状态转换由对应权项及图表规定。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11544193B2.html#engineering">用预期缓存状态处理探测与回填竞态</a>
-<p>选中供数者再校验</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
-<p>供数指令早于回填</p></li><li><a href="US11016913B1.html#engineering">汇聚节点把写回响应转成跨簇回填</a>
-<p>谁持有可用副本</p></li></ul>
+<p>当目录已经推进状态、目标代理还在等前一笔回填时，探测可能早于目标状态到达。母案权 1 让目标代理等待本地状态与探测中的预期状态相符。继续申请权 1 聚焦发探测前的供数者选择，优先选主共享持有者，缺席时才在次共享持有者中选。对照两个权项，可区分目录的选择与目标代理的执行条件。</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
+<p>前件的目录探测可要求某个持有者直接向请求者发数据。若目标代理自己还有同地址的前序请求，后件把早到探测及其类型存入该在途请求的缓冲项，待前序请求完成后按类型处理。原说明书图 9–10 展示了连续请求同一缓存块时，一任持有者怎样接力转发。</p></li><li><a href="US11016913B1.html#engineering">汇聚节点把写回响应转成跨簇回填</a>
+<p>两件都把供数路径缩短到代理间，但从不同副本状态出发。US11947457B2 的目录在主、次共享持有者中选择供数者，并在探测中指定直送。US11016913B1 处理远端持有修改副本的情形，由互连汇聚节点把持有者的回送响应转成回填。</p></li></ul>
     <p><a href="../index.html?patent=US11947457B2#knowledge">在全量关系图上定位 US11947457B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

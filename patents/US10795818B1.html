@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US10795818B1 限制实时探测前的普通请求 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US10795818B1</code><span>美国授权专利</span><time datetime="2020-10-06">2020-10-06</time></p>
   <h1>限制实时探测前的普通请求</h1>
   <p class="english-title" lang="en">Method and apparatus for ensuring real-time snoop latency</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">中断、显示等对时延敏感的任务，可能和普通缓存探测走同一通道。进入控制器后，原本排在前面的一批普通请求可能占用端口很久。</p>
     <p>控制器在同一通道接收普通和时延敏感 snoop。当待处理的普通请求达到阈值时，控制器可以提前安排新到的时延敏感请求。入口通道仍按原有规则接收两类请求。</p>
     <ol class="walkthrough"><li><h3>两类请求共用接收通道</h3><p>接收通道在接收时不给任何一类 snoop 预先排序。</p></li><li><h3>按阈值计数</h3><p>控制器统计待处理的普通 snoop，并与预设值比较。实施例可以持续限制普通队列，也可以只在有时延敏感请求时限制。</p></li><li><h3>安排敏感请求的位置</h3><p>敏感请求到达且普通数达到阈值时，控制器调整服务顺序，使排在它前面处理的普通数不超过阈值。</p></li><li><h3>处理超出限额的普通请求</h3><p>控制器可以丢弃超限请求，由源端重提，也可以放进重试缓冲。没有敏感请求竞争时，普通请求可以按到达次序处理。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 和 5 分别覆盖丢弃新到普通 snoop，以及达到门槛后由重试缓冲接收普通 snoop 的方案。两者改变的是普通流量的处置路径，敏感请求仍从同类通道抵达。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -110,12 +110,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>普通请求突发、导致入口队列过长时，控制器可以限制普通流量给敏感请求带来的排队干扰。</dd></div><div><dt>代价和限制</dt><dd>瓶颈若在互连、长事务本身或实时请求彼此竞争，限制普通请求对总尾延迟的影响可能较小。</dd></div><div><dt>验证指标</dt><dd>记录各个敏感请求前的普通请求数和 p95、p99 等待。另统计普通请求重提次数和重试缓冲峰值占用。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>主请求缓冲能限制先于敏感请求服务的普通条目数。被推迟的普通请求要占用重试存储或重新注入，其代价可能表现为更长的普通事务驻留与额外互连流量。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若普通 snoop 需要反复重提并长时间竞争共享通道，入口注入率可能成为新的瓶颈。权利要求对先行普通请求数设上限，端到端尾延迟仍需包含这些重提。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设 N=2，5 笔普通请求已排在实时请求前。只有 1 个服务端口，每笔普通请求占 4 周期，当前没有请求在执行。</dd></div><div><dt>处理结果</dt><dd>FIFO 要等 20 周期。若调整后恰有 2 笔普通请求留在前面，敏感请求因普通流量而等待 8 周期。</dd></div><div><dt>结果解读</dt><dd>20 和 8 只计算前置普通请求。正在执行的访问、其他实时请求、端口停顿及互连传输都可能增加实际等待。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#snoop-limit">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#snoop-limit">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -128,9 +129,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11900146B2.html#engineering">实时内存事务专表与独立 credit</a>
-<p>限超车与分信用池</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
-<p>延迟上限与排队限额</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>启动准入与服务优先级</p></li></ul>
+<p>实时请求可能在两处被普通请求拖住。探测控制器允许普通和实时探测共用同一通道，但限制能在一笔实时探测前被处理的普通探测数。内存控制器给实时事务专表独立 credit 池，使普通请求消耗完共享 credit 时，实时请求仍可在自身有 credit 的情况下参加仲裁。</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
+<p>近远缓存阵列同拍出数时让远组先过，暂存近组结果，以维护阵列访问延迟上限。一致性探测共享入口时则限制敏感请求之前可服务的普通探测数量，到阈值才提升优先级。读这两张时序图时要分清量纲，前者约束阵列返回时间，后者约束前方服务笔数，换算成时间还需知道每笔占用多久。</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
+<p>US12619558B2 在标签结果未知时只检查命中所需资源，避免缺失队列不足阻挡本可启动的请求。US10795818B1 的请求已通过同一个通道抵达，仲裁器限制敏感请求前可服务的普通请求数。比较时分别量取进入标签流水线前的阻塞，以及已入队探测等待服务的时间。</p></li></ul>
     <p><a href="../index.html?patent=US10795818B1#knowledge">在全量关系图上定位 US10795818B1</a></p>
   </section>
 </div>
@@ -155,7 +156,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

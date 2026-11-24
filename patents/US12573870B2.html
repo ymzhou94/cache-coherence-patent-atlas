@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12573870B2 用预测窗口修正电池可用功率 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#supply">硬件供电与保护</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=supply#catalog">硬件供电与保护</a></p>
   <p class="document-id"><code>US12573870B2</code><span>美国授权专利</span><time datetime="2026-03-10">2026-03-10</time></p>
   <h1>用预测窗口修正电池可用功率</h1>
   <p class="english-title" lang="en">Battery power capability prediction and correction</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">电池模型的欧姆压降紧跟电流，RC 极化支路还会在脉冲持续时累积压降。电压接近截止线时，旧模型误差会直接放大为功率上限误差。</p>
     <p>处理器将实际电压、截止电压、预测供电持续时间和 RC 时间常数联系起来，估计该窗口的等效阻抗与开路电压，再对可用功率作修正。</p>
     <ol class="walkthrough"><li><h3>读电压与截止线</h3><p>读取电池实测电压和截止电压，必要时结合实测电流及电池状态。截止线标记需要约束功率的位置。</p></li><li><h3>选定预测时长</h3><p>峰值功率只承诺在选定窗口内维持。预测窗口和各 RC 支路时间常数决定支路产生多少有效压降。</p></li><li><h3>求电流上限</h3><p>图 6–8 从随窗口变化的阻抗和估计的等效开路电压求电流余量，再用截止电压换算相应功率。</p></li><li><h3>调整输出预算</h3><p>比较实测电压和截止线。在实施例中，实测电压低于截止线时下调能力，高于线时可按路径做恢复或预校正。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 6–8 分别估计等效阻抗和等效开路电压。时间常数远短于预测窗口的 RC 支路可近似进入稳态，较慢支路仍携带上一段负载留下的极化状态。等起始端电压的两个试验可有不同的内部状态。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>负载可预估持续多久，且 RC 模型捕捉到压降过程时，可区分短脉冲与持续负载。</dd></div><div><dt>代价和限制</dt><dd>实际温度、老化或未建模极化会改变阻抗。只改预测窗口无法消除传感误差和模型状态失配。</dd></div><div><dt>验证指标</dt><dd>对照脉冲末最低电压、不同窗口预测误差、功率修正后误触发限幅次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>把预测误差拆为电流一变化便出现的欧姆压降，以及随后随时间增长的极化压降。用短脉冲起点拟合前者，用接近截止电压的长脉冲拟合后者，才看得出各项校正的贡献。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让两次试验达到相同起始荷电状态和端电压，其中一次在阶跃前曾持续大电流放电。若模型给出相同的功率上限，但两次越过截止电压的时刻不同，应核查极化状态估计和测量历史。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学假定无初始极化，开路电压 4.0 V、截止线 3.4 V、R0=0.1 Ω、一个 R1=0.2 Ω 且 τ=1 s 的极化支路。</dd></div><div><dt>处理结果</dt><dd>由 R(t)=R0+R1(1−exp(−t/τ)) 求等效阻抗。窗口 0.2 s、1 s、3 s 的截止电压处功率分别约 14.97、9.01、7.03 W。</dd></div><div><dt>结果解读</dt><dd>电流在窗口内保持恒定，功率取窗口末端的 Vcut×I。原文校正还用到实测电压和当前电池内部状态。</dd></div></dl>
+      <h3>模型算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>一阶 RC 模型中，开路电压 4 V，截止 3.4 V，极化时间常数 1 s。连续发出 8 次 200 ms、4 A 的电流请求，脉冲之间停 50 ms。</dd></div><div><dt>处理结果</dt><dd>两种预测对首笔都允许 4 A，最低电压为 3.455 V。每次以零极化计算限流时，第 2 笔跌至 3.342 V，第 8 笔跌至 3.033 V。追踪残余极化后，第 8 笔限流至 2.32 A，最低端电压保持在 3.400 V。</dd></div><div><dt>结果解读</dt><dd>单次电流审批的结果会被前一笔负载留下的极化改变。拉长休息时间至 4 s 后，两种预测在这组参数下均可放行 4 A。最低电压和获准电流分别说明保护效果与可供负载的能力。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#battery-window">运行对应原型</a>
+    <a class="lab-link" href="../lab.html?scenario=pulse-train#battery-window">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11728668B2.html#engineering">用多时间宽度的负载轮廓为电池批准峰值</a>
-<p>负载轮廓与能力</p></li><li><a href="US12608071B2.html#engineering">电池截止保护的前瞻预算与闭环融合</a>
-<p>能力估计到预算</p></li><li><a href="US12424940B2.html#engineering">平均供电路径与峰值供电路径分离</a>
-<p>短时供电能力与峰值路径</p></li></ul>
+<p>审批短时峰值时，两件专利都需要区分瞬时负载与持续负载。US11728668B2 先从重叠时间窗提取基线和脉冲的特征值，再估计可以放行的尖峰。US12573870B2 从预测供电持续时间和 RC 时间常数估计等效阻抗，用端电压和截止电压修正该窗口的可用功率。前者以负载轮廓和新增功率请求为输入，后者刻画同一电池的上限怎样随窗口变化。</p></li><li><a href="US12608071B2.html#engineering">电池截止保护的前瞻预算与闭环融合</a>
+<p>US12573870B2 以端电压、截止电压和预测时长求修正后的供电能力。US12608071B2 的前瞻预算也需要未来窗口的电池能力，然后把它形成的首份预算与闭环反馈预算按权重合成，下发给各子系统。技术上可以把窗口化的能力估计作为前瞻环输入，两个控制器须先统一时间窗和功率口径。</p></li><li><a href="US12424940B2.html#engineering">平均供电路径与峰值供电路径分离</a>
+<p>US12573870B2 根据预测时间窗口修正电池可用功率估计。US12424940B2 则给出峰值转换器与局部储能到稳压轨的硬件路径。对照时，前者的功率估计说明输入约束，后者的分路电感电流用于观察峰值由哪路承担。</p></li></ul>
     <p><a href="../index.html?patent=US12573870B2#knowledge">在全量关系图上定位 US12573870B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

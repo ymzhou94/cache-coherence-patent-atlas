@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20260203067A1 检测 PC 相对运算以提前发出预取 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US20260203067A1</code><span>美国公开申请</span><time datetime="2026-07-16">2026-07-16</time></p>
   <h1>检测 PC 相对运算以提前发出预取</h1>
   <p class="english-title" lang="en">Prefetcher based on PC-relative Operations</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">常规 load 要等地址生成指令进入流水线，再得到可用于发读的地址。对地址完全由 PC 和立即数决定的指令序列，该公开申请让预取逻辑提前计算。</p>
     <p>处理器检查符合条件的 PC 相对运算及后继 load，从指令编码提取立即数，提前求出目标地址并发数据预取。检测、加法、查重和入队可以分阶段完成。</p>
     <ol class="walkthrough"><li><h3>识别起始运算和后续 load</h3><p>处理器先匹配起始模式，再依次扫描后续指令。部分实施例检查寄存器依赖，排除与地址运算无关的 load。</p></li><li><h3>按照指令语义合成地址</h3><p>对 ADRP、ADD、LDR 一类序列，预取逻辑先把 PC 对齐到页基点，再按每条指令的语义累加偏移。</p></li><li><h3>检查请求资格并入队</h3><p>一些从属实现会先查重和检查可用额度，然后把地址送到 load 单元或相应缓存路径。若已经有目标数据，也可按实施例过滤掉该候选。</p></li><li><h3>等待需求使用，或在清空前端时取消</h3><p>前端 flush 可清掉仍在队列的请求。如果后续 load 实际执行，就有机会使用预取的数据。若 load 未执行，这笔预取会消耗额外资源。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 4 的启动队列在请求到队首时才把它送给 LSU。排队期间发生清空事件可删除尚未发出的候选，说明书举了权限级变化和 guarded transition。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>地址只依赖 PC 和可见的立即数，且序列能及时识别时，预取可以在正常 load 之前开始取数。</dd></div><div><dt>代价和限制</dt><dd>如果无法确认依赖、load 在错误路径、队列已满，或预取发得太晚，就可能省不下等待，发出的请求还可能增加缓存和带宽压力。</dd></div><div><dt>验证指标</dt><dd>统计识别到的模式、地址正确率、命中率、提前量、未使用的预取，以及因 flush 取消的请求数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>在取指阶段算出目标地址之后，请求还要获得队列名额、相关翻译和数据路径资源。静态依赖清楚只缩短地址产生等待，计算完的地址在队列中也可能迟到。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若进入一个经过权限切换后才开始执行的代码段，候选可能在到达队首前被清空。即使它的 PC 和立即数组合已经算对，切换后也可能要从正常需求路径取数。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设 ADRP 的 PC 为 0x12034，页大小为 4 KiB。ADRP 相对页基点加 0x2000，关联 ADD 加 0x30，LDR 的字节偏移为 0x08。</dd></div><div><dt>处理结果</dt><dd>页基点为 0x12000。三次加法依次得到 0x14000、0x14030、0x14038。模式匹配确认后，可对 0x14038 发起数据预取。</dd></div><div><dt>结果解读</dt><dd>本例的 LDR 偏移已按指令语义换成字节。何时能入队、完成地址翻译和发出预取，取决于具体实现。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
-<p>无依赖预取与等待重叠</p></li></ul>
+<p>PC 相对预取先识别包含立即数的运算和后续 load，直接从指令内容算出目标地址并发出预取。顺序流水线方案先检测到首个数据缺失，再在等待时执行后续操作并发出第二笔缺失读。一个依赖地址能从指令编码提前算出，一个依赖后继能在首个结果未到时先执行。</p></li></ul>
     <p><a href="../index.html?patent=US20260203067A1#knowledge">在全量关系图上定位 US20260203067A1</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

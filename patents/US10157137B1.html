@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US10157137B1 组相联缓存的双重标签比较与路预测 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US10157137B1</code><span>美国授权专利</span><time datetime="2018-12-18">2018-12-18</time></p>
   <h1>组相联缓存的双重标签比较与路预测</h1>
   <p class="english-title" lang="en">Cache way prediction</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">组相联缓存需要确定目标数据在哪一路。标签完全确定后再读数据会增加串行等待，同时开启多路数据阵列又会增加阵列活动。</p>
     <p>预测电路先比较标签并给出候选路。另一条路径把请求标签的一部分与各路的相应标签位比较，再结合预测结果确认是否命中及命中哪一路。说明书的一个实施例会在确认期间读取预测路的数据。</p>
     <ol class="walkthrough"><li><h3>用索引找到缓存组</h3><p>地址索引限定候选组，标签用于区分该组内的各条数据。说明书示例还从地址中抽取 bank、pipe 和 offset，各字段可随实现变化。</p></li><li><h3>用标签哈希预测 way</h3><p>部分实现会在填充时按 way 保存标签哈希。新访问计算哈希，并与该组读出的有效值比较，得到预测 way。数据阵列可先打开这一路。</p></li><li><h3>把部分标签比较用于命中确认</h3><p>标签电路将请求标签的一部分与各路保存的片段比较，再结合预测结果确定实际 way 或缺失。</p></li><li><h3>确认后才交付数据</h3><p>预测正确时，可以交付预读的数据。若实际在另一 way，控制器停止初读，部分实现会更新哈希并重发。判为缺失时走正常缺失路径。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 到权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 的一组实现用标签两部分异或得到哈希，另保存半个标签的片段。第二比较与预测输出一起判定，标签片段或哈希单独匹配都不足以交付。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>预测正确时，只读一路即可让数据读取和一部分标签判定重叠，也减少阵列激活次数。</dd></div><div><dt>代价和限制</dt><dd>哈希别名、替换后的预测状态过时或过早取消读取，都可能增加阵列重读和流水线重发。</dd></div><div><dt>验证指标</dt><dd>固定命中轨迹，按预测正确、误选可修正和真正缺失分别测量标签何时确认、每次激活几路阵列。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>哈希阵列可以比完整标签更早提供候选路，只激活一路数据阵列也能降低阵列活动。若候选频繁需要改选，额外读取和纠错会重新进入响应的关键路径。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>构造同组的两条地址，使其标签经异或得到同一哈希但保存的标签片段不同。第一次读错路时，后续比较须能阻止交付初读数据，并从正确路或下层取得返回值。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定某组有四路，预测器两次都先选 way 2。第一次访问的后续确认也得到 way 2，第二次则没有确认该位置。</dd></div><div><dt>处理结果</dt><dd>第一次可在确认标签时并行读数据，确认后交付。第二次须阻止交付初读结果，再按实际判定改读或走缺失路径。</dd></div><div><dt>结果解读</dt><dd>部分标签是确认所需的一个输入。重新读取要等多久，由实现和后续判定决定。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12423235B2.html#engineering">在缓存代理保存一致性目录 way 标识</a>
-<p>缩小 way 搜索</p></li></ul>
+<p>组相联缓存先用标签比较预测一路并启动数据读，再确认实际命中 way，误选时放弃原读。目录的候选子集随缓存块分配下发，逐出时由代理带回，目录在这几路中核对块标识。前者预测一次数据读该开哪路，后者把先前的目录分配结果作为后续查询的提示。</p></li></ul>
     <p><a href="../index.html?patent=US10157137B1#knowledge">在全量关系图上定位 US10157137B1</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

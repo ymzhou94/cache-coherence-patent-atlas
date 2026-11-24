@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11586552B2 部分有效缓存行的读补齐 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11586552B2</code><span>美国授权专利</span><time datetime="2023-02-21">2023-02-21</time></p>
   <h1>部分有效缓存行的读补齐</h1>
   <p class="english-title" lang="en">Memory cache with partial cache line valid states</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">代理可以只改写缓存行的一部分。此时内存有缺失条目的值，缓存则保存某些位置的新值。整行都从内存复制会盖掉缓存中的修改。</p>
     <p>控制器按有效位掩码合并本地数据和下层返回的数据。它只填无效条目，保留缓存中已修改的条目，再用合并后的值应答。</p>
     <ol class="walkthrough"><li><h3>从 tag 识别部分有效状态</h3><p>读请求命中处于 partial 状态的区段。这个区段至少有一个无效部分，以及一个相对内存已修改的部分。</p></li><li><h3>读取条目掩码</h3><p>掩码标出哪些位置要补齐、哪些位置可沿用缓存中的值。有效位表示本地条目可用，写回状态另行处理。</p></li><li><h3>用下层数据补齐</h3><p>控制器向内存取回对应内容。下层返回值只填进掩码标出的无效位置，已有效且修改过的值继续保留。</p></li><li><h3>返回合并后的值</h3><p>控制器用合并结果应答。需要写回时可另发下行请求，读合并的独立权项允许先返回结果。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 允许部分修改、部分无效的区段边补齐边保留本地修改值。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 在此基础上进一步要求把更新后的区段发送给内存控制器，两种权项的数据路径不同。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>只要部分条目已改写，一次合并就能保住这些新值，并补齐缺失部分。</dd></div><div><dt>代价和限制</dt><dd>整段原本就有效时，合并没有缺失条目可填。读路径触发条件、标签位数和掩码读写吞吐都影响实现成本。</dd></div><div><dt>验证指标</dt><dd>核对返回值和无效位变更次数，再记录下层真正读取了多少字节，以及同一区段第二次读取的延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>合并逻辑承担逐字段选择新旧数据的成本。若实施方式随后写回合并结果，额外流量出现在内存写侧。仅用下层读事务数会漏计这一部分。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若返回侧以整个区段传输，而实施方式还请求回送合并结果，一次补齐可能同时消耗整段下层读和写带宽。这是具体总线粒度下的后果，权利要求没有规定传输宽度。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设缓存行有四个条目，缓存里是 [9, 未知, 8, 未知]，有效位为 [1,0,1,0]。内存内容是 [7, 2, 6, 4]，第 0、2 项已在片内改为 9 和 8。</dd></div><div><dt>处理结果</dt><dd>内存结果到达后，控制器只填第 1、3 项，返回 [9, 2, 8, 4]。若把整段内存结果覆盖进来，第 0、2 项会退回 7 和 6。</dd></div><div><dt>结果解读</dt><dd>实际总线仍可能返回整段。片内只填两个位置，片外传输了多少字节还要看下层事务。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#partial-line">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#partial-line">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9218286B2.html#engineering">部分写缺失先建行，暂借 ECC 位标有效</a>
-<p>补齐部分脏行</p></li><li><a href="US12007901B2.html#engineering">部分写入、有效掩码与回送内存</a>
-<p>读写共用有效掩码</p></li><li><a href="US20250013568A1.html#engineering">匹配数据模式时跳过写入</a>
-<p>部分有效行与模式写抑制</p></li></ul>
+<p>同一缺失片段和本地脏片段并存时，两件给出不同的读补齐顺序。US9218286B2 的权 14 将 ECC 位暂用作有效位置，先把有效片段写回再从内存读行。US11586552B2 的权 1 先读下层，仅用返回值补无效片段，保留本地修改后合并应答。</p></li><li><a href="US12007901B2.html#engineering">部分写入、有效掩码与回送内存</a>
+<p>母案权 1 用部分有效状态处理读取，按掩码补无效片段，保住本地修改。继续申请权 1 处理对同一类状态的部分写入，将新值写入本地相应位置、向内存控制器发出这些位置的写请求，并更新掩码。两件合起来解释了后来一次读取为何能够区分可从内存补齐的片段和本地应保留的片段。</p></li><li><a href="US20250013568A1.html#engineering">匹配数据模式时跳过写入</a>
+<p>US11586552B2 对无效字从下层取数，合并时保留本地修改过的字。US20250013568A1 比较写入值与预设模式，跳过匹配值的数据写。部分有效掩码表示字的有效性，模式匹配信号表示写入值是否符合预设，验证时分别统计下层读与数据阵列写。</p></li></ul>
     <p><a href="../index.html?patent=US11586552B2#knowledge">在全量关系图上定位 US11586552B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

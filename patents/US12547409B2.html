@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12547409B2 支持多种长度的分层 trace cache · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US12547409B2</code><span>美国授权专利</span><time datetime="2026-02-10">2026-02-10</time></p>
   <h1>支持多种长度的分层 trace cache</h1>
   <p class="english-title" lang="en">Trace cache that supports multiple different trace lengths</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">遇到已预测为跳转的分支，接着执行的指令可能跨越连续地址范围。trace 按执行路径组织指令，可以把转移前后的指令放在同一条路径中。</p>
     <p>trace cache 分层保存包含内部已跳转分支的指令路径。较远层能存更长的 trace。控制器预测某条 trace 将执行时，可先从远层读出，把它放进支持该长度的预取缓冲供前端取用。</p>
     <ol class="walkthrough"><li><h3>识别可构建的路径</h3><p>I-cache 按连续地址保存指令。前端按 trace 的构建条件识别执行路径，这里的 trace 包含内部 taken 分支。</p></li><li><h3>把长项放到远层</h3><p>近层容纳较短的 trace。远层能存超过近层长度上限的项，两层可采用不同的容量与时序预算。</p></li><li><h3>预测后读取远层</h3><p>预取控制器预测某条 trace 将执行时，可先访问远层。读出的长项进入支持相同长度的快速预取缓冲。</p></li><li><h3>在前端请求时供给</h3><p>实际执行路径与预测一致、数据又及时到达时，前端可从缓冲取出 trace。数据晚于前端请求时，能隐藏的等待会变少。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 把从预取缓冲提升到近层限定在近层可容纳的长度内。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 允许远层主条目保存前段，并用指针指向溢出缓冲中的其余指令。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>长路径反复出现且能提前预测时，前端有机会一次取得跨越分支的指令。</dd></div><div><dt>代价和限制</dt><dd>长项占用更多空间。未执行的长项会占用远层端口和快缓冲，预测发得太晚则仍有远层等待。</dd></div><div><dt>验证指标</dt><dd>分别统计近层和远层命中率、长项预取正确率、预取到使用之间的提前拍数，以及前端每拍收到多少有效指令。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>把远层轨迹放进预取缓冲时，溢出的后段也必须取得，才能交付完整长轨迹。若复用的是超过近层上限的长项，重复预测仍可能反复占用远层读取端口。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若多个长循环在相同短时间内交替被预测，完整轨迹可能已经从远层读到缓冲，却在实际取用前被替换。此时远层的高命中率可以与前端等待同时出现。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定近层最多存 8 条指令，远层最多存 16 条。A 有 6 条指令，跨内部跳转的 B 有 12 条。预测 B 的提前量足以完成远层读取。</dd></div><div><dt>处理结果</dt><dd>A 可存近层。B 存在远层，并预取到支持 16 条指令的缓冲。实际请求 B 时，缓冲可提供完整的 12 条。</dd></div><div><dt>结果解读</dt><dd>8、16、6、12 是算例长度。要衡量收益，需在前端请求 B 时检查数据是否已在缓冲就绪。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US20250315262A1.html#engineering">把二级 trace cache 的轨迹提前送到前端</a>
-<p>预取识别与长轨迹供给</p></li><li><a href="US12530193B2.html#engineering">按内部控制转移的稳定性构建轨迹</a>
-<p>轨迹构造与长轨迹交付</p></li><li><a href="US12585469B2.html#engineering">预测 trace cache 未命中时关闭数据读</a>
-<p>说明书相互引用</p></li></ul>
+<p>US12547409B2 的近层与远层允许不同的轨迹长度，远层返回需进入可容纳长轨迹的预取缓冲。US20250315262A1 用执行路径中指令地址形成签名，预测是否要从二级轨迹缓存预取。对照时分别量取预测可提前多少周期，以及返回后前端等待轨迹交付的周期。</p></li><li><a href="US12530193B2.html#engineering">按内部控制转移的稳定性构建轨迹</a>
+<p>US12530193B2 根据内部控制转移的偏向决定哪些指令能够保留在轨迹中。US12547409B2 规定近层和远层支持不同最大长度，较长轨迹由预取缓冲向前端交付。前者改变可构造的轨迹组成，后者决定长轨迹可以存在哪一层以及怎样返回。</p></li><li><a href="US12585469B2.html#engineering">预测 trace cache 未命中时关闭数据读</a>
+<p>US18/627,035 与 US18/627,001 在各自说明书记载的关联申请中互相引用。前者权 1 在预测缺失时抑制本次数据阵列读取，后者权 1 用预取缓冲区向取指前端提供来自二级轨迹缓存的长轨迹。</p></li></ul>
     <p><a href="../index.html?patent=US12547409B2#knowledge">在全量关系图上定位 US12547409B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

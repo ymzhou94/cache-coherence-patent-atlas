@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12579071B1 按初始 PC 复用被逐出的访问图 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US12579071B1</code><span>美国授权专利</span><time datetime="2026-03-17">2026-03-17</time></p>
   <h1>按初始 PC 复用被逐出的访问图</h1>
   <p class="english-title" lang="en">Pattern match prefetcher with supplemental program-counter-based learning</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">切换数据区域后，旧区域的访问图可能被逐出。同一条指令若继续访问结构相似的区域，从旧图学到的相对偏移还可能用得上。</p>
     <p>主表按数据区域记录各偏移的访问类型。图被逐出时，辅助表按第一次触及该图的指令 PC 保存其特征。后续逐出的图若有同一初始 PC，便可用于更新记录。以后为新区域分配图时，匹配的记录可提供起始模式。</p>
     <ol class="walkthrough"><li><h3>按区域和偏移记录访问</h3><p>主表用数据地址找对应区域，再按偏移记录需求读、预取结果等类型。预取器比较这些符号以预测下一批偏移。</p></li><li><h3>逐出时送出训练样本</h3><p>主表把初次触及该图的指令 PC 和各偏移类别送给辅助表。图 4 的实现还可检查样本是否充分。</p></li><li><h3>按初始 PC 汇总已对齐的样本</h3><p>后续逐出的图如果初始 PC 相同，辅助表会用它更新计数。以首触地址为基准对齐后，不同绝对地址上的同类偏移可以归入同一计数。达到要求后，记录进入可用状态。</p></li><li><h3>用已就绪的记录初始化新图</h3><p>需求访问需要分配新图时，预取器用指令 PC 查辅助表。匹配且已就绪便用偏移计数生成起始符号，其余情况用默认图。由此生成的候选仍受正常发出资源限制。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12579071B1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 的辅助信息是与各偏移对应的计数。它据计数生成起始符号，主表为新区分配访问图时直接用起始符号构建新图。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>循环或遍历在新区域反复产生相似的相对访问时，可缩短每次重新学习的时间。</dd></div><div><dt>代价和限制</dt><dd>同一 PC 访问不同数据结构时，辅助表可能混合不同模式的样本，继而发出更多无用预取。</dd></div><div><dt>验证指标</dt><dd>固定需求轨迹，测量首个有效预取提前多久。再统计起始图生成的额外候选中，及时命中和迟到的比例。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>以首触位置对齐时，重复触达的相对偏移比稳定的绝对数据地址更重要。逐出样本的数量与一致程度影响起始图，原本一直命中主表的区域未必为辅助表提供样本。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若相同指令交替访问两种布局，首触相同却分别向前和向后遍历，辅助计数可能同时强化两个方向。遇到单向需求时，另一方向的请求仍会占预取额度。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>指令 PC 为 P 的 load 先后访问多个区域。各自以首触处为偏移 0，随后都访问 +2。已逐出的样本让 +2 的计数达到门槛，随后 P 第一次触及新区域 R3。</dd></div><div><dt>处理结果</dt><dd>主表若需要为 R3 分配新图，辅助表命中 P 后可把 +2 写进起始图。资源允许时，预取器可在 R3 的实际 +2 访问发生前发出候选。</dd></div><div><dt>结果解读</dt><dd>已有图仍有效时会继续使用。若 P 在 R3 访问的是另一类结构，历史 +2 也可能用不上。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
-<p>从候选生成到否决</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
-<p>按区域恢复和按 PC 学习</p></li><li><a href="US20260072843A1.html#engineering">按活动访问图数量调整预取限制</a>
-<p>候选生成和发出限制</p></li></ul>
+<p>访问图被逐出时，预取器按首次触及区域的指令 PC 学习区域内偏移，后续为不同地址区域构造起始图，产生新的候选。预取行被逐出且从未使用时，另一方案按实际地址记录失败，活动记录可否决同址候选。前者在图表逐出时积累跨区域规律，后者在数据缓存逐出时反馈具体地址的效果。</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
+<p>两件都处理主预取表逐出访问图后的冷启动。US12572473B1 从被逐出图保存压缩字段，同一区域重访时可恢复；US12579071B1 按首条访问指令的 PC 汇总逐出图，匹配 PC 的新区也能用学习结果初始化。可分别测重复区域首次有用预取和相似模式跨新区的覆盖率。</p></li><li><a href="US20260072843A1.html#engineering">按活动访问图数量调整预取限制</a>
+<p>US12579071B1 由首次触及区域的 PC 学到偏移，其结果可用于新区域初始化并产生预取候选。US20260072843A1 根据主预取表的活动图数量限制某一类访问图的预取参数。两件对读可把候选侧覆盖率与发出侧带宽控制分开。</p></li></ul>
     <p><a href="../index.html?patent=US12579071B1#knowledge">在全量关系图上定位 US12579071B1</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

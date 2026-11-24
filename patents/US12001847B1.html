@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12001847B1 顺序执行流水线在加载缺失期间重叠独立访存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US12001847B1</code><span>美国授权专利</span><time datetime="2024-06-04">2024-06-04</time></p>
   <h1>顺序执行流水线在加载缺失期间重叠独立访存</h1>
   <p class="english-title" lang="en">Processor implementing parallel in-order execution during load misses</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">如果第一条 load 一缺失就停住流水线，后面地址已知的独立访存也必须排在它后面。让后续读先在内存中进行，可以重叠两笔等待，同时保留顺序执行的起点。</p>
     <p>流水线在第一个缺失请求在途时推测执行后继指令，可以提前发出第二个缺失请求。遇到停止条件后，流水线等首个请求返回，再从原来的第一条指令按序重执行。</p>
     <ol class="walkthrough"><li><h3>发出首个缺失请求</h3><p>首条 load 找不到需要的数据时发读。流水线在指令队列或关联状态中保存重执行起点。</p></li><li><h3>在等待期间推测执行后继</h3><p>首读在途时，流水线可以继续执行部分后继指令。可用旁路暂存中间结果，并把临时状态分开维护。若发现独立的第二个缺失，也发出相应读请求。</p></li><li><h3>遇到不能继续的条件就停</h3><p>若下一条依赖首读结果，流水线无法继续计算。访问类型不同、暂存副本丢失或指令缓冲已满，也可让这段推测执行停止。</p></li><li><h3>首读返回后从第一条重走</h3><p>流水线从保存的起点按序重新执行。后续读若已经完成，可缩短重走时的等待，指令仍按原程序顺序提交。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>依权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>，推测段中的第三个缺失若属于与首条不同的访存指令类型，可以停止推测执行。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 又允许一条推测指令使用另一条推测指令生成的中间结果。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>首个缺失后的短窗口内有独立读时，可用同一段等待覆盖多笔片外事务。</dd></div><div><dt>代价和限制</dt><dd>指针链等依赖密集的序列可提前发出的请求较少。推测读还会占用请求槽，随后重执行也要用流水线。</dd></div><div><dt>验证指标</dt><dd>固定两笔读的延迟，比较发出间隔和重叠拍数，并记录停止原因及重执行指令数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>独立于首缺失的数据依赖仍可能在推测段内形成短链，能够生成更多已知地址。串行重执行的成本则落在原来的指令流水线，包括已经执行过的中间地址运算。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若第二条独立 load 同首条访问相同的繁忙通道，提前发出的请求可能只是在下游等待。数据返回仍近似串行，而重走地址链可能增加执行工作。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定 A 在第 0 拍发读，第 20 拍返回。独立的 B 在第 5 拍发读，也需要 20 拍。之后 C 要用 A 的数据，推测执行在这里停止。</dd></div><div><dt>处理结果</dt><dd>暂不计重执行开销时，A 与 B 分别在第 20、25 拍就绪。若等 A 返回才在第 20 拍发 B，最后一笔要到第 40 拍完成。两笔并发在本例中早 15 拍就绪。</dd></div><div><dt>结果解读</dt><dd>若 B 的地址也依赖 A，就无法在第 5 拍发出。实际指令用时还包括重执行、仲裁和排队。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>核内提前与片外门槛</p></li><li><a href="US20260203067A1.html#engineering">检测 PC 相对运算以提前发出预取</a>
-<p>无依赖预取与等待重叠</p></li><li><a href="US12657031B2.html#engineering">协处理器指令交付前预取操作数</a>
-<p>提前取数的发起条件</p></li></ul>
+<p>顺序流水线等待 A 的数据时可推测执行后续指令，先发 B 的缺失请求，之后从 A 按序重执行。在下层 SLC，合格的推测读可趁标签未出先排进缺失队列，片外读仍等缺失确认。放在同一条访存路径上看，前者提前发出第二笔请求，后者提前准备这一笔请求到外存的队列资源。</p></li><li><a href="US20260203067A1.html#engineering">检测 PC 相对运算以提前发出预取</a>
+<p>PC 相对预取先识别包含立即数的运算和后续 load，直接从指令内容算出目标地址并发出预取。顺序流水线方案先检测到首个数据缺失，再在等待时执行后续操作并发出第二笔缺失读。一个依赖地址能从指令编码提前算出，一个依赖后继能在首个结果未到时先执行。</p></li><li><a href="US12657031B2.html#engineering">协处理器指令交付前预取操作数</a>
+<p>US12657031B2 让主处理器提前交付操作数地址，使预取可在协处理器接收指令前发起。US12001847B1 在顺序流水线等待第一个加载缺失期间推测执行后续独立访存，之后再按原顺序重执行。比较时分别对齐操作数地址交付和首个缺失发生，以判断各方案靠什么事件取得提前量。</p></li></ul>
     <p><a href="../index.html?patent=US12001847B1#knowledge">在全量关系图上定位 US12001847B1</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

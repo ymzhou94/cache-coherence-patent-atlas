@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250103520A1 标签流水线发出前预留重试槽 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US20250103520A1</code><span>美国公开申请</span><time datetime="2025-03-27">2025-03-27</time></p>
   <h1>标签流水线发出前预留重试槽</h1>
   <p class="english-title" lang="en">Memory Controller Reservation of Retry Queue</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">标签流水线第一次处理请求时，可能碰到地址冲突或仍在进行的一致性事务。控制器若事先留好重试条目，就可以在本地等待冲突解除。</p>
     <p>内存控制器先为获准的请求预留一个重试队列条目，再发入标签流水线。如果首次处理后要重试，控制器用该条目保留请求。</p>
     <ol class="walkthrough"><li><h3>网络请求等待仲裁</h3><p>网络接口可分别缓冲命令与数据。仲裁器同时查看待处理请求和本地重试队列的空位。</p></li><li><h3>先留槽，再发入标签流水线</h3><p>为获选请求预留一个 retry queue 条目。队列没有空位时，请求留在流水线入口等候。</p></li><li><h3>发生冲突时保存请求状态</h3><p>首次标签处理遇到地址锁或必须等待 snoop 等情况时，控制器用预留条目保存重试要用的上下文。</p></li><li><h3>重试或释放预留</h3><p>阻塞解除后，控制器在本地重新发出请求。第一次处理就结束的请求可以放掉预留。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 将网络接口上的命令队列与数据缓冲分开，发给仲裁器的是命令部分。公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250103520A1/en#CLM-00005" aria-label="原文权利要求 5">5</a> 则在标签流水线要求再处理一遍时才把请求信息写进已预留的条目。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>首次标签处理有一定概率要重试且网络往返成本高时，预留槽可以让重复处理在控制器内完成。</dd></div><div><dt>代价和限制</dt><dd>长时间未解除的冲突占满重试队列时，一次就能完成的命中也可能被挡在入口。</dd></div><div><dt>验证指标</dt><dd>分别记录入口等待、首次处理即完成的比例、重试条目平均占用，以及因缺槽而退回网络的次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>重试槽的预留会先消耗容量，命令和写数据的实际驻留仍可能分布在两个部件。重试槽数、网络接口数据缓冲占用和首次标签查询次数是三种不同的资源压力。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若短写请求的命令能反复重试但数据缓冲长期被占，增加重试槽可能把主瓶颈转移到数据缓冲。这个容量耦合来自所示的队列组织，公开权利要求未给出相对尺寸。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>本地只剩一个重试槽。已发入流水线的 A 等待一致性操作完成，占着这个槽。B 到达时还不知道标签查询结果。</dd></div><div><dt>处理结果</dt><dd>B 留在入口。A 释放条目后，B 先预留再进入流水线。若 B 也要重试，就使用自己的预留条目。</dd></div><div><dt>结果解读</dt><dd>B 因缺槽等在入口，省去了因此退回网络再提交的过程。即使 B 本可一次办完，也要等空位。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#admission">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#admission">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>启动与重试的保留项</p></li><li><a href="US12430224B2.html#engineering">缓存缺失追踪器在缓冲区不足时反压执行</a>
-<p>追踪反压与重试槽预留</p></li></ul>
+<p>同一标签流水线中，公开申请在仲裁通过前留出本地重试槽，这样首次通过失败不会因为缺重试项而退回网络重发。另件授权在查标签前只尝试保留命中路径需要的资源组，并在确认缺失后申请另一组。从这对权 1 可分清第一次能否启动，以及需要第二次通过时能否留在控制器内。</p></li><li><a href="US12430224B2.html#engineering">缓存缺失追踪器在缓冲区不足时反压执行</a>
+<p>US12430224B2 的权利要求 15 在追踪缓冲区不足时用回填缓冲暂存相关信息，并反压缓存的新内存请求。US20250103520A1 在允许请求进入标签流水线之前预留重试槽，以保证随后需要再次处理的请求能留在控制器中。用这两种设计分析流水线停顿时，应分别记录调试追踪空间和事务重试空间。</p></li></ul>
     <p><a href="../index.html?patent=US20250103520A1#knowledge">在全量关系图上定位 US20250103520A1</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11893251B2 按缺失率调整系统内存缓冲区的缓存预装顺序 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11893251B2</code><span>美国授权专利</span><time datetime="2024-02-06">2024-02-06</time></p>
   <h1>按缺失率调整系统内存缓冲区的缓存预装顺序</h1>
   <p class="english-title" lang="en">Allocation of a buffer located in system memory into a cache memory</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">缓冲区位于系统内存。结构上仍采用普通缓存的组相联映射和替换规则，预装的访问顺序会影响实际驻留内容。</p>
     <p>先按非线性地址次序发出内存事务，让返回内容进入缓存。随后跟踪该缓冲区的访问缺失率，达到条件时改变下次使用的预装次序。</p>
     <ol class="walkthrough"><li><h3>分配系统内存缓冲区</h3><p>确定待预装的地址范围。该区域继续由系统内存承载。</p></li><li><h3>以非线性次序预装</h3><p>处理电路发出非顺序访问，返回时尝试驻留到缓存。</p></li><li><h3>测量实际访问的缺失率</h3><p>只统计访问该缓冲区的事务，保持与预装阶段的计数口径一致。</p></li><li><h3>调整下一次预装</h3><p>观察值达到阈值时改用另一地址次序，对后续缓冲区访问重新评估。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>原图 12、14 和权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> 划分两种事务。批量事务预装缓冲区，成功驻留的行附带实时标记，未能驻留的位置在实时读取缺失时由实时事务取回。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>实际访问之前可以预装高复用内容。对缓存冲突敏感的工作集可根据实际缺失率调整发出顺序。</dd></div><div><dt>代价和限制</dt><dd>预装增加内存流量与缓存占用，也可能逐出涉及其他工作负载的行。</dd></div><div><dt>验证指标</dt><dd>分别报告实际访问缺失率、预装读字节数、未成功驻留和其他流量的 P95 延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>预装流量可走较低优先级的队列，正式使用阶段仍需为实时缺失保留内存带宽。可按事务类别记录实际驻留行数、被逐出行数和实时缺失造成的 DRAM 读字节数。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若其他代理的工作集持续占用相同缓存组，预装行可能在正式读取前全部被逐出。固定实时扫描顺序，增加同组冲突，预装流量仍然存在而按期完成比例可能不升。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学例中，同一缓冲区地址落入共享缓存的多个组。先测试一组非线性访问次序，再统计实际处理阶段的缺失率。</dd></div><div><dt>处理结果</dt><dd>如果观察值满足修改条件，下一轮改变发出顺序，比较该缓冲区的访问而非系统总命中率。</dd></div><div><dt>结果解读</dt><dd>比较必须固定缓冲区工作集、并发流量和统计窗口。该流程没有要求固定缓存容量或 PIPT 映射。</dd></div></dl>
     </div>
     
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11704245B2.html#engineering">把缓存容量动态改作直接寻址 RAM</a>
-<p>普通缓存预装与直寻址</p></li><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
-<p>反馈调整预装顺序与缓存配额</p></li></ul>
+<p>US11893251B2 保留系统内存中的缓冲区，通过非线性顺序把内容预装到普通缓存，再按缺失率调整顺序。US11704245B2 把部分缓存物理容量改作直接寻址 RAM，并将这些行排除在普通替换外。两种方式分别需要检查实际驻留与可分配容量。</p></li><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
+<p>US11893251B2 让程序按非线性顺序访问系统内存缓冲区，使用对应访问的缺失率调整下一次预装顺序。US11232033B2 监测数据流的运行状态和缓存用量，根据预计的带宽变化调整各组可占的容量。两种机制的控制变量分别是访问顺序和空间配额，评估时分别记录缺失率变化和各组占用量。</p></li></ul>
     <p><a href="../index.html?patent=US11893251B2#knowledge">在全量关系图上定位 US11893251B2</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

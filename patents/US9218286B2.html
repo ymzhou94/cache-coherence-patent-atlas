@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9218286B2 部分写缺失先建行，暂借 ECC 位标有效 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US9218286B2</code><span>美国授权专利</span><time datetime="2015-12-22">2015-12-22</time></p>
   <h1>部分写缺失先建行，暂借 ECC 位标有效</h1>
   <p class="english-title" lang="en">System cache with partial write valid states</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">部分写只提供几个词的新值。如果先取整条旧行，片上写入也得等它返回。缓存可先存新值，用原本留给 ECC 的位标出已经写入的位置。</p>
     <p>部分写缺失时，缓存先分配行并存新值，同一位置原有的 ECC 位暂用作有效掩码。以后覆盖、读取缺失部分或写回时，再用掩码判断哪些词可用。</p>
     <ol class="walkthrough"><li><h3>部分写未命中时先分配</h3><p>控制器确认本次请求只写部分词且地址未命中。它先分配空间存新值，不读取旧整行。</p></li><li><h3>标签标为 partial dirty</h3><p>标签状态决定同一组存储位怎样解释。处于 partial dirty 时，用这些位记录哪些词已写入并有效。</p></li><li><h3>继续合并后续局部写</h3><p>同一行再被部分写命中时，控制器只覆盖指定的词，并更新对应掩码。未写过的词仍无效。</p></li><li><h3>读取部分脏行时先写回</h3><p>按权利要求 14 的读路径，控制器只把有效词写回内存，再从下层取整行应答。未更新位置的内存值要保留。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 用部分脏状态指定 ECC 区域此时装的是字有效掩码。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a> 的读回路径在回填了整行后可以将标签改为干净状态。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>部分写之后很快写满整行，或可以直接带掩码写回时，首次写入的等待和即时片外读量可能减少。</dd></div><div><dt>代价和限制</dt><dd>随后立即读取部分脏行时，按位写回加整行重取会增加后续开销。复用 ECC 位也会改变保护方式，增加状态管理。</dd></div><div><dt>验证指标</dt><dd>测首次局部写的返回时间、整行读取延迟、有效词写回字节数、部分脏状态留存时间和 ECC 位用途切换。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>通过复用已有阵列位能避免早期配置单独的有效位存储。开始读部分脏行时，所需的局部写和整行读却出现在同一笔读的服务路径，元数据节省和读等待应分开核算。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若写端每次只更新一个字，接着立即读取整行，推迟的内存操作会反复发生。第一次写缺失更早完成这一局部变化，不能用来推断这样的完整负载用时会缩短。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>内存旧行是 [1,2,3,4]。部分写缺失仅把索引 1 的词改为 9，有效掩码是 [0,1,0,0]。后来请求读取完整一行。</dd></div><div><dt>处理结果</dt><dd>首次写入跳过旧整行读取。全行读到来后，先把索引 1 的 9 写回，内存变成 [1,9,3,4]，再取回完整行应答。</dd></div><div><dt>结果解读</dt><dd>权利要求 14 先在内存更新有效词，再取完整行。US11586552B2 先取回数据，再由缓存按有效位合并。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11586552B2.html#engineering">部分有效缓存行的读补齐</a>
-<p>补齐部分脏行</p></li></ul>
+<p>同一缺失片段和本地脏片段并存时，两件给出不同的读补齐顺序。US9218286B2 的权 14 将 ECC 位暂用作有效位置，先把有效片段写回再从内存读行。US11586552B2 的权 1 先读下层，仅用返回值补无效片段，保留本地修改后合并应答。</p></li></ul>
     <p><a href="../index.html?patent=US9218286B2#knowledge">在全量关系图上定位 US9218286B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

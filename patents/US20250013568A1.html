@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250013568A1 匹配数据模式时跳过写入 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US20250013568A1</code><span>美国公开申请</span><time datetime="2025-01-09">2025-01-09</time></p>
   <h1>匹配数据模式时跳过写入</h1>
   <p class="english-title" lang="en">Data Pattern Based Cache Management</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">图形背景或页面背景可能多次写入同一个值。省掉阵列写之后，读请求仍需得到符合相应协议的响应，所以应分别计算数据写和地址表更新。</p>
     <p>写入前，控制器拿数据和一个或多个预设模式比较。匹配时跳过数据写入，未匹配的值照常写入。部分从属权项记录跳过写入的地址，读到这些地址时按相应协议返回模式相关的值。</p>
     <ol class="walkthrough"><li><h3>比较请求数据</h3><p>控制器把待写数据送给比较逻辑。参考值可以取预先设定的图形背景模式。</p></li><li><h3>按比较结果写入</h3><p>比较先于数据写。若值匹配模式，控制器跳过对应的写入。其他值写入实际存储。</p></li><li><h3>登记地址</h3><p>带地址表的实现给可用模式表示的地址做标记。以后如果写入普通值，也要同步改标记，使读取回到实际存储路径。</p></li><li><h3>读取登记过的地址</h3><p>读地址命中表项时，控制器根据适用权项返回模式关联的值。部分权项允许返回协议约定的占位值或哈希。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250013568A1/en#CLM-00021" aria-label="原文权利要求 21">21</a> 限定匹配模式时跳过关联写操作。公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250013568A1/en#CLM-00024" aria-label="原文权利要求 24">24</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250013568A1/en#CLM-00025" aria-label="原文权利要求 25">25</a> 给出的读回分支还可返回约定值或模式哈希。读侧语义须与所采用的权项和实施方式对应。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>重复像素或相同背景占比越高，一份模式元数据就越可能代替多次逻辑写。</dd></div><div><dt>代价和限制</dt><dd>在数据很少匹配的负载里，比较逻辑仍要工作。频繁覆盖或失效也会增加地址表更新量。</dd></div><div><dt>验证指标</dt><dd>保持两组实验的输出相同，再记录模式匹配率、省去的数据写次数、地址表更新次数和读侧重建延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>跳过关联写会减少数据阵列或下层写活动。调用端仍须维持可解释的读侧状态，新增成本可能出现在地址记录更新、覆盖处理与读回判定的接口上。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若同一批地址在匹配值与非匹配值之间频繁切换，省掉的数据写可能抵不过状态频繁更新的成本。这个临界点须由同一负载的两类写流量和读返回延迟确定。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设模式为 0，四个逻辑位置依次写入 [0, 9, 0, 7]。此例采用带地址表、能为登记地址重新生成模式值的实现。</dd></div><div><dt>处理结果</dt><dd>位置 0、2 只登记地址，位置 1、3 各实际写一次。随后读位置 2 时，控制器通过模式路径返回 0。</dd></div><div><dt>结果解读</dt><dd>这里省掉了 2 次数据写，比较和标记更新照常执行。权利要求 24 涉及返回与模式不同的预设值，权利要求 25 涉及返回模式的哈希。两种返回值都要按各自的约定解释。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11586552B2.html#engineering">部分有效缓存行的读补齐</a>
-<p>部分有效行与模式写抑制</p></li><li><a href="US11442855B2.html#engineering">按内容模式选择逐出行</a>
-<p>同一继续申请链</p></li></ul>
+<p>US11586552B2 对无效字从下层取数，合并时保留本地修改过的字。US20250013568A1 比较写入值与预设模式，跳过匹配值的数据写。部分有效掩码表示字的有效性，模式匹配信号表示写入值是否符合预设，验证时分别统计下层读与数据阵列写。</p></li><li><a href="US11442855B2.html#engineering">按内容模式选择逐出行</a>
+<p>两件文献之间隔着 US17/929,544 和 US18/360,352 两代申请。沿同一份背景值缓存披露，可以对照母案对逐出选择的保护和公开申请权 21 用背景值匹配决定是否实际写数据。</p></li></ul>
     <p><a href="../index.html?patent=US20250013568A1#knowledge">在全量关系图上定位 US20250013568A1</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

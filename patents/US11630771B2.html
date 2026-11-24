@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11630771B2 用待失效标记推迟缓存失效 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11630771B2</code><span>美国授权专利</span><time datetime="2023-04-18">2023-04-18</time></p>
   <h1>用待失效标记推迟缓存失效</h1>
   <p class="english-title" lang="en">Poison mechanisms for deferred invalidates</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">若维护命令总在目标核使用某条指令或翻译之前使它失效，目标核往往得反复取回相同内容。专利在允许延期的范围内，用标记记住尚未执行的失效操作。</p>
     <p>缓存管理逻辑检查维护命令适用的范围。范围匹配时，它先把目标条目标记为待失效。关联同步事件到达后，再使条目失效并清除标记。</p>
     <ol class="walkthrough"><li><h3>确定条目和作用域</h3><p>目标核接到其他处理器的维护命令后，根据命令地址或全清类型确定条目。权 1 要求检查命令的作用域是否与本核当前执行状态的有效范围匹配。</p></li><li><h3>登记待失效</h3><p>缓存管理逻辑可以设置 poison 标记，或把信息放进专用空间。此时条目仍留在阵列中。</p></li><li><h3>等待关联事件</h3><p>同步事件可以来自本核或其他核。TLB 实施例可以使用 DSB。ICache 实施例可以等待 ISB 或一次成功的缓存外取指。</p></li><li><h3>使条目失效</h3><p>关联事件到达后，缓存管理逻辑使已标记的条目失效，再清除标记。部分实施例允许之前的访问继续命中，具体适用条件由权利要求和 ISA 语义限定。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00009" aria-label="原文权利要求 9">9</a> 给出两种标记组织，设置逐条目标志，或把条目移到缓存中专门保留的区域。两种组织都遵守权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的作用域匹配和同步触发条件。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同步语义允许延期，且两次同步之间有多条失效命令时，可以减少重复清除、重填及随之产生的停顿。</dd></div><div><dt>代价和限制</dt><dd>每条命令后若紧跟自己的同步事件，合并机会有限。实现仍须为待失效状态和作用域检查付出开销。</dd></div><div><dt>验证指标</dt><dd>记录实际失效次数、TLB 重填或 ICache 未命中量、屏障完成时间，以及最长连续停顿。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>位标记将成本留在条目状态和同步清除逻辑里。专用区域会改变条目的存放位置，可能还占用额外查找资源。应分别看待失效条目数、区域占用和同步事件后的清除周期。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若实现使用专用区域而该区域已满，迁移可能先遇到容量压力。该后果是对有限存储的工程推断，权利要求 9 没有给出区域容量及达到上限时的处理策略。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>在同一执行范围内，TLB 条目 X 在关联的 DSB 前收到两条失效命令。X 仍有效，且该实现设有待失效位。</dd></div><div><dt>处理结果</dt><dd>两条命令设置同一个待失效位。DSB 到达后，目标核使 X 失效。后续访问要重新建立翻译。</dd></div><div><dt>结果解读</dt><dd>这个状态例只覆盖同一执行范围内、关联 DSB 到达前的两条命令。TLB 未命中率要看实际访问序列。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
-<p>谁触发实际失效</p></li><li><a href="US12625810B2.html#engineering">缓存覆盖写可取消待处理失效</a>
-<p>待失效位的终止条件</p></li></ul>
+<p>两件都能推迟维护，但判断条件不同。US11630771B2 在作用域匹配当前执行状态时记录待失效标记，等待对应同步事件。US11586551B2 在目标核空闲时拦截并缓冲失效，恢复前执行，切换到断电时可丢弃记录。前者关心同步语义，后者关心电源状态转换。</p></li><li><a href="US12625810B2.html#engineering">缓存覆盖写可取消待处理失效</a>
+<p>US12625810B2 用上级缓存的待失效位区分两条路径，覆盖写先到时清位，上级逐出先到时才失效下级的对应条目。US11630771B2 接收其他处理器的失效命令，作用域匹配时延迟实际失效，直到关联同步事件到达。两种方案都记录待失效状态，状态终止事件分别是缓存行操作和处理器同步。</p></li></ul>
     <p><a href="../index.html?patent=US11630771B2#knowledge">在全量关系图上定位 US11630771B2</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

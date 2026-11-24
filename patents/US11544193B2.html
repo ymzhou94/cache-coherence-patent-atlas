@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11544193B2 用预期缓存状态处理探测与回填竞态 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11544193B2</code><span>美国授权专利</span><time datetime="2023-01-03">2023-01-03</time></p>
   <h1>用预期缓存状态处理探测与回填竞态</h1>
   <p class="english-title" lang="en">Scalable cache coherency protocol</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">一致性点可以先排好同一缓存块上的事务顺序。互连上的延迟仍可能让较晚发出的探测在较早事务的回填之前到达。</p>
     <p>内存控制器读取精确目录，把目标缓存的预期状态写进探测消息。目标代理收到后比较本地状态。如果状态不匹配，它保留这条探测，等与较早请求有关的消息推进状态，再继续处理。</p>
     <ol class="walkthrough"><li><h3>用目录确定预期状态</h3><p>内存控制器按地址读取目录项，查出块的持有者和各代理应有的状态。</p></li><li><h3>把预期状态随探测发送</h3><p>控制器构造发给目标代理的探测，在消息内写入该代理的预期状态。适用时还可附上完成计数等字段。</p></li><li><h3>收到探测时比较状态</h3><p>目标代理先比较缓存块的实际状态与消息中的预期状态。两者不符时，它暂存这条探测，避免在旧状态下发送数据或修改权限。</p></li><li><h3>等前一条事务推进本地状态</h3><p>另一请求的 fill 或完成消息抵达后，目标代理更新本地状态。状态匹配时，它按探测要求变更状态或发送数据。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 允许目录根据条目状态确定接收代理应看到的完成数。发起代理在收到首次完成时初始化计数器，随后按其他代理的完成消息更新计数器。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同地址请求往返较慢、控制器又要保持吞吐时，目录可继续排序，由代理保存较早到达的探测。</dd></div><div><dt>代价和限制</dt><dd>前序完成消息长期不抵达时，暂存探测会占用缓冲，并可能引起回压。</dd></div><div><dt>验证指标</dt><dd>测量同块并发度、状态不匹配次数和缓冲占用。记录每笔事务从在目录完成排序到在代理实际完成的时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>目录可以在发出探测时推进自身记录，发起侧仍须收齐计数所对应的事件。收益在于目录接受后续工作的时机，收敛成本则保留在各代理的同步路径。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若两个供数或失效应答相隔很久，目录忙碌度可能下降，发起事务的完成却仍跟随后一个应答。记录已预期的完成数和最后一个实际应答即可检验该情形。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>一个读按目录顺序使 A 由 I 转为 E。B 后续读同一块，引发一条预期 A 为 E 的探测。互连先把探测送到 A，较早请求的回填晚 2 个时间单位。</dd></div><div><dt>处理结果</dt><dd>A 目前为 I，与预期的 E 不符，于是保存探测。回填到达以后，A 转为 E，然后处理保存的探测。</dd></div><div><dt>结果解读</dt><dd>2 个时间单位是模型设定。即使互连改变到达次序，目标代理仍能按目录要求处理探测。它需要等先前回填带来数据或状态。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
-<p>选中供数者再校验</p></li><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
-<p>暂停处理失效的恢复条件</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
-<p>列入参考文献</p></li></ul>
+<p>当目录已经推进状态、目标代理还在等前一笔回填时，探测可能早于目标状态到达。母案权 1 让目标代理等待本地状态与探测中的预期状态相符。继续申请权 1 聚焦发探测前的供数者选择，优先选主共享持有者，缺席时才在次共享持有者中选。对照两个权项，可区分目录的选择与目标代理的执行条件。</p></li><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
+<p>US11586551B2 由电源管理逻辑记录空闲核收到的失效，恢复执行前再清理对应阵列。US11544193B2 让代理对照探测中的预期状态，在本地状态未匹配时等待先前事务推进。前者的等待边界由核心电源状态决定，后者的等待边界由缓存块一致性状态决定。</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
+<p>US12332792B2 的参考文献表列出 US11544193B2。同一文献还可以出现在申请沿革中。比较协议时，可转到机制连线具体查看由谁供数、何时转发探测。</p></li></ul>
     <p><a href="../index.html?patent=US11544193B2#knowledge">在全量关系图上定位 US11544193B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

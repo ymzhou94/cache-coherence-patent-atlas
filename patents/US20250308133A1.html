@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20250308133A1 按帧提交剩余时间预执行或降功耗 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US20250308133A1</code><span>美国公开申请</span><time datetime="2025-10-02">2025-10-02</time></p>
   <h1>按帧提交剩余时间预执行或降功耗</h1>
   <p class="english-title" lang="en">Prediction and use of processor inactivity for rendering frames</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">渲染前的数据处理可能因内容复杂度而变化，一次提交之前的空档只有在满足时限时才可挪给别的工作。专利分别讨论提前做未来工作和在不同长度的帧周期内降功耗。</p>
     <p>更新调度器取得截止和当前时间，计算仍可用的时间。可变刷新率下相邻帧的周期可能不同。</p>
     <ol class="walkthrough"><li><h3>读取下一提交截止</h3><p>更新调度器取得截止和当前时间，计算仍可用的时间。可变刷新率下相邻帧的周期可能不同。</p></li><li><h3>预测后继帧所需工作</h3><p>预测引擎可按当前画面与内容顺序估计未来工作。空闲调度器对比预计处理时长与剩余时间。</p></li><li><h3>安排能放入的工作</h3><p>能在截止前完成时，可提前完成未来操作的结果以减轻下一时窗的负担。若预测落空，则已执行部分可能无法复用。</p></li><li><h3>用较长时限降低功耗设置</h3><p>另一独立项比较预计完成时间与后一个截止，选择足以按时完成的更低功耗设置。性能控制器可收到提交时限决定档位。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> 允许更新调度器根据到当前截止的剩余时间组织预测操作，预测引擎还用当前帧与显示顺序。权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a> 的变量是下一周期长度和后续运行点。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>帧流水线的时窗可预测，且有可提前处理、能够被未来帧复用的任务时，最容易观察到收益。</dd></div><div><dt>代价和限制</dt><dd>工作量预测错误会侵占当前帧余量；刷新率突变或温度节流都可能使低档超时。</dd></div><div><dt>验证指标</dt><dd>以同一呈现内容对比固定调度，记录提交错过比例、无用提前工作、每帧能量和不同刷新率下的尾部。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>把下一帧提前完成量拆成预做收益与输入更新后的重做时间。帧能耗需将前一窗口多执行的工作分摊到对应完成帧，否则会高估降运行点的收益。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在预测执行开始后插入视觉输入变化，保持显示时限和平均负载相同。若结果废弃率升高且总每帧能耗上升，提前完成时间没有转化为可显示成果。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设当前帧完成后剩 3 ms，预测到下一帧可独立预取的工作耗 2 ms。另一个例子中下一周期给 8 ms，某任务在高、低两档分别需 4 与 7 ms。</dd></div><div><dt>处理结果</dt><dd>先例可以挪入预测任务，然后在下一周期使用结果。后例可把这次工作放在低档并按时完成。若实际耗时多 2 ms，后例便出现过期。</dd></div><div><dt>结果解读</dt><dd>时间均为教学假设。提交是交给渲染流程的时点，不能等同于显示器实际呈现。低峰值功耗不保证能量一定下降。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12361630B2.html#engineering">利用帧提交前空隙预做工作或降低处理器功率</a>
-<p>继续申请</p></li></ul>
+<p>公开申请继续自 US18/731,141。两份权 1 分别利用第一、第二个提交期限前的剩余时间预测后续图形操作。对照时先确认计时边界，再判断可用于节能的空档。</p></li></ul>
     <p><a href="../index.html?patent=US20250308133A1#knowledge">在全量关系图上定位 US20250308133A1</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

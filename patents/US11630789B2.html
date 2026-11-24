@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11630789B2 优先投递给已上电核心的中断控制 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US11630789B2</code><span>美国授权专利</span><time datetime="2023-04-18">2023-04-18</time></p>
   <h1>优先投递给已上电核心的中断控制</h1>
   <p class="english-title" lang="en">Scalable interrupts</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">中断控制器按可编程顺序向多个核簇尝试投递。第一轮仅考虑已上电核心。所有核簇都返回拒绝后，第二轮允许核心退出断电状态并接收中断。</p>
     <p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p>
     <ol class="walkthrough"><li><h3>确定第一轮的核簇投递顺序</h3><p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p></li><li><h3>核簇先尝试已上电的核心</h3><p>簇控制器在第一轮只尝试已供电的核心。若已供电者能接收，中断不需要唤醒剩余核心。</p></li><li><h3>两种执行单元都要到可中断点</h3><p>核心可以估算 ROB 提交和 load/store 完成均能否在指定时间到可中断点。若其中之一无法及时到达，该核心可返回 Nack。</p></li><li><h3>全部拒绝后允许核心上电</h3><p>只有第一轮各簇都拒绝才进入第二轮。簇控制器给断电核心上电，并尝试向其核心集合投递。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 的核簇探测顺序可编程。第一轮终止条件取决于各簇的应答，已上电的候选核心可能因权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> 所述访存或退休约束返回 Nack。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>经常可在其他已在线核心处理时，两段试探有机会减少唤醒次数及跃迁能量。</dd></div><div><dt>代价和限制</dt><dd>如果所有在线核心都忙，第一轮会增加接收前的探测时延，且第二轮仍要承担唤醒。</dd></div><div><dt>验证指标</dt><dd>比较固定目的地和两轮投递，在同一中断轨迹测成功落在在线核心的比例、Nack 数、额外唤醒和交付时延尾部。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>将中断延迟拆为核簇轮询、候选核心的应答等待及第二轮唤醒。省电应统计避免的核心上电次数，同时比较从中断产生到处理程序开始的尾延迟。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>先探测的核簇频繁在应答门槛到期才拒绝，让后面的在线核心始终可立即接收。若没有新增上电、处理程序尾延迟却增加，瓶颈是探测顺序和应答时限。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设簇 A 有一个忙于长访存的在线核心，簇 B 有一个能在要求时间内接收的在线核心和两个断电核心。</dd></div><div><dt>处理结果</dt><dd>A 因访问未到可中断点返回 Nack。B 的在线核心随后 Ack，两颗 B 中断电核心可以继续关闭。若 A、B 全都拒绝，则走第二轮。</dd></div><div><dt>结果解读</dt><dd>本例只计一次中断，轮询和唤醒时间由实现决定。簇与核心的次序必须按中断路由约束复算。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12248350B2.html#engineering">跨裸片事务按本端唤醒、远端确认的顺序发出</a>
-<p>应答约束中断和事务发出</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
-<p>中断目标与线程放置</p></li><li><a href="US20250284649A1.html#engineering">CPU 根据可接受中断的时点返回 Ack 或 Nack</a>
-<p>中断路由申请的继续链</p></li></ul>
+<p>US11630789B2 在第一轮尝试由已上电核心接受中断，所有核簇返回 Nack 后才重试并允许上电。US12248350B2 的发起端先恢复本端网络电路、唤醒指定的远端，再依权利要求 4 等待确认后发送跨裸片事务。前者在一轮均未接受中断时才进入能唤醒核心的下一轮，后者的确认是向既定目的地发出事务的前提。</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
+<p>US11630789B2 的硬件中断控制器先尝试已上电核心，所有候选核簇拒绝后才允许为其他核心上电。US12147839B2 从核簇总线接口队列饱和与 LSU 指标识别线程，再由 OS 调度器调整线程放置。两者都影响核心上的工作来源，选择对象分别是中断接收核心和可迁移线程。</p></li><li><a href="US20250284649A1.html#engineering">CPU 根据可接受中断的时点返回 Ack 或 Nack</a>
+<p>US20250284649A1 经 US18/674,203 和 US18/301,837 追溯至授权为 US11630789B2 的 US17/246,311。US11630789B2 的权利要求 1 要求先尝试已上电核心，全部拒绝后进入允许核心上电的第二轮。继续申请的权利要求 9 则聚焦核心如何按能否及时到达可中断点返回 Nack。</p></li></ul>
     <p><a href="../index.html?patent=US11630789B2#knowledge">在全量关系图上定位 US11630789B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

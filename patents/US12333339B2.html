@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12333339B2 GPU 按共享缓存亲和性分派工作并在空出时重分配 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12333339B2</code><span>美国授权专利</span><time datetime="2025-06-17">2025-06-17</time></p>
   <h1>GPU 按共享缓存亲和性分派工作并在空出时重分配</h1>
   <p class="english-title" lang="en">Affinity-based graphics scheduling</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">每组 GPU 子单元具有各自共享的缓存。软件提供图形工作的初始亲和性映射，硬件负责按映射分派。</p>
     <p>当另一组已分派完其份额，工作共享控制电路更新有限状态机。控制器可以覆盖软件的初始映射，将原本属于第一组的部分工作重新分派。</p>
     <ol class="walkthrough"><li><h3>提供亲和性映射</h3><p>软件提交图形工作或计算内核，并标出在哪一个 GPU 子单元组执行。</p></li><li><h3>按组划分工作</h3><p>分发电路按映射把不同份额送往相应组。各组分别共享自己的缓存。</p></li><li><h3>检测另一组的分派进度</h3><p>控制电路检查另一组已分派完其原份额的条件，并推动硬件有限状态机。</p></li><li><h3>转移部分剩余份额</h3><p>状态机进入相应状态后，硬件重新映射部分尚待分配工作。已经执行的操作不需要重新执行。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 16–18 把分派完成作为重新分配的触发。目标组可能尚有已接收的工作，状态机重分配的对象是后续待分派份额，仍须考虑其缓存组的可用性。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在工作尾段利用可参与分派的 GPU 子单元，降低份额不均造成的执行尾延迟。</dd></div><div><dt>代价和限制</dt><dd>重分配可能破坏原映射带来的缓存局部性，增加跨组数据访问和内存带宽需求。</dd></div><div><dt>验证指标</dt><dd>记录重分配工作组数、每组缓存缺失率、内存流量和整个内核完成时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>收益由减少最后一组空转和缩短负载尾段构成。代价是改变工作所在的缓存组，可能增加缓存缺失、下层传输字节数与各组请求队列等待。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>保持各组算力与初始工作量差异不变，增大 A、B 使用的数据重叠度。若分派尾段缩短但 kernel 完成反而推迟，可比较新增缓存缺失和下层带宽利用率。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>组 A 还有待分派工作，组 B 已发完自己的份额。</dd></div><div><dt>处理结果</dt><dd>达到共享条件后，可把 A 的部分工作重新分配给 B。权 1 的条件是已经分派完成，不能直接当作所有指令均已执行完成。</dd></div><div><dt>结果解读</dt><dd>比较两组的利用率、共享缓存缺失和内存流量。GPU 工作组亲和性与 CPU 线程亲和性采用不同调度实体。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
-<p>GPU 工作组与 OS 线程的放置</p></li><li><a href="US11775811B2.html#engineering">按执行依赖提高 CPU、GPU 和神经处理器的重叠</a>
-<p>跨处理器依赖与 GPU 内部分派</p></li><li><a href="US12175300B2.html#engineering">GPU 逻辑槽映射给高优先级图形工作预留硬件槽</a>
-<p>预留硬件槽与重分派工作组</p></li></ul>
+<p>US12333339B2 的 GPU 分派硬件从软件给出的初始工作映射开始，在某组已发完原份额后按硬件状态重新分派。US12147839B2 由性能控制逻辑识别核簇共享资源压力，再由 OS 调度器决定具体线程是否迁移。两边的调度对象分别是 GPU 工作组和 CPU 线程，观测点分别在硬件分派器和核簇资源。</p></li><li><a href="US11775811B2.html#engineering">按执行依赖提高 CPU、GPU 和神经处理器的重叠</a>
+<p>US11775811B2 按运算的依赖图从就绪节点中选择可提高处理器并行活动的工作。US12333339B2 在 GPU 内按照软件映射分派工作组，并允许硬件在某组发完原份额后重新分派。前者决定何时向哪个执行资源提交一项就绪工作，后者决定 GPU 内部由哪组资源接收工作组。</p></li><li><a href="US12175300B2.html#engineering">GPU 逻辑槽映射给高优先级图形工作预留硬件槽</a>
+<p>US12175300B2 用软件优先级约束逻辑槽到硬件槽的映射，低优先级工作只能使用未预留槽。US12333339B2 在先有的软件映射上允许 GPU 硬件按分派进度重新分配工作组。对照时注意预留槽影响工作能否映射，重分派影响获准进入的工作交给哪组执行资源。</p></li></ul>
     <p><a href="../index.html?patent=US12333339B2#knowledge">在全量关系图上定位 US12333339B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

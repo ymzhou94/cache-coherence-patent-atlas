@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9311251B2 按数据流保留 sticky 缓存行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US9311251B2</code><span>美国授权专利</span><time datetime="2016-04-12">2016-04-12</time></p>
   <h1>按数据流保留 sticky 缓存行</h1>
   <p class="english-title" lang="en">System cache with sticky allocation</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">单次使用的数据也要占一行，没来得及复用的共享数据可能因此被逐出。标签上的 sticky 状态和 group ID 分别表示行的保护状态和替换时应尊重的组边界。</p>
     <p>缓存标签保存行状态和数据流组 ID。sticky 状态可阻止普通分配或其他组逐出受保护的行。带 sticky 提示的请求若命中普通行，该行仍保留原状态。</p>
     <ol class="walkthrough"><li><h3>读取提示和组号</h3><p>请求方可带 sticky 提示与 group ID。请求进入 SLC 后，缓存先查 tag，取得已有行的状态。</p></li><li><h3>命中普通行时保持原状态</h3><p>带 sticky 提示的请求若命中普通行，缓存继续把它记作普通行。</p></li><li><h3>缺失时考虑普通候选</h3><p>sticky 请求缺失时，可用普通行优先承接分配。只有新分配的行写入 sticky 状态。</p></li><li><h3>检查是否允许同组替换</h3><p>没有普通候选时，实施例检查组内替换配置。启用且能找到合格的同组保护行时可以替换，否则可从内存返回数据并跳过在 SLC 分配。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9311251B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 允许另一组的 sticky 请求命中已有 sticky 行时，把该行重新归给请求组。这个动作改变标签中的归属字段，又保留行内的数据和 sticky 属性。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>重要数据流在短时间内反复使用同一批数据，且普通容量仍充足时，保留 sticky 行能减少无关流造成的逐出。</dd></div><div><dt>代价和限制</dt><dd>保护行过多时，普通流更容易找不到可替换行。关闭同组替换或遇到跨组保护时，新的 sticky 请求也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录保护行留存时间、普通请求命中率、找不到替换候选的次数，以及行移交其他组后的驻留情况。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>组间移交无需重新从下层取数，但会改变随后哪个组受到逐出保护。收益和竞争成本落在同一标签上。应观察读命中后组号写入，以及之后实际取得该组保护的行。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若两个组交错访问同一批行，反复命中可能让保护归属在组间来回变。权利要求 7 允许重分配，归属变更能否提高任何一组命中率仍由未来访问决定。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>一个两路缓存组有 A、B 两行。A 是组 1 的 sticky 行，B 是组 2 的普通行。组 2 先带 sticky 提示访问 B，再读一个新地址 C。</dd></div><div><dt>处理结果</dt><dd>第一次命中后，B 仍是普通行。第二次若为 sticky 缺失且 B 符合条件，可以在 B 的位置分配 sticky 行 C，同时保留 A。</dd></div><div><dt>结果解读</dt><dd>这个例子的组相联度设为两路。普通行不会因为一次命中的提示就被算进保护容量。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9043570B2.html#engineering">按组配额限占并允许总配额超配</a>
-<p>逐行保护与配额约束</p></li><li><a href="US9158685B2.html#engineering">请求侧缓存提示与按来源释放</a>
-<p>命中提示与持久状态</p></li><li><a href="US11822480B2.html#engineering">按关键性插入并概率保护缓存行</a>
-<p>显式行保护与概率逐出</p></li></ul>
+<p>US9311251B2 把 sticky 状态和数据流组号写入标签，禁止其他组的填充替换该组的 sticky 行。US9043570B2 在缓存缺失时比较发起组的占用量和配额，再决定从本组还是其他组查找候选行。前一机制约束哪些行可被替换，后一机制约束到哪个组中搜索。</p></li><li><a href="US9158685B2.html#engineering">请求侧缓存提示与按来源释放</a>
+<p>US9158685B2 的权利要求 1 用 de-allocate 提示和原分配来源匹配来触发行释放，权利要求 14 另覆盖 sticky 行被 de-allocate 提示命中。US9311251B2 在带 sticky 分配提示的请求命中普通行时保留普通状态。两件专利都用请求侧提示，具体命中动作分别是释放和保留原状态。</p></li><li><a href="US11822480B2.html#engineering">按关键性插入并概率保护缓存行</a>
+<p>US9311251B2 依据标签中的 sticky 状态和数据流组号约束替换，普通分配不能替换受保护的行。US11822480B2 把关键性写入回填的行，再随机选择是否让关键行参与逐出候选。相同的访问序列下，可以分别统计受保护行的驻留时间和普通行在竞争替换时发生的缺失。</p></li></ul>
     <p><a href="../index.html?patent=US9311251B2#knowledge">在全量关系图上定位 US9311251B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

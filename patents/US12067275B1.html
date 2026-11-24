@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12067275B1 I/O 代理在同一请求存储体中划分顺序子域 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US12067275B1</code><span>美国授权专利</span><time datetime="2024-08-20">2024-08-20</time></p>
   <h1>I/O 代理在同一请求存储体中划分顺序子域</h1>
   <p class="english-title" lang="en">Memory bank with subdomains</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">多个逻辑流共享一个请求存储体可以节省物理资源。如果所有请求合到同一顺序链上，外设 A 的阻塞可能拖延外设 B。</p>
     <p>I/O 代理把不同外设分配到子域。同一个请求表（TOR）存储体承载多个子域，并按各自链表组织事务。外部一致性管理电路可以仍把它看成单一缓存代理。</p>
     <ol class="walkthrough"><li><h3>为外设分配子域</h3><p>选择能够区分不同请求流的逻辑标识。</p></li><li><h3>将事务写入共享请求表</h3><p>请求条目保留其子域关联，可以使用同一物理存储体。</p></li><li><h3>在各子域内维护顺序</h3><p>根据对应顺序链判断哪一笔事务具备发出条件。</p></li><li><h3>向一致性管理电路暴露一个代理</h3><p>不同子域共享同一 I/O 代理身份，目录无需把每个子域建成独立代理。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a> 规定动态调整顺序子域数量时，I/O 代理先排空共享请求存储体再切换配置。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00012" aria-label="原文权利要求 12">12</a> 允许共享一个外设接口的两个设备映射到同一子域。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>域间隔离可减少不同外设因共享顺序链导致的队首阻塞。</dd></div><div><dt>代价和限制</dt><dd>共享容量和发出端口仍可能饱和。域数量与外设带宽分布不匹配时，管理成本可能增加。</dd></div><div><dt>验证指标</dt><dd>按子域测 TOR 占用、事务入队至发出的等待、域内依赖等待与端口饱和时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>排空使旧子域中的事务在映射变化前结束，代价是重配置要等存储体内最后一笔事务离开。可以同时观测在途表项、最后一笔旧事务的完成、配置生效和新事务的首次分配。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若一笔外设事务在重配置前长期等待下游响应，切换时间将由该事务决定。持续接入流量时可对照静态配置，短时拆分子域节省的后续等待可能抵不过本次排空。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>外设 A 的一个请求在等待响应。外设 B 也已在同一 TOR 存储体登记可执行请求。</dd></div><div><dt>处理结果</dt><dd>由于 A、B 关联不同子域，A 的顺序依赖不会阻塞 B。</dd></div><div><dt>结果解读</dt><dd>这项独立性针对域间顺序，不保证物理端口、互连信用或内存带宽无限。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
-<p>顺序子域与跨类型事务依赖</p></li></ul>
+<p>US12067275B1 在同一个请求存储体中把外设事务划分为顺序子域，允许不同子域的事务各自推进，外部管理电路仍可将其视为单个一致性代理。US12625723B2 用计数器表达 I/O 事务类型之间的排序依赖，较老的阻塞事务完成后才允许新的异类事务发出。观测时可以分别区分子域队首阻塞和事务类型造成的等待。</p></li></ul>
     <p><a href="../index.html?patent=US12067275B1#knowledge">在全量关系图上定位 US12067275B1</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

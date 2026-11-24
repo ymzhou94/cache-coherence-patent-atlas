@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11900146B2 实时内存事务专表与独立 credit · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11900146B2</code><span>美国授权专利</span><time datetime="2024-02-13">2024-02-13</time></p>
   <h1>实时内存事务专表与独立 credit</h1>
   <p class="english-title" lang="en">Memory controller with separate transaction table for real time transactions</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">非实时请求突发时，可能把共享 credit 用光。实时请求会在取得内存命令资源之前受阻。独立事务表和 credit 池把实时请求的候选资格单独管理。</p>
     <p>内存控制器按请求类型分表。实时事务表有独立 credit，非实时表和处理器、图形等额外表共用另一池。仲裁器根据 QoS 与可用 credit 选择交给内存流水线的请求。</p>
     <ol class="walkthrough"><li><h3>按来源和实时属性入表</h3><p>入口把请求放到相应的事务表。指定的非实时代理走非实时表，额外处理器可有自己的表。</p></li><li><h3>各表提出候选</h3><p>实时和非实时选择电路分别从自己的表取出候选。某些实时请求可以按不同于到达顺序的次序入选。</p></li><li><h3>检查相应的 credit 池</h3><p>实时表从独立池取 credit，非实时表与额外表共用第二个池。一池耗尽时，只阻塞需要该池额度的候选。</p></li><li><h3>仲裁器选择发出的请求</h3><p>仲裁器按 QoS 和可用 credit 选出请求。内存流水线随后分配下游的命令和数据资源。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 在授予资源时区分实时 credit 池和共享池。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 还允许实时选择电路不按接收顺序挑选部分实时请求，独立池本身不定义实时流内部的次序。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -103,9 +103,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>共享 credit 被非实时流用完时，独立池能给实时请求保留部分仲裁机会。</dd></div><div><dt>代价和限制</dt><dd>命令资源和数据总线忙时，取得实时 credit 的请求仍要等。保留池过大也会缩小其他流量可用的额度。</dd></div><div><dt>验证指标</dt><dd>分实时与非实时记录 credit 耗尽的时段、从仲裁胜出到完成的延迟，以及违约率。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>独立 credit 保护的是实时请求的准入机会。实时选择与内存服务仍会消耗调度和带宽资源。分析尾延迟时应拆出表内等待、授予后等待和 DRAM 服务。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果两组瓶颈都是同一 DRAM bank 的服务，继续增加实时 credit 可能只增加等待中的实时事务。专利给出隔离的资源池，未给出其独占 DRAM 的服务上限。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>共享池剩 0 个 credit，实时池剩 1 个。一批 CPU 请求和一条周期性读请求同时等候仲裁。</dd></div><div><dt>处理结果</dt><dd>CPU 侧要等共享池补充额度。实时读可用独立池的 1 个 credit 参加仲裁。内存若长时间忙碌，这条读仍可能超过截止时间。</dd></div><div><dt>结果解读</dt><dd>这个算例只确定谁有资格参选。判断是否按时完成还要给定仲裁规则和内存服务时限。</dd></div></dl>
     </div>
     
@@ -121,8 +122,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
-<p>限超车与分信用池</p></li><li><a href="US12730763B2.html#engineering">关键读触发提前结束写服务轮次</a>
-<p>有信用仍需读轮次</p></li></ul>
+<p>实时请求可能在两处被普通请求拖住。探测控制器允许普通和实时探测共用同一通道，但限制能在一笔实时探测前被处理的普通探测数。内存控制器给实时事务专表独立 credit 池，使普通请求消耗完共享 credit 时，实时请求仍可在自身有 credit 的情况下参加仲裁。</p></li><li><a href="US12730763B2.html#engineering">关键读触发提前结束写服务轮次</a>
+<p>独立 credit 保住实时内存事务的仲裁资格。即便具备资格，读请求也可能赶上集中写轮次。另件授权的切换条件是处理器标明这笔读为关键读，并且指定优先级的写队列有足够空位等条件成立，可提前转入读轮次。</p></li></ul>
     <p><a href="../index.html?patent=US11900146B2#knowledge">在全量关系图上定位 US11900146B2</a></p>
   </section>
 </div>
@@ -147,7 +148,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

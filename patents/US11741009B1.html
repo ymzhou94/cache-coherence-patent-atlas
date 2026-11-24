@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11741009B1 缓存中设备请求的两级令牌排序 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11741009B1</code><span>美国授权专利</span><time datetime="2023-08-29">2023-08-29</time></p>
   <h1>缓存中设备请求的两级令牌排序</h1>
   <p class="english-title" lang="en">Request ordering in a cache</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">即使请求被分到不同设备和管线，处理器仍可能要求它们按接收次序发出。把位置和顺序分开记录，便可用多组缓冲承载同一保序流。</p>
     <p>地址决定请求进入哪条管线，空位决定请求放在哪个缓冲。第一级令牌记下缓冲编号，第二级令牌记下管线编号。发送端先找管线，再找缓冲。</p>
     <ol class="walkthrough"><li><h3>按地址选管线</h3><p>Bank 选择电路根据请求地址选定处理管线。</p></li><li><h3>在管线内找空位</h3><p>选中管线后，硬件按缓冲占用情况放入请求。严格保序的请求要登记两级位置令牌。</p></li><li><h3>分别记录跨管线和管线内的次序</h3><p>二级令牌记录管线编号，反映请求跨管线的顺序。每条管线各有一级令牌，记录本管线内的缓冲编号及其顺序。</p></li><li><h3>用队头令牌找到请求</h3><p>发送端按二级队头选中含最老请求的管线，再读它的一级队头找到实际缓冲。请求发出后更新令牌和缓冲。允许有限重排的实施例可以另外使用一组一级令牌。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>两级令牌的次序描述哪些设备请求先从源端发出。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11741009B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 针对要求时间顺序的请求集合，未把不同设备的内部执行次序和完成应答并入令牌协议。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>地址分布不均、且每条管线有多个缓冲时，按空位分配可以提高利用率，同时保留必要的发送次序。</dd></div><div><dt>代价和限制</dt><dd>最老请求的目的设备产生回压时，即使其他缓冲空闲，同一保序请求流也可能受阻。</dd></div><div><dt>验证指标</dt><dd>比较各管线的占用率、队头阻塞周期、跨设备的顺序违规次数和每周期发出的请求数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>组织请求时只在令牌存储中集中保存位置。事务数据仍留在分散缓冲，避免跨管线搬运整笔请求。相应负担是发送端要按两个位置索引取回队头请求。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若目的端 A 接收早却执行慢，目的端 B 接收晚却先完成，两级令牌仍可能完全符合发出顺序。端到端完成顺序需查看设备协议，不能由令牌队列直接判定。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>X、Y、Z 要严格按接收顺序发出。假设 X 在 P1/B3，Y 在 P0/B1，Z 在 P1/B2。</dd></div><div><dt>处理结果</dt><dd>二级队列依次记 P1、P0、P1。P1 的一级队列记 B3、B2，P0 的一级队列记 B1。发送端因此依次找出 X、Y、Z。</dd></div><div><dt>结果解读</dt><dd>调整缓冲位置后，只要令牌随之更新，发出顺序便可保留。示例追踪的是设备访问的发出顺序。</dd></div></dl>
     </div>
     
@@ -118,8 +119,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
-<p>两级令牌顺序与异类事务依赖</p></li><li><a href="US12216578B2.html#engineering">用两级令牌保持缓存请求的发出顺序</a>
-<p>继续申请突出两级令牌</p></li></ul>
+<p>US11741009B1 用两级令牌记录设备请求所在的处理管线和缓冲位置，供请求选择电路按时序发送。US12625723B2 让 I/O 代理按需为异类事务建立计数依赖，等较老事务完成并更新计数后才发出受阻事务。前者用令牌在分散存储中恢复发出顺序，后者用计数器判断发出前的完成条件。</p></li><li><a href="US12216578B2.html#engineering">用两级令牌保持缓存请求的发出顺序</a>
+<p>US12216578B2 说明书首段将申请 US17/526,944 列为母申请。继续申请独权 1 指定每条请求处理管线有一级令牌存储，跨管线设二级令牌，用两级令牌记录受顺序约束的设备请求位置。</p></li></ul>
     <p><a href="../index.html?patent=US11741009B1#knowledge">在全量关系图上定位 US11741009B1</a></p>
   </section>
 </div>
@@ -144,7 +145,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

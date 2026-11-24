@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12306762B1 抑制曾经无用的预取地址 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US12306762B1</code><span>美国授权专利</span><time datetime="2025-05-20">2025-05-20</time></p>
   <h1>抑制曾经无用的预取地址</h1>
   <p class="english-title" lang="en">Deny list for a memory prefetcher circuit</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">预取数据即使从未被需求读命中，也用掉了缓存空间、请求槽和返回带宽。逐出时已能确定这次驻留有没有被利用。</p>
     <p>缓存逐出一条从未被触碰的预取行时，把地址报告给限制表。以后再预取该地址，若查到的记录已生效，电路可拒绝请求。</p>
     <ol class="walkthrough"><li><h3>在标签中记录有无使用</h3><p>标签可标记一行是由预取填充、尚未被触碰的。之后若有需求访问命中，缓存可据此更新未使用状态。</p></li><li><h3>未使用就逐出时回报地址</h3><p>更换缓存行时，缓存检查该标记。若预取行仍未被使用，缓存把地址报告给限制表。部分实施例累加计数，达到门槛才激活记录。</p></li><li><h3>下一次预取前检查记录</h3><p>预取候选先按目标地址查表，再检查记录是否活动。记录已建立但计数还没到门槛时，仍能放行。</p></li><li><h3>确定一条记录覆盖多少地址</h3><p>有的实现让一条表项覆盖多条缓存行，也可加入信用值，或在发出队列内做检查。表项覆盖的地址和信用规则会影响误抑制。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>依权 <a class="claim-anchor" href="https://patents.google.com/patent/US12306762B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>，若缓存报告先前的预取地址已被使用，电路可把该项计数重置到初始值。表项存在、计数达到门槛及随后清除是三种状态。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,12 +100,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同一批预取地址反复出现、预取行却从不被使用时，限制表可以省下队列和填充资源。</dd></div><div><dt>代价和限制</dt><dd>工作集转热后，旧记录可能挡住变得有用的预取。表项粒度较粗时，影响还可能波及邻近地址。</dd></div><div><dt>验证指标</dt><dd>记录哪些地址因未触碰就逐出而被登记、哪些候选随后被挡住，随后首次需求缺失的次数，以及误抑制持续多久。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>若实现选择在发出队列中才核对活动状态，被挡住的候选已经使用了入队和查表资源。它能少发下层读，但前端候选拥塞未必随下层流量一起下降。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果预取每次都在热需求来临前很久发出，缓存行会因等待过久而先被逐出。限制表可能识别出未触碰，却无法区分这个时间错位与地址永远冷。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定地址 0x1000 的缓存行由预取填充，每次都在需求访问命中前被逐出。选用计数到 2 才激活的实现，并让这一过程发生两次。</dd></div><div><dt>处理结果</dt><dd>第二次报告激活表项。后来再预取 0x1000 时，电路会拒绝候选。对这个地址的需求读仍走普通请求路径。</dd></div><div><dt>结果解读</dt><dd>2 是示例门槛。如果地址后来变热，活动记录可能让需求读失去预取带来的提前量。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#deny-list">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#deny-list">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
-<p>撤销预取与合并读</p></li><li><a href="US12579071B1.html#engineering">按初始 PC 复用被逐出的访问图</a>
-<p>从候选生成到否决</p></li><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
-<p>陈旧命中与无用预取</p></li></ul>
+<p>限制表按地址阻止预取，可以在请求入队前拦截，也可以在入队后、发往下层前撤销。US9454486B2 权 7 处理已发出且尚未完成的同址预取。需求读可等同一份数据返回，省去再发一次读。</p></li><li><a href="US12579071B1.html#engineering">按初始 PC 复用被逐出的访问图</a>
+<p>访问图被逐出时，预取器按首次触及区域的指令 PC 学习区域内偏移，后续为不同地址区域构造起始图，产生新的候选。预取行被逐出且从未使用时，另一方案按实际地址记录失败，活动记录可否决同址候选。前者在图表逐出时积累跨区域规律，后者在数据缓存逐出时反馈具体地址的效果。</p></li><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
+<p>前者的早期地址查询可能命中却提供陈旧值，store queue 的更新值会让地址预测置信度下调。后者等到预取行逐出且始终无人访问，按地址累计负反馈，达到活动条件后否决同址预取。分别对照一次 load 的数据是否可用，与一次预取驻留是否产生复用。</p></li></ul>
     <p><a href="../index.html?patent=US12306762B1#knowledge">在全量关系图上定位 US12306762B1</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

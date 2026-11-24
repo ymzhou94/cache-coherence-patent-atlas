@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11016913B1 汇聚节点把写回响应转成跨簇回填 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11016913B1</code><span>美国授权专利</span><time datetime="2021-05-25">2021-05-25</time></p>
   <h1>汇聚节点把写回响应转成跨簇回填</h1>
   <p class="english-title" lang="en">Inter cluster snoop latency reduction</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">请求簇发出读请求时，还不知道最新副本的位置。数据来源由一致性点查找。若数据在另一个簇，回填从哪里发出，决定了数据回到请求簇还要经过哪些链路。</p>
     <p>内存控制器作为一致性点，发现目标块有远端修改副本后，向持有簇发出回送请求。携数据的响应经过汇聚节点时，节点用响应里的数据为原读请求构造回填。</p>
     <ol class="walkthrough"><li><h3>在一致性点查副本</h3><p>请求簇 A 的读先到内存控制器。控制器查找副本信息，确定 B 持有修改副本。</p></li><li><h3>请 B 回送修改数据</h3><p>控制器向 B 发 copy-back 请求。B 取出最新数据，放入 copy-back 响应。</p></li><li><h3>节点构造给 A 的回填</h3><p>B 的响应进入汇聚节点的上行队列。节点识别它对应 A 之前发出的读，用响应数据构造给 A 的 fill，并把 fill 放进下行队列。</p></li><li><h3>向控制器转送原响应</h3><p>节点还可将原 copy-back 响应送往控制器。控制器得知节点已发回填时，可以抑制本来要发出的第二份回填。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 细化汇聚节点的队列接口。旁路电路从持有者对应的输入队列生成 fill，选择器把 fill 送入请求代理的输出队列，该队列也承接来自内存控制器的通路。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -110,12 +110,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>汇聚点离控制器较远、被读数据又在另一簇修改时，给读簇的回填可以明显提前。</dd></div><div><dt>代价和限制</dt><dd>控制器若靠近汇聚点、旁路下行拥塞，或者大量请求走普通的干净数据路径，整体收益会缩小。</dd></div><div><dt>验证指标</dt><dd>以 B 发出响应为起点，分别测 A 收回填和控制器收原响应的时刻。另记录可旁路比例和互连队列延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>去掉绕到一致性点再返回这一段，在输出端则增加了旁路 fill 与常规消息的竞争。应分别观察旁路选择器的授予和目标代理输出队列的等待时长。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若目标输出队列一直被其他回填填满，跳过的上行路径再长，读代理也可能仍在同一出口等待。绕路缩减属于图示路径，能否缩短收数时间取决于这段排队。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设 B 到汇聚节点、节点到 A 各用 2 个单位。节点与控制器之间单向各用 5 个单位，控制器处理和节点转换各需 1 个单位。</dd></div><div><dt>处理结果</dt><dd>从 B 发出响应起，常规路径用 2+5+1+5+2=15 个单位，节点旁路用 2+1+2=5 个单位。原响应若并行上行，控制器在第 7 个单位收到。</dd></div><div><dt>结果解读</dt><dd>这里用无排队、链路对称的教学模型。A 收到回填和控制器收到原响应是两个独立的计时终点。</dd></div></dl>
+      <h3>模型算例</h3>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>模型中供数簇每拍送出一笔响应，共 8 笔。PoC 单程 5 跳，每跳 1 拍。汇聚点只有一个转换单元，每笔占用 3 拍。下行端口每拍可发一笔。</dd></div><div><dt>处理结果</dt><dd>逐笔以原响应发出为计时起点。经 PoC 的 8 笔回填都是 15 拍。旁路首笔 7 拍，第 5 笔 15 拍，末笔 21 拍。原响应始终在发出后第 7 拍抵达 PoC。</dd></div><div><dt>结果解读</dt><dd>每来一笔，旁路转换队列多积压 2 拍。首笔省下的回程时间在第 5 笔耗尽。将转换间隔调到与到达间隔一致，再限制下行端口，可分辨排队发生在哪一级。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#bypass">运行对应原型</a>
+    <a class="lab-link" href="../lab.html?scenario=converter-queue#bypass">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -128,9 +129,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11537538B2.html#engineering">由一致性点发出跨簇数据旁路指示</a>
-<p>谁决定回填走旁路</p></li><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
-<p>谁持有可用副本</p></li><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
-<p>探测等待与回填绕行</p></li></ul>
+<p>两件专利描述同一条回填旁路。US11016913B1 权 1 规定互连节点如何把回送响应转换成直达请求簇的回填。US11537538B2 权 1 则写明控制器在回送请求中标出旁路条件，持有数据的簇据此构造响应。原响应仍要交给控制器，以完成一致性处理。</p></li><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
+<p>两件都把供数路径缩短到代理间，但从不同副本状态出发。US11947457B2 的目录在主、次共享持有者中选择供数者，并在探测中指定直送。US11016913B1 处理远端持有修改副本的情形，由互连汇聚节点把持有者的回送响应转成回填。</p></li><li><a href="US10795818B1.html#engineering">限制实时探测前的普通请求</a>
+<p>US10795818B1 给延迟敏感 snoop 设置普通请求超越数量上限，约束的是接收端仲裁前的等待。US11016913B1 针对远端持有脏副本的读请求，由互连汇聚节点把 copy-back 响应转换成发给请求者的回填。端到端测量时，可以拆出 snoop 从接收到获准处理的时间，以及生成响应到收到回填的时间。</p></li></ul>
     <p><a href="../index.html?patent=US11016913B1#knowledge">在全量关系图上定位 US11016913B1</a></p>
   </section>
 </div>
@@ -155,7 +156,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

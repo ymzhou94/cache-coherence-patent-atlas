@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US10621100B1 多级缓存共用访问图预取器 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US10621100B1</code><span>美国授权专利</span><time datetime="2020-04-14">2020-04-14</time></p>
   <h1>多级缓存共用访问图预取器</h1>
   <p class="english-title" lang="en">Unified prefetch circuit for multi-level caches</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">近层和远层各有预取器时，两套电路可能各自学习同一批访问。统一电路可以复用区域历史，再按不同层的条件决定请求发往哪里。</p>
     <p>同一个预取器按区域记录访问图，再把已观察到的访问与候选模式匹配，生成各层的预取。模式长度超过阈值时，可改用更粗的访问图。另一项独立权利要求分别跟踪两层的准确度，用来调节各自的发出量。</p>
     <ol class="walkthrough"><li><h3>在区域图上标记访问</h3><p>预取器先确定请求所属的地址区域，再在图中为对应块记录一次访问。说明书的 access map 按偏移记下不同的访问类型。</p></li><li><h3>按历史匹配候选模式</h3><p>预取器拿历史片段与模式表比较，再根据匹配结果决定预取哪些后续块、送近层还是送外层。</p></li><li><h3>长模式超过阈值后改变粒度</h3><p>模式够长时，原来逐块记录的图可以改为用更粗的单元表示。权利要求 3 举例从一个块改为块大小的整数倍。</p></li><li><h3>分别控制各层预取量</h3><p>另一独立权利要求要求分别跟踪同一访问图在两个缓存层的预取准确度，再分别控制数量。说明书中的 AQF、BQF 给出了令牌式实现。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 允许把访问图粒度改为下一级缓存的块大小。权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00005" aria-label="原文权利要求 5">5</a> 明确一种做法是清除旧图并按新粒度重新分配，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 还可要求该图表现出单位步长。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>区域内规律明显时，共用访问图有机会减少重复学习。各层独立限量可以减少对近层容量和外层带宽的压力。</dd></div><div><dt>代价和限制</dt><dd>模式经常变化或访问随机跨区时，粗细粒度切换需要额外状态，无用的候选还会增加下层流量。</dd></div><div><dt>验证指标</dt><dd>分别测近层和外层的覆盖率、命中准确度、及时性、额外流量，以及缓存污染带来的需求缺失。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>更新到粗粒度可用同样数量的符号表示更远范围，但清除和重新分配会丢掉累积细节。是否值得取决于新粒度下仍能否预测真正要读的相邻块。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>长访问模式也可能只触碰每个大区块的一半。例如经过一段连续热身后改成隔行读，粗粒度会把已访问及未访问的小块合在一起，增加仅被预取的字节。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定访问图起初每单元覆盖一条缓存行，模式长度阈值为四次需求访问，且允许改成每单元两行。输入是一段连续访问。</dd></div><div><dt>处理结果</dt><dd>模式长度超过门槛后，预取器可以改用粗粒度图覆盖更长的区间。若近层的 AQF 偏低，可以减少近层预取，外层则另查 BQF。</dd></div><div><dt>结果解读</dt><dd>单元覆盖范围和模式长度阈值为算例参数。两个缓存层各自保有独立的发出预算。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11176045B2.html#engineering">次预取器回报覆盖，主预取器限量</a>
-<p>两层反馈与两器协作</p></li><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
-<p>访问图生成与逐出反馈</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
-<p>原文列为参考文献</p></li></ul>
+<p>多级预取从同一访问图得到候选，用近层和外层各自的准确度调节各自的发出量。另一件专利让主预取器的跟踪缺失调用另一套机制，次机制报出足够置信度后，主机制把同次需求关联的请求数降到较小的非零值。一边分配两个目的层的发出量，一边协调同一数据缓存前的两个预测器。</p></li><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
+<p>US10621100B1 按访问模式及缓存层次生成预取候选，并可调整访问图的粒度。US12306762B1 观察未使用预取行的逐出，按地址限制后续预取。两者分别处理候选产生和无用预取复发，实验应在需求命中率之外记录预取发出数和下层流量。</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
+<p>US12572473B1 的专利参考文献列出 US10621100B1。</p></li></ul>
     <p><a href="../index.html?patent=US10621100B1#knowledge">在全量关系图上定位 US10621100B1</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

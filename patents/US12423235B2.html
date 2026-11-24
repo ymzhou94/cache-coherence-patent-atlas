@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12423235B2 在缓存代理保存一致性目录 way 标识 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US12423235B2</code><span>美国授权专利</span><time datetime="2025-09-23">2025-09-23</time></p>
   <h1>在缓存代理保存一致性目录 way 标识</h1>
   <p class="english-title" lang="en">Coherence directory way tracking in coherent agents</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">一致性目录可采用组相联结构，每组包含多路。若逐出通知只带块标识，目录可能要逐路比较同一缓存组的标签。回填时向代理返回的路提示，可以在逐出时用来缩小查询范围。</p>
     <p>目录首次记录某块时，给它选一个 way，并向持有者发送覆盖该路的子集指示。此后缓存同一块的代理也可收到这项指示。代理逐出块时，把指示和块标识一起发还目录。</p>
     <ol class="walkthrough"><li><h3>建立目录项并下发指示</h3><p>首个代理缓存 X 时，目录选中一个 way，记录 X 的持有者，并发送可覆盖该 way 的子集指示。</p></li><li><h3>把提示发给之后的持有者</h3><p>第二个代理缓存 X 时，目录增加一条持有者记录，并发出相同目录子集的指示。各代理将提示与本地缓存块关联保存。</p></li><li><h3>逐出时回送块标识和提示</h3><p>代理在逐出通知中同时发送块 ID 和 way 指示。目录只查相应的候选 way，再根据块 ID 确认实际条目。</p></li><li><h3>更新持有者或回收目录项</h3><p>还有其他持有者时，目录只清掉发通知的代理。最后一个代理逐出时，目录项可以失效。若未带指示，目录可以并行查多路。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 要求逐出消息同时携块标识与子集提示。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a> 的提示可指向多路并在子集内并行比较，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 又规定未带提示时使用全路搜索。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -110,9 +110,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>目录相联度较高而且大部分逐出都带有效指示时，少查几路可降低比较工作，能耗也可能下降。</dd></div><div><dt>代价和限制</dt><dd>代理关闭提示、并发操作改变目录位置，或提示本身覆盖太多候选时，新增的元数据可能换不来明显的查找收益。</dd></div><div><dt>验证指标</dt><dd>统计每次逐出激活的目录 way 数、无提示逐出的比例、额外标签存储，以及被串行处理的更新数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>提示缩小同一次比较激活的路数，但并行比较原本就能同时发起。即使查找周期未变，比较逻辑的活动和跨代理保存的提示位也会重新分配硬件成本。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若目录每次仍需激活整个存储组，而只有比较使能受提示控制，读阵列的能耗可能没有明显下降。权利要求写明搜索范围，阵列门控粒度属于实现决定。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假设某个目录 set 有 8 个 way。X 进入 way 5，A 和 B 各缓存一份，收到的指示都覆盖 way 4、5。A 随后逐出 X。</dd></div><div><dt>处理结果</dt><dd>目录只查 4、5 两个候选，并用块 ID 找到 X。它删掉 A 的持有者记录，留着 B。B 之后逐出时若无有效提示，目录可查 8 路并回收该项。</dd></div><div><dt>结果解读</dt><dd>8 路以及 4、5 的分组是示例参数。目录用提示缩小比较范围，再凭块 ID 匹配条目，并按持有者记录判断是否回收。</dd></div></dl>
     </div>
     
@@ -128,9 +129,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US8856456B2.html#engineering">通过块追踪项过滤缓存一致性探测</a>
-<p>跳过探测与少查目录</p></li><li><a href="US10157137B1.html#engineering">组相联缓存的双重标签比较与路预测</a>
-<p>缩小 way 搜索</p></li><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
-<p>目录定位与供数者选择</p></li></ul>
+<p>较早的权项在请求代理和一致性接口分别跟踪一组缓存块，代理查组状态决定要不要发探测。较新的权项在目录初次分配时把包含所选 way 的子集提示交给代理，逐出消息带回提示以缩小目录的块 ID 搜索。第一个节省消息，第二个节省一次已有消息触发的目录比较。</p></li><li><a href="US10157137B1.html#engineering">组相联缓存的双重标签比较与路预测</a>
+<p>组相联缓存先用标签比较预测一路并启动数据读，再确认实际命中 way，误选时放弃原读。目录的候选子集随缓存块分配下发，逐出时由代理带回，目录在这几路中核对块标识。前者预测一次数据读该开哪路，后者把先前的目录分配结果作为后续查询的提示。</p></li><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
+<p>US12423235B2 让缓存代理保留目录路子集提示，用于缩小后续目录查找范围。US11947457B2 利用目录中的共享状态选择优先供数的缓存代理。一个决策定位目录项，另一个决策选取数据来源。比较收益时区分目录访问开销与数据到达请求方的时延。</p></li></ul>
     <p><a href="../index.html?patent=US12423235B2#knowledge">在全量关系图上定位 US12423235B2</a></p>
   </section>
 </div>
@@ -155,7 +156,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11822480B2 按关键性插入并概率保护缓存行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US11822480B2</code><span>美国授权专利</span><time datetime="2023-11-21">2023-11-21</time></p>
   <h1>按关键性插入并概率保护缓存行</h1>
   <p class="english-title" lang="en">Criticality-informed caching policies</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">关键依赖上的数据若过早被逐出，后续执行可能被缺失拖住。把曾经关键的行都长期留在缓存，也会挤占新数据的空间。</p>
     <p>为缓存行分配条目时，控制器判定该行的关键性，再设置初始替换排名。需要逐出时，控制器按概率选择候选模式。在保护模式下，关键行不进入逐出候选集合。</p>
     <ol class="walkthrough"><li><h3>填充时判定关键性</h3><p>回填时，控制器综合多个因素给出关键级别。说明书举了与页表、指令流和关键 load 路径有关的因素。</p></li><li><h3>用关键性设置初始排名</h3><p>新行加入缓存组时，控制器给它设置逻辑替换排名。排名记录行在替换次序中的相对位置，插入位置由策略决定。</p></li><li><h3>逐出时先决定候选范围</h3><p>需要腾出空间时，控制器按概率选择是否屏蔽关键行，再用替换数据从余下候选中选 victim。图 4 和多级缓存示例也考虑了不同的有效项状态。</p></li><li><h3>在层级间传递关键性</h3><p>从属权利要求允许第二缓存随逐出行接收关键性指示，并可据此设置新排名。以后该行回填到第一缓存时，也可把指示带回。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11822480B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11822480B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 允许第二缓存保留被逐出行的关键性指示，并在以后回填第一缓存时把该指示送回。这里传递的是行类别，第一缓存仍按自己的替换状态选位置。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>关键性标记能反映实际阻塞代价时，保护模式有机会保住会再次用到的关键行。</dd></div><div><dt>代价和限制</dt><dd>工作集变化后，保护过强会让旧阶段的关键行继续占用容量，挤出新行。</dd></div><div><dt>验证指标</dt><dd>固定访问轨迹，改变保护概率和标记错误率。分别统计关键与普通访问的缺失、实际逐出对象和低价值行的驻留比例。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>逐出发生时的候选遮罩和跨级返回时的标记保真度各有成本。后一项会省去一些重复分类，但若关键性随执行阶段改变，恢复旧指示也会保留判断滞后。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>让两条关键行反复从第一缓存逐出并由第二缓存回填，同时旧阶段已经结束。如果回填仍重用旧标记，概率保护会反复挤出当前阶段真正复用的普通行。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定组内由老到新是关键行 K、普通行 U、普通行 V、关键行 W。所有候选都有效，控制器选择允许候选中最老的一行。</dd></div><div><dt>处理结果</dt><dd>保护模式排除 K 和 W，因此逐出 U。允许关键行参与时，最旧的 K 可以被选中。</dd></div><div><dt>结果解读</dt><dd>算例对比两种模式各自的候选范围。选择两种模式的概率由实现设定。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US10963392B1.html#engineering">按前级取入价值筛选系统缓存替换候选行</a>
-<p>随行标记与组统计</p></li><li><a href="US9311251B2.html#engineering">按数据流保留 sticky 缓存行</a>
-<p>显式行保护与概率逐出</p></li><li><a href="US11921640B2.html#engineering">停止优先保留不再关键的行</a>
-<p>共享临时申请</p></li></ul>
+<p>关键性方案在选中替换候选行后，可以把这条行的关键性值随数据传到下一级，之后仍能追踪这条行。SLC 替换候选行接纳查看的是前级中其他数据的取入用途，达到门槛才接纳当前替换候选行。比较同一笔逐出可看出，两件专利的输入分别是该行携带的属性与近期工作集的特征。</p></li><li><a href="US9311251B2.html#engineering">按数据流保留 sticky 缓存行</a>
+<p>US9311251B2 依据标签中的 sticky 状态和数据流组号约束替换，普通分配不能替换受保护的行。US11822480B2 把关键性写入回填的行，再随机选择是否让关键行参与逐出候选。相同的访问序列下，可以分别统计受保护行的驻留时间和普通行在竞争替换时发生的缺失。</p></li><li><a href="US11921640B2.html#engineering">停止优先保留不再关键的行</a>
+<p>两件文献的说明书均主张 US63/239,258 的优先权。对比两者可区分逐次逐出的概率保护，与观察关键行命中表现后停止保护。</p></li></ul>
     <p><a href="../index.html?patent=US11822480B2#knowledge">在全量关系图上定位 US11822480B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12211506B2 常开音频域跨越处理器和内存控制器唤醒保留样本 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12211506B2</code><span>美国授权专利</span><time datetime="2025-01-28">2025-01-28</time></p>
   <h1>常开音频域跨越处理器和内存控制器唤醒保留样本</h1>
   <p class="english-title" lang="en">Always-on audio control for mobile device</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">音频采样可在处理器和内存控制器断电时继续进入常开电路的本地缓冲。模式匹配只需读取缓冲样本。</p>
     <p>检测到预定模式后，常开电路保留命中样本和此前的样本，并启动处理器及内存控制器上电。新样本继续进入缓冲，直到能写外部内存。</p>
     <ol class="walkthrough"><li><h3>低功耗时持续采样</h3><p>采样先写入常开电路的本地缓冲，并与预定音频模式比较。</p></li><li><h3>捕捉匹配及前序样本</h3><p>触发命中时保留相关历史采样窗口。</p></li><li><h3>启动两个唤醒路径</h3><p>常开电路启动处理器和内存控制器的上电。内存控制器准备期间继续缓冲新样本。</p></li><li><h3>恢复向内存写入</h3><p>控制器可接收写事务后，常开电路可把匹配及后续采样写入内存。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 1 的保留同时覆盖命中样本、先前样本及上电期间继续进入的样本。若固定缓冲必须容纳上述三段，内存可写时间就成为采样连续性的容量约束。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>减少常驻处理器持续执行任务的需要，同时尽可能保留触发附近的连续样本。</dd></div><div><dt>代价和限制</dt><dd>本地缓冲必须同时容纳回看范围和唤醒期间的新样本。检测误触发还会产生额外唤醒能耗。</dd></div><div><dt>验证指标</dt><dd>量测采样缺口、单次唤醒能耗、常开域平均功率和触发到首次内存写入的延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>可用缓冲空间应按采样速率换算为时长，再扣除历史保留窗口。分别计算触发后采样保护时间、首笔转存时延与内存恢复期间所需的新增样本容量。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>延长内存恢复时间而保持处理器上电时间不变，同时扫描历史回看长度。若先出现触发之后的缺样，缓冲余量不足。若缺在历史区，则需核查匹配前保留策略。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>语音模式在处理器关闭期间命中，此后音频流还在继续。</dd></div><div><dt>处理结果</dt><dd>缓冲中的触发前样本与期间的新采样共同跨过唤醒间隙。内存控制器准备后，缓冲数据可转移到内存。</dd></div><div><dt>结果解读</dt><dd>验证按采样序号检查缺样和乱序。另行计量模式检测到内存可写的延迟。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12117320B2.html#engineering">常开岛检测音频并保留仅内存唤醒路径</a>
-<p>常开音频的两种唤醒路径</p></li></ul>
+<p>两件文献都允许在 CPU 和内存控制器关闭时缓存音频。US12117320B2 在未匹配声音模式且本地缓存达到阈值时，仅唤醒内存路径以转存。US12211506B2 的权利要求 1 针对模式命中后同时唤醒处理器与内存控制器，并在其可写之前保留匹配样本、之前的样本及随后收到的样本。</p></li></ul>
     <p><a href="../index.html?patent=US12211506B2#knowledge">在全量关系图上定位 US12211506B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

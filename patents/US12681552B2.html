@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12681552B2 两层电源管理处理器约束跨域 DVFS 的中间状态 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#power">功耗与热控制</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12681552B2</code><span>美国授权专利</span><time datetime="2026-07-14">2026-07-14</time></p>
   <h1>两层电源管理处理器约束跨域 DVFS 的中间状态</h1>
   <p class="english-title" lang="en">Multi-processor power management circuit</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">高层控制器可以只表达想要的性能等级。同一个目标在不同电源域组合下可能有不同路径，电压、时钟与活动域条件需要由熟悉具体芯片的固件逐步判断。</p>
     <p>第一处理器运行操作系统的控制回路，采集电路活动并为各电源域提出目标性能状态。第二处理器的固件根据各域当前状态确定可执行的过渡路径。</p>
     <ol class="walkthrough"><li><h3>高层处理器形成目标</h3><p>第一处理器运行操作系统的控制回路，采集电路活动并为各电源域提出目标性能状态。</p></li><li><h3>固件展开候选路径</h3><p>第二处理器执行与具体芯片有关的固件，把目标展开为中间配置，包括时钟频率与供电电压。</p></li><li><h3>检查另一域当时的状态</h3><p>若一个候选中间态与已活动的另一域当前状态不兼容，选择规避该中间态的路径。限制还可能涉及各域同时处在最高性能状态的数量。</p></li><li><h3>按合法顺序执行</h3><p>控制电路按选定路径更新时钟和供电。图 7 的实施例在升频前先提高电压，在降压前先降低频率。验证时分别检查两个动作完成的时点。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 7 将升频与升压、降频与降压分别排序。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 还要求规划时查看其他电源域的当前状态。对方的状态若在过渡途中变化，固件测试需覆盖并发请求。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>目标策略可在多个芯片变体上复用，同时让执行阶段按每个变体的供电约束排序。</dd></div><div><dt>代价和限制</dt><dd>状态表可能随固件与硬件升级而增加。中间态增加也可能拉长切换延迟，必须检验状态视图的及时性。</dd></div><div><dt>验证指标</dt><dd>遍历目标与当前域状态对，收集合法路径比例和切换延时，再核对每一步均满足域间、频率及电压条件。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>切换延迟可由候选路径检查、各电源轨到位时间、时钟切换与域间等待组成。频率和电压动作越多，完成同一目标的切换时间和过渡能量可能越高。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>两个域同时请求升频，随后一个又撤销。若重复改路或过渡延迟增大，捕获每一步的电压、时钟和域状态版本，可查出请求竞争而非稳态可达性问题。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设域 A 要从 A0 到 A2。候选 A1 在域 B 高性能时非法，另一个过渡态 Ax 在该组合下允许。</dd></div><div><dt>处理结果</dt><dd>当 B 仍在高性能时，第二处理器选 A0→Ax→A2；若 B 已降到允许状态，则旧路线也可能可行。</dd></div><div><dt>结果解读</dt><dd>名字和状态值是用于说明中间态检查的假设。示例中的非法组合应在图状态级验证，而具体供电延时需要独立量测。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11579934B2.html#engineering">非对称多处理器的闭环性能控制与热功率约束</a>
-<p>目标档到切换路径</p></li><li><a href="US20260093309A1.html#engineering">用内部性能状态选择跨电源域时钟</a>
-<p>内部状态的可见性和路径许可</p></li><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
-<p>跨域性能切换的准入检查</p></li></ul>
+<p>US11579934B2 把性能推荐和上限裁决为目的 DVFS 档。US12681552B2 接收目的性能状态以后，逐一检查候选路径上的中间态与其他电源域的现有状态是否兼容。目的档已经获准时，仍可能要绕过特定中间态才能安全抵达。</p></li><li><a href="US20260093309A1.html#engineering">用内部性能状态选择跨电源域时钟</a>
+<p>US20260093309A1 允许电源管理电路使用至少一个请求方无权直接请求的组件状态，并以状态转换许可表管理跨域时钟。US12681552B2 的第二层处理器在转换路径与另一电源域当前状态冲突时，选择绕开非法中间状态的路径。前者说明请求接口的状态集合如何与内部许可区分，后者说明执行阶段如何处理具体冲突。</p></li><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
+<p>US12332723B2 等待读写代理确认缓冲余量足以承受内存停服，再允许该事件发生。US12681552B2 检查候选中间性能状态与其他电源域是否兼容，必要时改走另一条状态路径。进入切换前需要确认的约束分别来自内存服务余量和电源域状态组合。</p></li></ul>
     <p><a href="../index.html?patent=US12681552B2#knowledge">在全量关系图上定位 US12681552B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20260087582A1 GPU 分发硬件根据待运行工作控制子单元电源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US20260087582A1</code><span>美国公开申请</span><time datetime="2026-03-26">2026-03-26</time></p>
   <h1>GPU 分发硬件根据待运行工作控制子单元电源</h1>
   <p class="english-title" lang="en">Graphics Processor Power Management Controlled by Distribution Hardware</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">传统做法可以让固件处理器先看见工作，再通知电源处理器。此案把队列和跟踪状态直接接入分发硬件，使电源控件能利用它已经掌握的工作范围。</p>
     <p>GPU 的工作控制硬件同时观察主队列和尚未完成的已分发工作，发出 GPU 子单元的供电状态请求。可以在确认要扩展分发范围时提前唤醒所需子单元。</p>
     <ol class="walkthrough"><li><h3>主机提交并准备调度硬件</h3><p>应用和驱动向主 kick 队列提交，主机可先保证调度逻辑可达。硬件读取队列并准备分配。</p></li><li><h3>观察待发与已发两类工作</h3><p>读取主队列中的 kick 大小、优先级或依赖。跟踪单元同时知道已分发的工作是否还在使用具体子单元。</p></li><li><h3>按所需范围控制电源</h3><p>当较大的 kick 将跨更多 GPU 子单元时，请求唤醒必要部分。没有分发需要时可收小通电范围；迟滞定时器可推迟关闭。</p></li><li><h3>电源就绪后分发</h3><p>需要上电的 shader 在就绪前不能开始执行。部分实施例由硬件直接推动门控，部分仍由电源处理器最终执行。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>图 5–6 的提前量始自主队列中能辨认目标子单元的时点。上电需要在真正分发之前完成才可能隐藏全部唤醒延迟，已分发任务仍影响何时允许掉电。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>工作范围在排队时已可见且不同 kick 的活跃范围差别大，可减轻固件握手或避免空转域。</dd></div><div><dt>代价和限制</dt><dd>电源预测失误、唤醒时间长或缓存状态重建成本高时，频繁切域会拖延短任务。</dd></div><div><dt>验证指标</dt><dd>测 kick 到首条执行的分段延迟、加电域的驻留时间、空闲关门次数和被错唤醒的子单元。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>收益来自分发后等待上电的时长缩短。代价来自等待交付期间提前通电，以及目标集合改变时多唤醒的子单元。工作组排队延迟须单列。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>安排同一批工作在主队列等待外部依赖，再让最终目标集合收缩。若执行启动时点没有前移、额外通电子单元时间却增加，提前上电没有改善关键路径。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>一个小 kick 仅需 mGPU0。尚未启动的小任务之后有一项会使用 mGPU0、mGPU1 的大 kick。</dd></div><div><dt>处理结果</dt><dd>系统可让 mGPU1 在小任务期间休眠。若大任务的需求已经可见，就能提前开始唤醒 mGPU1；在就绪前不会向它发送实际执行。</dd></div><div><dt>结果解读</dt><dd>是否省延迟由可预见的提前量和唤醒成本决定。及时获知队列和活跃状态本身不会消除上电时间。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
-<p>GPU 分派进度与资源控制</p></li></ul>
+<p>US20260087582A1 的 GPU 工作控制根据多个队列和已经分派的工作状态与电源控制电路通信。US12333339B2 读取工作组的分派进度，决定是否把余下工作交给其他组。前者决定执行资源的供电状态，后者重新分配工作，时间线上需分开标记唤醒、可分派和已分派。</p></li></ul>
     <p><a href="../index.html?patent=US20260087582A1#knowledge">在全量关系图上定位 US20260087582A1</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

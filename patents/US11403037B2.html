@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11403037B2 根据内存总线活动调整连续读写轮次 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11403037B2</code><span>美国授权专利</span><time datetime="2022-08-02">2022-08-02</time></p>
   <h1>根据内存总线活动调整连续读写轮次</h1>
   <p class="english-title" lang="en">Ordering memory requests based on access efficiency</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">连续同方向传输可减少总线方向切换，但写轮次太长时，后续读请求需要等待。方案通过完成的轮次反馈总线活动，以更新接下来的读写批量。</p>
     <p>控制器按当前效率值调度连续读和连续写。完成一对轮次后，根据传输中实际处理请求的时间重新计算效率，再修改后续轮次的读写请求数。</p>
     <ol class="walkthrough"><li><h3>写请求入队</h3><p>保留收到的写请求，等待已调度写轮次。</p></li><li><h3>调度一对读写轮次</h3><p>当前效率值约束连续读与连续写各自的数量。</p></li><li><h3>在轮次完成后采样</h3><p>记录总线活动用于更新内存访问效率。</p></li><li><h3>调整下一对轮次的批量</h3><p>按新的效率值改变可连续执行的读请求和写请求数。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 和原图 5 允许把部分写的读改写放在读轮次与写轮次交界。控制器先从指定页读出原数据，再修改并写回，复用轮次原有的读转写。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在持续混合读写流量下，可以根据总线利用率调整方向切换频率。</dd></div><div><dt>代价和限制</dt><dd>用更长轮次提高活动占比可能提升读请求尾延迟。反馈也会受负载变化速度影响。</dd></div><div><dt>验证指标</dt><dd>分别测数据总线活跃周期比例、读 P95/P99、写队列等待及方向切换次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>交界调度可能省掉为读改写单独插入的总线方向切换。其读和写仍消耗数据总线周期。分别计数每次读转写的空闲周期、被合并的方向切换，以及普通写请求从入队到下发的等待。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果部分写所需的读数据在轮次交界仍未就绪，首个普通写也可能被推迟。可固定读写数量，改变部分写目标行的就绪时刻，检查省下的切换周期是否被等待抵消。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设控制器完成一轮读和一轮写，监测到切换或其他等待使活动占比偏离其策略目标。</dd></div><div><dt>处理结果</dt><dd>控制器用这一对轮次的活动信息更新效率，据此决定后续轮次的批量。</dd></div><div><dt>结果解读</dt><dd>教学例只说明反馈路径，不假定所有低效率都应增加写轮次长度。具体阈值和响应见实施方式。</dd></div></dl>
     </div>
     
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12730763B2.html#engineering">关键读触发提前结束写服务轮次</a>
-<p>读写轮次反馈与提前切换</p></li><li><a href="US12216594B2.html#engineering">双 rank 读轮次按请求数分配槽位并按 QoS 切换</a>
-<p>读轮次内分槽与跨轮次调整</p></li></ul>
+<p>US11403037B2 在一对读写轮次完成后测量活动时间，再调整后续轮次的读写批量。US12730763B2 把关键读带入当前写轮次的切换判断，同时检查写队列空位等条件。前者的观察窗口是一对轮次，后者的触发点是关键读进入后的当轮边界。</p></li><li><a href="US12216594B2.html#engineering">双 rank 读轮次按请求数分配槽位并按 QoS 切换</a>
+<p>US11403037B2 用测得的内存访问效率调整下一组读写轮次的连续请求数。US12216594B2 在一轮读操作开始时按两个 rank 的请求数分配槽位，再依服务质量要求决定允许的 rank 切换次数。两种仲裁分别改变每轮读写的长度和同一读轮次内的 rank 服务顺序。</p></li></ul>
     <p><a href="../index.html?patent=US11403037B2#knowledge">在全量关系图上定位 US11403037B2</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

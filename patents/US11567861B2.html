@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11567861B2 按页访问率迁移热页，使部分物理内存进入自刷新 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US11567861B2</code><span>美国授权专利</span><time datetime="2023-01-31">2023-01-31</time></p>
   <h1>按页访问率迁移热页，使部分物理内存进入自刷新</h1>
   <p class="english-title" lang="en">Hashing with soft memory folding</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">物理内存切片绑定一组物理页。将整个切片的内容全部搬走可能使低功耗转换过慢。权利要求按页访问率选择需要迁移的子集。</p>
     <p>准备停用一个物理切片时，先把超过访问率阈值的页复制到另一切片，再修改这些页的虚拟到物理映射。其余页保留映射。之后停用原切片，从属项列举主动或因无访问而进入自刷新。</p>
     <ol class="walkthrough"><li><h3>选择可停用切片</h3><p>监视内存访问和容量需求。在适合低活动状态时选择候选物理资源。</p></li><li><h3>迁移访问率超过阈值的页</h3><p>复制到不会被此次停用的切片。阈值作用于页的访问率。</p></li><li><h3>更新迁移页映射</h3><p>迁移完成后为对应虚拟地址改用新物理页。其他地址的映射保持原位置。</p></li><li><h3>调整原切片状态</h3><p>停止持续访问该资源。实施例允许 DRAM 因空闲进入自刷新或由控制逻辑显式请求自刷新。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> 把两级访问率判定与页分配器串起来。切片整体访问率低于第一阈值时，先停止向该切片分配物理页，再识别超过第二阈值的页。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>低活动期较长且热页只占候选切片的一部分时，可减少活动内存切片。</dd></div><div><dt>代价和限制</dt><dd>迁移占用带宽，转换地址翻译需要正确同步。若冷页很快变热，切片恢复和迁移开销会增加。</dd></div><div><dt>验证指标</dt><dd>按切片测迁移字节数、进入低功耗所需时间、低功耗驻留时长、重新访问的尾延迟及总能量。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>禁止新分配有助于稳定待迁移的页集合，随后的复制则占用其他切片的可用页和内存带宽。可分开统计停止分配后的物理页分配去向、实际迁移字节及各切片进入自刷新的次数。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若停用后，一个此前低于阈值、仍留在原切片的页突然变热，原切片可能频繁退出自刷新。可在迁移后改变访问热点，测量新增退出次数和稳定期能量，判断热度统计是否仍有效。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学场景中切片 A 的页 P 活跃，页 Q 较冷。切片 B 有可用于迁移的物理页。</dd></div><div><dt>处理结果</dt><dd>先复制 P 至 B，再更新对应地址翻译；Q 维持原映射。A 可以按实现进入低活动状态。</dd></div><div><dt>结果解读</dt><dd>保留映射的页之后若再次被访问，需要考虑恢复该切片的延迟。页迁移也有复制和刷新旧地址转换的成本。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US20230367510A1.html#engineering">用可编程多粒度地址散列选择内存控制器</a>
-<p>共同主张临时申请优先权</p></li></ul>
+<p>两份文献的说明书均列出美国临时申请 63/179,666，各自的继续申请链经过不同母案。US20230367510A1 的公开权利要求 26 涉及页内分散和多粒度散列，US11567861B2 的权利要求 1 涉及迁移高访问率的页、更新虚拟地址映射并停用原内存切片。</p></li></ul>
     <p><a href="../index.html?patent=US11567861B2#knowledge">在全量关系图上定位 US11567861B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11586551B2 空闲核的存储阵列失效维护 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US11586551B2</code><span>美国授权专利</span><time datetime="2023-02-21">2023-02-21</time></p>
   <h1>空闲核的存储阵列失效维护</h1>
   <p class="english-title" lang="en">Storage array invalidation maintenance</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">核心暂停执行时可以保留一部分缓存状态。在它空闲期间，其他代理仍可能改动它缓存过的指令或地址翻译。</p>
     <p>电源管理电路在核进入空闲状态时通知缓存电路拦截发给该核的失效请求，并接收通知、保存待失效信息。核收到恢复请求后，电路在它重新执行前按记录处理。如果核从空闲转为断电，电路丢弃这段空闲期的记录。</p>
     <ol class="walkthrough"><li><h3>进入空闲状态</h3><p>电源状态机从 run 经准备阶段进入 idle。缓存电路随后拦截发给目标阵列的请求，核心可以继续保持空闲。</p></li><li><h3>记录失效地址</h3><p>电源管理电路接收缓存侧通知，把地址写入失效缓冲。图 2 的实现可以分别记录 ICache 和 TLB 的地址和计数。</p></li><li><h3>唤醒时处理记录</h3><p>收到唤醒请求后，状态机先进入 invalidation。缓冲未溢出时按地址失效，溢出时可清空对应阵列。维护完成后核心才能取指。</p></li><li><h3>处理断电期间的通知</h3><p>核心转入 powered-off 时，电路处置此前的空闲期记录。图 4 的保留供电方案还可以接收断电期间的新通知，在恢复时处理仍保留的阵列。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 把另一个存储阵列的失效信息与第一阵列区分开。图 2 的实施例各给 ICache 和 TLB 一组计数器及地址缓冲，说明书也允许两者共用。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>空闲时间较长、失效请求不多时，可以集中维护，并保留未受影响的缓存条目。</dd></div><div><dt>代价和限制</dt><dd>失效请求密集时，缓冲可能反复溢出。核心每次恢复都可能面对一个空的阵列。</dd></div><div><dt>验证指标</dt><dd>记录每千次维护触发的唤醒次数和缓冲溢出率。恢复后分别测首次取指和页表访问的等待时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>分开记录会占用更多控制状态，但一类维护流量较大时，另一类仍能保留精确的待失效地址。观察恢复路径分别清掉哪些阵列条目，就能区分这两种组织的影响。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>两类维护请求若轮流出现，共享缓冲可能比两个固定分区容纳更多有效地址。这个容量取舍由图 2 的两种组织推得，权利要求没有规定缓冲大小或分区比例。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设 ICache 的地址缓冲只能保留两项。核心空闲期间收到 X 和 Y 的失效通知。</dd></div><div><dt>处理结果</dt><dd>核心重新执行前先使 X、Y 失效。若第三条通知使计数器溢出，可以改为使整个 ICache 失效。没有溢出的 TLB 记录仍可单独处理。</dd></div><div><dt>结果解读</dt><dd>两项是示例容量。权利要求规定恢复前处理待失效记录，并覆盖溢出时使整个阵列失效的情形。</dd></div></dl>
     </div>
     
@@ -118,9 +119,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11630771B2.html#engineering">用待失效标记推迟缓存失效</a>
-<p>谁触发实际失效</p></li><li><a href="US10909035B2.html#engineering">中间缓存容量为零时仍保留控制路径</a>
-<p>阵列停用与失效维护</p></li><li><a href="US11275697B2.html#engineering">合并 TLB 失效请求时保留电源状态边界</a>
-<p>电源状态改变后的失效</p></li></ul>
+<p>两件都能推迟维护，但判断条件不同。US11630771B2 在作用域匹配当前执行状态时记录待失效标记，等待对应同步事件。US11586551B2 在目标核空闲时拦截并缓冲失效，恢复前执行，切换到断电时可丢弃记录。前者关心同步语义，后者关心电源状态转换。</p></li><li><a href="US10909035B2.html#engineering">中间缓存容量为零时仍保留控制路径</a>
+<p>两件专利都把数据阵列和一致性操作分开。零容量中间层继续转发探测，取指缺失时仍可查上层数据缓存寻找最新值。空闲核方案面对的是仍保存条目的阵列，由 PMU 记下失效，恢复执行前处理。取数依赖探测返回，空闲阵列的失效则可推迟到唤醒边界。</p></li><li><a href="US11275697B2.html#engineering">合并 TLB 失效请求时保留电源状态边界</a>
+<p>US11275697B2 的从属权利要求 7 描述进入非活动状态时清除 TLB，因此已经被转换覆盖的请求可以丢弃。US11586551B2 的实施方式在空闲保留阵列时缓冲失效通知，在处理器核心恢复前清除相关条目。判断是否可以略过失效，先核实目标缓存或 TLB 在该电源状态下是否保留。</p></li></ul>
     <p><a href="../index.html?patent=US11586551B2#knowledge">在全量关系图上定位 US11586551B2</a></p>
   </section>
 </div>
@@ -145,7 +146,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

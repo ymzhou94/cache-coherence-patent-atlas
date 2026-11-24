@@ -36,16 +36,29 @@
     return { baseline: schedule(backlog), limited: schedule(Math.min(backlog, limit)), target: target.id };
   }
 
-  function fillTrace({ controllerHops, mergeWork, controllerWait, mergeWait, sharedWait }) {
-    const toMerge = 2;
-    const toController = toMerge + controllerWait + controllerHops;
-    const fillAtMerge = toController + 1 + controllerHops;
-    const localFill = toMerge + mergeWait + mergeWork;
-    return {
-      toMerge, toController, fillAtMerge, localFill,
-      baseline: fillAtMerge + sharedWait + 2,
-      bypass: localFill + sharedWait + 2,
-    };
+  function fillTrace({ controllerHops, mergeWork, controllerWait, mergeWait, sharedWait, count = 1, gap = 1, downlinkInterval = 1 }) {
+    let converterFreeAt = 0;
+    let baselineLinkFreeAt = 0;
+    let bypassLinkFreeAt = 0;
+    const rows = Array.from({ length: count }, (_, index) => {
+      const sent = index * gap;
+      const toMerge = sent + 2;
+      const toController = toMerge + controllerWait + controllerHops;
+      const fillAtMerge = toController + 1 + controllerHops;
+      const conversionStart = Math.max(toMerge + mergeWait, converterFreeAt);
+      const localFill = conversionStart + mergeWork;
+      converterFreeAt = localFill;
+      const baselineSend = Math.max(fillAtMerge + sharedWait, baselineLinkFreeAt);
+      const bypassSend = Math.max(localFill + sharedWait, bypassLinkFreeAt);
+      baselineLinkFreeAt = baselineSend + downlinkInterval;
+      bypassLinkFreeAt = bypassSend + downlinkInterval;
+      return {
+        sent, toMerge, toController, fillAtMerge, conversionStart, localFill, baselineSend, bypassSend,
+        baseline: baselineSend + 2,
+        bypass: bypassSend + 2,
+      };
+    });
+    return { ...rows[0], rows };
   }
 
   function missQueueTrace({ pattern, gap, lookup, prepare, slots }, speculate) {
@@ -203,12 +216,20 @@
     });
   }
 
-  function batteryPulseTrace({ horizon, tau, polarization, demand }) {
+  function batteryPulseTrace({ horizon, tau, polarization, demand, count = 1, idle = 0 }) {
     const open = 4;
     const cut = 3.4;
     const ohmic = 0.1;
-    const impedance = ms => ohmic + polarization / 1000 * (1 - Math.exp(-ms / tau));
-    const limit = (open - cut) / impedance(horizon);
+    const rc = polarization / 1000;
+    const impedance = ms => ohmic + rc * (1 - Math.exp(-ms / tau));
+    const decay = Math.exp(-horizon / tau);
+    const rest = Math.exp(-idle / tau);
+    const endResistance = impedance(horizon);
+    const currentLimit = residual => Math.min(
+      (open - cut - residual) / ohmic,
+      (open - cut - residual * decay) / endResistance,
+    );
+    const limit = currentLimit(0);
     const currentStatic = Math.min(demand / 1000, (open - cut) / ohmic);
     const currentWindow = Math.min(demand / 1000, limit);
     const rows = Array.from({ length: 5 }, (_, index) => {
@@ -216,7 +237,24 @@
       const resistance = impedance(ms);
       return { ms, resistance, staticVoltage: open - currentStatic * resistance, windowVoltage: open - currentWindow * resistance };
     });
-    return { cut, limit, currentStatic, currentWindow, rows };
+    let resetResidual = 0;
+    let trackedResidual = 0;
+    function pulse(residual, current) {
+      const after = residual * decay + current * rc * (1 - decay);
+      return {
+        residual, current,
+        minimum: open - current * ohmic - Math.max(residual, after),
+        nextResidual: after * rest,
+      };
+    }
+    const pulses = Array.from({ length: count }, () => {
+      const reset = pulse(resetResidual, currentWindow);
+      const tracked = pulse(trackedResidual, Math.min(demand / 1000, currentLimit(trackedResidual)));
+      resetResidual = reset.nextResidual;
+      trackedResidual = tracked.nextResidual;
+      return { reset, tracked };
+    });
+    return { cut, limit, currentStatic, currentWindow, rows, pulses };
   }
 
   function memoryPauseTrace({ pause, readRate, writeRate, readStock, writeFree }) {

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12625723B2 I/O 代理用分类型计数器约束事务发出 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#snoop">Snoop 与一致性</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US12625723B2</code><span>美国授权专利</span><time datetime="2026-05-12">2026-05-12</time></p>
   <h1>I/O 代理用分类型计数器约束事务发出</h1>
   <p class="english-title" lang="en">Counters for ensuring transactional ordering in I/O agent</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">I/O 代理接收不同种类的事务。一项较年轻的请求何时能进入流水线，可能取决于较老的其他类型事务是否完成。硬件可以把等待条件编码为计数器值。</p>
     <p>分配会阻塞其他事务的操作时，代理递增受影响类型的计数器。另一类型的请求保存指针绑定该计数器。相关较老事务完成时计数器递减。回到初始值后，等待的请求可以进入流水线。</p>
     <ol class="walkthrough"><li><h3>初始化分类型计数器</h3><p>I/O 代理为事务类型定义初值及其计数关系。</p></li><li><h3>分配会造成依赖的事务</h3><p>较老事务进入处理结构时，影响的其他类型计数器递增。</p></li><li><h3>绑定较年轻事务</h3><p>其请求项保存所需计数器的指针，并留在入口等待。</p></li><li><h3>较老事务完成并放行</h3><p>对应计数器递减。计数值返回初始状态之后，等待事务才满足发出条件。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 共同限定一次绑定的计数窗口。当前事务绑定后，较年轻的异类事务增加新计数器。较老事务在退休时按分配时保存的指针递减原计数器。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>入口可以直接根据计数器判断跨类型顺序依赖，避免通过完成时间猜测依赖是否解除。</dd></div><div><dt>代价和限制</dt><dd>计数要精确对应分配和完成。持续拥塞时，等待队列和未完成事务会占用硬件资源。</dd></div><div><dt>验证指标</dt><dd>记录每种事务的入队、进入流水线及完成时刻，统计计数器非初值的等待、入口占用和重试。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>固定计数窗口使后到请求无法延长已注册的依赖。每个未完成的窗口需要占用池中一个计数器。可按窗口记录最后一次递减、等待项发出和计数槽释放三个事件。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>即使计数器回到初值，权利要求 7 的同类型事务还须到达队首。可让队首卡在另一个计数器上，比较后项的依赖解除与实际发出时刻。两者的间隔属于队列约束。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学例中 T2 的初值为 0，有两个尚未完成的较老 T1 事务需要阻塞 T2。</dd></div><div><dt>处理结果</dt><dd>分配两个 T1 后计数为 2。T2 绑定计数器，直到两个 T1 都完成后才可发出。</dd></div><div><dt>结果解读</dt><dd>数值展示依赖关系，实际计数宽度与事务类型按实现确定。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12632384B2.html#engineering">I/O 代理可乱序取得独占读权限</a>
-<p>I/O 事务的发出与完成</p></li><li><a href="US11893413B2.html#engineering">用写表缩短虚拟通道的请求缓冲驻留</a>
-<p>写请求缓冲释放与事务排序</p></li><li><a href="US12067275B1.html#engineering">I/O 代理在同一请求存储体中划分顺序子域</a>
-<p>顺序子域与跨类型事务依赖</p></li></ul>
+<p>两件专利把约束施加在不同阶段。US12632384B2 允许先拿到较年轻事务的独占读权限，原图 4 在外设侧继续按序完成。US12625723B2 用类型计数器约束较年轻事务何时进入流水线，阻塞解除发生在发出前。测性能时应分别记录事务发出、权限返回和对外完成。</p></li><li><a href="US11893413B2.html#engineering">用写表缩短虚拟通道的请求缓冲驻留</a>
+<p>US11893413B2 在桥接收写请求且写表分配成功时释放通用请求缓冲项，完成应答到达后再释放写表项。US12625723B2 则让 I/O 代理用分类型计数器保留事务依赖，较老的异类事务完成后才清除对新事务的阻塞。两者对应不同的观测时点，一边是通用缓冲驻留结束，另一边是排序依赖解除。</p></li><li><a href="US12067275B1.html#engineering">I/O 代理在同一请求存储体中划分顺序子域</a>
+<p>US12067275B1 在同一个请求存储体中把外设事务划分为顺序子域，允许不同子域的事务各自推进，外部管理电路仍可将其视为单个一致性代理。US12625723B2 用计数器表达 I/O 事务类型之间的排序依赖，较老的阻塞事务完成后才允许新的异类事务发出。观测时可以分别区分子域队首阻塞和事务类型造成的等待。</p></li></ul>
     <p><a href="../index.html?patent=US12625723B2#knowledge">在全量关系图上定位 US12625723B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

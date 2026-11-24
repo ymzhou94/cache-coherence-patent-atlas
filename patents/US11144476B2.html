@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11144476B2 多端口缓存的 LRU 排名更新 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#cpu">CPU 缓存与 LSU</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
   <p class="document-id"><code>US11144476B2</code><span>美国授权专利</span><time datetime="2021-10-12">2021-10-12</time></p>
   <h1>多端口缓存的 LRU 排名更新</h1>
   <p class="english-title" lang="en">Least recently used ranking in a multi-port cache</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">多端口缓存可以并行读数据，同一组却通常只有一份替换状态。两个端口都读到数据时，如果本拍只能改一次排名，另一路的更新就要等。</p>
     <p>控制器按组记录各 way 的替换排名。同组两路同时命中时，控制器用旧排名和阈值选出本拍先更新的一路。部分实现还把另一路的标识写进反馈寄存器。</p>
     <ol class="walkthrough"><li><h3>先看组号</h3><p>标签比较完成后，控制器拿到两个访问的组号和 way 号。命中不同组时，各端口可以分别更新所在组的排名。两个命中落在同一组的不同 way 时，才会竞争同一份状态。</p></li><li><h3>用旧排名选一路</h3><p>控制器比较各 way 的旧排名和组阈值。图 4 中，数值越小越接近 LRU。这样的行可能更早被逐出，所以先更新。</p></li><li><h3>把选中的 way 提到 MRU</h3><p>控制器更新旧位置和 MRU 之间各行的排名，区间外的行保持原来的相对顺序。这个过程只改排名，数据留在原来的 way。</p></li><li><h3>用反馈寄存器记住另一路</h3><p>如果另一路也满足阈值，控制器可先记下它的 way 标识。后续某拍没有符合阈值的新命中抢占更新时，控制器补做这次提升，再清除反馈项。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>依权 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>，未选中的路若不满足阈值，控制器可以降低其排名。反馈寄存器只用于满足阈值但当拍未选中的那一路，两个动作有不同条件。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>同组双命中频繁、排名写端口又少时，可以优先更新最可能被逐出的行。</dd></div><div><dt>代价和限制</dt><dd>若新命中一直占用更新机会，反馈项会继续等待。期间到来的缺失可能逐出这一路。</dd></div><div><dt>验证指标</dt><dd>在同组和跨组访问轨迹中，分别统计反馈等待了多久、MRU 更新写了几次，以及相对严格 LRU 多了多少缺失。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>反馈保存的是路标识。补做更新时需按该路在组内的现有位置调整排名，因为前一拍的提升可能已经改变了它与其他路的相对次序。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若繁忙端口反复命中本来就接近 MRU 的两路，更新它们的先后通常不会改变下一次逐出。按组筛选的额外比较在这种轨迹上很难换来更少的缺失。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定一组有四路，从 LRU 到 MRU 排成 A、B、C、D，阈值覆盖最旧两路。两个端口同拍命中 A 和 B，反馈寄存器为空。</dd></div><div><dt>处理结果</dt><dd>控制器先提升 A 并记录 B，排名变成 B、C、D、A。下一拍没有符合阈值的新命中时，再提升 B，得到 C、D、A、B。</dd></div><div><dt>结果解读</dt><dd>如果两次更新之间发生缺失，B 仍可能位于淘汰端。若严格 LRU 已按访问顺序提交两次更新，此时最旧的行会不同。</dd></div></dl>
     </div>
     
@@ -115,7 +116,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12222875B1.html#engineering">由关键性选择插入与提升向量</a>
-<p>选更新对象与选新排名</p></li></ul>
+<p>多端口缓存同拍命中同组两路时，先比较两路旧排名与阈值，让控制器决定本次更新哪一路。IPV 方案针对已经确定的访问行，按该行关键性选向量，再由旧排名查新排名。一个解决同拍写替换状态的争用，另一个定义这次更新的幅度。</p></li></ul>
     <p><a href="../index.html?patent=US11144476B2#knowledge">在全量关系图上定位 US11144476B2</a></p>
   </section>
 </div>
@@ -140,7 +141,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12190151B2 GPU 线程分两级分配到通道与执行流水线 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#clpc">CLPC 与性能调节</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12190151B2</code><span>美国授权专利</span><time datetime="2025-01-07">2025-01-07</time></p>
   <h1>GPU 线程分两级分配到通道与执行流水线</h1>
   <p class="english-title" lang="en">Multi-stage thread scheduling</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">该披露讨论 GPU 等处理器内的硬件调度。第一级把线程分到通道，第二级把译码后的操作送往共享执行流水线。</p>
     <p>执行流水线把背压反馈到第一级调度器。调度器据此改变尚未分配到通道的线程优先级，第二级继续按操作类型和流水线可用性仲裁。</p>
     <ol class="walkthrough"><li><h3>线程进入候选集</h3><p>第一级在通道译码前根据线程优先级进行仲裁。</p></li><li><h3>通道译码操作</h3><p>译码阶段识别当前指令需要使用的执行流水线。</p></li><li><h3>分派到执行流水线</h3><p>第二级在多个通道提出的操作之间选择，候选数可能超过可用流水线数。</p></li><li><h3>把背压反馈给前级</h3><p>执行流水线根据执行状态报告背压，第一级调整候选线程的通道分配优先级。权 2 还支持编译器提示。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 2 的编译器提示告知候选线程可能使用的流水线类型，调度决策仍发生在译码前。进入通道以后，指令实际类型由译码确认，再由第二级仲裁。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -100,9 +100,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>把执行级拥塞反馈给通道分配，减少拥塞流水线对其他通道的拖累。</dd></div><div><dt>代价和限制</dt><dd>提示与实际指令流可能不同。优先级长期压低会延长部分线程的等待。</dd></div><div><dt>验证指标</dt><dd>按流水线分别统计背压占比、有效分派率和候选线程尾延迟。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>将吞吐变化分为前级通道利用率和各执行流水线空闲周期。低背压流水线可能更忙，长期避开高背压资源的线程则可能出现通道分配饥饿。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>构造提示指向轻载流水线、实际主要指令却访问繁忙流水线的着色器。若通道驻留时间增加且有效分派率下降，可用提示误判率和每类背压周期定位失效。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>两个候选线程主要使用不同类型的执行流水线。一个流水线持续向第一级报告拥塞。</dd></div><div><dt>处理结果</dt><dd>第一级可以降低倾向占用拥塞资源的线程的仲裁优先级。操作进入通道后的分派依然由第二级决定。</dd></div><div><dt>结果解读</dt><dd>这些优先级属于 GPU 内部通道仲裁。评价时记录通道占用、指令分派率和候选线程等待时间。</dd></div></dl>
     </div>
     
@@ -118,7 +119,7 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12175300B2.html#engineering">GPU 逻辑槽映射给高优先级图形工作预留硬件槽</a>
-<p>工作映射与指令发出</p></li></ul>
+<p>US12175300B2 在 GPU 工作映射阶段检查优先级门槛和硬件槽。US12190151B2 在译码前选择线程，在译码后根据目标流水线选择操作，并把执行流水线的背压反馈给第一级。两件使用的队列和控制量不同，验证时分别记录工作提交到槽映射、线程选择到操作发出的时延。</p></li></ul>
     <p><a href="../index.html?patent=US12190151B2#knowledge">在全量关系图上定位 US12190151B2</a></p>
   </section>
 </div>
@@ -143,7 +144,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20240202146A1 让 DRAM 在接收 SYNC 后延迟启动数据时钟 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US20240202146A1</code><span>美国公开申请</span><time datetime="2024-06-20">2024-06-20</time></p>
   <h1>让 DRAM 在接收 SYNC 后延迟启动数据时钟</h1>
   <p class="english-title" lang="en">Memory Device Bandwidth Optimization</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">多 bank 的内存命令共享命令总线。激活命令占定时隙时，数据总线时钟的 SYNC 命令仍需在首笔数据传输之前生效。让器件内部延迟 SYNC 生效，可把命令发出周期与数据时钟启动周期分开。</p>
     <p>内存流水线接收 SYNC。启用延迟时，器件等指定时长才启动数据时钟。没有延迟指示时正常启动。原图 3E–3F 把 SYNC 发出从第 18 周期移到第 17 周期，由一周期内部延迟保持原生效点。</p>
     <ol class="walkthrough"><li><h3>为 bank 激活安排时隙</h3><p>控制器把激活和访问命令编排到命令总线，满足相关 bank 等待条件。</p></li><li><h3>配置 SYNC 延迟</h3><p>器件收到延迟模式指示，或按实施例由 SYNC 参数携带延迟。</p></li><li><h3>提前发送 SYNC</h3><p>避开已分配给激活命令的时隙。</p></li><li><h3>按要求启动数据时钟</h3><p>器件内部的延迟逻辑使其在预定周期生效，后续才能按规定进行数据传输。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00005" aria-label="原文权利要求 5">5</a> 把等待周期编码在 SYNC 操作数字段，由器件端的多位计数器实现。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 分别允许译码器等待后转发，或由执行端等待后启动数据时钟。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>在兼容该模式的器件上，可减少 SYNC 与激活命令争用命令总线。</dd></div><div><dt>代价和限制</dt><dd>内存控制器与器件都须支持该时序能力，不同 DRAM 接口和频率有各自的时序约束。</dd></div><div><dt>验证指标</dt><dd>记录激活与 SYNC 的命令时隙、数据时钟启动和读写数据有效期，同时统计命令总线与数据总线利用率。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>两种放置方式都能调整启动时刻，等待分别占用译码侧或执行侧资源。可同时记录命令译码、执行端接收和数据时钟启动，判断等待期间后续非 SYNC 命令能否继续推进。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>原图 3E、3F 利用了可供提前发送 SYNC 的命令周期。若相同周期必须发其他 bank 的激活命令，提前插入 SYNC 可能推迟该激活。可核对数据时钟对齐后两笔读请求的返回时刻。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>原图 3E–3F 中本需在第 18 个命令总线周期处理 SYNC，那里又是激活命令的时隙。</dd></div><div><dt>处理结果</dt><dd>改在第 17 周期发出 SYNC。器件内部延迟一周期，使时钟启动仍对应原第 18 周期的效果。</dd></div><div><dt>结果解读</dt><dd>这是一组披露的命令时序。“周期”指命令总线周期，不能直接把一周期换算成整条 DRAM 读延迟。</dd></div></dl>
     </div>
     
@@ -115,8 +116,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12079144B1.html#engineering">数据总线忙时选择仅需命令的请求</a>
-<p>命令发出与数据总线时序</p></li><li><a href="US12444474B2.html#engineering">内存工作点切换至目标电压前重复校准接口时序</a>
-<p>数据时钟启动与接口时序校准</p></li></ul>
+<p>US20240202146A1 允许 DRAM 在命令总线上提前接收 SYNC，并由器件延迟启动数据时钟。US12079144B1 在数据总线不可用时优先考虑无需发送数据操作数的请求。判断命令带宽是否得到利用时，要分别计量命令发出、数据时钟启动和数据实际传输。</p></li><li><a href="US12444474B2.html#engineering">内存工作点切换至目标电压前重复校准接口时序</a>
+<p>US20240202146A1 在 DRAM 侧按 SYNC 延迟指示选择数据时钟的启动时点。US12444474B2 在性能状态切换期间重复发起存储器时序测试，根据返回的计数值调节送往存储器的时钟延迟。前者的观测量是某笔事务的命令到数据时钟启动间隔，后者的观测量是电压变化期间的接口时钟延迟及其校准值。</p></li></ul>
     <p><a href="../index.html?patent=US20240202146A1#knowledge">在全量关系图上定位 US20240202146A1</a></p>
   </section>
 </div>
@@ -141,7 +142,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

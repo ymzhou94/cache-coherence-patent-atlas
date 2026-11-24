@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11416254B2 同一解码组内的零额外周期 load 旁路 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US11416254B2</code><span>美国授权专利</span><time datetime="2022-08-16">2022-08-16</time></p>
   <h1>同一解码组内的零额外周期 load 旁路</h1>
   <p class="english-title" lang="en">Zero cycle load bypass in a decode group</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">同组 store 与后续 load 即使需要传递同一份数据，常规取数也可能经过地址生成和 store queue。若解码阶段就能确认这种依赖，重命名即可把后续消费者接到现有的生产者。</p>
     <p>硬件比较同一解码周期内的较早 store 和后续 load，同时检查其间是否有指令改写寻址寄存器。条件满足后，重命名器把 load 的目的寄存器映射到 store 数据源使用的物理寄存器。</p>
     <ol class="walkthrough"><li><h3>在同一解码组找 store 与 load</h3><p>解码器同拍给出组内操作。比较电路找出较老的 store 和其后可能相关的 load，并以这组指令判断旁路资格。</p></li><li><h3>检查中间指令是否改写寻址寄存器</h3><p>只要一条中间指令改写影响地址的架构寄存器，比较器就不能沿用旧 store 的等址判断。</p></li><li><h3>复用 store 数据源的物理编号</h3><p>通过资格检查后，重命名器让 load 的目的映射使用 store 数据源的物理寄存器号。一种实现还可以跳过从 free list 取新编号。</p></li><li><h3>消费者等源寄存器就绪</h3><p>之后读 load 目的值的指令都等这个源寄存器。省下的是普通 load 的数据路径，最早可消费时间仍由生产者何时写出该值决定。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 把相邻操作用于简化检查。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11416254B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 还明确可比较同周期产生的操作码，以识别 store 之后具有地址依赖的 load。配对范围仍由译码组限定。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>两次访存在同一个解码组且 store 源数据就绪时，消费者可通过重命名直接取值。</dd></div><div><dt>代价和限制</dt><dd>跨组、寻址寄存器被改写或寻址复杂时，适用的匹配减少。组内比较逻辑也要满足解码时序。</dd></div><div><dt>验证指标</dt><dd>统计通过资格的比例、各类未通过原因、跳过的 free-list 读取次数，以及消费者何时实际拿到源值。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>复用的是物理寄存器映射，最终省下的是消费者等待 load 数据返回的一段链路。原 store 的地址及提交责任仍在它自己的路径上，不能把少一次取数当作少一次写入。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在同一缓存行上先写四字节、再读取覆盖八字节的 load 时，字节范围更宽。即使基址表达式相同，也不能只凭相等的寻址寄存器就让该 load 使用原 store 的单个值。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>假定同一组依次解码 store [X1] ← X2、一条独立操作和 load X3 ← [X1]。两次访存均满足资格，中间操作不写 X1，X2 当前映射到 P17。</dd></div><div><dt>处理结果</dt><dd>重命名器可将 X3 也映射到 P17。后续读取 X3 的指令便从 P17 获得数据。若中间操作改写 X1，这个匹配分支便不能使用。</dd></div><div><dt>结果解读</dt><dd>这个序列采用相同的寻址形式，并假定其他资格满足。跨组、地址别名或操作宽度不同时，需要按各自条件判断。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11175917B1.html#engineering">并行重放缓冲加快等待 store 数据的 load</a>
-<p>重命名旁路与重放</p></li><li><a href="US12547401B2.html#engineering">把依赖 load 的比较或运算移入 LSU</a>
-<p>移动消费者和复用生产者</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
-<p>减少加载依赖链上的等待</p></li></ul>
+<p>两件专利都处理 load 等待较早 store 数据的问题。同一解码组内能证明寻址寄存器未被中间指令改写时，前者把 load 目的重命名为 store 的源物理寄存器。后者在执行期才发现 store queue 地址命中、数据未到，用配对标识监听 store 数据操作的发射，再触发 load 重放。两者缩短的是不同阶段的等待，依赖值都仍需就绪。</p></li><li><a href="US12547401B2.html#engineering">把依赖 load 的比较或运算移入 LSU</a>
+<p>US12547401B2 仍执行原始 load，把后续消费操作的比较或算术移到 LSU 处理。US11416254B2 则在同一解码组识别较早的 store，在地址及依赖条件满足时，把 load 目的映射到 store 数据源物理寄存器。两项机制作用在不同阶段，应分别量化比较结果可用延迟和被省去的数据通路。</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
+<p>US11893241B1 在缓存数据阵列回程仲裁处处理近远阵列同拍返回，近组可能多等一个周期。US11416254B2 在同一解码组中识别安全的 store 到 load 依赖，经寄存器重命名让该 load 使用已有物理寄存器。两项专利优化的是不同位置的加载依赖，适用条件分别是阵列回程争用和可证明的组内地址关系。</p></li></ul>
     <p><a href="../index.html?patent=US11416254B2#knowledge">在全量关系图上定位 US11416254B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

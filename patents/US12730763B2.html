@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12730763B2 关键读触发提前结束写服务轮次 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#slc">SLC 与内存控制器</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
   <p class="document-id"><code>US12730763B2</code><span>美国授权专利</span><time datetime="2026-09-08">2026-09-08</time></p>
   <h1>关键读触发提前结束写服务轮次</h1>
   <p class="english-title" lang="en">Mechanisms for processing memory requests based on criticality</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">内存控制器通常成批执行写命令，以减少读写转向。批量写尚未做完时，CPU 可能已经被新到的 load 卡住。处理器提供关键性，控制器据此判断能否打断当前写轮次。</p>
     <p>处理器给出请求的关键性。内存系统在写轮次里收到关键读后，检查指定优先级的写队列还有多少空位。空位达到下限并满足其他启用条件时，控制器可以提前进入读轮次。</p>
     <ol class="walkthrough"><li><h3>处理器给出请求的关键性</h3><p>处理器或 LLC 逻辑判断请求是否关键。实施例包括阻住队头的 load、地址转换表遍历，以及 I-cache 未命中队列的队首。</p></li><li><h3>在写轮次收到读请求</h3><p>内存系统读取关键性字段，有些实施方式则另行询问。普通读继续等待可获读服务的时点。</p></li><li><h3>检查写队列空位</h3><p>控制器检查指定优先级的写队列是否达到空位下限。实施例还可能考虑当前写轮次的进度、过去的写压力或实时流量是否升级。</p></li><li><h3>按启用条件决定是否切轮</h3><p>条件满足时，控制器可以提前结束写轮次。其余情形可继续原轮次。切到读轮次后，仲裁器再按读队列的服务规则选请求。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 4、5 将一次关键读的门槛判定与剩余写轮次绑定。首次检查若判定条件不满足，该轮写服务仍完成，即使门槛随后变得满足。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,12 +97,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>写压力暂时低于饱和时，提前开启读轮次能缩短关键读等待写批次完成的时间。</dd></div><div><dt>代价和限制</dt><dd>频繁切换会增加读写转向，并可能降低写吞吐。写队列接近满载时，需要一起衡量积压。</dd></div><div><dt>验证指标</dt><dd>用相同的到达序列比较关键读 p95、p99、写队列峰值、总写吞吐和读写转向次数。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>这一限制减少同一轮内因队列空位变化反复尝试切换的机会，代价是刚错过门槛的关键读可能等完整个剩余批次。应对齐首个判定时点、空位变化和读轮次开始。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若关键读到达时写队列只差一个空位，紧随其后的写完成也不会让权利要求 5 的实施例提前切读。把门槛建模为逐拍重新仲裁，会低估这类请求的等待。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>模型算例</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>设每轮计划处理 8 个写槽。关键读在第 2 个写槽服务完后到达。模型要求至少服务 2 槽，指定写队列至少有 3 个空位。分别比较有 4 个和 1 个空位的情况。</dd></div><div><dt>处理结果</dt><dd>空位为 4 且其他条件满足时，可以提前切换，关键读最多绕过后续 6 个写服务机会。只有 1 个空位时继续原轮次，让写侧继续排出请求。</dd></div><div><dt>结果解读</dt><dd>6 是剩余计划写槽数。若要算读延迟，还要计入总线转向、读请求间的竞争和 DRAM 行状态。</dd></div></dl>
     </div>
-    <a class="lab-link" href="../lab.html#read-turn">运行对应原型</a>
+    <a class="lab-link" href="../lab.html#read-turn">复算该场景</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11900146B2.html#engineering">实时内存事务专表与独立 credit</a>
-<p>有信用仍需读轮次</p></li><li><a href="US12079144B1.html#engineering">数据总线忙时选择仅需命令的请求</a>
-<p>等数据线或换方向</p></li><li><a href="US11403037B2.html#engineering">根据内存总线活动调整连续读写轮次</a>
-<p>读写轮次反馈与提前切换</p></li></ul>
+<p>独立 credit 保住实时内存事务的仲裁资格。即便具备资格，读请求也可能赶上集中写轮次。另件授权的切换条件是处理器标明这笔读为关键读，并且指定优先级的写队列有足够空位等条件成立，可提前转入读轮次。</p></li><li><a href="US12079144B1.html#engineering">数据总线忙时选择仅需命令的请求</a>
+<p>命令和数据分线时，US12079144B1 在数据线不可用时仍可从另一地址队列选不需携带数据的合格请求。US12730763B2 遇到关键读时可提前结束整段写轮次，前提之一是写队列有足够空位。前者利用仍可用的命令链路，后者改变读写服务方向。</p></li><li><a href="US11403037B2.html#engineering">根据内存总线活动调整连续读写轮次</a>
+<p>US11403037B2 在一对读写轮次完成后测量活动时间，再调整后续轮次的读写批量。US12730763B2 把关键读带入当前写轮次的切换判断，同时检查写队列空位等条件。前者的观察窗口是一对轮次，后者的触发点是关键读进入后的当轮边界。</p></li></ul>
     <p><a href="../index.html?patent=US12730763B2#knowledge">在全量关系图上定位 US12730763B2</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>

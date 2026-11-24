@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12229561B1 TLBI 后的数据同步屏障等待目标核在途访问 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=research">
+<link rel="stylesheet" href="../assets/site.css?edition=analysis">
 
 </head>
 <body>
@@ -12,7 +12,6 @@
 <header class="topbar"><div class="frame topbar-inner">
   <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
   <nav class="top-nav" aria-label="主导航">
-    <a href="../topics.html">工程专题</a>
     <a href="../index.html#knowledge">关系图谱</a>
     <a href="../index.html#catalog">专利目录</a>
     <a href="../lab.html">原型实验室</a>
@@ -21,7 +20,7 @@
 <main id="main">
 <div class="article-title">
 <div class="frame">
-  <p class="crumb"><a href="../topics.html">工程专题</a><span aria-hidden="true">/</span><a href="../topics.html#latency">访存延迟与预取</a></p>
+  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
   <p class="document-id"><code>US12229561B1</code><span>美国授权专利</span><time datetime="2025-02-18">2025-02-18</time></p>
   <h1>TLBI 后的数据同步屏障等待目标核在途访问</h1>
   <p class="english-title" lang="en">Processing of data synchronization barrier instructions</p>
@@ -42,6 +41,7 @@
     <p class="section-intro">仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</p>
     <p>远端核收到后续 DSB 指示，检查已完成虚实地址转换但仍未退休的指令。实施例用标志位翻转区分屏障之前和之后的转换。确认发出前，需等待符合条件的指令退休。</p>
     <ol class="walkthrough"><li><h3>发起跨核同步</h3><p>权 1 指定本地 DSB 指令跟在欲使 TLB 项失效的 TLBI 之后。</p></li><li><h3>确定待确认指令</h3><p>远端目标核检查有无虚拟地址已经转换为物理地址而尚未退休的指令。</p></li><li><h3>跟踪待处理项的退休</h3><p>实施例可用位标识区分 DSB 到达前后完成地址转换的指令。</p></li><li><h3>生成远端确认</h3><p>需等待的相关指令退休后，目标核才发出确认。</p></li><li><h3>发送核观察同步完成</h3><p>确认回到发起核，与具体内核软件是否使用这个实现无关。</p></li></ol>
+    <div class="analysis-note"><h3>机制约束</h3><p>权 2 用指令携带的标志与当前标志判定它何时完成地址转换。权 3 把翻转当前标志安排在回复之后。权 4 另把目标 TLB 条目的真正失效安排在收到 DSB 指示之后。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -97,9 +97,10 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">实验与取舍</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>远端回复所等待的指令集合由实际在途转换限定，有机会减少整条流水线同步的等待。</dd></div><div><dt>代价和限制</dt><dd>远端慢速访存可能仍然主导 DSB 确认尾延迟。访存指令、TLBI 和 DSB 的时序需要各自核对。</dd></div><div><dt>验证指标</dt><dd>从发送核发出 DSB 到收齐远端确认计时，另计每个远端的已翻译未退休指令数和最晚退休时间。</dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>标志位可把跨边界的转换分开，发起核仍需等待远端回复。若想区分失效开销和已有访存排空，须单独看远端首次识别 TLB 条目、执行失效和发回确认三个时点。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在目标核的 TLB 项已能很快失效时，让一条先完成转换的 load 继续等待远端缓存数据。确认仍可能被这条已在途指令拖住，单独测 TLB 维护用时会低估发送端等待。</p></div>
     <div id="example" class="article-example">
-      <h3>教学算例</h3>
+      <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>核 A 发出 TLBI 后执行 DSB。核 B 在收到 DSB 指示前已有一条地址完成转换的 load，但该 load 尚未退休。</dd></div><div><dt>处理结果</dt><dd>核 B 记录该在途 load，待满足退休条件后回复核 A。</dd></div><div><dt>结果解读</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div></dl>
     </div>
     
@@ -115,9 +116,9 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12639070B2.html#engineering">指令同步屏障前后的投机取指</a>
-<p>远端确认和核内取指</p></li><li><a href="US12321746B2.html#engineering">跨处理器数据同步屏障可排除指定地址区间</a>
-<p>DSB 应答等待对象</p></li><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
-<p>跨设备失效的完成边界</p></li></ul>
+<p>两件讨论的屏障对象不同。US12229561B1 要求目标核等待在 DSB 指示之前已完成地址转换的在途指令退休，再回复发起核。US12639070B2 关注一个核内 ISB 前后，允许提前取年轻指令，并在退休阶段校验旧状态依赖。分别观测跨核确认延迟和屏障后首条指令的可译码时间。</p></li><li><a href="US12321746B2.html#engineering">跨处理器数据同步屏障可排除指定地址区间</a>
+<p>US12321746B2 的目标处理器等待排除地址区间之外的在途 load/store 完成后应答。US12229561B1 针对 TLB 失效指令（TLBI）之后的数据同步屏障（DSB），要求目标核根据已完成地址转换的在途指令是否退休来应答。两种机制的核间应答均受目标核流水线状态约束，但所等待的事务集合和完成条件不同。</p></li><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
+<p>US12229561B1 用 TLBI 后的 DSB 查找在收到屏障前已完成地址转换的在途指令，并等待有关指令退休后回复。US12487927B2 的主处理器在解除映射后发出远程缓存失效，说明书分别给出映射与远程清理的阻塞边界。两者都要求按事件明确谁可以确认完成。</p></li></ul>
     <p><a href="../index.html?patent=US12229561B1#knowledge">在全量关系图上定位 US12229561B1</a></p>
   </section>
 </div>
@@ -142,7 +143,6 @@
 </div></main>
 <footer class="footer"><div class="frame">
   <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <a href="../method.html">研读方法</a>
   <span>资料截至 2026-11-24</span>
 </div></footer>
 </body>
