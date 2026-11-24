@@ -275,6 +275,96 @@
         };
       },
     },
+    {
+      id: "clpc-frame", name: "CLPC 工作窗", title: "闭环降档后，突然变重的工作窗会怎样？",
+      patents: [["US11579934B2", 2, "图 3，工作间隔利用率"]],
+      setup: "每个工作窗有独立的期限，超时丢弃该窗剩余工作。三个档位每拍处理 1、2 或 4 个工作单位。基线总请求最高档。反馈方案按当前窗已用时间占比升降下一窗档位，目标附近保留 ±12 个百分点。最后四窗还受系统档位上限约束。",
+      fields: [select("pattern", "每窗工作量", "3,3,3,3,18,18,18,18", [
+        ["3,3,3,3,18,18,18,18", "低负载后突发"], ["3,3,4,4,3,4,4,3", "持续轻载"],
+        ["4,6,8,10,14,17,18,18", "逐渐上升"],
+      ]), num("deadline", "工作窗期限（拍）", 6, 3, 12), num("target", "目标使用时间占比（%）", 75, 45, 85),
+      num("cap", "后四窗系统档位上限", 3, 1, 3)],
+      cases: [["反馈遇到突发", {}], ["轻载可持续低档", { pattern: "3,3,4,4,3,4,4,3" }], ["系统上限压到 2 档", { cap: 2 }]],
+      run(v) {
+        const fixed = t.framePolicyTrace(v, false);
+        const loop = t.framePolicyTrace(v, true);
+        const misses = rows => rows.filter(row => !row.completed).length;
+        const high = rows => rows.filter(row => row.gear === 3).length;
+        const clipped = loop.filter(row => row.requested > row.limit).length;
+        const status = row => row.completed ? "完成" : "超期";
+        const spans = rows => rows.map((row, i) => segment("窗 " + (i + 1) + " / 档 " + row.gear,
+          i * v.deadline, (i + 1) * v.deadline, row.completed ? "work" : "wait"));
+        return {
+          metrics: [["超期工作窗 · 固定 / 反馈", misses(fixed) + " / " + misses(loop)],
+            ["最高档工作窗 · 固定 / 反馈", high(fixed) + " / " + high(loop)], ["反馈请求受到系统限档", clipped + " 窗"]],
+          explanation: "表中把控制器请求档位与实际档位分开。超期时当窗利用率按 100% 饱和，结果用于下一窗。负载突然增加时，上一窗的观测还来不及反映新工作量。",
+          lanes: [lane("固定高档请求", spans(fixed)), lane("工作窗反馈", spans(loop))],
+          data: table("工作量、请求和实际档位", ["工作窗", "工作量", "固定档位与结果", "反馈请求 → 实际", "完成所需 / 期限", "反馈结果", "下一窗请求"],
+            loop.map((row, i) => [i + 1, row.work, fixed[i].gear + " · " + status(fixed[i]), row.requested + " → " + row.gear,
+              row.needed + " / " + v.deadline + " 拍", status(row), row.next])),
+        };
+      },
+    },
+    {
+      id: "battery-window", name: "供电预测窗", title: "同样 4 A，为什么短脉冲能放行，长脉冲需要收紧？",
+      patents: [["US12573870B2", 4, "权 1、12，图 6–8"]],
+      setup: "教学电池从零极化开始，开路 4 V，截止 3.4 V，串联欧姆电阻 100 mΩ。基线只按瞬时欧姆压降确定限流，预测窗方案对窗口末端的等效阻抗限流。两种方案都用同一个 RC 电路计算端电压。",
+      fields: [num("horizon", "供电持续时长（ms）", 1000, 50, 5000), num("tau", "极化时间常数（ms）", 1000, 100, 5000),
+        num("polarization", "极化电阻（mΩ）", 200, 0, 350), num("demand", "请求电流（mA）", 4000, 0, 6000)],
+      cases: [["200 ms 脉冲", { horizon: 200 }], ["3 s 持续负载", { horizon: 3000 }], ["关闭极化支路", { polarization: 0 }]],
+      run(v) {
+        const r = t.batteryPulseTrace(v);
+        const last = r.rows.at(-1);
+        const voltage = value => value.toFixed(3) + " V";
+        const violated = last.staticVoltage < r.cut - 1e-9;
+        return {
+          metrics: [["末端电压 · 瞬时 / 按窗限流", voltage(last.staticVoltage) + " / " + voltage(last.windowVoltage)],
+            ["实际供电电流 · 瞬时 / 按窗限流", r.currentStatic.toFixed(2) + " / " + r.currentWindow.toFixed(2) + " A"],
+            ["该时窗的最大电流", r.limit.toFixed(2) + " A"]],
+          explanation: (violated ? "只按欧姆压降放行会跌穿 3.4 V。较长窗口采用更高的等效阻抗，会提前收紧可用电流。"
+            : "本例的瞬时限流在窗口末仍守住截止线。逐点查看极化压降，对照长脉冲场景。") + " 每个采样点都保留了两条路径的电压。",
+          data: table("相同电池模型下的端电压轨迹", ["时刻（ms）", "等效阻抗（mΩ）", "瞬时限流", "瞬时裕量（mV）", "按窗限流"],
+            r.rows.map(row => [row.ms, (row.resistance * 1000).toFixed(1), voltage(row.staticVoltage),
+              plus(Math.round((row.staticVoltage - r.cut) * 1000)), voltage(row.windowVoltage)])),
+        };
+      },
+    },
+    {
+      id: "memory-pause", name: "跨裸片暂停握手", title: "内存暂停前，读缓存要装满多少，写缓存要腾出多少？",
+      patents: [["US12332723B2", 2, "权 1–4，专利图 5"]],
+      setup: "两个裸片各有发起访存的代理。主裸片计划暂停内存服务，读端继续取数据，写端继续产生数据。读库存和写空位各上限 12 项。内存可用时，两端可并行按净速率每拍准备 2 项，到各自门槛后维持余量。准备速率、容量及确认无需额外传播拍均为模型假设。",
+      fields: [num("pause", "内存暂停长度（拍）", 4, 1, 10), num("readRate", "每拍读取（项）", 2, 1, 4),
+        num("writeRate", "每拍写入（项）", 1, 1, 4), num("readStock", "初始读库存（项）", 6, 0, 12),
+        num("writeFree", "初始写空位（项）", 6, 0, 12)],
+      cases: [["只需预填读缓存", {}], ["读写两端并行准备", { readStock: 2, writeFree: 4, writeRate: 2 }],
+        ["任一端容量不足", { pause: 7 }], ["余量足够，立即确认", { readStock: 8 }]],
+      run(v) {
+        const r = t.memoryPauseTrace(v);
+        const last = r.rows.at(-1);
+        const firstLost = r.rows.find(row => row.baseline.missed || row.baseline.overflow);
+        const safeUntil = firstLost ? firstLost.time - 1 : v.pause;
+        const levels = state => state.read + " / " + state.free;
+        const losses = state => state.missed + " / " + state.overflow;
+        return {
+          metrics: [["所需读库存 / 写空位", r.readNeed + " / " + r.writeNeed + " 项"],
+            ["确认并启动暂停", r.start === null ? "持续等待" : cycle(r.start)],
+            ["读欠供 / 写溢出 · 立即 → 等确认", losses(last.baseline) + " → " + (r.start === null ? "未暂停" : losses(last.guarded))]],
+          explanation: r.start === null
+            ? "至少一端的需求超过 12 项。主裸片未收到正向确认，内存继续提供服务。有限窗口里的持续等待表示这组固定条件无法放行。"
+            : "读端要在暂停期间持续供数，写端要吸收同一时段的新数据。两端可以并行准备，备妥较晚的一端决定确认时刻。暂停尽头库存或空位恰好归零也能安全完成。",
+          lanes: [lane("立即启动暂停", [segment("内存暂停", 0, safeUntil), segment("欠供或溢出", safeUntil, v.pause, "wait")]),
+            lane("等两端确认后暂停", r.start === null ? [segment("继续服务，等待确认", 0, last.time, "wait")] : [
+              segment("准备读写余量", 0, r.start, "wait"), segment("内存暂停", r.start, last.time),
+            ], r.start)],
+          data: table("拍边界上的缓存余量及累计损失", ["时刻", "基线库存 / 空位", "基线欠供 / 溢出",
+            "握手状态", "握手库存 / 空位", "握手欠供 / 溢出"], r.rows.map(row => [cycle(row.time),
+            row.time <= v.pause ? levels(row.baseline) : "—", row.time <= v.pause ? losses(row.baseline) : "—",
+            row.time === r.start ? "确认 / 开始暂停" : r.start === null || row.time < r.start ? "等待确认" :
+              row.time === last.time ? "恢复内存服务" : "暂停中",
+            levels(row.guarded), losses(row.guarded)])),
+        };
+      },
+    },
   ];
 
   function element(tag, text, className) {

@@ -8,8 +8,9 @@
   const empty = document.getElementById("empty-results");
   let category = "all";
 
-  function matchesYear(value) {
-    const number = Number(value);
+  function matchesYear(card) {
+    if (year.value === "recent-publication") return card.dataset.published >= year.selectedOptions[0].dataset.from;
+    const number = Number(card.dataset.year);
     if (year.value === "since-2020") return number >= 2020;
     if (year.value === "since-2024") return number >= 2024;
     if (year.value === "before-2020") return number < 2020;
@@ -22,7 +23,7 @@
     for (const card of cards) {
       const subject = card.dataset.search.toLowerCase();
       const visible = (category === "all" || card.dataset.category === category) &&
-        matchesYear(card.dataset.year) && words.every(word => subject.includes(word));
+        matchesYear(card) && words.every(word => subject.includes(word));
       card.hidden = !visible;
       if (visible) count += 1;
     }

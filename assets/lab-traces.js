@@ -182,8 +182,80 @@
     return { rows, reads, misses, blocked };
   }
 
+  function framePolicyTrace({ pattern, deadline, target, cap }, feedback) {
+    const rates = [0, 1, 2, 4];
+    let requested = 3;
+    return pattern.split(",").map(Number).map((work, i) => {
+      const limit = i < 4 ? 3 : cap;
+      const gear = Math.min(requested, limit);
+      const needed = work / rates[gear];
+      const completed = needed <= deadline;
+      const utilization = Math.min(needed, deadline) / deadline;
+      let next = requested;
+      if (feedback) {
+        if (!completed || utilization > target / 100 + 0.12) next = Math.min(3, gear + 1);
+        else if (utilization < target / 100 - 0.12) next = Math.max(1, gear - 1);
+        else next = gear;
+      }
+      const row = { work, gear, needed, completed, utilization, requested, limit, next };
+      requested = next;
+      return row;
+    });
+  }
+
+  function batteryPulseTrace({ horizon, tau, polarization, demand }) {
+    const open = 4;
+    const cut = 3.4;
+    const ohmic = 0.1;
+    const impedance = ms => ohmic + polarization / 1000 * (1 - Math.exp(-ms / tau));
+    const limit = (open - cut) / impedance(horizon);
+    const currentStatic = Math.min(demand / 1000, (open - cut) / ohmic);
+    const currentWindow = Math.min(demand / 1000, limit);
+    const rows = Array.from({ length: 5 }, (_, index) => {
+      const ms = horizon * index / 4;
+      const resistance = impedance(ms);
+      return { ms, resistance, staticVoltage: open - currentStatic * resistance, windowVoltage: open - currentWindow * resistance };
+    });
+    return { cut, limit, currentStatic, currentWindow, rows };
+  }
+
+  function memoryPauseTrace({ pause, readRate, writeRate, readStock, writeFree }) {
+    const capacity = 12;
+    const prepRate = 2;
+    const readNeed = pause * readRate;
+    const writeNeed = pause * writeRate;
+    const readTarget = Math.min(readNeed, capacity);
+    const writeTarget = Math.min(writeNeed, capacity);
+    const prep = Math.max(0, Math.ceil((readTarget - readStock) / prepRate),
+      Math.ceil((writeTarget - writeFree) / prepRate));
+    const start = readNeed <= capacity && writeNeed <= capacity ? prep : null;
+    const baseline = { read: readStock, free: writeFree, missed: 0, overflow: 0 };
+    const guarded = { ...baseline };
+
+    function useBuffers(state) {
+      state.missed += Math.max(0, readRate - state.read);
+      state.overflow += Math.max(0, writeRate - state.free);
+      state.read = Math.max(0, state.read - readRate);
+      state.free = Math.max(0, state.free - writeRate);
+    }
+
+    const rows = Array.from({ length: 1 + (start === null ? Math.max(pause, prep) : start + pause) }, (_, time) => {
+      const tick = time - 1;
+      if (time > 0 && tick < pause) useBuffers(baseline);
+      if (time > 0 && (start === null || tick < start)) {
+        guarded.read = Math.max(guarded.read, Math.min(readTarget, guarded.read + prepRate));
+        guarded.free = Math.max(guarded.free, Math.min(writeTarget, guarded.free + prepRate));
+      } else if (time > 0) {
+        useBuffers(guarded);
+      }
+      return { time, baseline: { ...baseline }, guarded: { ...guarded } };
+    });
+    return { capacity, readNeed, writeNeed, start, rows };
+  }
+
   const traces = {
     returnTrace, snoopTrace, fillTrace, missQueueTrace, admissionTrace, writeTurnTrace, quotaTrace, prefetchTrace,
+    framePolicyTrace, batteryPulseTrace, memoryPauseTrace,
   };
   if (typeof module === "object" && module.exports) module.exports = traces;
   else window.PatentTraces = traces;
