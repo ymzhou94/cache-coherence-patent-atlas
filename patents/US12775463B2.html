@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12775463B2 分级存储队列与地址解析 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=analysis">
+<link rel="stylesheet" href="../assets/site.css?edition=evidence">
 
 </head>
 <body>
@@ -29,7 +29,7 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
   <section class="engineering" id="engineering" aria-labelledby="engineering-title">
     <h2 id="engineering-title">工程要点</h2>
     <p class="engineering-change">主存储队列满时，次队列接收后到的 store 并启动地址解析。主队列释放条目后，store 可以转回主队列。</p>
@@ -41,7 +41,7 @@
     <p class="section-intro">在途 store 要保存在队列里，依赖它的 load 还要能查到比缓存更新的值。若每个槽都支持相同数量的查询端口，增加容量的成本也会增加。</p>
     <p>主存储队列有空闲条目时接收 store，满时交由次队列接收。次队列可以先解析地址，待主队列释放条目后再移交。移交时按地址解析进度选择继续执行的流水级，最终由主队列处理执行与提交。</p>
     <ol class="walkthrough"><li><h3>主队列满后由次队列接收</h3><p>有空槽时，较早的 store 先进入主队列。主槽暂满时，后续 store 还可进入次队列。</p></li><li><h3>次队列提前求地址</h3><p>图 4 给出了与两级队列对应的地址解析阶段。store 留在次队列等待空槽期间，就可能开始解析。</p></li><li><h3>主槽释放后回迁</h3><p>较早的 store 退休并释放主槽后，可以把次队列中的请求移到主队列。相应从属权利要求规定优先迁移最旧条目。</p></li><li><h3>按已完成的阶段继续</h3><p>回迁时地址若已解析，可从后面的阶段继续。地址若尚未解析，条目需进入第一解析阶段。如果旧 store 只覆盖 load 的部分字节，还须另行决定转发、组合或重放。</p></li></ol>
-    <div class="analysis-note"><h3>机制约束</h3><p>主队列接收回迁条目并承担缓存写入。说明书图 5A 单独讨论 load 字节由 store 和缓存共同提供的情况，转发要考虑覆盖范围和 store 相对于 load 的顺序。</p></div>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>主队列接收回迁条目并承担缓存写入。说明书图 5A 单独讨论 load 字节由 store 和缓存共同提供的情况，转发要考虑覆盖范围和 store 相对于 load 的顺序。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -99,7 +99,7 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">实验与取舍</h2>
+    <h2 id="evaluation-title">工程推演与验证</h2>
     <div class="analysis-note"><h3>收益与开销</h3><p>次队列加深可减轻 store 入口阻塞，对依赖 load 的取数瓶颈则要看慢路径。尤其在只找到部分字节时，还要等缓存回填，不能用次队列地址命中直接作为完成事件。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>如果循环每次先写结构体的一个字段，马上读取跨多个字段的宽值，次队列可能常遇到部分覆盖。即使可容纳更多 store，依赖 load 仍可能先在转发和回填路径堆积。</p></div>
     <div id="example" class="article-example">
@@ -111,6 +111,7 @@
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、9、15 项。下方列出部分权利要求的中文释义。</p>
+    
     <dl class="claim-list"><div class="claim"><dt>权 1</dt><dd>主队列有空槽时接收 store。主队列满时，次队列接收请求并启动地址解析。主队列释放槽位后，条目可回迁。</dd></div><div class="claim"><dt>权 9</dt><dd>主、次队列分别开始求目标地址。主队列中对应的地址就绪后，可执行该 store。</dd></div><div class="claim"><dt>权 15</dt><dd>主、次队列的请求进入不同地址解析级。主队列对应地址就绪后，store 转入执行。</dd></div></dl>
     <h3 class="evidence-heading">原文位置</h3>
     <dl class="explanation evidence"><div><dt>独立权利要求 1</dt><dd>主队列满时，后续 store 进次队列并启动地址解析。主队列有空槽且次队列有请求时，可以回迁。</dd></div><div><dt>说明书图 4、图 5A–5B</dt><dd>图 4 给出地址解析流水级，图 5 比较了组合、转发和部分覆盖。</dd></div><div><dt>从属权利要求 17–19</dt><dd>地址已在上游解析完成时，条目可转入执行。地址尚未解析时，须进第一解析阶段。若该阶段资源不足，条目可暂留。</dd></div></dl>
@@ -126,7 +127,7 @@
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">

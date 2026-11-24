@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US9710268B2 预测存储队列命中以提前发射依赖访存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=analysis">
+<link rel="stylesheet" href="../assets/site.css?edition=evidence">
 
 </head>
 <body>
@@ -29,7 +29,7 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
   <section class="engineering" id="engineering" aria-labelledby="engineering-title">
     <h2 id="engineering-title">工程要点</h2>
     <p class="engineering-change">发射逻辑依据较老 load 的存储队列命中预测，为依赖它的年轻访存安排较短或较长的发射间隔。</p>
@@ -41,7 +41,7 @@
     <p class="section-intro">指针链上，较老 load 读出的值要参与下一次访存的地址计算。如果数据缓存能把该值直接送进地址生成器，后续操作可能少等一段路径。若数据需要从 store queue 取得，短间隔就可能不够。</p>
     <p>核内指令发射逻辑根据较老 load 是否预计命中存储队列，决定何时发射其依赖访存。预计命中存储队列时等待 N 个周期，预计未命中时等待较短的 M 个周期。后一条路径可把 L1 数据缓存返回的指针直接转发给依赖操作的地址生成单元。</p>
     <ol class="walkthrough"><li><h3>找出下一次访存的生产者</h3><p>核内指令发射逻辑识别年轻 load 或 store 对较老 load 的数据依赖，再根据预测的数据可用时间安排发射。</p></li><li><h3>预测较老 load 是否命中 store queue</h3><p>预测器可以用训练信息区分 store 转发和无法在短时间内供数的情况。预测 store queue 缺失后，数据缓存还须另行查询。</p></li><li><h3>给两种预测设置不同间隔</h3><p>预测命中使用较长的 N，预测缺失使用较短的 M。若旧 load 的数据可直接从缓存旁路，返回拍可对齐年轻操作的地址生成阶段。</p></li><li><h3>到地址生成时核对数据是否就绪</h3><p>地址计算使用实际读出的值。预测不准或数据缓存也缺失时，按实现推迟或重发。说明书还考虑了会增加流水阶段的对齐和符号扩展。</p></li></ol>
-    <div class="analysis-note"><h3>机制约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把对齐和符号扩展也放进预测条件。存储队列未命中预测只决定可尝试的调度时机，年轻地址生成实际还要接到满足格式要求的旧 load 结果。</p></div>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把对齐和符号扩展也放进预测条件。存储队列未命中预测只决定可尝试的调度时机，年轻地址生成实际还要接到满足格式要求的旧 load 结果。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -99,7 +99,7 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">实验与取舍</h2>
+    <h2 id="evaluation-title">工程推演与验证</h2>
     <div class="analysis-note"><h3>收益与开销</h3><p>缩短的是旧 load 到年轻访存发射之间的等待。若值还需要扩展或对齐调整，压力会转移到地址生成输入前的处理级，缓存数据阵列本身的读取时间可保持原样。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>同一链表循环可交替读自然对齐的整字指针与需扩展的压缩索引。后一类若使用相同的短间隔，即使都在数据缓存命中，也更容易赶不上年轻操作的地址生成拍。</p></div>
     <div id="example" class="article-example">
@@ -111,6 +111,7 @@
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、8、14 项。下方列出部分权利要求的中文释义。</p>
+    
     <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按较老 load 的 store queue 命中预测，以 N 拍或 M 拍间隔发射依赖访存。M 小于 N。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></dt><dd>预测 store queue 缺失时，可把数据缓存的返回值转发给年轻访存的地址生成单元。</dd></div></dl>
     <h3 class="evidence-heading">原文位置</h3>
     <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按较老 load 的 store queue 命中预测，选择 N 或 M 拍后发射年轻的依赖访存。M 小于 N。</dd></div><div><dt>说明书图 3–6、9</dt><dd>图中包括前递硬件、指令依赖、预测表和调度。文字以指针链为例比较 4 拍与 3 拍或更少。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>这些项补充了向地址生成单元直接转发、预测对齐或符号扩展、形成地址，以及年轻操作可以是 store 的条件。</dd></div></dl>
@@ -125,7 +126,7 @@
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">

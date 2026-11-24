@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11016913B1 汇聚节点把写回响应转成跨簇回填 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=analysis">
+<link rel="stylesheet" href="../assets/site.css?edition=evidence">
 
 </head>
 <body>
@@ -29,7 +29,7 @@
 </div>
 <div class="frame article-layout">
 <div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
   <section class="engineering" id="engineering" aria-labelledby="engineering-title">
     <h2 id="engineering-title">工程要点</h2>
     <p class="engineering-change">互连汇聚节点接收持有者返回的脏数据，把 copy-back 响应转换为发给原读代理的回填。</p>
@@ -41,11 +41,11 @@
     <p class="section-intro">请求簇发出读请求时，还不知道最新副本的位置。数据来源由一致性点查找。若数据在另一个簇，回填从哪里发出，决定了数据回到请求簇还要经过哪些链路。</p>
     <p>内存控制器作为一致性点，发现目标块有远端修改副本后，向持有簇发出回送请求。携数据的响应经过汇聚节点时，节点用响应里的数据为原读请求构造回填。</p>
     <ol class="walkthrough"><li><h3>在一致性点查副本</h3><p>请求簇 A 的读先到内存控制器。控制器查找副本信息，确定 B 持有修改副本。</p></li><li><h3>请 B 回送修改数据</h3><p>控制器向 B 发 copy-back 请求。B 取出最新数据，放入 copy-back 响应。</p></li><li><h3>节点构造给 A 的回填</h3><p>B 的响应进入汇聚节点的上行队列。节点识别它对应 A 之前发出的读，用响应数据构造给 A 的 fill，并把 fill 放进下行队列。</p></li><li><h3>向控制器转送原响应</h3><p>节点还可将原 copy-back 响应送往控制器。控制器得知节点已发回填时，可以抑制本来要发出的第二份回填。</p></li></ol>
-    <div class="analysis-note"><h3>机制约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 细化汇聚节点的队列接口。旁路电路从持有者对应的输入队列生成 fill，选择器把 fill 送入请求代理的输出队列，该队列也承接来自内存控制器的通路。</p></div>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 细化汇聚节点的队列接口。旁路电路从持有者对应的输入队列生成 fill，选择器把 fill 送入请求代理的输出队列，该队列也承接来自内存控制器的通路。</p></div>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-5">旁路缩短 A 收到数据的路径</a></li><li><a href="#fig-1">汇聚节点把 B 的数据回填给 A</a></li><li><a href="#fig-2">查出修改副本后，节点直接回填</a></li><li><a href="#fig-3">请求者收到回填与控制器收到原响应</a></li><li><a href="#fig-4">什么响应可以在节点转换</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-5">旁路缩短 A 收到数据的路径</a></li><li><a href="#fig-1">汇聚节点把 B 的数据回填给 A</a></li><li><a href="#fig-2">脏数据在互连节点分成回填与一致性完成两路</a></li><li><a href="#fig-3">请求者收到回填与控制器收到原响应</a></li><li><a href="#fig-4">什么响应可以在节点转换</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-5" aria-labelledby="fig-5-title">
@@ -75,16 +75,16 @@
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">查出修改副本后，节点直接回填</h3></div>
-    <a class="paper-open" href="../figures/US11016913B1/US11016913B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 查出修改副本后，节点直接回填 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">脏数据在互连节点分成回填与一致性完成两路</h3></div>
+    <a class="paper-open" href="../mechanisms/US11016913B1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="查出修改副本后，节点直接回填">
-    <img class="paper-image" src="../figures/US11016913B1/US11016913B1-fig-2.svg" width="762" height="435"
-         style="--paper-width:762px" alt="查出修改副本后，节点直接回填。控制器确认簇 B 持有修改数据后发回送请求。节点用 B 的响应构造 A 所需的回填。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="脏数据在互连节点分成回填与一致性完成两路">
+    <img class="paper-image" src="../mechanisms/US11016913B1/diagram.svg" width="920" height="641"
+         style="--paper-width:920px" alt="脏数据在互连节点分成回填与一致性完成两路。两簇的请求在互连节点汇聚，内存控制器向持有者发出 snoop。响应到达汇聚节点后，节点直接向请求簇回填，并把响应送往控制器完成一致性事务。原图 3 把两路画为并行，后一路不再补发回填。">
   </div>
   <figcaption>
-    <span>控制器确认簇 B 持有修改数据后发回送请求。节点用 B 的响应构造 A 所需的回填。</span>
-    <span class="figure-evidence">图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
+    <span>两簇的请求在互连节点汇聚，内存控制器向持有者发出 snoop。响应到达汇聚节点后，节点直接向请求簇回填，并把响应送往控制器完成一致性事务。原图 3 把两路画为并行，后一路不再补发回填。</span>
+    <span class="figure-evidence">原图 2–3 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://patentimages.storage.googleapis.com/d6/eb/a6/bb5ae3b2dd9f05/US11016913.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
@@ -109,7 +109,7 @@
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">实验与取舍</h2>
+    <h2 id="evaluation-title">工程推演与验证</h2>
     <div class="analysis-note"><h3>收益与开销</h3><p>去掉绕到一致性点再返回这一段，在输出端则增加了旁路 fill 与常规消息的竞争。应分别观察旁路选择器的授予和目标代理输出队列的等待时长。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>若目标输出队列一直被其他回填填满，跳过的上行路径再长，读代理也可能仍在同一出口等待。绕路缩减属于图示路径，能否缩短收数时间取决于这段排队。</p></div>
     <div id="example" class="article-example">
@@ -120,8 +120,23 @@
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、15 项。下方列出部分权利要求的中文释义。</p>
-    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>远端执行 copy-back，回送修改后的数据。互连中的第一个汇聚节点把响应转换成回填，发给原请求者。</dd></div></dl>
+    <p class="subdued">独立权利要求为第 1、10、15 项。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <h3 id="claim-features-title">独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的技术特征</h3>
+  <p>说明书抽取段 0034–0039、0045–0049（原图 2 的节点 28A，原图 3 的方框 70–102）。</p>
+  <table class="comparison-table" aria-labelledby="claim-features-title">
+    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row">F1</th><td>多个代理参与同一缓存一致性域</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20on%20a%20chip%20%28SOC%29">原图 1；处理器簇 14A、14B 都经互连访问一致性点</a></td></tr><tr><th scope="row">F2</th><td>这些代理的一致性点位于内存控制器内</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=As%20mentioned%20previously%2C%20the%20memory%20controller%2018%20may%20further%20include%20the%20coherence%20point%2030.%20The%20coherence">原图 2；内存控制器 18 含一致性点 30</a></td></tr><tr><th scope="row">F3</th><td>内存控制器和多个一致性代理连接同一互连</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20on%20a%20chip%20%28SOC%29">原图 1；互连 22 连接控制器 18 与两簇</a></td></tr><tr><th scope="row">F4</th><td>互连由多个节点连接这些代理</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=The%20communication%20fabric%2022%20may%20be%20any%20communication%20interconnect%20and%20protocol%20for%20communicating%20among%20the%20components">原图 1；互连 22 标出多个路由节点</a></td></tr><tr><th scope="row">F5</th><td>其中一个节点汇聚来自多个一致性代理、发往内存控制器的请求</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20one%20embodiment%20of%20the%20node%2028A%20and%20the%20memory">原图 2；仲裁器 44 汇聚上行队列 42A、42B</a></td></tr><tr><th scope="row">F6</th><td>内存控制器收到第二代理的读请求后，识别第一代理缓存的已修改副本</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=As%20mentioned%20previously%2C%20the%20memory%20controller%2018%20may%20further%20include%20the%20coherence%20point%2030.%20The%20coherence">原图 3 方框 70–78；一致性点查第一代理的复制标签</a></td></tr><tr><th scope="row">F7</th><td>检测到已修改副本后，内存控制器经互连向第一代理发出复制返回请求（CpBkRq）</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=The%20coherence%20point%2030%20may%20process%20the%20transactions%20for%20coherence%20purposes%2C%20including%20checking%20the%20duplicate%20tags">原图 3 方框 80–86；控制器到副本持有者</a></td></tr><tr><th scope="row">F8</th><td>第一代理经互连以复制返回响应（CpBkRsp）返回已修改数据</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=The%20processor%20clusters%2014A-14B%20and%2For%20other%20coherent%20agents%20in%20other%20embodiments%20may%20respond%20to%20copy%20back">原图 3 方框 88–90；副本持有者返回数据</a></td></tr><tr><th scope="row">F9</th><td>汇聚节点把响应数据重新封装为回填（Fill），并发给读请求的发起代理</td><td><a href="https://patents.google.com/patent/US11016913B1/en#:~:text=The%20bypass%20circuitry%2040%20may%20examine%20the%20packets%20in%20the%20upstream%20queues%2042A-42B%2C%20searching%20for%20packets">原图 3 方框 92–94；旁路回填直接发往读请求方</a></td></tr></tbody>
+  </table>
+  <p class="source-links"><a href="#fig-2">在机制图中查看</a></p>
+</section>
+    <details class="claim-dependency">
+  <summary id="claim-dependency-title">权项依赖与新增限定</summary>
+  <table class="comparison-table" aria-labelledby="claim-dependency-title">
+    <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>内存控制器发现已修改副本后请求返回，互连汇聚节点把响应转换为回填</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>汇聚节点还把复制返回响应发往内存控制器</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>节点回填后，内存控制器抑制给同一代理的第二次回填</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>每个一致性代理有对应的上行队列，仲裁器从中选择发往内存控制器的通信</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>为各代理配置下行队列，旁路把持有者的上行响应转为请求方的下行回填</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>缓冲控制器发来的下行通信，由旁路控制多路选择器把回填写入下行队列</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>没有旁路回填时，多路选择器改从下行缓冲区取通信</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>至少一个一致性代理是处理器簇，簇内含一个或多个带缓存的处理器</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>处理器簇含多个处理器，共享缓存响应复制返回请求、接收回填并向请求核供数</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>汇聚节点为各代理设置上行和下行队列，旁路识别复制返回响应并生成回填</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>仲裁器从上行队列中选择发往内存控制器的数据包</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>除向请求方回填外，仲裁器还选择向控制器发送复制返回响应</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>互连接收控制器的下行包，旁路控制多路选择器把回填包写入下行队列</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>没有旁路回填包时，多路选择器选取其他互连节点的数据包</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>控制器向持有已修改副本的簇请求返回数据，汇聚节点把响应转换为请求簇的回填</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>汇聚节点在转换回填之外，还把复制返回响应发往内存控制器</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>内存控制器收到节点转发的响应后，抑制给请求簇的第二次回填</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>请求簇发出读请求，以此触发对另一簇持有的已修改副本的检测</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>在汇聚节点对各簇通信仲裁，选出发往内存控制器的通信</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>旁路回填期间，节点缓冲控制器发往同一请求簇的另一条通信</td></tr></tbody>
+  </table>
+</details>
     <h3 class="evidence-heading">原文位置</h3>
     <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>第一汇聚节点用含修改数据的响应生成给请求者的回填。权 10 还规定上、下行队列和旁路电路。</dd></div><div><dt>图 2–4</dt><dd>图 2 给出节点内部的队列和旁路电路，图 3–4 分别展示旁路回填与常规回填。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11016913B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>节点可以继续向控制器转发原响应。控制器可因节点已经回填而抑制重复回填。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US11016913B1/en">专利原文</a></p>
@@ -137,7 +152,7 @@
 </div>
 <aside class="record-panel" aria-label="专利记录与来源">
   <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">实验与取舍</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
   </nav>
   <h2>专利记录</h2>
   <dl class="record-details">
