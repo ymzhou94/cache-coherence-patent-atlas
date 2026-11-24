@@ -31,22 +31,13 @@
     empty.hidden = count > 0;
   }
 
-  function setCategory(value) {
-    category = value;
-    for (const button of buttons) {
-      button.setAttribute("aria-pressed", String(button.dataset.filter === category));
-    }
-    render();
-  }
-
   for (const button of buttons) {
-    button.addEventListener("click", () => setCategory(button.dataset.filter));
-  }
-  for (const link of document.querySelectorAll("[data-catalog-topic]")) {
-    link.addEventListener("click", () => {
-      search.value = "";
-      year.value = "all";
-      setCategory(link.dataset.catalogTopic);
+    button.addEventListener("click", () => {
+      category = button.dataset.filter;
+      for (const candidate of buttons) {
+        candidate.setAttribute("aria-pressed", String(candidate === button));
+      }
+      render();
     });
   }
   search.addEventListener("input", render);
