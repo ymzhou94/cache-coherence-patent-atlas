@@ -276,15 +276,15 @@
       },
     },
     {
-      id: "clpc-frame", name: "CLPC 工作窗", title: "闭环降档后，突然变重的工作窗会怎样？",
+      id: "clpc-frame", name: "CLPC 工作窗口", title: "降低性能状态后，突发负载是否还能按期完成？",
       patents: [["US11579934B2", 2, "图 3，工作间隔利用率"]],
-      setup: "每个工作窗有独立的期限，超时丢弃该窗剩余工作。三个档位每拍处理 1、2 或 4 个工作单位。基线总请求最高档。反馈方案按当前窗已用时间占比升降下一窗档位，目标附近保留 ±12 个百分点。最后四窗还受系统档位上限约束。",
+      setup: "每个工作窗口有独立的截止时间。超期后丢弃该窗口的剩余工作。模型中三个性能状态每拍处理 1、2 或 4 个工作单位。基线始终请求最高性能状态。反馈控制器用当前窗口的执行时间占比选择下一窗口的性能状态，目标附近保留 ±12 个百分点的容差。最后四个窗口受系统性能上限约束。",
       fields: [select("pattern", "每窗工作量", "3,3,3,3,18,18,18,18", [
         ["3,3,3,3,18,18,18,18", "低负载后突发"], ["3,3,4,4,3,4,4,3", "持续轻载"],
         ["4,6,8,10,14,17,18,18", "逐渐上升"],
       ]), num("deadline", "工作窗期限（拍）", 6, 3, 12), num("target", "目标使用时间占比（%）", 75, 45, 85),
-      num("cap", "后四窗系统档位上限", 3, 1, 3)],
-      cases: [["反馈遇到突发", {}], ["轻载可持续低档", { pattern: "3,3,4,4,3,4,4,3" }], ["系统上限压到 2 档", { cap: 2 }]],
+      num("cap", "后四个窗口的最高性能状态", 3, 1, 3)],
+      cases: [["突发负载", {}], ["持续轻载", { pattern: "3,3,4,4,3,4,4,3" }], ["最高性能状态为 2", { cap: 2 }]],
       run(v) {
         const fixed = t.framePolicyTrace(v, false);
         const loop = t.framePolicyTrace(v, true);
@@ -292,14 +292,14 @@
         const high = rows => rows.filter(row => row.gear === 3).length;
         const clipped = loop.filter(row => row.requested > row.limit).length;
         const status = row => row.completed ? "完成" : "超期";
-        const spans = rows => rows.map((row, i) => segment("窗 " + (i + 1) + " / 档 " + row.gear,
+        const spans = rows => rows.map((row, i) => segment("窗口 " + (i + 1) + " / 状态 " + row.gear,
           i * v.deadline, (i + 1) * v.deadline, row.completed ? "work" : "wait"));
         return {
           metrics: [["超期工作窗 · 固定 / 反馈", misses(fixed) + " / " + misses(loop)],
-            ["最高档工作窗 · 固定 / 反馈", high(fixed) + " / " + high(loop)], ["反馈请求受到系统限档", clipped + " 窗"]],
-          explanation: "表中把控制器请求档位与实际档位分开。超期时当窗利用率按 100% 饱和，结果用于下一窗。负载突然增加时，上一窗的观测还来不及反映新工作量。",
-          lanes: [lane("固定高档请求", spans(fixed)), lane("工作窗反馈", spans(loop))],
-          data: table("工作量、请求和实际档位", ["工作窗", "工作量", "固定档位与结果", "反馈请求 → 实际", "完成所需 / 期限", "反馈结果", "下一窗请求"],
+            ["最高性能状态的窗口数 · 基线 / 反馈", high(fixed) + " / " + high(loop)], ["系统上限约束的请求", clipped + " 个窗口"]],
+          explanation: "控制器请求的性能状态受系统上限约束。超期时，模型将当前窗口的执行时间占比截断为 100%，再用它计算下一窗口的请求。突发负载到来前，控制器只能根据此前的工作量作出决定。",
+          lanes: [lane("固定请求最高性能状态", spans(fixed)), lane("按工作窗口反馈", spans(loop))],
+          data: table("工作量及请求与实际性能状态", ["工作窗口", "工作量", "基线状态与结果", "请求状态 → 实际状态", "完成时间 / 截止时间", "反馈结果", "下一窗口的请求"],
             loop.map((row, i) => [i + 1, row.work, fixed[i].gear + " · " + status(fixed[i]), row.requested + " → " + row.gear,
               row.needed + " / " + v.deadline + " 拍", status(row), row.next])),
         };

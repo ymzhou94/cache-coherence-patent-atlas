@@ -32,7 +32,7 @@
   <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">请求方可能提前知道数据只消费一次，也可能知道所需的数据已接走。请求可以带上普通分配、sticky 分配、不分配或释放提示。是否能释放，还取决于命中行的来源和状态。</p>
-    <p>代理在请求里携带缓存提示。do-not-allocate 缺失时跳过填充，命中时可以保留已有状态。de-allocate 不发起新分配，合格的命中可能释放现有行或提高其被替换的优先级。独立权利要求 1 要求核对请求源和原分配源。</p>
+    <p>代理在请求里携带缓存提示。do-not-allocate 缺失时跳过回填，命中时可以保留已有状态。de-allocate 不发起新分配，合格的命中可能释放现有行或提高其被替换的优先级。独立权利要求 1 要求核对请求源和原分配源。</p>
     <ol class="walkthrough"><li><h3>在请求中带上提示</h3><p>代理发送地址和 cache hint。有的实现还携带组标识。提示描述预计用途，地址照常传送。</p></li><li><h3>查找地址对应的行</h3><p>do-not-allocate 请求缺失时可以完成访问并跳过新行分配，命中时可保留已有行。</p></li><li><h3>核对释放请求的来源</h3><p>de-allocate 请求命中后，控制器按权利要求 1 检查请求来源是否与该行原来的分配来源相同。匹配时才有释放资格。</p></li><li><h3>按行状态处置</h3><p>干净行可以失效。对脏行，有的实施方式将它列为优先替换候选，或通过一致性事务转移所有权，以保住修改过的值。</p></li></ol>
   </section>
   <section class="article-section" id="example" aria-labelledby="example-title">
@@ -41,7 +41,7 @@
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">释放请求怎样核对行的来源</a></li><li><a href="#fig-2">不分配提示在命中和缺失时的处理</a></li><li><a href="#fig-3">命中后还要看来源是否匹配</a></li><li><a href="#fig-4">省下的填充与后续重取</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">释放请求怎样核对行的来源</a></li><li><a href="#fig-2">不分配提示在命中和缺失时的处理</a></li><li><a href="#fig-3">命中后还要看来源是否匹配</a></li><li><a href="#fig-4">省下的回填与后续重取</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
@@ -84,19 +84,19 @@
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">省下的填充与后续重取</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">省下的回填与后续重取</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">提示／动作</th><th scope="col">即时效果</th><th scope="col">随后仍复用</th></tr></thead><tbody><tr><th scope="row">正常填充</th><td>建立一行</td><td>可利用已有 SLC 行</td></tr><tr><th scope="row">do-not-allocate 缺失</th><td class="emphasis">省一次填充</td><td>可能再次取数</td></tr><tr><th scope="row">de-allocate 合格命中</th><td>释放或降级</td><td class="emphasis">可能再次取数</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">提示／动作</th><th scope="col">即时效果</th><th scope="col">随后仍复用</th></tr></thead><tbody><tr><th scope="row">正常回填</th><td>建立一行</td><td>可利用已有 SLC 行</td></tr><tr><th scope="row">do-not-allocate 缺失</th><td class="emphasis">省一次回填</td><td>可能再次取数</td></tr><tr><th scope="row">de-allocate 合格命中</th><td>释放或降级</td><td class="emphasis">可能再次取数</td></tr></tbody></table>
   <figcaption>
-    <span>判断提示带来的节省时，要同时记录这次绕过的填充和因早释放而增加的重取。</span>
+    <span>判断提示带来的节省时，要同时记录这次绕过的回填和因早释放而增加的重取。</span>
     <span class="figure-evidence">图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9158685B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；工程对照。 · <a href="https://patentimages.storage.googleapis.com/de/ce/da/29fbdc3c2be1ee/US9158685.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">收益与代价</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>一次性请求较多时，跳过填充可以减少对活跃行的替换。知道行已用完且符合归属条件时，代理可以早点交还空间。</dd></div><div><dt>代价和限制</dt><dd>误判复用会损失之后的命中。处理脏行还可能要写回或转移所有权。</dd></div><div><dt>验证指标</dt><dd>按每种 hint 分别统计省去的填充、释放后重取、释放或降低驻留优先级的次数，以及写回流量。</dd></div></dl>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>一次性请求较多时，跳过回填可以减少对活跃行的替换。知道行已用完且符合归属条件时，代理可以早点交还空间。</dd></div><div><dt>代价和限制</dt><dd>误判复用会损失之后的命中。处理脏行还可能要写回或转移所有权。</dd></div><div><dt>验证指标</dt><dd>按每种缓存提示分别统计省去的回填、释放后重取、释放或降低驻留优先级的次数，以及写回流量。</dd></div></dl>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">

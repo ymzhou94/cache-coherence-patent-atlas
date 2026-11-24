@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12164961B2 用快慢能耗估算共同约束后台调度 · 芯片架构与功耗专利图谱</title>
+<title>US12164961B2 合并两种能耗估计，约束后台任务执行 · 芯片架构与功耗专利图谱</title>
 <link rel="stylesheet" href="../assets/site.css?exhibits=1">
 
 </head>
@@ -21,9 +21,9 @@
 <div class="frame">
   <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><span>CLPC 与性能调节</span></p>
   <p class="document-id"><code>US12164961B2</code><span>美国授权专利</span></p>
-  <h1>用快慢能耗估算共同约束后台调度</h1>
+  <h1>合并两种能耗估计，约束后台任务执行</h1>
   <p class="english-title" lang="en">Fast energy accounting system</p>
-  <p class="document-question">完整的应用能耗数据还没出炉，后台调度器怎样先做决定？</p>
+  <p class="document-question">较慢的能耗估计尚未更新时，调度器用什么判断后台任务能否执行？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -31,13 +31,13 @@
   <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#mechanism">工作机制</a></li><li><a href="#example">示例</a></li><li><a href="#figures">工程图解与对照</a></li><li><a href="#evaluation">收益与代价</a></li><li><a href="#claims">权利要求与出处</a></li></ul></nav>
   <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">后台应用可能共享一段时间的能耗预算。如果在下次调度前没有能耗增量，后台任务可以在慢速账本更新之前连续申请运行。</p>
+    <p class="section-intro">系统按时间窗口约束后台应用的累计能耗。较慢的模型尚未更新时，调度器使用较快模型估计新增能耗，以免连续批准已接近预算上限的后台任务。</p>
     <p>操作系统的快速模型以少量观测及时估算后台能耗。慢速模型用更多输入或模型处理较早窗口。调度器合成两个结果，再允许或阻止后台执行。</p>
-    <ol class="walkthrough"><li><h3>计算快速估计</h3><p>快速引擎使用第一组输入和模型，先生成后台任务能耗的粗略及时估计。</p></li><li><h3>计算慢速估计</h3><p>慢速引擎使用更多资源输入或更多模型。细分信号在收集和建模上可能需要更长时间。</p></li><li><h3>合成窗口账本</h3><p>权 19 将同一第一窗口的慢估值、快估值以及随后窗口的快估值分开列出，避免把同一段工作直接累计两次。</p></li><li><h3>据预算运行或暂停</h3><p>动态活动调度器使用合成估计，决定当前还允许哪些后台工作继续。</p></li></ol>
+    <ol class="walkthrough"><li><h3>计算快速估计</h3><p>快速引擎用较少观测及时估计当前窗口中后台任务的能耗。</p></li><li><h3>计算慢速估计</h3><p>慢速引擎使用更多资源输入或更多模型。细分信号在收集和建模上可能需要更长时间。</p></li><li><h3>按时间窗口合并估计值</h3><p>按权利要求 19，用较慢模型的结果替换首个窗口的快速估计。后续窗口继续使用快速估计，每个窗口只计一次。</p></li><li><h3>决定是否继续执行</h3><p>系统的后台活动调度器用合并后的能耗估计决定是否继续执行。这一步控制后台活动是否获准运行。</p></li></ol>
   </section>
   <section class="article-section" id="example" aria-labelledby="example-title">
     <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>教学账本中第一窗的快估为 11 mJ、慢估为 14 mJ，随后尚未细算的窗口快估为 4 mJ。剩余预算为 16 mJ。</dd></div><div><dt>处理结果</dt><dd>用慢估替换同窗快估后，合成值为 18 mJ。若暂时只看快估，两窗相加是 15 mJ，可能放行同一后台任务。</dd></div><div><dt>结果解读</dt><dd>例子用分窗替换说明口径，不假定原文强制用这三个数字。决策误差取决于慢估的可信度和校准延迟。</dd></div></dl>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>这个算例的能耗预算为 16 mJ。首个窗口的快速估计为 11 mJ，较慢模型给出 14 mJ。后续窗口只有 4 mJ 的快速估计。</dd></div><div><dt>处理结果</dt><dd>两个窗口的快速估计合计为 15 mJ，尚低于预算。用 14 mJ 替换首个窗口的 11 mJ 后，累计估计升至 18 mJ，超过预算。</dd></div><div><dt>结果解读</dt><dd>这里的数值用于演示估计更新如何改变调度判断。误差取决于两种模型的准确度和较慢估计的到达时间。</dd></div></dl>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">工程图解与对照</h2>
@@ -50,10 +50,10 @@
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="两类能耗观测送到同一个后台调度器">
     <img class="paper-image" src="../figures/US12164961B2/US12164961B2-fig-1.svg" width="982" height="326"
-         style="--paper-width:982px" alt="两类能耗观测送到同一个后台调度器。快估和慢估针对时间窗口合并后，才变成放行决策。">
+         style="--paper-width:982px" alt="两类能耗观测送到同一个后台调度器。调度器以相同时间窗口归并两种估计，再判断后台任务能否执行。">
   </div>
   <figcaption>
-    <span>快估和慢估针对时间窗口合并后，才变成放行决策。</span>
+    <span>调度器以相同时间窗口归并两种估计，再判断后台任务能否执行。</span>
     <span class="figure-evidence">图 3–6，权 1、10 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12164961">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
   </figcaption>
 </figure>
@@ -74,7 +74,7 @@
   <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">分清同窗替换和新窗追加</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">记录</th><th scope="col">最新可用估计</th><th scope="col">计入的值</th></tr></thead><tbody><tr><th scope="row">第一窗，慢估未出</th><td>快估 11 mJ</td><td>暂记 11</td></tr><tr><th scope="row">第一窗，慢估已经出</th><td>慢估 14 mJ</td><td class="emphasis">更正为 14</td></tr><tr><th scope="row">第二窗，慢估未出</th><td>快估 4 mJ</td><td class="emphasis">追加 4</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">记录</th><th scope="col">最新可用估计</th><th scope="col">计入的值</th></tr></thead><tbody><tr><th scope="row">第一窗，慢估未出</th><td>快速估计 11 mJ</td><td>暂记 11</td></tr><tr><th scope="row">第一窗，慢估已经出</th><td>较慢模型估计 14 mJ</td><td class="emphasis">更正为 14</td></tr><tr><th scope="row">第二窗，慢估未出</th><td>快速估计 4 mJ</td><td class="emphasis">追加 4</td></tr></tbody></table>
   <figcaption>
     <span>按窗口对齐后，总计中只保留第一窗的一份估计。</span>
     <span class="figure-evidence">权 19；数值为假设 · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
@@ -84,16 +84,16 @@
   <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-4-title">后台预算判断如何随估算更新改变</h3></div>
     
   </div>
-  <table class="comparison-table numeric-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">条件或方案</th><th scope="col">mJ</th></tr></thead><tbody><tr><th scope="row">预算</th><td>16</td></tr><tr><th scope="row">快估账面</th><td>15</td></tr><tr><th scope="row">校正后</th><td>18</td></tr></tbody></table>
+  <table class="comparison-table numeric-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">条件或方案</th><th scope="col">mJ</th></tr></thead><tbody><tr><th scope="row">预算</th><td>16</td></tr><tr><th scope="row">快速估计合计</th><td>15</td></tr><tr><th scope="row">校正后</th><td>18</td></tr></tbody></table>
   <figcaption>
-    <span>预算为 16 mJ。使用快估时账面为 15 mJ，第一窗以慢估校正后为 18 mJ。</span>
+    <span>能耗预算为 16 mJ。两段窗口的快速估计合计为 15 mJ。用较慢模型的估计值替换首个窗口后，累计估计升至 18 mJ。</span>
     <span class="figure-evidence">权 19；教学示例 · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">收益与代价</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>后台能耗反馈对调度有时效需求时，快速模型避免等待完整统计。慢估能校正不同任务记账的长期偏差。</dd></div><div><dt>代价和限制</dt><dd>快估在硬件域占用不同的工作负载上会偏。慢模型高开销且更新滞后时，误放行或过早暂停仍可能出现。</dd></div><div><dt>验证指标</dt><dd>对照整机能量采样，测分窗误差、估计延迟、后台预算超额幅度和误暂停比例。</dd></div></dl>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>后台能耗反馈对调度有时效需求时，快速模型避免等待完整统计。较慢的模型可以修正长期累计的能耗估计偏差。</dd></div><div><dt>代价和限制</dt><dd>快速模型对不同 CPU、GPU 和其他硬件域活动比例的负载可能有不同误差。慢速模型更新滞后时，后台任务仍可能被过早暂停或继续执行超过预算。</dd></div><div><dt>验证指标</dt><dd>对照整机能量采样，测分窗误差、估计延迟、后台预算超额幅度和误暂停比例。</dd></div></dl>
     
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">

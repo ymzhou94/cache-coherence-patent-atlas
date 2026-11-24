@@ -32,16 +32,16 @@
   <section class="mechanism" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">几个组的需求高峰可能出现在不同时间。允许配额总和超出物理行数，可以给每组留较高上限。实际分配仍要在目标 set 找到合格行。</p>
-    <p>缓存按组记录占用，可按配置启用配额。各组配额总和允许超过物理行数。分配请求缺失时，本组是否达到上限决定到哪个组找牺牲行。</p>
-    <ol class="walkthrough"><li><h3>按组记录当前占用</h3><p>缓存标签保存组归属和行状态。控制器统计每组的行数，再读出配额是否启用。</p></li><li><h3>缺失时查本组上限</h3><p>要分配新行的请求缺失后，控制器将请求所属组的当前行数与其配额比较。</p></li><li><h3>按比较结果选搜索范围</h3><p>本组已到上限时，从本组找牺牲行以限制占用。尚未到上限时，可以从其他组找候选。两种情况都受 set 范围和行状态约束。</p></li><li><h3>更新占用，按配置清理</h3><p>替换完成后更新相应组的占用。一些实现还会在关闭配额后按配置执行 flush 或 drop。</p></li></ol>
+    <p>缓存按组记录占用，可按配置启用配额。各组配额总和允许超过物理行数。分配请求缺失时，本组是否达到上限决定到哪个组找替换候选行。</p>
+    <ol class="walkthrough"><li><h3>按组记录当前占用</h3><p>缓存标签保存组归属和行状态。控制器统计每组的行数，再读出配额是否启用。</p></li><li><h3>缺失时查本组上限</h3><p>要分配新行的请求缺失后，控制器将请求所属组的当前行数与其配额比较。</p></li><li><h3>按比较结果选搜索范围</h3><p>本组已到上限时，从本组找替换候选行以限制占用。尚未到上限时，可以从其他组找候选。两种情况都受 set 范围和行状态约束。</p></li><li><h3>更新占用，按配置清理</h3><p>替换完成后更新相应组的占用。一些实现还会在关闭配额后按配置执行 flush 或 drop。</p></li></ol>
   </section>
   <section class="article-section" id="example" aria-labelledby="example-title">
     <h2 id="example-title">示例</h2>
-    <dl class="explanation example"><div><dt>初始条件</dt><dd>缓存有 8 条可用行，A 和 B 的配额都是 6。当前 A 占 6 条，B 占 2 条。假定相关组里有可替换的普通行。</dd></div><div><dt>处理结果</dt><dd>新来的 A 缺失从 A 组找牺牲行，A 仍占 6 条。此时 B 尚未到 6，可在另一组找合格行，把一行空间让给 B。</dd></div><div><dt>结果解读</dt><dd>两个上限合计 12，但最多仍只能放下 8 条。搜索范围由发出缺失请求的组是否达到上限决定。</dd></div></dl>
+    <dl class="explanation example"><div><dt>初始条件</dt><dd>缓存有 8 条可用行，A 和 B 的配额都是 6。当前 A 占 6 条，B 占 2 条。假定相关组里有可替换的普通行。</dd></div><div><dt>处理结果</dt><dd>新来的 A 缺失从 A 组找替换候选行，A 仍占 6 条。此时 B 尚未到 6，可在另一组找合格行，把一行空间让给 B。</dd></div><div><dt>结果解读</dt><dd>两个上限合计 12，但最多仍只能放下 8 条。搜索范围由发出缺失请求的组是否达到上限决定。</dd></div></dl>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">工程图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">组占用怎样影响替换候选</a></li><li><a href="#fig-2">从 A 占 6 行、B 占 2 行开始</a></li><li><a href="#fig-3">该从本组还是其他组找牺牲行</a></li><li><a href="#fig-4">配额合计 12，缓存最多装 8 行</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">组占用怎样影响替换候选</a></li><li><a href="#fig-2">从 A 占 6 行、B 占 2 行开始</a></li><li><a href="#fig-3">该从本组还是其他组找替换候选行</a></li><li><a href="#fig-4">配额合计 12，缓存最多装 8 行</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
@@ -71,7 +71,7 @@
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">该从本组还是其他组找牺牲行</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">该从本组还是其他组找替换候选行</h3></div>
     
   </div>
   <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">请求组占用</th><th scope="col">候选范围</th><th scope="col">合格条件</th></tr></thead><tbody><tr><th scope="row">达到配额</th><td class="emphasis">优先同组</td><td>行状态与 set</td></tr><tr><th scope="row">未达到配额</th><td class="emphasis">可找其他组</td><td>行状态与 set</td></tr><tr><th scope="row">候选受保护或无可用 way</th><td>即使有配额也可能不分配</td><td>不得越过约束</td></tr></tbody></table>
@@ -93,13 +93,13 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">收益与代价</h2>
-    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>各组忙闲错开，且有其他组合格的牺牲行时，超配让不同组在各自的忙碌窗口使用更大的空间。</dd></div><div><dt>代价和限制</dt><dd>各组同一时段大量访问时，物理容量仍是固定的。就算本组尚未用完配额，目标 set 没有合格行也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录各组逐期占用、驱逐来源和目标组、请求未分配次数及总命中率。</dd></div></dl>
+    <dl class="explanation evaluation"><div><dt>何时有效</dt><dd>各组忙闲错开，且有其他组合格的替换候选行时，超配让不同组在各自的忙碌窗口使用更大的空间。</dd></div><div><dt>代价和限制</dt><dd>各组同一时段大量访问时，物理容量仍是固定的。就算本组尚未用完配额，目标 set 没有合格行也可能无法分配。</dd></div><div><dt>验证指标</dt><dd>记录各组逐期占用、引发逐出的请求组和被逐出行所属组、请求未分配次数及总命中率。</dd></div></dl>
     <a class="lab-link" href="../lab.html#quota">运行对应原型</a>
   </section>
   <section class="claim-section" id="claims" aria-labelledby="claims-title">
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、5、9、18 项。下方列出部分权利要求的中文释义。</p>
-    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按行的组归属和各组计数施加配额。配额总和 M 大于物理行数 N。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>缺失时，本组若已达到配额，则查找本组牺牲行。尚未达到配额时，查找另一组的候选。</dd></div></dl>
+    <dl class="claim-list"><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按行的组归属和各组计数施加配额。配额总和 M 大于物理行数 N。</dd></div><div class="claim"><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>缺失时，本组若已达到配额，则查找本组替换候选行。尚未达到配额时，查找另一组的候选。</dd></div></dl>
     <h3 class="evidence-heading">原文位置</h3>
     <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>第 1 项给出配额统计及 M&gt;N 的情形。第 5 项按缺失时本组是否达到配额决定查找组。</dd></div><div><dt>图 6、图 8、图 9</dt><dd>图 6 描述配额表，图 8 给出超配例子，图 9 展示缺失后的候选分支。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>从属项进一步涉及逐 way 搜索及清理配额时的 flush 或 drop。</dd></div></dl>
     <p class="source-links"><a href="https://patents.google.com/patent/US9043570B2/en">专利原文</a></p>
