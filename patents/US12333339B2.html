@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12333339B2 GPU 按共享缓存亲和性分派工作并在空出时重分配 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<title>US12333339B2 GPU 按缓存亲和性分派，并按组进度重分配 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -22,9 +22,9 @@
 <div class="frame">
   <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
   <p class="document-id"><code>US12333339B2</code><span>美国授权专利</span><time datetime="2025-06-17">2025-06-17</time></p>
-  <h1>GPU 按共享缓存亲和性分派工作并在空出时重分配</h1>
+  <h1>GPU 按缓存亲和性分派，并按组进度重分配</h1>
   <p class="english-title" lang="en">Affinity-based graphics scheduling</p>
-  <p class="document-question">一组 GPU 子单元已发完分配给它的工作，能否协助另一组而维持既有缓存亲和性策略？</p>
+  <p class="document-question">GPU 子单元组分派完本组份额后，怎样接手其他组尚未分派的工作？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -39,56 +39,57 @@
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">每组 GPU 子单元具有各自共享的缓存。软件提供图形工作的初始亲和性映射，硬件负责按映射分派。</p>
-    <p>当另一组已分派完其份额，工作共享控制电路更新有限状态机。控制器可以覆盖软件的初始映射，将原本属于第一组的部分工作重新分派。</p>
-    <ol class="walkthrough"><li><h3>提供亲和性映射</h3><p>软件提交图形工作或计算内核，并标出在哪一个 GPU 子单元组执行。</p></li><li><h3>按组划分工作</h3><p>分发电路按映射把不同份额送往相应组。各组分别共享自己的缓存。</p></li><li><h3>检测另一组的分派进度</h3><p>控制电路检查另一组已分派完其原份额的条件，并推动硬件有限状态机。</p></li><li><h3>转移部分剩余份额</h3><p>状态机进入相应状态后，硬件重新映射部分尚待分配工作。已经执行的操作不需要重新执行。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>图 16–18 把分派完成作为重新分配的触发。目标组可能尚有已接收的工作，状态机重分配的对象是后续待分派份额，仍须考虑其缓存组的可用性。</p></div>
+    <p>软件指定工作与各组共享缓存的亲和性映射。硬件跟踪每组未分派的份额，在一个组分派完本组工作后更新状态机，将其他组的部分待分派工作转给它。</p>
+    <ol class="walkthrough"><li><h3>软件设置初始映射</h3><p>软件提交工作和映射标识。映射表为各部分指定目标 GPU 子单元组。</p></li><li><h3>各组遍历自己的份额</h3><p>以计算内核为例，主遍历电路确定工作分区，各组遍历器把本组部分展开为可分派的工作组批次。</p></li><li><h3>检测接收组的进度</h3><p>工作共享控制器跟踪各组尚未分派的工作。候选接收组须已经分派完其原份额。</p></li><li><h3>更新掩码并同步接收组</h3><p>工作共享控制器选出供给组和接收组，更新状态机。供给组的遍历器随后可用允许跨组的 mGPU 掩码，接收组获得同步所需的状态。</p></li></ol>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 1 的触发点是接收组分派完原份额。硬件覆盖的是剩余工作后续的分派映射，原图 18 具体给出掩码和同步状态。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>组内共享缓存</dt><dd>同一 GPU 子单元组内的执行单元共同访问的缓存。</dd></div><div><dt>分派完成</dt><dd>一组的既定工作全部发出。仍可能有已发出的操作未执行完。</dd></div><div><dt>GPU 子单元掩码</dt><dd>标明当前工作可被分派到哪些 mGPU 的位集合。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">B 的初始份额发完后才考虑共用 A 的份额</a></li><li><a href="#fig-1">软件设置初始映射，硬件按分派进度更新</a></li><li><a href="#fig-4">一组发完初始工作之后的共享窗口</a></li><li><a href="#fig-3">份额和重分配条件</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">接收组分派完原份额后接手剩余工作</a></li><li><a href="#fig-1">软件设置初始映射，硬件按分派进度更新</a></li><li><a href="#fig-4">跨组工作分派的掩码和同步状态</a></li><li><a href="#fig-3">工作共享的原映射和覆盖条件</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">B 的初始份额发完后才考虑共用 A 的份额</h3></div>
-    <a class="paper-open" href="../figures/US12333339B2/US12333339B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 B 的初始份额发完后才考虑共用 A 的份额 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">接收组分派完原份额后接手剩余工作</h3></div>
+    <a class="paper-open" href="../mechanisms/US12333339B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="B 的初始份额发完后才考虑共用 A 的份额">
-    <img class="paper-image" src="../figures/US12333339B2/US12333339B2-fig-2.svg" width="762" height="389"
-         style="--paper-width:762px" alt="B 的初始份额发完后才考虑共用 A 的份额。判断的是分派进度。已接收工作的指令可能仍在 B 上执行。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="接收组分派完原份额后接手剩余工作">
+    <img class="paper-image native-image" src="../mechanisms/US12333339B2/fig-2/diagram.svg" width="920" height="458"
+         style="--paper-width:920px" alt="接收组分派完原份额后接手剩余工作。组 B 发完自己原有的工作后，硬件可以把 A 的部分剩余工作发给 B。此前发出的指令可能仍在运行。">
   </div>
   <figcaption>
-    <span>判断的是分派进度。已接收工作的指令可能仍在 B 上执行。</span>
-    <span class="figure-evidence">图 16–18，权 1、4 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
+    <span>组 B 发完自己原有的工作后，硬件可以把 A 的部分剩余工作发给 B。此前发出的指令可能仍在运行。</span>
+    <span class="figure-evidence">图 16–18，权 1、4 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
   <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">软件设置初始映射，硬件按分派进度更新</h3></div>
-    <a class="paper-open" href="../mechanisms/US12333339B2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+    <a class="paper-open" href="../mechanisms/US12333339B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="软件设置初始映射，硬件按分派进度更新">
-    <img class="paper-image native-image" src="../mechanisms/US12333339B2/diagram.svg" width="712" height="456"
-         style="--paper-width:712px" alt="软件设置初始映射，硬件按分派进度更新。软件先按缓存亲和性把图形工作分给各自共享缓存的 GPU 子单元组。工作共享控制器跟踪各组尚未分派的工作。重新分派时，控制器向工作供给组的遍历器提供允许跨组选择 mGPU 的掩码，并向接收组提供同步所需的状态。">
+    <img class="paper-image native-image" src="../mechanisms/US12333339B2/fig-1/diagram.svg" width="712" height="456"
+         style="--paper-width:712px" alt="软件设置初始映射，硬件按分派进度更新。软件指定工作到 GPU 子单元组的初始映射。工作共享控制器可依据组内分派进度更新映射。">
   </div>
   <figcaption>
-    <span>软件先按缓存亲和性把图形工作分给各自共享缓存的 GPU 子单元组。工作共享控制器跟踪各组尚未分派的工作。重新分派时，控制器向工作供给组的遍历器提供允许跨组选择 mGPU 的掩码，并向接收组提供同步所需的状态。</span>
-    <span class="figure-evidence">图 15–18，权 1–4 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
+    <span>软件指定工作到 GPU 子单元组的初始映射。工作共享控制器可依据组内分派进度更新映射。</span>
+    <span class="figure-evidence">图 15–18，权 1–4 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">一组发完初始工作之后的共享窗口</h3></div>
-    <a class="paper-open" href="../figures/US12333339B2/US12333339B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 一组发完初始工作之后的共享窗口 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">跨组工作分派的掩码和同步状态</h3></div>
+    <a class="paper-open" href="../mechanisms/US12333339B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="一组发完初始工作之后的共享窗口">
-    <img class="paper-image" src="../figures/US12333339B2/US12333339B2-fig-4.svg" width="781" height="225"
-         style="--paper-width:781px" alt="一组发完初始工作之后的共享窗口。各格只表示顺序。完成整项工作与最后一次分派是不同事件。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="跨组工作分派的掩码和同步状态">
+    <img class="paper-image native-image" src="../mechanisms/US12333339B2/fig-4/diagram.svg" width="829" height="332"
+         style="--paper-width:829px" alt="跨组工作分派的掩码和同步状态。控制器根据尚未分派的份额选供给组和接收组。供给组遍历器收到允许跨组选取 mGPU 的掩码，接收组得到同步状态。">
   </div>
   <figcaption>
-    <span>各格只表示顺序。完成整项工作与最后一次分派是不同事件。</span>
-    <span class="figure-evidence">图 16–18，权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
+    <span>控制器根据尚未分派的份额选供给组和接收组。供给组遍历器收到允许跨组选取 mGPU 的掩码，接收组得到同步状态。</span>
+    <span class="figure-evidence">图 16–18，权 1 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12333339">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">份额和重分配条件</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">工作共享的原映射和覆盖条件</h3></div>
     
   </div>
   <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">状态</th><th scope="col">分派优先考虑</th><th scope="col">潜在影响</th></tr></thead><tbody><tr><th scope="row">两组都有初始份额</th><td>遵循软件映射</td><td>保留组级局部性</td></tr><tr><th scope="row">B 发完初始份额</th><td>触发共享判决</td><td>检查 A 的待分派工作</td></tr><tr><th scope="row">共享获准</th><td>把 A 的一部分交给 B</td><td>可能改变缓存访问位置</td></tr></tbody></table>
@@ -100,8 +101,9 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
-    <div class="analysis-note"><h3>收益与开销</h3><p>收益由减少最后一组空转和缩短负载尾段构成。代价是改变工作所在的缓存组，可能增加缓存缺失、下层传输字节数与各组请求队列等待。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>保持各组算力与初始工作量差异不变，增大 A、B 使用的数据重叠度。若分派尾段缩短但 kernel 完成反而推迟，可比较新增缓存缺失和下层带宽利用率。</p></div>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按共享缓存映射</dt><dd>复用组内缓存数据 <span class="subdued">原图 3、15，权 1</span></dd></div><div><dt>硬件状态机更新</dt><dd>重新分派剩余工作 <span class="subdued">原图 18，权 1、14</span></dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>分开测最后一批分派到达各组的时刻、各组完成最后一项工作的时刻、重分派工作组数和下层传输字节数。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>如果剩余工作的热点数据仍驻留供给组缓存，移到另一组后的冷缺失可能抵消分派更均衡带来的时间收益。</p></div>
     <div id="example" class="article-example">
       <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>组 A 还有待分派工作，组 B 已发完自己的份额。</dd></div><div><dt>处理结果</dt><dd>达到共享条件后，可把 A 的部分工作重新分配给 B。权 1 的条件是已经分派完成，不能直接当作所有指令均已执行完成。</dd></div><div><dt>结果解读</dt><dd>比较两组的利用率、共享缓存缺失和内存流量。GPU 工作组亲和性与 CPU 线程亲和性采用不同调度实体。</dd></div></dl>
@@ -112,19 +114,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、8、14 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 1 的关键技术特征</h3>
-  <p>权 1 以一个 GPU 子单元组是否已分派完本组工作作为接收其他组工作的判据。只要满足分派条件，硬件状态机就可把其他组尚待分派的工作重新分给该组。这里的进度点是分派完成，已分派的工作此时仍可能在执行。原图 18 展示了重新分派所需的工作进度、执行单元掩码和同步状态。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>两个子单元组各自共享组内缓存</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=In%20the%20illustrated%20embodiment%2C%20mGPUs%20320A-320N%20are%20grouped%20and%20primary%20control%20circuitry%20210%20communicates%20with%20multiple">原图 3。mGPU 属于不同子单元组，组内可共享缓存 360，例中可能是 L2。</a></td></tr><tr><th scope="row">F2</th><td>软件给出各部分工作到 GPU 子单元组的亲和性映射</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=FIG.%2015%20is%20a%20diagram%20illustrating%20example%20affinity%20techniques%20for%20a%20set%20of%20graphics%20work%20%28e.g.%2C">原图 15。工作项用映射标识 1515 选择亲和性表 1520，表给出各部分的目标组。</a></td></tr><tr><th scope="row">F3</th><td>根据映射向两个子单元组分别分派对应的工作子集</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=At%202420%2C%20in%20the%20illustrated%20embodiment%2C%20control%20circuitry%20assigns%2C%20based%20on%20the%20mapping%2C%20a%20first%20subset">原图 24。步骤 2420 应用映射，使访问相关数据的工作可以利用同一组的缓存。</a></td></tr><tr><th scope="row">F4</th><td>检测另一个共享缓存组已分派完原先分给它的工作</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=Work%20sharing%20control%20circuitry%201820%2C%20in%20the%20illustrated%20embodiment%2C%20is%20configured%20to%20select%20work%20donator%20group%28s%29">原图 18。工作共享控制 1820 以未分派工作计数选接收组和供出组。</a></td></tr><tr><th scope="row">F5</th><td>检测结果更新由时序和组合电路实现的有限状态机</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2">原图 18。原图给出跟踪、供出组和接收组控制。时序和组合电路实现状态机是独权明确的硬件限定。</a></td></tr><tr><th scope="row">F6</th><td>覆盖软件映射，把第一组的一部分工作重新分给原先无此分派的组</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=In%20some%20embodiments%2C%20control%20circuitry%20selects%20one%20or%20more%20donator%20groups%20of%20mGPUs%20%28e.g.%2C%20the%20group%28s%29">原图 18。接收组可执行原来面向供出组的部分工作，平衡剩余分派量。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>设备由两组共享不同缓存，硬件根据接收组的分派进度改变软件映射。见原图 15 至 18。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=first%20and%20second%20groups%20of%20graphics%20processor%20sub-units%2C%20wherein%20the%20first%20group%20of%20sub-units%20shares%20a">F1</a></th><td>两个 GPU 子单元组各自共享组内缓存</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=a%20software-indicated%20mapping%20of%20portions%20of%20the%20set%20of%20graphics%20work%20to%20groups%20of%20graphics%20processor">F2</a></th><td>软件给出工作部分到 GPU 子单元组的映射</td><td>原图 15</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=another%20group%20of%20sub-units%20that%20share%20a%20cache%20have%20dispatched%20all%20of%20their%20assigned%20portion%20for">F3</a></th><td>检查另一个共享缓存组是否分派完原份额</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20hardware%20finite%20state%20machine%20is%20implemented%20using%20sequential%20circuitry%20and%20combinational%20circuitry">F4</a></th><td>工作共享状态机由时序和组合电路实现</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20part%20of%20the%20first%20subset%20would%20not%20have%20been%20assigned%20to%20the%20other%20group%20of">F5</a></th><td>重新分派使原本没有分到这部分工作的组接收它</td><td>原图 18</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-8" aria-labelledby="independent-8-title">
+  <h4 id="independent-8-title">权利要求 8</h4>
+  <p>介质中保存具有组级缓存、软件映射和硬件重新分派逻辑的电路设计。见原图 15 至 18。</p>
+  <table class="comparison-table" aria-labelledby="independent-8-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=first%20and%20second%20groups%20of%20graphics%20processor%20sub-units%2C%20wherein%20the%20first%20group%20of%20sub-units%20shares%20a">F6</a></th><td>两个 GPU 子单元组各自共享组内缓存</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=a%20software-indicated%20mapping%20of%20portions%20of%20the%20set%20of%20graphics%20work%20to%20groups%20of%20graphics%20processor">F7</a></th><td>软件给出工作部分到 GPU 子单元组的映射</td><td>原图 15</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=another%20group%20of%20sub-units%20that%20share%20a%20cache%20have%20dispatched%20all%20of%20their%20assigned%20portion%20for">F8</a></th><td>检查另一个共享缓存组是否分派完原份额</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20hardware%20finite%20state%20machine%20is%20implemented%20using%20sequential%20circuitry%20and%20combinational%20circuitry">F9</a></th><td>工作共享状态机由时序和组合电路实现</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20part%20of%20the%20first%20subset%20would%20not%20have%20been%20assigned%20to%20the%20other%20group%20of">F10</a></th><td>重新分派使原本没有分到这部分工作的组接收它</td><td>原图 18</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-14" aria-labelledby="independent-14-title">
+  <h4 id="independent-14-title">权利要求 14</h4>
+  <p>方法从接收软件映射开始，比较分派进度后更新硬件状态机并覆盖部分映射。见原图 15 至 18。</p>
+  <table class="comparison-table" aria-labelledby="independent-14-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=a%20software-indicated%20mapping%20of%20portions%20of%20the%20set%20of%20graphics%20work%20to%20groups%20of%20graphics%20processor">F11</a></th><td>软件给出工作部分到 GPU 子单元组的映射</td><td>原图 15</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=another%20group%20of%20sub-units%20that%20share%20a%20cache%20have%20dispatched%20all%20of%20their%20assigned%20portion%20for">F12</a></th><td>检查另一个共享缓存组是否分派完原份额</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20hardware%20finite%20state%20machine%20is%20implemented%20using%20sequential%20circuitry%20and%20combinational%20circuitry">F13</a></th><td>工作共享状态机由时序和组合电路实现</td><td>原图 18</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=the%20part%20of%20the%20first%20subset%20would%20not%20have%20been%20assigned%20to%20the%20other%20group%20of">F14</a></th><td>重新分派使原本没有分到这部分工作的组接收它</td><td>原图 18</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>初始按软件映射分配。另一组已分派完份额时，硬件状态机可触发重新分派。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>相对权 1，要求在配置寄存器中保存多个工作到子单元组的映射。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>相对权 1，将工作限定为计算内核。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>相对权 3，规定主遍历电路确定内核分块，并由各组遍历电路生成工作组批次。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>相对权 4，增加批次仲裁及向所选组内子单元分派的电路。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>相对权 1，要求支持一维、二维及三维工作映射。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>相对权 1，增加逻辑槽、每子单元多硬件槽，以及同时依据分派规则和亲和性映射的逻辑到硬件槽映射。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=A%20non-transitory%20computer-readable%20storage%20medium%20having%20stored%20thereon%20design%20information%20that%20specifies%20a%20design%20of%20at%20least%20a">查看原文限定</a></td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20non-transitory%20computer-readable%20storage%20medium%20of%20claim%208%2C%20wherein%20the%20circuit%20includes%20control%20circuitry%20configured%20to%20store%2C%20in">查看原文限定</a></td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20non-transitory%20computer-readable%20storage%20medium%20of%20claim%208%2C%20wherein%20the%20distribution%20circuitry%20includes%3Aprimary%20walker%20circuitry%20configured%20to%20determine">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20non-transitory%20computer-readable%20storage%20medium%20of%20claim%2010%2C%20wherein%20the%20distribution%20circuitry%20further%20includes%3Agroup%20walker%20arbitration%20circuitry%20configured">查看原文限定</a></td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20non-transitory%20computer-readable%20storage%20medium%20of%20claim%208%2C%20wherein%20the%20circuit%20supports%20mappings%20of%20portions%20of%20sets%20of">查看原文限定</a></td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20non-transitory%20computer-readable%20storage%20medium%20of%20claim%208%2C%20wherein%20the%20circuit%20further%20comprises%3Acircuitry%20that%20implements%20a%20plurality%20of">查看原文限定</a></td></tr><tr id="claim-14"><th scope="row">14</th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=A%20method%2C%20comprising%3Areceiving%2C%20by%20distribution%20circuitry%20of%20a%20graphics%20processor%20that%20includes%20first%20and%20second%20groups%20of%20graphics">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20method%20of%20claim%2014%2C%20further%20comprising%3Adisabling%20affinity-based%20work%20distribution%20in%20one%20or%20more%20modes%20of%20operation.">查看原文限定</a></td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20method%20of%20claim%2014%2C%20further%20comprising%3Aassigning%20subsets%20of%20sets%20of%20graphics%20work%20to%20groups%20of%20graphics%20sub-units%2C">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20method%20of%20claim%2014%2C%20wherein%3Athe%20graphics%20processor%20implements%20a%20plurality%20of%20logical%20slots%3Bthe%20sub-units%20in%20the%20first">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td><a href="https://eureka.patsnap.com/patent/US12333339B2#:~:text=The%20method%20of%20claim%2017%2C%20wherein%20the%20one%20or%20more%20software%20overrides%20include%20at%20least%20one%20of%20the">查看原文限定</a></td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>设备由两组共享不同缓存，硬件根据接收组的分派进度改变软件映射。见原图 15 至 18。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>用配置寄存器保存多套工作部分到子单元组的映射。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>将图形工作限定为计算内核。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>为计算内核设主遍历器和分组遍历器，后者将各组份额展开为工作组批次。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>在组遍历结果间仲裁，再将选中的批次发给对应组的一个或多个子单元。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>支持一维、二维和三维的工作映射。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>加逻辑槽和分布式硬件槽；指定全部或部分子单元的分派范围，结合组映射来确定槽映射。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>介质中保存具有组级缓存、软件映射和硬件重新分派逻辑的电路设计。见原图 15 至 18。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>设计包含保存多套工作部分到组映射的配置寄存器。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>设计包括主遍历和两个组遍历器，分别产生各组的工作子集。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>设计加入组遍历结果仲裁和将所选批次分发给对应组内子单元的电路。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>设计支持一、二、三维工作映射。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>设计加入逻辑槽、分布式硬件槽和由分派范围、组映射共同确定的槽映射。</td></tr><tr id="claim-14"><th scope="row">14</th><td>独立项</td><td>方法从接收软件映射开始，比较分派进度后更新硬件状态机并覆盖部分映射。见原图 15 至 18。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td>在一种或多种运行模式下禁用按亲和性分派。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td>使用多个不同映射分派工作子集，至少覆盖两种工作维数。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td>用一个或多个软件覆盖项部分控制逻辑槽到分布式硬件槽的映射。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>列出软件覆盖项可选的子单元掩码、分派范围、目标组或调度策略。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -135,7 +153,7 @@
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
 <p>US12333339B2 的 GPU 分派硬件从软件给出的初始工作映射开始，在某组已发完原份额后按硬件状态重新分派。US12147839B2 由性能控制逻辑识别核簇共享资源压力，再由 OS 调度器决定具体线程是否迁移。两边的调度对象分别是 GPU 工作组和 CPU 线程，观测点分别在硬件分派器和核簇资源。</p></li><li><a href="US11775811B2.html#engineering">按执行依赖提高 CPU、GPU 和神经处理器的重叠</a>
-<p>US11775811B2 按运算的依赖图从就绪节点中选择可提高处理器并行活动的工作。US12333339B2 在 GPU 内按照软件映射分派工作组，并允许硬件在某组发完原份额后重新分派。前者决定何时向哪个执行资源提交一项就绪工作，后者决定 GPU 内部由哪组资源接收工作组。</p></li><li><a href="US12175300B2.html#engineering">GPU 逻辑槽映射给高优先级图形工作预留硬件槽</a>
+<p>US11775811B2 为算法节点标出所属处理器，遍历依赖图时从就绪节点中选择能增加同时使用的处理器数量的节点。US12333339B2 在 GPU 内按软件指定的映射分派工作组，并允许硬件在接收组发完原份额后重分派其余工作。前者决定就绪算法节点的提交次序，后者决定 GPU 内部的工作归属。</p></li><li><a href="US12175300B2.html#engineering">GPU 为高优先级逻辑槽预留分布式硬件槽</a>
 <p>US12175300B2 用软件优先级约束逻辑槽到硬件槽的映射，低优先级工作只能使用未预留槽。US12333339B2 在先有的软件映射上允许 GPU 硬件按分派进度重新分配工作组。对照时注意预留槽影响工作能否映射，重分派影响获准进入的工作交给哪组执行资源。</p></li></ul>
     <p><a href="../index.html?patent=US12333339B2#knowledge">在全量关系图上定位 US12333339B2</a></p>
   </section>
@@ -150,6 +168,7 @@
     <div><dt>美国申请日</dt><dd>2021-08-11</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2025-06-17</dd></div>
     <div><dt>美国申请号</dt><dd>US17/399,784</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew M. Havlir、Ajay Simha Modugala、Benjamin Bowman、Yunjun Zhang</dd></div><div><dt>分类号</dt><dd>G06F12/0804、G06F12/0808、G06F12/0813、G06F12/084、G06F12/0842、G06F9/4881、G06F9/5027、G06F9/5066、G06T1/20、G06F12/0811、G06F12/0857、G06F12/0888、G06F12/126、G06F2209/509、G06F2212/1008、G06F2212/1016、G06F2212/1028、G06F2212/1048、G06F2212/455、G06F2212/502、G06T2200/28</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12333339B2/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://eureka.patsnap.com/patent/US12333339B2">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

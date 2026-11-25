@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12444474B2 内存工作点切换至目标电压前重复校准接口时序 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<title>US12444474B2 内存供电切换期间重复校准接口时序 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -22,9 +22,9 @@
 <div class="frame">
   <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US12444474B2</code><span>美国授权专利</span><time datetime="2025-10-14">2025-10-14</time></p>
-  <h1>内存工作点切换至目标电压前重复校准接口时序</h1>
+  <h1>内存供电切换期间重复校准接口时序</h1>
   <p class="english-title" lang="en">Voltage ramp memory calibration</p>
-  <p class="document-question">在内存供电电压爬升期间，如何调整时钟或选通信号的延迟？</p>
+  <p class="document-question">内存供电电压仍在变化时，控制器怎样修正接口信号的发送时序？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -32,79 +32,81 @@
   <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
   <section class="engineering" id="engineering" aria-labelledby="engineering-title">
     <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">内存控制器在性能状态切换过程中多次请求内存侧定时测试，读取反映当前电压的计数后更新接口时钟延迟。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>电压斜坡期间的时延变化须能被测试计数跟踪。测量窗口和延迟更新频率影响暂态校准。</dd></div><div><dt>验证方法</dt><dd>固定电压斜坡和内存负载，对照仅在目标电压校准与切换中重复校准。记录每次计数、延迟档位和接口错误。</dd></div></dl>
+    <p class="engineering-change">在内存性能状态变换期间增加控制器发起的多次定时测试。每次用内存侧返回的计数更新接口发送延迟。</p>
+    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>计数值需随当前供电状态变化，并能映射到所需的接口延迟调整。发送 W_DQS 是图 2 的例子。</dd></div><div><dt>验证方法</dt><dd>固定电压斜坡与访问序列，比较仅在目标电压校准和过渡期间重复校准。同步记录各窗口的实际电压、Count_out、延迟控制码和内存访问错误。</dd></div></dl>
     <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12444474B2">原文权利要求 1（全文）</a><a href="#fig-4">对应工程图解</a></p>
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">内存接口采样裕量会随供电电压变化。校准电路需要在工作点切换过程中观测这种变化。</p>
-    <p>内存端的环形振荡器与计数器给出一段固定时间内的计数。控制器用返回值更新接口延迟，并在供电稳定前多次执行校准。</p>
-    <ol class="walkthrough"><li><h3>开启测量窗口</h3><p>校准控制电路发送开始计数的命令。内存端用环形振荡器信号驱动计数器。</p></li><li><h3>结束并读取计数</h3><p>控制器经过指定间隔后发送停止命令。内存返回计数，计数器可以清零以准备下一次测量。</p></li><li><h3>调整接口延迟</h3><p>控制器可根据本次和上次计数的差值修改延迟电路。图 2 以写数据选通信号为例。</p></li><li><h3>在斜坡中重复</h3><p>供电达到目标工作点并稳定后停止多次校准。权 8 允许在切换过程中的至少部分阶段传输数据。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 3 要在结束测试时读取并清零计数。权 5 用相邻计数差值调整延迟，权 8 允许部分过渡时间内处理存储流量。这要求采样窗和可继续事务的阶段独立定义。</p></div>
+    <p class="section-intro">供电电压变化会移动内存接口的采样窗口。图 2 的环形振荡器由内存端供电，其频率随电压变化。控制器用计数间接跟踪这项变化，并通过发送端的延迟电路调整时钟或选通信号。</p>
+    <p>性能状态切换期间，内存控制器多次命令内存端执行定时测试。每次取回反映当前供电电压的计数，用它更新控制器上的发送时钟延迟。图 2 以写数据选通（W_DQS）为例。</p>
+    <ol class="walkthrough"><li><h3>内存端开始计数</h3><p>控制器检测到性能状态切换，向内存发送开始定时测试的命令。计数器用内存侧环形振荡器的脉冲递增。</p></li><li><h3>控制器读回计数</h3><p>图 2 的命令电路等待指定时间后发停止计数命令。内存端停止计数、返回 Count_out，并可将计数器清零。</p></li><li><h3>更新发送时序</h3><p>控制器得到 Count_out 后调整输出时钟的延迟。图 2 的实施例先计算与最近一次计数的差，再向 PHY 内的延迟电路发送新的控制码以调整 W_DQS。</p></li><li><h3>电压变化期间重复测试</h3><p>相邻测试跨过同一段供电电压变化。图 4 还允许达到目标值后做一次校准，供电稳定信号到达时结束这轮重复校准。</p></li></ol>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>独权覆盖切换期间的多次校准和按计数调整延迟。使用相邻差、固定时间后发停止命令以及允许部分事务均有各自的从属条件。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>W_DQS</dt><dd>写数据选通信号，内存端据此采样写入的数据。</dd></div><div><dt>环形振荡器</dt><dd>由反馈环组成的振荡电路。在本实施例中频率随内存端供电电压变化。</dd></div><div><dt>DLL</dt><dd>延迟锁定环。控制器侧延迟电路的一种实施方式。</dd></div><div><dt>采样眼</dt><dd>由多段接口信号叠加所得的时序图。水平开口代表可用时间窗口，垂直开口代表电压裕量。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-4">相邻测量窗口追踪同一段电压斜坡</a></li><li><a href="#fig-1">内存端测量，经控制器调整接口时钟延迟</a></li><li><a href="#fig-2">单次测试跨越两个控制命令</a></li><li><a href="#fig-3">不同阶段使用什么判据</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-4">可在计数期间继续服务部分内存事务</a></li><li><a href="#fig-1">内存端产生计数，控制器调整发送时序</a></li><li><a href="#fig-2">一次校准怎样读回计数并更新延迟</a></li><li><a href="#fig-3">重复校准的几个独立条件</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">相邻测量窗口追踪同一段电压斜坡</h3></div>
-    <a class="paper-open" href="../figures/US12444474B2/US12444474B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 相邻测量窗口追踪同一段电压斜坡 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">可在计数期间继续服务部分内存事务</h3></div>
+    <a class="paper-open" href="../mechanisms/US12444474B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="相邻测量窗口追踪同一段电压斜坡">
-    <img class="paper-image" src="../figures/US12444474B2/US12444474B2-fig-4.svg" width="813" height="225"
-         style="--paper-width:813px" alt="相邻测量窗口追踪同一段电压斜坡。每个计数窗口结束时返回结果，随后更新延迟。图中不固定校准次数。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="可在计数期间继续服务部分内存事务">
+    <img class="paper-image native-image" src="../mechanisms/US12444474B2/fig-4/diagram.svg" width="794" height="652"
+         style="--paper-width:794px" alt="可在计数期间继续服务部分内存事务。计数、读回和延迟更新在电压变化过程中多次发生。原图 4 还允许电压到达目标值后再做一次校准。">
   </div>
   <figcaption>
-    <span>每个计数窗口结束时返回结果，随后更新延迟。图中不固定校准次数。</span>
-    <span class="figure-evidence">图 4，权 1、3、5–6 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
+    <span>计数、读回和延迟更新在电压变化过程中多次发生。原图 4 还允许电压到达目标值后再做一次校准。</span>
+    <span class="figure-evidence">图 4，权 1、3、5–6 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">内存端测量，经控制器调整接口时钟延迟</h3></div>
-    <a class="paper-open" href="../mechanisms/US12444474B2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">内存端产生计数，控制器调整发送时序</h3></div>
+    <a class="paper-open" href="../mechanisms/US12444474B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="内存端测量，经控制器调整接口时钟延迟">
-    <img class="paper-image native-image" src="../mechanisms/US12444474B2/diagram.svg" width="955" height="176"
-         style="--paper-width:955px" alt="内存端测量，经控制器调整接口时钟延迟。内存侧用环形振荡器计数反映电压变化，并把计数返回控制器。控制器据此调整接口时钟延迟，使校准可与正常访存的部分时段重叠。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="内存端产生计数，控制器调整发送时序">
+    <img class="paper-image native-image" src="../mechanisms/US12444474B2/fig-1/diagram.svg" width="269" height="838"
+         style="--paper-width:269px" alt="内存端产生计数，控制器调整发送时序。内存侧环形振荡器感受 Vdd，其脉冲驱动计数器。控制器读回 Count_out，通过 PHY 中的延迟电路调节 W_DQS。">
   </div>
   <figcaption>
-    <span>内存侧用环形振荡器计数反映电压变化，并把计数返回控制器。控制器据此调整接口时钟延迟，使校准可与正常访存的部分时段重叠。</span>
-    <span class="figure-evidence">图 1–2，权 1–5 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
+    <span>内存侧环形振荡器感受 Vdd，其脉冲驱动计数器。控制器读回 Count_out，通过 PHY 中的延迟电路调节 W_DQS。</span>
+    <span class="figure-evidence">图 1–2，权 1–5 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">单次测试跨越两个控制命令</h3></div>
-    <a class="paper-open" href="../figures/US12444474B2/US12444474B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 单次测试跨越两个控制命令 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">一次校准怎样读回计数并更新延迟</h3></div>
+    <a class="paper-open" href="../mechanisms/US12444474B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="单次测试跨越两个控制命令">
-    <img class="paper-image" src="../figures/US12444474B2/US12444474B2-fig-2.svg" width="762" height="389"
-         style="--paper-width:762px" alt="单次测试跨越两个控制命令。计数窗口结束后才返回结果。控制器用结果在下一次测试前调整延迟。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="一次校准怎样读回计数并更新延迟">
+    <img class="paper-image native-image" src="../mechanisms/US12444474B2/fig-2/diagram.svg" width="920" height="458"
+         style="--paper-width:920px" alt="一次校准怎样读回计数并更新延迟。停止命令结束计数。计数器先返回 Count_out 再清零，控制器可用相邻两次计数的差值更新延迟。">
   </div>
   <figcaption>
-    <span>计数窗口结束后才返回结果。控制器用结果在下一次测试前调整延迟。</span>
-    <span class="figure-evidence">图 1–2、5，权 1–5 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
+    <span>停止命令结束计数。计数器先返回 Count_out 再清零，控制器可用相邻两次计数的差值更新延迟。</span>
+    <span class="figure-evidence">图 1–2、5，权 1–5 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同阶段使用什么判据</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">重复校准的几个独立条件</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">阶段</th><th scope="col">校准动作</th><th scope="col">接口行为</th></tr></thead><tbody><tr><th scope="row">切换开始</th><td>开始周期性测量</td><td>按已有设置工作</td></tr><tr><th scope="row">斜坡</th><td>更新时钟延迟</td><td>可在部分阶段传输</td></tr><tr><th scope="row">目标轨稳定</th><td>结束重复校准</td><td>使用校准后的设置</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">权项</th><th scope="col">增加的条件</th><th scope="col">操作</th></tr></thead><tbody><tr><th scope="row">权 3</th><td>等待指定时长后发第二命令</td><td>停止计数、返回结果、清零</td></tr><tr><th scope="row">权 5</th><td>本次与前次计数的差</td><td>根据差值调整时钟延迟</td></tr><tr><th scope="row">权 6</th><td>供电已稳定在目标状态电压</td><td>结束切换期间的重复校准</td></tr><tr><th scope="row">权 8</th><td>切换至少有一部分时段允许传输</td><td>控制器与内存交换内存流量</td></tr></tbody></table>
   <figcaption>
-    <span>目标电压已经稳定时结束斜坡期的重复校准。传输允许范围由具体实现确定。</span>
+    <span>权 1 用计数调整发送延迟。各从属项分别增加定时窗口、差值、终止判据或事务可用性。</span>
     <span class="figure-evidence">图 4–6，权 1、6、8 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12444474">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2">专利全文</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
-    <div class="analysis-note"><h3>收益与开销</h3><p>分别统计校准命令占用的接口时间、写选通最小采样裕量、转换期间可服务读写的比例。每增加一次测量可能改善时序跟踪，也可能推高事务队列的尾延迟。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>在相同电压转换下改变负载和温度，让环振计数对实际选通延迟的相关性变差。若计数差仍平滑但眼宽缩小、错误率上升，计数代理已不能覆盖时延变化。</p></div>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>切换期间反复测量</dt><dd>跟踪内存侧时序变化 <span class="subdued">权 1，原图 4</span></dd></div><div><dt>更新 PHY 发送延迟</dt><dd>保留采样时序裕量 <span class="subdued">原图 2，说明书 [0035]–[0036]</span></dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>计数器里积累的是窗口内的环振脉冲。电压变化越快，窗口平均值与更新时刻的实际供电可能相差越大。缩短窗口能减小这段差异，但会减少脉冲数。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>在相同供电斜坡下改变温度。如果 Count_out 仍平滑变化但眼图水平裕量变窄，应检查环振与数据路径的温度敏感度是否一致。</p></div>
     <div id="example" class="article-example">
       <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>内存由较低供电电压切换到较高电压，接口仍在完成部分内存事务。</dd></div><div><dt>处理结果</dt><dd>每次测试使用相同测量窗口。振荡计数随电压变化，控制器更新延迟设置。</dd></div><div><dt>结果解读</dt><dd>验证时对齐校准命令、供电轨迹和选通信号。计数是电压相关代理量，不能直接作为电压读数。</dd></div></dl>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设内存供电从低电压工作点升至高电压工作点。用等长的定时窗口观察环形振荡器。</dd></div><div><dt>处理结果</dt><dd>较高电压可使振荡器在同样窗口内产生更多脉冲。控制器利用相邻计数差更新延迟设置。</dd></div><div><dt>结果解读</dt><dd>验证时应同时观察内存供电、计数值以及写数据选通的采样位置。计数跨越整个窗口，因此会反映窗口内的电压变化。</dd></div></dl>
     </div>
     
   </section>
@@ -112,23 +114,39 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、10、17 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 1 的关键技术特征</h3>
-  <p>原图 2 以写数据选通信号 W_DQS 为校准对象。原图 4–6 给出计数、回传、调整和复测的顺序。权利要求 5 限定按相邻计数差调整，权利要求 8 限定过渡期间有内存事务。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>控制器向内存发送时钟信号。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Memory%20controller%20105%20in%20the%20embodiment%20shown%20is%20configured%20to%20conduct%20memory%20transactions%20with%20memory%20110.">原图 1。受校准的是控制器发出的存储接口时钟。</a></td></tr><tr><th scope="row">F2</th><td>工作点变化期间重复校准。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=This%20process%20continues%20as%20the%20voltage%20ramps%20up%20from%20V_P1%20to%20V_P2.%20During%20at%20least%20the">原图 4。电压斜坡内包含多个校准窗口。</a></td></tr><tr><th scope="row">F3</th><td>延迟电路调整发向内存的时钟。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20of%20another%20embodiment%20of%20a%20memory%20subsystem.%20In%20the%20embodiment">原图 2。可在控制器接口侧调节延迟。</a></td></tr><tr><th scope="row">F4</th><td>控制器发命令，内存开始产生反映当前电压的计数值。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Accordingly%2C%20the%20present%20disclosure%20contemplates%20performing%20such%20a%20background%20calibration%20during%20the%20change%20in%20voltage.%20A">原图 1。环形振荡器驱动计数器是权 2 的实施方式。</a></td></tr><tr><th scope="row">F5</th><td>测试完成后控制器收到内存端计数。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%204%20is%20an%20illustration%20of%20a%20timeline%20for%20calibrations%20carried%20out%20by%20one%20embodiment%20of">原图 4。测量窗口结束与收到结果分开观察。</a></td></tr><tr><th scope="row">F6</th><td>控制器根据计数配置时钟延迟。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Command%20circuit%20211%20in%20the%20embodiment%20shown%2C%20upon%20receiving%20the%20count%20value%20from%20counter%20circuit%20245%2C">原图 2。图 2 还给出利用相邻计数差的实现。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>控制器装置在性能状态变化时执行多次定时测试，每次用内存返回且反映供电的计数调整发给内存的时钟延迟。见图 1、2、4。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=a%20plurality%20of%20calibrations%20of%20the%20clock%20signal%20during%20a%20change">F1</a></th><td>切换过程中对送往内存的时钟执行多次校准。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=When%20changing%20performance%20states%2C%20the%20voltage%20may%20be%20changed%20separately%20from%20the%20clock%20frequency.%20For%20example%2C">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=In%20the%20embodiment%20shown%2C%20memory%20controller%20105%20is%20configured%20to%20initiate%20a%20calibration%20as%20the%20voltage">说明书 0029</a> · 原图 1 · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=a%20timing%20test%20that%20generates%20a%20count%20value%20indicative%20of%20a%20current%20voltage%20of%20the%20memory">F2</a></th><td>定时测试产生反映内存当前供电电压的计数。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=It%20is%20noted%20that%20the%20use%20of%20the%20write%20data%20strobe%20in%20FIG.%202%20is%20by">说明书 0032</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Calibration%20control%20circuit%20206%20in%20the%20embodiment%20shown%20is%20configured%20to%20initiate%20and%20%2F%20or%20carry">说明书 0034</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=cause%20the%20delay%20circuit%20to%20adjust%2C%20based%20on%20the%20count%20value%2C%20the%20delay%20applied%20to%20the">F3</a></th><td>用计数结果更新控制器侧的发送时钟延迟。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=In%20response%20to%20receiving%20an%20indication%20of%20a%20performance%20state%20change%2C%20command%20circuit%20211%20may%20generate">说明书 0035</a> · 原图 2</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-10" aria-labelledby="independent-10-title">
+  <h4 id="independent-10-title">权利要求 10</h4>
+  <p>方法项要求各性能状态有不同供电电压。改变状态期间重复由控制器发起、内存回传计数、控制器调节延迟的过程，见图 5。</p>
+  <table class="comparison-table" aria-labelledby="independent-10-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=a%20given%20one%20of%20the%20plurality%20of%20performance%20states%20has%20a%20unique%20supply%20voltage">F4</a></th><td>每个性能状态对应不同供电电压。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%205%20is%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%20for%20carrying%20out%20a">说明书 0050</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=performing%2C%20during%20the%20changing%20operation%20to%20the%20second%20one%20of%20the%20plurality%20of%20performance%20states">F5</a></th><td>在变换到第二状态期间执行校准。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=In%20changing%20the%20performance%20state%2C%20power%20management%20circuit%20320%20may%20also%20send%20a%20multi-bit%20signal%20P_state">说明书 0047</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%205%20is%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%20for%20carrying%20out%20a">说明书 0050</a> · 原图 4 · 原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=conveying%2C%20by%20the%20memory%20to%20the%20memory%20controller%20circuit%20at%20a%20conclusion%20of%20the%20timing%20test%2C">F6</a></th><td>内存在测试结束时将计数交回控制器。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Calibration%20control%20circuit%20206%20in%20the%20embodiment%20shown%20is%20configured%20to%20initiate%20and%20%2F%20or%20carry">说明书 0034</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%205%20is%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%20for%20carrying%20out%20a">说明书 0050</a> · 原图 2 · 原图 5</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
+  <h4 id="independent-17-title">权利要求 17</h4>
+  <p>系统独权明确控制器在集成电路上，状态变换包括供电改变，控制器以定时测试计数反馈调整发往内存的时钟延迟。见图 2、3。</p>
+  <table class="comparison-table" aria-labelledby="independent-17-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=an%20integrated%20circuit%20including%20at%20least%20one%20memory%20controller%20circuit%20implemented%20thereon">F7</a></th><td>在集成电路上实现至少一个内存控制器。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=It%20is%20noted%20that%20in%20some%20embodiments%2C%20after%20the%20voltage%20change%20is%20complete%2C%20with%20the%20voltage">说明书 0038</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=the%20change%20of%20operation%20comprises%20a%20change%20to%20a%20supply%20voltage">F8</a></th><td>改变工作状态包括改变供电电压。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=Clock%20generator%20321%20may%20also%20include%20other%20circuits%20usable%20to%20adjust%20a%20frequency%20of%20the%20Clk_In">说明书 0044</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=In%20changing%20the%20performance%20state%2C%20power%20management%20circuit%20320%20may%20also%20send%20a%20multi-bit%20signal%20P_state">说明书 0047</a> · 原图 3 · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=cause%20the%20delay%20circuit%20to%20adjust%20the%20delay%20to%20the%20clock%20signal%20using%20the%20count%20value">F9</a></th><td>用返回计数调节时钟信号延迟。</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=In%20response%20to%20receiving%20an%20indication%20of%20a%20performance%20state%20change%2C%20command%20circuit%20211%20may%20generate">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=FIG.%203%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20including%20a%20memory%20controller">说明书 0039</a> · 原图 2 · 原图 3</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>性能状态切换过程中重复测量并依据内存返回计数调整送往内存的时钟延迟。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>内存设置环振、计数器和存储单元，计数器使用环振输出递增。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>到期发第二命令，停止计数、回传结果并清零。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-2">2</a></td><td>供电升高时环振输出频率随之上升。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>时钟延迟按本次计数与上次计数的差调整。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>达到目标状态的稳定供电电压后停止重复校准。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>各性能状态对应彼此不同的供电电压。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>允许在至少部分工作点过渡时段传送内存流量。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>时钟延迟电路可使用延迟锁定环。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=A%20method%20comprising%3Aoperating%20a%20memory%20subsystem%20in%20a%20first%20one%20of%20a%20plurality%20of%20performance%20states%2C%20wherein%20the">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>使用环振使计数器递增并回传计数值。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>第二命令结束测量窗口，计数回传后清零。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>切换期间供电升高时，环振输出频率随之提高。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>控制器根据相邻两次计数的差更新时钟延迟。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>供电达到目标状态电压且稳定后停校准。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>允许过渡期间的部分时间继续收发内存事务。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US12444474B2#:~:text=A%20system%20comprising%3Aan%20integrated%20circuit%20including%20at%20least%20one%20memory%20controller%20circuit%20implemented%20thereon%2C%20wherein%20the%20memory%20controller">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>内存侧设供电相关频率的环振和连接的计数器。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>第二命令停止计数、回报并清零，控制器按相邻两次计数差调节延迟。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>切换工作点期间可在部分阶段继续完成内存事务。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>控制器装置在性能状态变化时执行多次定时测试，每次用内存返回且反映供电的计数调整发给内存的时钟延迟。见图 1、2、4。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>增设带存储位置、环形振荡器和计数器的内存。在第一命令到达后，用环振输出递增计数。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>经过指定间隔发第二命令，内存端停止递增、返回计数并清零。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-2">2</a></td><td>限定切换中随供电电压升高而提高环振输出频率。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>以本次计数与前次计数的差调整时钟延迟。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>第二性能状态对应的供电电压稳定后结束多次校准。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>要求每个性能状态使用与其他状态不同的供电电压。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>要求切换过程中的至少一段时间，控制器与内存交换内存流量。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>延迟电路使用延迟锁定环。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>方法项要求各性能状态有不同供电电压。改变状态期间重复由控制器发起、内存回传计数、控制器调节延迟的过程，见图 5。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>以环振输出递增计数器，计数器提供测试结果。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>加入指定间隔后的第二命令。内存端停止计数，向控制器送回结果并清零。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>供电电压在切换期间升高时，提高环振输出频率。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>限定控制器按当前计数和前次计数的差调整时钟延迟。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>当供电稳定于第二性能状态规定的电压后，结束多次校准。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>要求在内存子系统切换的至少部分阶段传输内存流量。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>系统独权明确控制器在集成电路上，状态变换包括供电改变，控制器以定时测试计数反馈调整发往内存的时钟延迟。见图 2、3。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>内存子系统增加与供电相关的环形振荡器。计数器收到第一命令后用其输出递增。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>加入指定间隔后的第二命令、计数停止与回传并清零。控制器再与最近一次结果相减，以差值改写延迟。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>限定控制器与内存在状态过渡期的至少一部分收发内存事务。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1–2、权 1–4</dt><dd>内存端环形振荡器、计数器和控制器侧延迟电路。</dd></div><div><dt>图 4、权 5–6</dt><dd>电压斜坡期间的重复校准与终止。</dd></div><div><dt>图 2、说明书 [0030]–[0036]</dt><dd>以写数据选通和采样眼为例说明延迟调整。</dd></div></dl>
+    <dl class="explanation evidence"><div><dt>原图 1–2，权 1–5</dt><dd>内存端测量。控制器端接收计数并改变发送延迟。从属项给出环振、停止命令、清零和相邻差值。</dd></div><div><dt>原图 4–6，权 6、8、15、16、20</dt><dd>稳定于目标电压后结束重复校准。部分从属项要求过渡期间至少一段时间仍有内存事务。</dd></div><div><dt>原图 2，说明书 [0030]–[0037]</dt><dd>给出 W_DQS、延迟锁定环以及眼图采样点。电压变换完成后的时钟频率变换可能需要其他校准。</dd></div></dl>
     <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12444474B2">专利原文</a></p>
   </section>
   <section class="article-section" id="related" aria-labelledby="related-title">
@@ -149,6 +167,7 @@
     <div><dt>美国申请日</dt><dd>2023-11-30</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2025-10-14</dd></div>
     <div><dt>美国申请号</dt><dd>US18/525,088</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Robert E. Jeter、Jingkui Zheng、Srinivasa Rao Masanam</dd></div><div><dt>分类号</dt><dd>G11C29/023、G11C29/028、G11C29/1201、G11C29/12015、G11C29/46、G11C7/222</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12444474B2/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://eureka.patsnap.com/patent/US12444474B2">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

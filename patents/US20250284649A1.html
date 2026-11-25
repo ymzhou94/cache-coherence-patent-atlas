@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20250284649A1 CPU 根据可接受中断的时点返回 Ack 或 Nack · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<title>US20250284649A1 CPU 按可中断点的到达时限应答中断投递 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -22,7 +22,7 @@
 <div class="frame">
   <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
   <p class="document-id"><code>US20250284649A1</code><span>美国公开申请</span><time datetime="2025-09-11">2025-09-11</time></p>
-  <h1>CPU 根据可接受中断的时点返回 Ack 或 Nack</h1>
+  <h1>CPU 按可中断点的到达时限应答中断投递</h1>
   <p class="english-title" lang="en">Scalable Interrupts</p>
   <p class="document-question">一个核心已上电，但有长延迟访存时，怎样在硬件投递阶段判断它能否及时响应中断？</p>
 </div>
@@ -38,60 +38,61 @@
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">核簇中断控制器可向核心发出投递请求。核心要先判断自己的流水线和其他子系统能否在规定时间内到达可中断点。</p>
-    <p>CPU 的应答控制电路查询重排序缓冲区和加载/存储单元。若任一子系统可能来不及到达可中断点，核心可对该次请求回 Nack。</p>
-    <ol class="walkthrough"><li><h3>接收中断投递请求</h3><p>请求进入处理器侧的应答控制电路。此时还未执行中断服务例程。</p></li><li><h3>查询在途指令与访存</h3><p>重排序缓冲区（ROB）检查未退休操作。加载/存储单元可单独回报访问状态，也可向 ROB 提供最老已承诺访存的位置。</p></li><li><h3>判定是否赶得上截止时间</h3><p>潜在长延迟操作、屏蔽中断的操作以及尚未完成的设备地址空间访问都可能阻止核心及时推进。</p></li><li><h3>返回投递应答</h3><p>能够及时到达就应答，预计超时则返回 Nack。系统之后如何重试由中断控制器路径决定。</p></li></ol>
+    <p class="section-intro">核簇中断控制器把请求发给一个候选核心。核心在接收中断之前先预测流水线的退休和在途访存能否到达可中断点。</p>
+    <p>核心的应答控制电路判断子系统能否在时限内到达可中断点。能到达则返回接受应答（Ack），任一子系统预计无法到达则返回拒绝应答（Nack）。</p>
+    <ol class="walkthrough"><li><h3>核心接口接收投递请求</h3><p>请求进入处理器的中断应答电路。硬件判断发生在开始执行中断处理程序之前。</p></li><li><h3>读取指令退休和访存状态</h3><p>重排序缓冲区（ROB）跟踪尚未退休的操作。访存单元（LSU）可反馈状态，权 8 还写明向 ROB 提供其必须完成的最早访存操作指针。</p></li><li><h3>检查是否能按时到达</h3><p>实施例可先检查指令状态，再查询 LSU。较长执行延迟、可屏蔽中断的操作或未完成的设备地址空间访问可能触发拒绝。</p></li><li><h3>回送应答与实际处理中断</h3><p>预计按时到达则回 Ack，预计不能达到则回 Nack。Ack 后可冻结边界指针并让操作退休至边界，再由核心接收中断。</p></li></ol>
     <div class="analysis-note"><h3>权项与实施例约束</h3><p>公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 给出 LSU 向 ROB 提供最老已承诺访存位置的做法。公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> 针对在途设备地址空间访问。核心的应答状态以预计可中断条件决定，先于软件处理。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>可中断点</dt><dd>核心状态已满足接收中断条件的边界。</dd></div><div><dt>必须完成的访存操作</dt><dd>访存单元已经承诺完成、在所述判定中用于确定退休边界的操作。</dd></div><div><dt>MDR</dt><dd>原图中跟踪映射、分派与重命名的单元。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">长延迟访存使投递请求较早得到 Nack</a></li><li><a href="#fig-1">核心应答逻辑汇总 ROB 和 LSU 的判定</a></li><li><a href="#fig-4">投递响应与中断处理程序之间有两个边界</a></li><li><a href="#fig-3">Ack 和 Nack 的触发条件</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">访存条件导致核心拒绝本轮投递</a></li><li><a href="#fig-1">核心应答逻辑汇总 ROB 和 LSU 的判定</a></li><li><a href="#fig-4">返回 Ack 后仍需推进到可中断点</a></li><li><a href="#fig-3">Ack 和 Nack 的触发条件</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">长延迟访存使投递请求较早得到 Nack</h3></div>
-    <a class="paper-open" href="../figures/US20250284649A1/US20250284649A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 长延迟访存使投递请求较早得到 Nack 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">访存条件导致核心拒绝本轮投递</h3></div>
+    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="长延迟访存使投递请求较早得到 Nack">
-    <img class="paper-image" src="../figures/US20250284649A1/US20250284649A1-fig-2.svg" width="762" height="389"
-         style="--paper-width:762px" alt="长延迟访存使投递请求较早得到 Nack。加载/存储单元回报访问状态，应答控制电路汇总后给出结果。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="访存条件导致核心拒绝本轮投递">
+    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-2/diagram.svg" width="920" height="452"
+         style="--paper-width:920px" alt="访存条件导致核心拒绝本轮投递。较早的指令检查通过后，核心再询问 LSU。若 LSU 预计不能按时到达边界，应答电路发 Nack。">
   </div>
   <figcaption>
-    <span>加载/存储单元回报访问状态，应答控制电路汇总后给出结果。</span>
-    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
+    <span>较早的指令检查通过后，核心再询问 LSU。若 LSU 预计不能按时到达边界，应答电路发 Nack。</span>
+    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
   <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">核心应答逻辑汇总 ROB 和 LSU 的判定</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250284649A1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="核心应答逻辑汇总 ROB 和 LSU 的判定">
-    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/diagram.svg" width="697" height="284"
-         style="--paper-width:697px" alt="核心应答逻辑汇总 ROB 和 LSU 的判定。核簇中断控制器经核心接口把请求送到核内应答电路，再沿接口接收 Ack 或 Nack。原图 6 至 8 中，重排序缓冲区提供指令提交及退休边界相关状态，访存单元判断仍需完成的加载与存储操作能否及时完成。">
+    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-1/diagram.svg" width="697" height="284"
+         style="--paper-width:697px" alt="核心应答逻辑汇总 ROB 和 LSU 的判定。核簇控制器经接口向核心发出请求，核心应答电路读取 ROB 和 LSU 状态后返回 Ack 或 Nack。">
   </div>
   <figcaption>
-    <span>核簇中断控制器经核心接口把请求送到核内应答电路，再沿接口接收 Ack 或 Nack。原图 6 至 8 中，重排序缓冲区提供指令提交及退休边界相关状态，访存单元判断仍需完成的加载与存储操作能否及时完成。</span>
-    <span class="figure-evidence">图 6–7，公开权 3、6–10 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
+    <span>核簇控制器经接口向核心发出请求，核心应答电路读取 ROB 和 LSU 状态后返回 Ack 或 Nack。</span>
+    <span class="figure-evidence">图 6–7，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">投递响应与中断处理程序之间有两个边界</h3></div>
-    <a class="paper-open" href="../figures/US20250284649A1/US20250284649A1-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 投递响应与中断处理程序之间有两个边界 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">返回 Ack 后仍需推进到可中断点</h3></div>
+    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="投递响应与中断处理程序之间有两个边界">
-    <img class="paper-image" src="../figures/US20250284649A1/US20250284649A1-fig-4.svg" width="781" height="225"
-         style="--paper-width:781px" alt="投递响应与中断处理程序之间有两个边界。Ack 是投递应答。进入处理程序还取决于核心真正到达可中断点。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="返回 Ack 后仍需推进到可中断点">
+    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-4/diagram.svg" width="668" height="440"
+         style="--paper-width:668px" alt="返回 Ack 后仍需推进到可中断点。此图只画接受分支。应答电路先返回 Ack，然后冻结已解析边界并退休至该边界，核心随后接收中断。">
   </div>
   <figcaption>
-    <span>Ack 是投递应答。进入处理程序还取决于核心真正到达可中断点。</span>
-    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
+    <span>此图只画接受分支。应答电路先返回 Ack，然后冻结已解析边界并退休至该边界，核心随后接收中断。</span>
+    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
   <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">Ack 和 Nack 的触发条件</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">在途状态</th><th scope="col">时间预测</th><th scope="col">可选结果</th></tr></thead><tbody><tr><th scope="row">各子系统可及时推进</th><td>满足时间约束</td><td>应答</td></tr><tr><th scope="row">潜在长延迟退休</th><td>可能过阈值</td><td>可发 Nack</td></tr><tr><th scope="row">未完成设备访存</th><td>无法按时到达</td><td>可发 Nack</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">在途状态</th><th scope="col">条件</th><th scope="col">结果</th></tr></thead><tbody><tr><th scope="row">各相关子系统均可到达</th><td>预计满足规定时限</td><td>Ack</td></tr><tr><th scope="row">长执行延迟或屏蔽中断的指令</th><td>满足相应从属判据</td><td>Nack</td></tr><tr><th scope="row">尚有设备地址空间访问</th><td>满足权 7 或权 21 的规定条件</td><td>Nack</td></tr></tbody></table>
   <figcaption>
     <span>只有到达可中断点的时间预测满足约束时才适合完成该次投递。</span>
     <span class="figure-evidence">图 8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
@@ -100,6 +101,7 @@
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测子系统到达时限</dt><dd>及时应答中断投递 <span class="subdued">原图 6、8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></span></dd></div><div><dt>向重排序缓冲区传指针</dt><dd>校验访存退休边界 <span class="subdued">原图 7、8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></span></dd></div></dl>
     <div class="analysis-note"><h3>收益与开销</h3><p>Nack 可省去为等待该核心浪费的周期，同时可能触发重派。记录可中断预计和实际到达时间的差、重派次数，以及请求到处理程序开始的尾延迟。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>让较慢设备访问多数刚超过应答门槛，替代核心也需要跨簇投递。若总中断延迟增加，需分离本核本可完成的剩余等待与跨簇重派开销。</p></div>
     <div id="example" class="article-example">
@@ -112,19 +114,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 2、9、16 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的关键技术特征</h3>
-  <p>权 2 规定核心收到中断请求后的应答条件。只要相关子电路都能在指定时间内到达可中断点，核心便应答接受。任一子电路预计无法按时到达时，核心应答拒绝。权 3 和权 6 分别指定重排序缓冲区与访存单元，权 8 加入最早已承诺完成的访存操作指针。公开文本将权 1 标为取消。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>应答控制电路与一个或多个相关核心内部子电路连接</td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=FIG.%206%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20processor%2030%20in%20more%20detail.">原图 6。核心接口将中断请求送到应答电路 126。实施例中其与 ROB 和 LSU 交换处理状态。</a></td></tr><tr><th scope="row">F2</th><td>核心在预计能按时到达可中断点时返回接受响应</td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20processor%20Int%20Ack%20control%20circuit%20126%20may%20be%20configured%20to%20determine%20whether%20or%20not%20the">原图 6。Ack 表示核心能在期限内到达可中断点并开始执行中断入口代码。</a></td></tr><tr><th scope="row">F3</th><td>接受判断依据相关子电路是否能在指定时间内到达可中断点</td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20processor%20Int%20Ack%20control%20circuit%20126%20may%20be%20configured%20to%20determine%20whether%20or%20not%20the">原图 8。实施例先检查核内状态和 LSU，再尝试把 ROB 的已解析边界移回最早已承诺完成的访存操作处。</a></td></tr><tr><th scope="row">F4</th><td>任一相关子电路预计无法按时到达可中断点时返回拒绝响应</td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20processor%20Int%20Ack%20control%20circuit%20126%20may%20be%20configured%20to%20determine%20whether%20or%20not%20the">原图 8。发现长延迟操作、屏蔽条件或无法回退的退休边界可走 Nack 分支。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-2" aria-labelledby="independent-2-title">
+  <h4 id="independent-2-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></h4>
+  <p>处理器权项规定时限内到达与无法到达的两种应答。见原图 6、8。</p>
+  <table class="comparison-table" aria-labelledby="independent-2-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=a%20control%20circuit%20coupled%20to%20the%20one%20or%20more%20subsystem%20circuits">F1</a></th><td>控制电路连接至少一个相关子系统</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=generate%20an%20acknowledge%20%28Ack%29%20response%20to%20an%20interrupt%20request%20received%20by%20the%20processor%20based%20on%20a">F2</a></th><td>相关子系统预计按时到达时接受</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=at%20least%20one%20of%20the%20one%20or%20more%20subsystem%20circuits%20will%20fail%20to%20reach%20the%20interruptible">F3</a></th><td>任一个相关子系统预计无法按时到达时拒绝</td><td>原图 8</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
+  <h4 id="independent-9-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></h4>
+  <p>方法先收请求，再判断子系统是否能按时到达，未达到条件时产生 Nack。见原图 8。</p>
+  <table class="comparison-table" aria-labelledby="independent-9-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=receiving%2C%20by%20a%20processor%2C%20a%20particular%20interrupt%20request">F4</a></th><td>处理器收到特定请求</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=determining%20whether%20one%20or%20more%20subsystem%20circuits%20in%20the%20processor%20will%20reach%20an%20interruptible%20point%20within">F5</a></th><td>判断核内子系统能否按时到达可中断点</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=generating%2C%20by%20a%20control%20circuit%20in%20the%20processor%2C%20non-acknowledge%20%28Nack%29%20response%20to%20the%20particular%20interrupt%20request">F6</a></th><td>处理器控制电路给该次请求发拒绝</td><td>原图 8</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-16" aria-labelledby="independent-16-title">
+  <h4 id="independent-16-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></h4>
+  <p>系统由核簇和核簇中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</p>
+  <table class="comparison-table" aria-labelledby="independent-16-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=send%20the%20interrupt%20request%20to%20a%20given%20processor%20of%20the%20plurality%20of%20processors">F7</a></th><td>核簇控制器向一个候选处理器发请求</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=determine%20whether%20one%20or%20more%20subsystem%20circuits%20in%20the%20given%20processor%20will%20reach%20an%20interruptible%20point">F8</a></th><td>候选处理器判断子系统的时限</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=generate%20a%20non-acknowledge%20%28Nack%29%20response%20to%20the%20interrupt%20request">F9</a></th><td>相应条件下对请求返回 Nack</td><td>原图 8</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td>独立项</td><td>应答控制电路根据各子系统能否在规定时间内到达可中断点，返回 Ack 或 Nack。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>相对权 2，指定 ROB 跟踪尚未退休的指令操作，并按需报告能否按时退休到可中断点。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>相对权 3，规定 ROB 中至少一个操作的潜在执行延迟超阈值时返回 Nack。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>相对权 3，规定 ROB 有导致中断屏蔽的操作时返回 Nack。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-2">2</a></td><td>相对权 2，指定 LSU 执行 load/store 并报告能否在期限内完成到可中断点。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>相对权 6，规定对设备地址空间仍有未完成的 load/store 时返回 Nack。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>相对权 6，要求 LSU 向 ROB 提供指向最早已承诺完成的访存操作，ROB 据此判断能否按时到达可中断点。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>若某个子系统无法在规定时间到达可中断点，处理器返回 Nack。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>重排序缓冲区跟踪未退休操作并回报是否可及时退休。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>潜在执行延迟超过阈值的操作可成为 Nack 条件。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20method%20of%20claim%2010%2C%20further%20comprising%20generating%20the%20Nack%20response%20based%20on%20the%20reorder%20buffer%20having%20at">查看原文限定</a></td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20method%20of%20claim%209%2C%20further%20comprising%3Aexecuting%2C%20by%20a%20load%20%2F%20store%20unit%20included%20in%20the%20one%20or">查看原文限定</a></td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20method%20of%20claim%2013%2C%20further%20comprising%20generating%2C%20by%20the%20control%20circuit%2C%20the%20Nack%20response%20based%20on%20the">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20method%20of%20claim%209%20further%20comprising%3Areceiving%2C%20by%20the%20processor%2C%20a%20different%20interrupt%20request%3B%20andgenerating%2C%20by%20the%20control">查看原文限定</a></td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=A%20system%20comprising%3Aa%20plurality%20of%20processors%20included%20in%20a%20processor%20cluster%3B%20anda%20cluster%20interrupt%20controller%2C%20coupled%20to%20the">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20the%20given%20processor%20is%20further%20configured%20to%20generate%20an%20acknowledge%20%28Ack%29%20response">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20the%20cluster%20interrupt%20controller%20is%20further%20configured%20to%3Abased%20on%20receiving%20the%20Nack">查看原文限定</a></td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20system%20of%20claim%2018%2C%20wherein%20the%20cluster%20interrupt%20controller%20is%20further%20configured%20to%3Abased%20on%20receiving%20respective%20Nack">查看原文限定</a></td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20to%20determine%20whether%20the%20one%20or%20more%20subsystem%20circuits%20will%20reach%20an">查看原文限定</a></td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=The%20system%20of%20claim%2020%2C%20wherein%20to%20determine%20whether%20the%20plurality%20of%20instruction%20operations%20will%20retire%20to%20an">查看原文限定</a></td></tr></tbody>
+    <tbody><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td>独立项</td><td>处理器权项规定时限内到达与无法到达的两种应答。见原图 6、8。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>重排序缓冲区跟踪未退休操作，并报告是否能按时退休到可中断点。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在潜在延迟超过阈值的操作时可返回 Nack。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在使中断被屏蔽的操作时可返回 Nack。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-2">2</a></td><td>访存单元执行加载和存储，并报告能否在时限内完成至可中断点。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>存在未完成的设备地址空间访存时发 Nack。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>LSU 将必须完成的最早访存操作指针给 ROB，由 ROB 判断是否能及时到达边界。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先收请求，再判断子系统是否能按时到达，未达到条件时产生 Nack。见原图 8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>方法使用 ROB 跟踪未退休操作并回报按时到达的可能性。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>潜在执行延迟超过阈值的操作触发 Nack。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>会屏蔽中断的操作触发 Nack。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>方法由 LSU 执行访存并回报能否及时完成到边界。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>存在尚未完成的设备地址空间访存时产生 Nack。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>另一个中断请求可有另一时限，能按该时限到达时产生 Ack。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>系统由核簇和核簇中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>核心预计及时到达时产生 Ack。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>核簇控制器收到第一候选的 Nack 后向第二核心发送请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>收到多个处理器各自的 Nack 后，核簇控制器汇总并返回 Nack。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>候选处理器跟踪取到但未退休的操作，并判断能否在时限内退休到可中断点。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>判定时考虑是否有设备地址空间访存在整个指定时段内仍未完成。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -148,6 +166,7 @@
     <div><dt>美国申请日</dt><dd>2025-04-03</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2025-09-11</dd></div>
     <div><dt>美国申请号</dt><dd>US19/169,824</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeffrey E. Gonion、Charles E. Tucker、Tal Kuzi、Richard F. Russo、Mridul Agarwal、Christopher M. Tsay、Gideon N. Levinsky、Shih-Chieh Wen、Lior Zimet</dd></div><div><dt>分类号</dt><dd>G06F9/4812、G06F1/26、G06F13/24、G06F9/5027、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20250284649A1/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://patents.google.com/patent/US20250284649A1/en">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12625810B2 缓存覆盖写可取消待处理失效 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -24,7 +24,7 @@
   <p class="document-id"><code>US12625810B2</code><span>美国授权专利</span><time datetime="2026-05-12">2026-05-12</time></p>
   <h1>缓存覆盖写可取消待处理失效</h1>
   <p class="english-title" lang="en">Delayed cache entry invalidation update for potential overwrite re-use</p>
-  <p class="document-question">读指令声明旧数据失效后，何时需要向下一级缓存传播失效？</p>
+  <p class="document-question">读指令声明旧数据失效后，操作数缓存什么时候才向下一层发失效？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -34,74 +34,79 @@
     <h2 id="engineering-title">工程要点</h2>
     <p class="engineering-change">上级缓存设置待失效位后，覆盖写先到就清位，逐出先到才使下级对应条目失效。</p>
     <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>竞争的两项操作须针对同一个上级条目，后一条下级失效取决于逐出时该位仍被置位。</dd></div><div><dt>验证方法</dt><dd>固定上级读后失效的地址，交换同址覆盖写和替换触发的先后。记录待失效位、逐出状态与下级失效信号。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12625810B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-4">对应对照表</a></p>
+    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12625810B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-4">对应工程图解</a></p>
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">执行单元读完一个暂存值后，可以声明该值不再有效。如果同一条目很快被新值覆盖，立即向下一级传播失效可能产生可以省下的协议操作。</p>
     <p>上一级缓存先设置待失效位。后续操作覆盖同一条目时清除该位。如果替换策略先逐出该条目，控制逻辑才使下一级的对应条目失效。</p>
     <ol class="walkthrough"><li><h3>读出旧值</h3><p>执行单元从上一级缓存读数据，同时送出失效信号。</p></li><li><h3>登记待失效位</h3><p>上一级缓存的控制逻辑保留待传播状态。</p></li><li><h3>处理覆盖写</h3><p>后续操作覆盖同一条目时清除待失效位，不触发下一级失效。</p></li><li><h3>处理替换逐出</h3><p>若该条目在待失效状态下先被逐出，控制逻辑使下一级对应条目失效。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的一种场景把上层解释为操作数缓存，下层解释为寄存器堆或寄存器数据缓存。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 进一步覆盖下一条操作立即覆盖旧条目时 抑制 失效的保证。</p></div>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的实施例把上级定义为操作数缓存、下级定义为寄存器堆或寄存器数据缓存。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 保证紧随其后的同条目覆盖可以抑制下级失效。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>末次使用（last use）</dt><dd>本次读取后不再需要源操作数的原值。带该标记的读操作可对相关缓存条目发出失效指示。</dd></div><div><dt>操作数缓存</dt><dd>执行单元近端保存寄存器值等操作数的小缓存。原图 3 用它连接运算数据通路与 DL0。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">待失效状态保存在上一级条目中</a></li><li><a href="#fig-2">覆盖写发生在逐出之前</a></li><li><a href="#fig-3">逐出发生在覆盖写之前</a></li><li><a href="#fig-4">待失效位在哪个分支清除</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-4">编译器如何安排同一个覆盖目的地</a></li><li><a href="#fig-1">待失效状态保存在上一级条目中</a></li><li><a href="#fig-2">覆盖写发生在逐出之前</a></li><li><a href="#fig-3">逐出发生在覆盖写之前</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">待失效状态保存在上一级条目中</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625810B2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-4-title">编译器如何安排同一个覆盖目的地</h3></div>
+    <a class="paper-open" href="../mechanisms/US12625810B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="待失效状态保存在上一级条目中">
-    <img class="paper-image native-image" src="../mechanisms/US12625810B2/diagram.svg" width="955" height="176"
-         style="--paper-width:955px" alt="待失效状态保存在上一级条目中。上一级条目用待失效标志记录此前的读后失效。原条目被覆写时清除标志，下级条目仍保持有效。原条目被替换逐出时，控制器使下级对应条目失效。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="编译器如何安排同一个覆盖目的地">
+    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-4/diagram.svg" width="790" height="316"
+         style="--paper-width:790px" alt="编译器如何安排同一个覆盖目的地。先标记操作数末次使用，再检查是否有合法的后续指令可写回同一位置。无候选时沿默认路径编译。">
   </div>
   <figcaption>
-    <span>上一级条目用待失效标志记录此前的读后失效。原条目被覆写时清除标志，下级条目仍保持有效。原条目被替换逐出时，控制器使下级对应条目失效。</span>
-    <span class="figure-evidence">原图 2、图 5，权利要求 1。 · <a href="#claim-features">逐项查看权利要求与原文</a></span>
+    <span>先标记操作数末次使用，再检查是否有合法的后续指令可写回同一位置。无候选时沿默认路径编译。</span>
+    <span class="figure-evidence">原图 4，说明书 [0050]–[0053]，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="#claim-features">权利要求与出处</a></span>
+  </figcaption>
+</figure>
+<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">待失效状态保存在上一级条目中</h3></div>
+    <a class="paper-open" href="../mechanisms/US12625810B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+  </div>
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="待失效状态保存在上一级条目中">
+    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-1/diagram.svg" width="955" height="176"
+         style="--paper-width:955px" alt="待失效状态保存在上一级条目中。覆盖写和替换逐出都读取该状态，只有逐出分支需要向下级传播失效。">
+  </div>
+  <figcaption>
+    <span>覆盖写和替换逐出都读取该状态，只有逐出分支需要向下级传播失效。</span>
+    <span class="figure-evidence">原图 2、图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">覆盖写发生在逐出之前</h3></div>
-    <a class="paper-open" href="../figures/US12625810B2/US12625810B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 覆盖写发生在逐出之前 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">覆盖写发生在逐出之前</h3></div>
+    <a class="paper-open" href="../mechanisms/US12625810B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="覆盖写发生在逐出之前">
-    <img class="paper-image" src="../figures/US12625810B2/US12625810B2-fig-2.svg" width="670" height="343"
-         style="--paper-width:670px" alt="覆盖写发生在逐出之前。该顺序下，下一级对应条目保持现有状态。">
+    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-2/diagram.svg" width="560" height="402"
+         style="--paper-width:560px" alt="覆盖写发生在逐出之前。该顺序下，下一级对应条目保持现有状态。">
   </div>
   <figcaption>
     <span>该顺序下，下一级对应条目保持现有状态。</span>
-    <span class="figure-evidence">原图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>。</span>
+    <span class="figure-evidence">原图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>。 · <a href="#claim-features">权利要求与出处</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-3-title">逐出发生在覆盖写之前</h3></div>
-    <a class="paper-open" href="../figures/US12625810B2/US12625810B2-fig-3.svg" target="_blank" rel="noopener" aria-label="打开 逐出发生在覆盖写之前 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-3-title">逐出发生在覆盖写之前</h3></div>
+    <a class="paper-open" href="../mechanisms/US12625810B2/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="逐出发生在覆盖写之前">
-    <img class="paper-image" src="../figures/US12625810B2/US12625810B2-fig-3.svg" width="762" height="297"
-         style="--paper-width:762px" alt="逐出发生在覆盖写之前。替换触发时仍有待失效位，必须推进下一级失效。">
+    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-3/diagram.svg" width="920" height="386"
+         style="--paper-width:920px" alt="逐出发生在覆盖写之前。替换触发时仍有待失效位，必须推进下一级失效。">
   </div>
   <figcaption>
     <span>替换触发时仍有待失效位，必须推进下一级失效。</span>
-    <span class="figure-evidence">原图 5、图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。</span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">待失效位在哪个分支清除</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">事件</th><th scope="col">上一级动作</th><th scope="col">下一级动作</th></tr></thead><tbody><tr><th scope="row">读后声明失效</th><td>登记待失效</td><td>等待后续事件</td></tr><tr><th scope="row">下一笔操作先覆盖</th><td>清除待失效</td><td>保留对应条目</td></tr><tr><th scope="row">替换先逐出</th><td>释放旧条目</td><td>使对应条目失效</td></tr></tbody></table>
-  <figcaption>
-    <span>逐出和覆盖的先后决定是否产生下一级失效。</span>
-    <span class="figure-evidence">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。</span>
+    <span class="figure-evidence">原图 5、图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
-    <div class="analysis-note"><h3>收益与开销</h3><p>编译器若能让后续结果重用原操作数位置，就可在结果写入时清掉待失效位，减少下层控制消息。需要对齐操作的实际执行顺序、目标条目匹配与是否发出失效。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若指令紧邻读取和写入，但重命名或寄存器分配让结果落在别的存储位置，上级原条目便可能先被逐出。该反例来自权利要求针对同一条目的限制，不能仅用指令相邻作判断。</p></div>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>同位置覆盖写</dt><dd>取消向下失效 <span class="subdued">原图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></span></dd></div><div><dt>编译选择覆盖目的地</dt><dd>增加复用机会 <span class="subdued">原图 4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></span></dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>编译器可选后续结果的目的操作数，使其复用原位置。核对收益时须对齐实际执行顺序、目的条目匹配和控制器是否外发失效。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>相邻的读、写若在寄存器分配或重命名后指向不同条目，不能触发同条目取消。此为按权利要求推得的应用边界。</p></div>
     <div id="example" class="article-example">
       <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>教学示例中，指令读 A 并声明 A 失效。下一条指令覆盖同一缓存条目。</dd></div><div><dt>处理结果</dt><dd>上一级缓存清除待失效位，下一级对应条目不因第一次声明而失效。如果期间发生替换逐出，则走传播失效分支。</dd></div><div><dt>结果解读</dt><dd>结果区分覆盖取消与逐出传播两条路径。原文未给出命中率或功耗变化。</dd></div></dl>
@@ -112,19 +117,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、12、19 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的关键技术特征</h3>
-  <p>原图 2、3 的同一操作数位置覆写可清除待失效位，替换策略先逐出则触发下一级失效，均见权利要求 1。原图 4 的编译器选择覆写目标由权利要求 19 单列。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>第一操作从上级缓存条目读数据，并发出该数据的失效指示</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2">原图 2。执行单元从上级取操作数并提供最后一次使用等信息。</a></td></tr><tr><th scope="row">F2</th><td>控制器先在上级条目设置待失效标志</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20620%2C%20in%20the%20illustrated%20embodiment%2C%20the%20computing%20system%20%28e.g.%2C%20control%20circuitry%20240%29%20sets%20an%20indicator%2C">原图 5。替换控制读取待失效状态。</a></td></tr><tr><th scope="row">F3</th><td>后续覆盖该条目时清标志，不失效相应的下级条目</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2">原图 3。覆盖路径取消先前的失效意图。</a></td></tr><tr><th scope="row">F4</th><td>待失效项被替换策略逐出时，才对下级对应条目执行失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2">原图 6。逐出仍是实际向下传递失效的分支。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
+  <p>装置权项规定两级缓存、读后失效、同一位置覆盖后的取消及替换逐出后的传播。原图 2、5–6。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=at%20different%20levels%20in%20a%20cache%20hierarchy">F1</a></th><td>两组缓存电路分属不同层级</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=Level%20N%2B1%20cache%20230%2C%20in%20the%20illustrated%20embodiment%2C%20is%20at%20another%20level%20in%20a%20cache%20%2F">说明书 0037</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=reads%20first%20data%20from%20an%20entry%20in%20the%20first-level%20cache%20circuitry%20and%20signals%20an%20invalidation%20of">F2</a></th><td>执行单元读上级条目并指示该数据失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=to%20indicate%20that%20the%20entry%20in%20the%20first-level%20cache%20circuitry%20has%20a%20pending%20invalidation">F3</a></th><td>上级条目设置待失效标志</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=clear%20the%20indicator%20without%20invalidating%20a%20corresponding%20entry%20in%20the%20second-level%20cache%20circuitry">F4</a></th><td>同条目覆盖时只清位，对应下级条目维持原状态</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=eviction%20of%20the%20entry%20in%20the%20first-level%20cache%20circuitry%20based%20on%20a%20replacement%20policy%20while%20the">F5</a></th><td>若该标志在按替换策略逐出时仍置位则触发下级失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%205%20is%20a%20block%20diagram%20illustrating%20example%20replacement%20control%20circuitry%20that%20considers%20invalidate-pending%20status%20as">说明书 0055</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=In%20some%20embodiments%2C%20replacement%20circuitry%20is%20configured%20to%20prioritize%20entries%20in%20the%20first-level%20cache%20indicated%20as">说明书 0068</a> · 原图 5–6</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-12" aria-labelledby="independent-12-title">
+  <h4 id="independent-12-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></h4>
+  <p>方法项把受益路径限定为同条目覆盖抑制失效。第二级使用写回并含第一级缓存覆盖的位置。原图 2–3、6。</p>
+  <table class="comparison-table" aria-labelledby="independent-12-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=reads%20first%20data%20from%20an%20entry%20in%20the%20first-level%20cache%20and%20signals%20an%20invalidation%20of%20the">F6</a></th><td>首操作读上级条目并指示旧数据失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=to%20indicate%20that%20the%20entry%20in%20the%20first-level%20cache%20has%20a%20pending%20invalidation">F7</a></th><td>系统设置该上级条目的待失效位</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=in%20response%20to%20a%20second%20operation%20overwriting%20the%20entry%20in%20the%20first-level%20cache%20while%20the%20indicator">F8</a></th><td>同条目被覆盖时清位并保留下级状态</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=the%20second-level%20cache%20is%20a%20write-back%20cache%20and%20is%20inclusive%20of%20data%20from%20locations%20cached%20in">F9</a></th><td>下级使用写回策略并含上级缓存的地址位置</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=Level%20N%2B1%20cache%20230%2C%20in%20the%20illustrated%20embodiment%2C%20is%20at%20another%20level%20in%20a%20cache%20%2F">说明书 0037</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=In%20some%20embodiments%2C%20the%20second-level%20cache%20circuitry%20is%20a%20write-back%20cache%20and%20is%20inclusive%20of%20locations">说明书 0064</a> · 原图 2</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-19" aria-labelledby="independent-19-title">
+  <h4 id="independent-19-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></h4>
+  <p>介质项的编译器安排程序顺序中的读后失效与同位置覆盖，处理器控制电路用待失效位取消外发操作。原图 3–4。</p>
+  <table class="comparison-table" aria-labelledby="independent-19-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=compiling%20a%20program%20for%20execution%20by%20a%20processor%20that%20includes%20a%20first-level%20cache%20and%20a%20second-level">F10</a></th><td>介质指令用于为含两级缓存的处理器编译程序</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%204%20is%20a%20flow%20diagram%20illustrating%20an%20example%20compiler%20method%20for%20re-use%2C%20according%20to%20some">说明书 0049</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=generating%20a%20first%20operation%20that%20reads%20first%20data%20and%20signals%20an%20invalidation%20of%20the%20first%20data">F11</a></th><td>编译产生读取原数据并带失效指示的操作</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20410%2C%20in%20the%20illustrated%20example%2C%20the%20compiler%20detects%20last%20use%20of%20a%20read%20operand.%20This">说明书 0050</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20420%2C%20in%20the%20illustrated%20example%2C%20the%20compiler%20sets%20a%20last-use%20indication%20for%20the%20operand%20in">说明书 0051</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=selecting%20a%20destination%20for%20the%20second%20operation%20to%20overwrite%20the%20first%20data">F12</a></th><td>为程序顺序中的后续操作选覆盖旧数据的目的位置</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20430%2C%20the%20compiler%20determines%20whether%20there%20is%20a%20subsequent%20instruction%20available%20that%20could%20target%20the">说明书 0052</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=If%20a%20candidate%20instruction%20is%20identified%20at%20430%2C%20flow%20proceeds%20to%20440%20and%20the%20compiler%20selects">说明书 0053</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=set%20an%20indicator%2C%20in%20response%20to%20the%20first%20operation">F13</a></th><td>处理器收到首操作时把该条目标成待失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=clear%20the%20indicator%20without%20invalidating%20a%20corresponding%20entry%20in%20the%20second-level%20cache">F14</a></th><td>后续实际覆盖时清除标志，保留下一层对应条目的现有状态</td><td>原图 3</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>执行单元读数据并声明失效时，控制逻辑设待失效位。后续覆盖清位且保留下级条目，先逐出则使下级条目失效。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>上级限定为操作数缓存，下级为寄存器文件或寄存器数据缓存，读操作带末次使用提示。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%202%2C%20wherein%20the%20operand%20cache%20includes%20entries%20configured%20to%20store%20register%20data%20for%20multiple">查看原文限定</a></td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20control%20circuitry%20is%20configured%20to%20guarantee%20suppression%20of%20an%20invalidate%20operation">查看原文限定</a></td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%204%2C%20wherein%20the%20processor%20execution%20circuitry%20executes%20a%20program%20that%20was%20compiled%20to%20re-use">查看原文限定</a></td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20first-level%20cache%20circuitry%20is%20a%20closest%20cache%20level%20to%20the%20processor">查看原文限定</a></td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20first%20operation%20is%20a%20load%20operation%20that%20specifies%20a%20memory%20address.">查看原文限定</a></td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20entry%20in%20the%20first-level%20cache%20circuitry%20includes%20a%20valid%20indication.">查看原文限定</a></td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20further%20comprising%3Areplacement%20control%20circuitry%20configured%20to%20prioritize%20entries%20in%20the%20first-level%20cache%20circuitry">查看原文限定</a></td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20second-level%20cache%20circuitry%20is%20a%20write-back%20cache%20and%20is%20inclusive%20of">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20apparatus%20of%20claim%201%2C%20further%20comprising%3Aeviction%20port%20circuitry%20configured%20to%20handle%20evictions%20only%20for%20entries%20in%20the">查看原文限定</a></td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>方法权利要求还明确下级缓存采用写回策略，并包含上级缓存中覆盖的地址。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2012%2C%20wherein%3Athe%20first-level%20cache%20is%20an%20operand%20cache%3Bthe%20second-level%20cache%20is%20a%20register%20file">查看原文限定</a></td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-12">12</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2012%2C%20wherein%3Athe%20computing%20system%20guarantees%20suppression%20of%20an%20invalidate%20operation%20to%20the%20second-level%20cache">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2014%2C%20further%20comprising%3Acompiling%20a%20program%20that%20includes%20the%20first%20operation%2C%20including%20selecting%20a%20destination">查看原文限定</a></td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-12">12</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2012%2C%20wherein%20the%20first%20operation%20is%20a%20load%20operation%20that%20specifies%20a%20memory%20address.">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-12">12</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2012%2C%20further%20comprising%3Aprioritizing%2C%20by%20the%20computing%20system%2C%20entries%20in%20the%20first-level%20cache%20indicated%20as">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-12">12</a></td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=The%20method%20of%20claim%2012%2C%20wherein%20the%20second-level%20cache%20is%20a%20write-back%20cache%20and%20is%20inclusive%20of%20data">查看原文限定</a></td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>编译器生成读后失效操作，随后把写目的选到能够覆盖旧数据的位置。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置权项规定两级缓存、读后失效、同一位置覆盖后的取消及替换逐出后的传播。原图 2、5–6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>上级限定为操作数缓存，下级为寄存器文件或寄存器数据缓存，读操作带末次使用提示。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>同一操作数缓存可保存图形程序多个 SIMT 组的线程寄存器数据。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>若紧随其后的操作覆盖该条目，硬件保证抑制原失效的下传。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>所执行程序由编译器安排读后失效指令后的操作数位置复用。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>第一级缓存限定为最靠近执行单元的层级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>触发失效的是指定内存地址的 load 指令。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>第一级缓存条目另带有效状态。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>替换控制优先逐出设有待失效位的第一级条目。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>第二级采用写回，并包含第一级覆盖的地址。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>新增逐出端口，仅处理处于待失效状态的第一级条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>方法项把受益路径限定为同条目覆盖抑制失效。第二级使用写回并含第一级缓存覆盖的位置。原图 2–3、6。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>把两级限定为操作数缓存与寄存器堆或寄存器数据缓存，并用末次使用指示。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-12">12</a></td><td>若紧随其后的操作覆盖同一条目，保证省去第二级失效。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>编译时为紧随其后的操作选定覆盖旧条目的目的位置。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-12">12</a></td><td>首操作为带内存地址的 load 指令。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-12">12</a></td><td>在替换选择中优先考虑待失效条目。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-12">12</a></td><td>再次明示第二级写回且包含第一级覆盖地址，父项已列相同限定。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>介质项的编译器安排程序顺序中的读后失效与同位置覆盖，处理器控制电路用待失效位取消外发操作。原图 3–4。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -134,7 +155,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11630771B2.html#engineering">用待失效标记推迟缓存失效</a>
-<p>US12625810B2 用上级缓存的待失效位区分两条路径，覆盖写先到时清位，上级逐出先到时才失效下级的对应条目。US11630771B2 接收其他处理器的失效命令，作用域匹配时延迟实际失效，直到关联同步事件到达。两种方案都记录待失效状态，状态终止事件分别是缓存行操作和处理器同步。</p></li></ul>
+<p>US12625810B2 用上级缓存的待失效位区分两条路径，覆盖写先到时清位，上级逐出先到时才失效下级的对应条目。US11630771B2 接收其他处理器的失效命令，作用域匹配时延迟实际失效，直到关联同步事件到达。两种方案都记录待失效状态，状态终止事件分别是缓存行操作和处理器同步。</p></li><li><a href="US12625821B2.html#engineering">用锁位保护数据缓存中的寄存器操作数</a>
+<p>US12625821B2 用线程的寄存器锁位阻止逐出含锁定操作数的数据缓存行。复位时将操作数缓存中带末次使用指示的条目写往存储层级，再清理该组锁位。US12625810B2 在读操作发出失效指示时设置上级条目的待失效位，覆盖写先到则清标记，替换逐出先到才使下级对应条目失效。</p></li></ul>
     <p><a href="../index.html?patent=US12625810B2#knowledge">在全量关系图上定位 US12625810B2</a></p>
   </section>
 </div>
@@ -148,6 +170,7 @@
     <div><dt>美国申请日</dt><dd>2024-10-10</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2026-05-12</dd></div>
     <div><dt>美国申请号</dt><dd>US18/911,588</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>David K. Li、Yoong Chert Foo、Benjiman L. Goodman、Chance C. Coats</dd></div><div><dt>分类号</dt><dd>G06F12/0808、G06F12/0811、G06F12/0815、G06F12/0875、G06F12/0891、G06F12/0895、G06F9/3887</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12625810B2/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://patents.google.com/patent/US12625810B2/en">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

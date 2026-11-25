@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US11630789B2 优先投递给已上电核心的中断控制 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -24,7 +24,7 @@
   <p class="document-id"><code>US11630789B2</code><span>美国授权专利</span><time datetime="2023-04-18">2023-04-18</time></p>
   <h1>优先投递给已上电核心的中断控制</h1>
   <p class="english-title" lang="en">Scalable interrupts</p>
-  <p class="document-question">有多簇可接收中断时，控制器怎样避免为了一个中断提前唤醒整组核心？</p>
+  <p class="document-question">多个核簇都能服务同一来源的中断时，控制器怎样优先利用已上电的核心？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -38,73 +38,75 @@
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">中断控制器按可编程顺序向多个核簇尝试投递。第一轮仅考虑已上电核心。所有核簇都返回拒绝后，第二轮允许核心退出断电状态并接收中断。</p>
-    <p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p>
-    <ol class="walkthrough"><li><h3>确定第一轮的核簇投递顺序</h3><p>中断控制器接收来源的中断。实施例可按来源选择顺序，在收到前一簇的拒绝后试探下一簇。</p></li><li><h3>核簇先尝试已上电的核心</h3><p>簇控制器在第一轮只尝试已供电的核心。若已供电者能接收，中断不需要唤醒剩余核心。</p></li><li><h3>两种执行单元都要到可中断点</h3><p>核心可以估算 ROB 提交和 load/store 完成均能否在指定时间到可中断点。若其中之一无法及时到达，该核心可返回 Nack。</p></li><li><h3>全部拒绝后允许核心上电</h3><p>只有第一轮各簇都拒绝才进入第二轮。簇控制器给断电核心上电，并尝试向其核心集合投递。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 的核簇探测顺序可编程。第一轮终止条件取决于各簇的应答，已上电的候选核心可能因权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> 所述访存或退休约束返回 Nack。</p></div>
+    <p class="section-intro">外设中断先进入全局中断控制器，由核簇控制器检查本簇能否接收。第一轮的候选集合由核心的电源状态决定。</p>
+    <p>全局控制器经核簇控制器尝试投递，第一轮只选已上电核心。各簇都回复拒绝后，第二轮由核簇控制器给关电核心上电，再尝试投递。</p>
+    <ol class="walkthrough"><li><h3>向核簇发起第一轮投递</h3><p>全局控制器接收中断后向核簇发送请求。权 6 至 8 进一步给出串行投递、可编程顺序以及按中断来源选不同顺序。</p></li><li><h3>尝试已上电核心</h3><p>核簇控制器只向本簇已上电的候选核心发送第一轮的请求。核心拒绝时，控制器可继续探询本簇的下一个候选。</p></li><li><h3>核心估计是否能按时进入中断</h3><p>权 15 的核心问重排序缓冲区能否及时退休指令，并检查访存单元能否完成到同一可中断点的操作。</p></li><li><h3>各簇均拒绝后启动第二轮</h3><p>全局控制器进入第二轮。收到第二轮请求的核簇控制器可给关电核心上电，再尝试在本簇范围内投递。</p></li></ol>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 定义两轮的候选范围；权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> 对串行顺序另作限定；权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> 单独表述核内时限判据。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>Ack/Nack</dt><dd>接受应答或拒绝应答，由核心返回核簇控制器，也可由核簇控制器返回全局控制器。</dd></div><div><dt>可中断点</dt><dd>处理器可以按规定接收中断的执行边界，涉及指令退休和访存完成状态。</dd></div><div><dt>重排序缓冲区（ROB）</dt><dd>跟踪已进入流水线且尚未退休的指令操作。</dd></div><div><dt>访存单元（LSU）</dt><dd>执行加载和存储操作，并参与核内中断接收状态判定。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">A 拒绝，B 的在线核心接收</a></li><li><a href="#fig-1">全局投递与核心电源状态的接口</a></li><li><a href="#fig-4">核心接受中断的两个局部条件</a></li><li><a href="#fig-3">路由结果何时允许第二轮</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">第一轮中簇 A 拒绝，簇 B 接受</a></li><li><a href="#fig-1">全局控制器经核簇控制器投递中断</a></li><li><a href="#fig-4">核心汇总指令退休与访存完成条件</a></li><li><a href="#fig-3">核簇应答如何决定投递轮次</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">A 拒绝，B 的在线核心接收</h3></div>
-    <a class="paper-open" href="../figures/US11630789B2/US11630789B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 A 拒绝，B 的在线核心接收 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">第一轮中簇 A 拒绝，簇 B 接受</h3></div>
+    <a class="paper-open" href="../mechanisms/US11630789B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="A 拒绝，B 的在线核心接收">
-    <img class="paper-image" src="../figures/US11630789B2/US11630789B2-fig-2.svg" width="762" height="389"
-         style="--paper-width:762px" alt="A 拒绝，B 的在线核心接收。B 已在线核心接收，整个投递在第一轮结束。关闭的核心未参与该轮。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="第一轮中簇 A 拒绝，簇 B 接受">
+    <img class="paper-image native-image" src="../mechanisms/US11630789B2/fig-2/diagram.svg" width="920" height="452"
+         style="--paper-width:920px" alt="第一轮中簇 A 拒绝，簇 B 接受。示例有一个中断待处理。A 返回 Nack 后，全局控制器在本轮尝试 B，B 的已上电核心返回 Ack。">
   </div>
   <figcaption>
-    <span>B 已在线核心接收，整个投递在第一轮结束。关闭的核心未参与该轮。</span>
-    <span class="figure-evidence">图 3–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
+    <span>示例有一个中断待处理。A 返回 Nack 后，全局控制器在本轮尝试 B，B 的已上电核心返回 Ack。</span>
+    <span class="figure-evidence">图 3–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">全局投递与核心电源状态的接口</h3></div>
-    <a class="paper-open" href="../mechanisms/US11630789B2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">全局控制器经核簇控制器投递中断</h3></div>
+    <a class="paper-open" href="../mechanisms/US11630789B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="全局投递与核心电源状态的接口">
-    <img class="paper-image native-image" src="../mechanisms/US11630789B2/diagram.svg" width="931" height="488"
-         style="--paper-width:931px" alt="全局投递与核心电源状态的接口。全局中断控制器把请求发给核簇中断控制器，再由后者向目标核心投递。核心返回的接受或拒绝应答（Ack/Nack）沿同一路径逐级汇总。第一轮的全部拒绝应答触发第二轮，第二轮由核簇控制器扩大可投递的核心范围。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="全局控制器经核簇控制器投递中断">
+    <img class="paper-image native-image" src="../mechanisms/US11630789B2/fig-1/diagram.svg" width="931" height="488"
+         style="--paper-width:931px" alt="全局控制器经核簇控制器投递中断。全局控制器向各核簇控制器发出请求。核簇控制器根据轮次选择已上电核心，或先给关电核心上电。">
   </div>
   <figcaption>
-    <span>全局中断控制器把请求发给核簇中断控制器，再由后者向目标核心投递。核心返回的接受或拒绝应答（Ack/Nack）沿同一路径逐级汇总。第一轮的全部拒绝应答触发第二轮，第二轮由核簇控制器扩大可投递的核心范围。</span>
-    <span class="figure-evidence">图 1–2，权利要求 1、19 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
+    <span>全局控制器向各核簇控制器发出请求。核簇控制器根据轮次选择已上电核心，或先给关电核心上电。</span>
+    <span class="figure-evidence">图 1–2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">核心接受中断的两个局部条件</h3></div>
-    <a class="paper-open" href="../figures/US11630789B2/US11630789B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 核心接受中断的两个局部条件 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">核心汇总指令退休与访存完成条件</h3></div>
+    <a class="paper-open" href="../mechanisms/US11630789B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="核心接受中断的两个局部条件">
-    <img class="paper-image" src="../figures/US11630789B2/US11630789B2-fig-4.svg" width="750" height="326"
-         style="--paper-width:750px" alt="核心接受中断的两个局部条件。ROB 和 LSU 在规定时间内都可达到可中断点才给出 Ack。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="核心汇总指令退休与访存完成条件">
+    <img class="paper-image native-image" src="../mechanisms/US11630789B2/fig-4/diagram.svg" width="707" height="332"
+         style="--paper-width:707px" alt="核心汇总指令退休与访存完成条件。核内应答电路查看重排序缓冲区和访存单元的状态，判断能否在指定时限内到达可中断点。">
   </div>
   <figcaption>
-    <span>ROB 和 LSU 在规定时间内都可达到可中断点才给出 Ack。</span>
-    <span class="figure-evidence">图 6–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
+    <span>核内应答电路查看重排序缓冲区和访存单元的状态，判断能否在指定时限内到达可中断点。</span>
+    <span class="figure-evidence">图 6–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">路由结果何时允许第二轮</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">核簇应答如何决定投递轮次</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">轮次</th><th scope="col">在线核心答复</th><th scope="col">处理</th></tr></thead><tbody><tr><th scope="row">第一轮</th><td>某簇 Ack</td><td>完成此次交付</td></tr><tr><th scope="row">第一轮</th><td>当前簇 Nack，还有其它簇</td><td>继续第一轮</td></tr><tr><th scope="row">第一轮</th><td>所有簇都 Nack</td><td class="emphasis">进入可唤醒轮</td></tr><tr><th scope="row">第二轮</th><td>存在断电候选</td><td>上电后再尝试</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">阶段</th><th scope="col">反馈或条件</th><th scope="col">下一动作</th></tr></thead><tbody><tr><th scope="row">第一轮</th><td>某簇接受</td><td>本次投递成功</td></tr><tr><th scope="row">第一轮</th><td>本簇拒绝，仍有其他簇</td><td>继续本轮</td></tr><tr><th scope="row">第一轮</th><td>各簇都拒绝</td><td class="emphasis">启动第二轮</td></tr><tr><th scope="row">第二轮</th><td>本簇有关闭的候选核心</td><td>上电后尝试投递</td></tr></tbody></table>
   <figcaption>
-    <span>第一轮的过滤条件为核心是否已供电。第二轮可以让此前未尝试的目标进入候选。</span>
+    <span>以下列出两轮投递的范围和转换条件。说明书还描述两轮无法成功时的强制投递。</span>
     <span class="figure-evidence">图 3–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="https://patentimages.storage.googleapis.com/b3/ab/43/cdc1798afdbabb/US11630789.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
-    <div class="analysis-note"><h3>收益与开销</h3><p>将中断延迟拆为核簇轮询、候选核心的应答等待及第二轮唤醒。省电应统计避免的核心上电次数，同时比较从中断产生到处理程序开始的尾延迟。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>先探测的核簇频繁在应答门槛到期才拒绝，让后面的在线核心始终可立即接收。若没有新增上电、处理程序尾延迟却增加，瓶颈是探测顺序和应答时限。</p></div>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>已上电核心先投递</dt><dd>减少核心上电次数 <span class="subdued">原图 3 至 5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>核内时限应答</dt><dd>检查可中断边界 <span class="subdued">原图 6 至 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></span></dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>分别测量簇间路由时间、核内应答时间、第二轮核心上电时间和接收后进入处理程序的时间。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>若第一簇长期在临近时限时才拒绝，后续已上电核心虽能立即接受，第一轮仍会拉高中断尾延迟。</p></div>
     <div id="example" class="article-example">
       <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设簇 A 有一个忙于长访存的在线核心，簇 B 有一个能在要求时间内接收的在线核心和两个断电核心。</dd></div><div><dt>处理结果</dt><dd>A 因访问未到可中断点返回 Nack。B 的在线核心随后 Ack，两颗 B 中断电核心可以继续关闭。若 A、B 全都拒绝，则走第二轮。</dd></div><div><dt>结果解读</dt><dd>本例只计一次中断，轮询和唤醒时间由实现决定。簇与核心的次序必须按中断路由约束复算。</dd></div></dl>
+      <dl class="explanation example"><div><dt>初始条件</dt><dd>设核簇 A 的已上电核心正在等待长延迟访存，核簇 B 有一个可及时接收中断的已上电核心和两个关电核心。</dd></div><div><dt>处理结果</dt><dd>串行实施例中，A 返回拒绝应答后，全局控制器向 B 发送请求。B 的已上电核心接受后，两个关电核心可以保持原电源状态。</dd></div><div><dt>结果解读</dt><dd>轮询和核内应答的时长取决于实现。可测中断从源端报告到处理程序开始的端到端延迟。</dd></div></dl>
     </div>
     
   </section>
@@ -112,19 +114,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、15、19 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的关键技术特征</h3>
-  <p>权 1 规定两轮中断投递。第一轮只探询已上电的核心，各核簇均拒绝后，第二轮才允许给关电核心上电。逐个探询的顺序见权 6、7 和独立权 19。说明书还给出跨裸片转发和超时后的强制投递流程。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>每个簇级中断控制器对应一个处理器核簇</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=When%20at%20least%20one%20interrupt%20has%20been%20received%20by%20the%20interrupt%20controller%2020%20%2C%20the%20interrupt">原图 1。簇级控制器 24A–24n 分别负责各自核簇的处理器 30。</a></td></tr><tr><th scope="row">F2</th><td>全局中断控制器发起经各核簇控制器尝试投递的第一轮</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=In%20the%20soft%20state%2042%20%2C%20the%20interrupt%20controller%2020%20may%20be%20configured%20initiate%20a%20soft">原图 3。有待处理中断时，全局控制器进入第一轮投递状态 42。</a></td></tr><tr><th scope="row">F3</th><td>第一轮只向核簇中已上电的核心尝试投递</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20initial%20iteration%20may%20be%20the%20soft%20iteration%2C%20as%20mentioned%20above.%20In%20the%20soft%20iteration%2C%20a">原图 5。第一轮沿选已上电核心的分支执行，跳过关电核心。</a></td></tr><tr><th scope="row">F4</th><td>第一轮收到各簇拒绝后发起第二轮投递</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=If%20the%20soft%20iteration%20completes%20with%20Nack%20responses%20from%20each%20cluster%20interrupt%20controller%2024%20A-%2024">原图 3。第一轮全部拒绝且仍有待处理中断时，状态机进入第二轮。</a></td></tr><tr><th scope="row">F5</th><td>第二轮由簇级控制器给关电核心上电，再向簇内核心尝试投递</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=Based%20on%20a%20Nack%20response%20from%20each%20cluster%20interrupt%20controller%2024%20A-%2024%20n%20during%20the">原图 5。第二轮走步骤 72 的上电分支，再执行核簇内投递。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
+  <p>系统权项用两轮区分核簇内的上电状态。第一轮只尝试已上电核心，第二轮允许给关电核心上电。见原图 1、3 和 5。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=perform%20a%20first%20iteration%20over%20the%20plurality%20of%20cluster%20interrupt%20controllers%20to%20attempt%20to%20deliver%20the">F1</a></th><td>全局控制器通过各核簇控制器发起第一轮</td><td>原图 3 · 原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=a%20subset%20of%20the%20plurality%20of%20processors%20in%20the%20respective%20processor%20cluster%20that%20are%20powered%20on">F2</a></th><td>第一轮候选限于已上电的处理器子集</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=based%20on%20non-acknowledge%20%28Nack%29%20responses%20from%20the%20plurality%20of%20cluster%20interrupt%20controllers%20in%20the%20first%20iteration">F3</a></th><td>第一轮收到各核簇的拒绝应答后推进</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=power%20on%20the%20ones%20of%20the%20plurality%20of%20processors%20that%20are%20powered%20off%20and%20attempt%20to">F4</a></th><td>第二轮可以给关电处理器上电并尝试投递</td><td>原图 5</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
+  <h4 id="independent-15-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></h4>
+  <p>处理器权项用指令退休和访存完成能否在规定时间内到达同一可中断点判定 Ack/Nack。见原图 6 至 8。</p>
+  <table class="comparison-table" aria-labelledby="independent-15-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=a%20reorder%20buffer%20configured%20to%20track%20a%20plurality%20of%20instruction%20operations">F5</a></th><td>重排序缓冲区跟踪尚未退休的指令操作</td><td>原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=a%20load%2Fstore%20unit%20configured%20to%20execute%20load%2Fstore%20operations">F6</a></th><td>访存单元执行加载和存储</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=the%20reorder%20buffer%20will%20retire%20instruction%20operations%20to%20an%20interruptible%20point">F7</a></th><td>重排序缓冲区可将指令退休至可中断点</td><td>原图 7 · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=at%20least%20one%20of%20the%20reorder%20buffer%20and%20the%20load%2Fstore%20unit%20will%20not%20reach%20the%20interruptible">F8</a></th><td>任一单元预计无法按时达到可中断点则拒绝</td><td>原图 8</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-19" aria-labelledby="independent-19-title">
+  <h4 id="independent-19-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></h4>
+  <p>方法权项明确第一轮串行经过核簇控制器，第二轮根据拒绝结果扩大目标。见原图 4、5、12。</p>
+  <table class="comparison-table" aria-labelledby="independent-19-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=performing%20a%20first%20iteration%20of%20serially%20attempting%20to%20deliver%20the%20interrupt%20to%20a%20plurality%20of%20cluster">F9</a></th><td>第一轮串行尝试各核簇</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=without%20attempting%20to%20deliver%20the%20interrupt%20to%20ones%20of%20the%20plurality%20of%20processors%20in%20the%20respective">F10</a></th><td>第一轮不向已上电子集之外的核心投递</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=performing%20a%20second%20iteration%20over%20the%20plurality%20of%20cluster%20interrupt%20controllers%20by%20the%20interrupt%20controller">F11</a></th><td>全局控制器启动第二轮</td><td>原图 12</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>第一遍逐簇尝试已上电核心。收到全部 Nack 时第二遍允许给关闭的核心上电再尝试。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>相对权 1，明确先发第一簇请求，再于该簇拒绝后发第二簇请求。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%202%20wherein%2C%20during%20the%20attempt%20to%20deliver%20the%20interrupt%20over%20the%20plurality">查看原文限定</a></td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%202%20wherein%2C%20during%20the%20attempt%20to%20deliver%20the%20interrupt%20over%20the%20plurality">查看原文限定</a></td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%201%20wherein%2C%20during%20the%20attempt%20to%20deliver%20the%20interrupt%20over%20the%20plurality">查看原文限定</a></td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>相对权 1，限定全局控制器串行向核簇发请求，并在收到接受响应时终止。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>相对权 6，串行投递顺序可编程。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>相对权 6，投递顺序按中断源选择，不同中断源对应不同顺序。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%201%20wherein%2C%20during%20the%20attempt%20to%20deliver%20the%20interrupt%20over%20the%20plurality">查看原文限定</a></td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%209%20wherein%20the%20first%20cluster%20interrupt%20controller%20is%20configured%20to%20terminate%20serial">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%2010%20wherein%20the%20first%20cluster%20interrupt%20controller%20is%20configured%20to%20transmit%20the">查看原文限定</a></td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>相对权 9，簇级控制器根据核簇内串行投递收到的拒绝响应，向全局控制器回复拒绝。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>相对权 1，要求两组簇级控制器位于不同裸片，先尝试本片的一组。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20system%20as%20recited%20in%20claim%2013%20wherein%20the%20second%20integrated%20circuit%20includes%20a%20second%20interrupt%20controller%2C%20and">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>ROB 和 LSU 均能在时间内到可中断点时 Ack，否则 Nack。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20processor%20as%20recited%20in%20claim%2015%20wherein%20the%20determination%20is%20the%20Nack%20response%20based%20on%20the%20reorder">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20processor%20as%20recited%20in%20claim%2015%20wherein%20the%20determination%20is%20the%20Nack%20response%20based%20on%20the%20reorder">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20processor%20as%20recited%20in%20claim%2015%20wherein%20the%20determination%20is%20the%20Nack%20response%20based%20on%20the%20load%2Fstore">查看原文限定</a></td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=A%20method%20comprising%3A%20receiving%20an%20interrupt%20from%20a%20first%20interrupt%20source%20in%20an%20interrupt%20controller%3B%20performing%20a%20first">查看原文限定</a></td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td><a href="https://patents.google.com/patent/US11630789B2/en#:~:text=The%20method%20as%20recited%20in%20claim%2019%20wherein%20serially%20attempting%20to%20deliver%20the%20interrupt%20to%20the%20plurality%20of">查看原文限定</a></td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统权项用两轮区分核簇内的上电状态。第一轮只尝试已上电核心，第二轮允许给关电核心上电。见原图 1、3 和 5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>收到第一个核簇的拒绝后，向第二个核簇发送中断请求。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>第二个核簇也拒绝时，继续向第三个核簇发出请求。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>第二个核簇接受且没有其他待处理中断时结束尝试。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>首个核簇接受且没有其他待处理中断时结束尝试。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>串行向核簇控制器发出请求，收到首个接受应答后终止。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>把串行请求的核簇顺序设为可编程。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>根据中断来源选择串行探询顺序，不同来源可用不同顺序。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>核簇控制器收到请求后，向本簇的处理器串行发出请求。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>本簇某处理器接受后，核簇控制器停止向本簇串行发送。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>某处理器接受后，核簇控制器将接受应答返回全局控制器。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>本簇的串行请求收到各处理器拒绝后，核簇控制器向全局侧返回拒绝。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>把两组控制器分布在不同裸片，先尝试全局控制器所在裸片上的核簇。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>本地组拒绝后向第二裸片的中断控制器转发，由后者尝试投递给远端核簇。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>处理器权项用指令退休和访存完成能否在规定时间内到达同一可中断点判定 Ack/Nack。见原图 6 至 8。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>ROB 有潜在执行延迟超过阈值的指令操作时，返回拒绝。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>ROB 有导致屏蔽中断的指令操作时，返回拒绝。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>访存单元有设备地址空间的未完成访存时，返回拒绝。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>方法权项明确第一轮串行经过核簇控制器，第二轮根据拒绝结果扩大目标。见原图 4、5、12。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630789B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>收到某核簇的接受应答便停止串行投递。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -133,9 +151,9 @@
   </section>
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12248350B2.html#engineering">跨裸片事务按本端唤醒、远端确认的顺序发出</a>
+    <ul class="article-related"><li><a href="US12248350B2.html#engineering">跨裸片事务如何唤醒互连</a>
 <p>US11630789B2 在第一轮尝试由已上电核心接受中断，所有核簇返回 Nack 后才重试并允许上电。US12248350B2 的发起端先恢复本端网络电路、唤醒指定的远端，再依权利要求 4 等待确认后发送跨裸片事务。前者在一轮均未接受中断时才进入能唤醒核心的下一轮，后者的确认是向既定目的地发出事务的前提。</p></li><li><a href="US12147839B2.html#engineering">按核簇共享资源饱和度迁移单个线程</a>
-<p>US11630789B2 的硬件中断控制器先尝试已上电核心，所有候选核簇拒绝后才允许为其他核心上电。US12147839B2 从核簇总线接口队列饱和与 LSU 指标识别线程，再由 OS 调度器调整线程放置。两者都影响核心上的工作来源，选择对象分别是中断接收核心和可迁移线程。</p></li><li><a href="US20250284649A1.html#engineering">CPU 根据可接受中断的时点返回 Ack 或 Nack</a>
+<p>US11630789B2 的硬件中断控制器先尝试已上电核心，所有候选核簇拒绝后才允许为其他核心上电。US12147839B2 从核簇总线接口队列饱和与 LSU 指标识别线程，再由 OS 调度器调整线程放置。两者都影响核心上的工作来源，选择对象分别是中断接收核心和可迁移线程。</p></li><li><a href="US20250284649A1.html#engineering">CPU 按可中断点的到达时限应答中断投递</a>
 <p>US20250284649A1 经 US18/674,203 和 US18/301,837 追溯至授权为 US11630789B2 的 US17/246,311。US11630789B2 的权利要求 1 要求先尝试已上电核心，全部拒绝后进入允许核心上电的第二轮。继续申请的权利要求 9 则聚焦核心如何按能否及时到达可中断点返回 Nack。</p></li></ul>
     <p><a href="../index.html?patent=US11630789B2#knowledge">在全量关系图上定位 US11630789B2</a></p>
   </section>
@@ -150,13 +168,14 @@
     <div><dt>美国申请日</dt><dd>2021-04-30</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2023-04-18</dd></div>
     <div><dt>美国申请号</dt><dd>US17/246,311</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeffrey E. Gonion、Charles E. Tucker、Tal Kuzi、Richard F. Russo、Mridul Agarwal、Christopher M. Tsay、Gideon N. Levinsky、Shih-Chieh Wen、Lior Zimet</dd></div><div><dt>分类号</dt><dd>G06F9/4812、G06F1/26、G06F13/24、G06F9/5027、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11630789B2/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://patents.google.com/patent/US11630789B2/en">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>
   <p>子 agent 已核对Google Patents 授权全文，覆盖 126 个说明书段落、20 项权利要求。</p>
   <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14。</p>
   </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US20250284649A1.html"><code>US20250284649A1</code> CPU 根据可接受中断的时点返回 Ack 或 Nack</a></li></ul>
+  <h2>同族对照</h2><ul class="related"><li><a href="US20250284649A1.html"><code>US20250284649A1</code> CPU 按可中断点的到达时限应答中断投递</a></li></ul>
 </aside>
 </div></main>
 <footer class="footer"><div class="frame">

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US10795818B1 限制实时探测前的普通请求 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<title>US10795818B1 限制时延敏感 snoop 前的普通请求数 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -22,9 +22,9 @@
 <div class="frame">
   <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
   <p class="document-id"><code>US10795818B1</code><span>美国授权专利</span><time datetime="2020-10-06">2020-10-06</time></p>
-  <h1>限制实时探测前的普通请求</h1>
+  <h1>限制时延敏感 snoop 前的普通请求数</h1>
   <p class="english-title" lang="en">Method and apparatus for ensuring real-time snoop latency</p>
-  <p class="document-question">普通探测和实时探测共用入口时，控制器最多允许多少普通请求先处理？</p>
+  <p class="document-question">两类 snoop 共用入口时，缓存控制器如何限制先于时延敏感 snoop 执行的普通请求数？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -38,78 +38,80 @@
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">中断、显示等对时延敏感的任务，可能和普通缓存探测走同一通道。进入控制器后，原本排在前面的一批普通请求可能占用端口很久。</p>
-    <p>控制器在同一通道接收普通和时延敏感 snoop。当待处理的普通请求达到阈值时，控制器可以提前安排新到的时延敏感请求。入口通道仍按原有规则接收两类请求。</p>
-    <ol class="walkthrough"><li><h3>两类请求共用接收通道</h3><p>接收通道在接收时不给任何一类 snoop 预先排序。</p></li><li><h3>按阈值计数</h3><p>控制器统计待处理的普通 snoop，并与预设值比较。实施例可以持续限制普通队列，也可以只在有时延敏感请求时限制。</p></li><li><h3>安排敏感请求的位置</h3><p>敏感请求到达且普通数达到阈值时，控制器调整服务顺序，使排在它前面处理的普通数不超过阈值。</p></li><li><h3>处理超出限额的普通请求</h3><p>控制器可以丢弃超限请求，由源端重提，也可以放进重试缓冲。没有敏感请求竞争时，普通请求可以按到达次序处理。</p></li></ol>
+    <p class="section-intro">两类缓存一致性 snoop 经同一入口送往缓存控制器。普通请求突发时，本地请求队列可能积压，使后到的时延敏感 snoop 晚些取得缓存端口。</p>
+    <p>处理器通过同一通道发送普通与时延敏感 snoop。入口通道不给时延敏感请求额外优先级。控制器检测到普通请求数达到预设值后，优先处理时延敏感 snoop，并限制在它之前处理的普通请求数。</p>
+    <ol class="walkthrough"><li><h3>两类 snoop 共用入口</h3><p>入口通道不给时延敏感类额外优先级。控制器可识别请求类别，再做本地仲裁。</p></li><li><h3>检测普通请求达到阈值</h3><p>可以用计数器跟踪待处理普通请求。原图 6 在没有时延敏感请求时也限制普通项数，原图 7 改用重试缓冲容纳超额普通项。</p></li><li><h3>限制先行普通请求</h3><p>普通请求数达到阈值时，控制器提高时延敏感类服务优先级。重排序电路是落实该限制的一种实现。</p></li><li><h3>处置超限普通请求</h3><p>控制器可丢弃超额普通请求，也可写入重试缓冲。权利要求 2 另规定没有时延敏感请求时，按到达顺序处理普通 snoop。</p></li></ol>
     <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 和 5 分别覆盖丢弃新到普通 snoop，以及达到门槛后由重试缓冲接收普通 snoop 的方案。两者改变的是普通流量的处置路径，敏感请求仍从同类通道抵达。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>时延敏感 snoop</dt><dd>送往缓存控制器、对服务等待时间有较高要求的缓存一致性探测。</dd></div><div><dt>先行普通请求数</dt><dd>一笔敏感 snoop 获得处理前，控制器允许先处理的普通 snoop 笔数。</dd></div><div><dt>重试缓冲</dt><dd>控制器中保存超限普通 snoop 的存储结构，使其可在之后重新进入处理路径。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">达到阈值后怎样安排敏感请求</a></li><li><a href="#fig-1">两类探测从同一通道进入控制器</a></li><li><a href="#fig-5">限额路径只先处理两笔普通请求</a></li><li><a href="#fig-3">超限普通请求如何处置</a></li><li><a href="#fig-4">五笔普通请求给敏感请求造成的等待</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">达到阈值后怎样安排敏感请求</a></li><li><a href="#fig-1">两类探测从同一通道进入控制器</a></li><li><a href="#fig-5">两种服务次序的端口占用</a></li><li><a href="#fig-3">超限普通请求如何处置</a></li><li><a href="#fig-4">算例计入哪些等待</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">达到阈值后怎样安排敏感请求</h3></div>
-    <a class="paper-open" href="../figures/US10795818B1/US10795818B1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 达到阈值后怎样安排敏感请求 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">达到阈值后怎样安排敏感请求</h3></div>
+    <a class="paper-open" href="../mechanisms/US10795818B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="达到阈值后怎样安排敏感请求">
-    <img class="paper-image" src="../figures/US10795818B1/US10795818B1-fig-2.svg" width="670" height="389"
-         style="--paper-width:670px" alt="达到阈值后怎样安排敏感请求。控制器安排 R 的服务位置，使它之前最多处理 N 笔普通请求。">
+    <img class="paper-image native-image" src="../mechanisms/US10795818B1/fig-2/diagram.svg" width="560" height="464"
+         style="--paper-width:560px" alt="达到阈值后怎样安排敏感请求。普通 snoop 积压达到阈值后，控制器限制在新到时延敏感 snoop 之前处理的普通请求数。">
   </div>
   <figcaption>
-    <span>控制器安排 R 的服务位置，使它之前最多处理 N 笔普通请求。</span>
-    <span class="figure-evidence">图 3–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> · <a href="https://patentimages.storage.googleapis.com/a4/59/1c/abe456dd80d522/US10795818.pdf">专利 PDF</a></span>
+    <span>普通 snoop 积压达到阈值后，控制器限制在新到时延敏感 snoop 之前处理的普通请求数。</span>
+    <span class="figure-evidence">图 3–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/a4/59/1c/abe456dd80d522/US10795818.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
   <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">两类探测从同一通道进入控制器</h3></div>
-    <a class="paper-open" href="../mechanisms/US10795818B1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+    <a class="paper-open" href="../mechanisms/US10795818B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="两类探测从同一通道进入控制器">
-    <img class="paper-image native-image" src="../mechanisms/US10795818B1/diagram.svg" width="666" height="410"
-         style="--paper-width:666px" alt="两类探测从同一通道进入控制器。两类 snoop 经同一通道到达。普通 snoop 的处理数达到阈值后，缓存控制器优先处理等待中的时延敏感 snoop。">
+    <img class="paper-image native-image" src="../mechanisms/US10795818B1/fig-1/diagram.svg" width="666" height="410"
+         style="--paper-width:666px" alt="两类探测从同一通道进入控制器。共享通道把两类 snoop 送到缓存控制器。计数、重新排序和超限普通请求的重试缓冲均在控制器一侧。">
   </div>
   <figcaption>
-    <span>两类 snoop 经同一通道到达。普通 snoop 的处理数达到阈值后，缓存控制器优先处理等待中的时延敏感 snoop。</span>
-    <span class="figure-evidence">图 1–2，权利要求 1、5–6 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://patentimages.storage.googleapis.com/a4/59/1c/abe456dd80d522/US10795818.pdf">专利 PDF</a></span>
+    <span>共享通道把两类 snoop 送到缓存控制器。计数、重新排序和超限普通请求的重试缓冲均在控制器一侧。</span>
+    <span class="figure-evidence">图 1–2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/a4/59/1c/abe456dd80d522/US10795818.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-5" aria-labelledby="fig-5-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-5-title">限额路径只先处理两笔普通请求</h3></div>
-    <a class="paper-open" href="../figures/US10795818B1/US10795818B1-fig-5.svg" target="_blank" rel="noopener" aria-label="打开 限额路径只先处理两笔普通请求 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-5-title">两种服务次序的端口占用</h3></div>
+    <a class="paper-open" href="../mechanisms/US10795818B1/fig-5/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="限额路径只先处理两笔普通请求">
-    <img class="paper-image" src="../figures/US10795818B1/US10795818B1-fig-5.svg" width="900" height="262"
-         style="--paper-width:900px" alt="限额路径只先处理两笔普通请求。5 笔普通请求已入队，每笔用 4 拍。FIFO 先服务这 5 笔。限额路径若恰有 2 笔留在前面，敏感请求在第 8 拍可以获得服务。横轴只计敏感请求前的普通服务时间。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="两种服务次序的端口占用">
+    <img class="paper-image native-image" src="../mechanisms/US10795818B1/fig-5/diagram.svg" width="788" height="404"
+         style="--paper-width:788px" alt="两种服务次序的端口占用。一个空闲服务端口，每笔普通 snoop 占 4 周期。FIFO 先处理 5 笔，敏感请求在第 20 周期可开始。设上限为 2 且实际先处理 2 笔，敏感请求在第 8 周期可开始。">
   </div>
   <figcaption>
-    <span>5 笔普通请求已入队，每笔用 4 拍。FIFO 先服务这 5 笔。限额路径若恰有 2 笔留在前面，敏感请求在第 8 拍可以获得服务。横轴只计敏感请求前的普通服务时间。</span>
-    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>；单端口教学模型，非端到端延迟保证。</span>
+    <span>一个空闲服务端口，每笔普通 snoop 占 4 周期。FIFO 先处理 5 笔，敏感请求在第 20 周期可开始。设上限为 2 且实际先处理 2 笔，敏感请求在第 8 周期可开始。</span>
+    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>；单端口教学模型，非端到端延迟保证。 · <a href="#claim-features">权利要求与出处</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
   <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">超限普通请求如何处置</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">触发条件</th><th scope="col">敏感类位置</th><th scope="col">普通超额项</th></tr></thead><tbody><tr><th scope="row">无敏感请求</th><td>未分配</td><td>按到达序</td></tr><tr><th scope="row">阈值＋敏感类</th><td class="emphasis">前置普通数 ≤ N</td><td>按实现处理</td></tr><tr><th scope="row">丢弃实施例</th><td>优先处理</td><td>丢弃／源端可重提</td></tr><tr><th scope="row">重试实施例</th><td>优先处理</td><td class="emphasis">进入重试缓冲</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">触发条件</th><th scope="col">敏感类位置</th><th scope="col">普通超额项</th></tr></thead><tbody><tr><th scope="row">无时延敏感请求（权项 2）</th><td>无敏感项</td><td>按到达顺序处理</td></tr><tr><th scope="row">普通请求数达到阈值（权项 1、7）</th><td class="emphasis">限制先行普通请求</td><td>依实现选择</td></tr><tr><th scope="row">丢弃方案（权项 3）</th><td>按阈值规则服务</td><td>丢弃后到普通项</td></tr><tr><th scope="row">重试缓冲方案（权项 5）</th><td>按阈值规则服务</td><td class="emphasis">超限普通项入重试缓冲</td></tr></tbody></table>
   <figcaption>
     <span>不同实施例可以丢弃超限项，也可以将其送入重试缓冲。普通项较少时可以按到达次序处理。</span>
     <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="https://patentimages.storage.googleapis.com/a4/59/1c/abe456dd80d522/US10795818.pdf">专利 PDF</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">定量对照</p><h3 id="fig-4-title">五笔普通请求给敏感请求造成的等待</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">算例计入哪些等待</h3></div>
     
   </div>
-  <table class="comparison-table numeric-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">条件或方案</th><th scope="col">模型周期</th></tr></thead><tbody><tr><th scope="row">FIFO ×5</th><td>20</td></tr><tr><th scope="row">限额 N=2</th><td>8</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">组成</th><th scope="col">算例处理</th><th scope="col">真实系统观测</th></tr></thead><tbody><tr><th scope="row">先行普通 snoop</th><td class="emphasis">按实际先行笔数乘每笔 4 周期</td><td>逐笔记录端口获准与完成</td></tr><tr><th scope="row">到达时在执行的 snoop</th><td>假定端口空闲，贡献为零</td><td>记录正在服务请求的剩余周期</td></tr><tr><th scope="row">其他敏感 snoop</th><td>本算例没有竞争项</td><td>记录同类队列与仲裁等待</td></tr><tr><th scope="row">互连或重试</th><td>算例从控制器收到请求起计</td><td>另记录源发出、入口到达和重提次数</td></tr></tbody></table>
   <figcaption>
-    <span>设单端口空闲，每笔普通请求占 4 周期。FIFO 先处理 5 笔，等待 20 周期。限额 N=2 的路径若正好有两笔在前，等待 8 周期。</span>
-    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的数量约束；合成算例，非测量</span>
+    <span>用同一到达点比较两种服务顺序。示例只计算先行普通 snoop 的端口服务时间。</span>
+    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>；合成算例，非测量</span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>限制先行普通探测数</dt><dd>约束敏感请求排队 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>；原图 3–5</span></dd></div><div><dt>超额普通请求入重试缓冲</dt><dd>保留普通请求待重试 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>；原图 7</span></dd></div></dl>
     <div class="analysis-note"><h3>收益与开销</h3><p>主请求缓冲能限制先于敏感请求服务的普通条目数。被推迟的普通请求要占用重试存储或重新注入，其代价可能表现为更长的普通事务驻留与额外互连流量。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>若普通 snoop 需要反复重提并长时间竞争共享通道，入口注入率可能成为新的瓶颈。权利要求对先行普通请求数设上限，端到端尾延迟仍需包含这些重提。</p></div>
     <div id="example" class="article-example">
@@ -122,19 +124,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、8、15 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的关键技术特征</h3>
-  <p>原图 6 在普通 snoop 超额时丢弃请求，原图 7 改由重试缓冲保留。权利要求 1 限制的是在一笔时延敏感 snoop 之前处理的普通 snoop 数。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>同一通道传时延敏感和普通两类 snoop</td><td><a href="https://patents.google.com/patent/US10795818B1/en">原图 1。两个类别共享至缓存控制器的入口。</a></td></tr><tr><th scope="row">F2</th><td>入口通道不为敏感 snoop 提供更高优先级</td><td><a href="https://patents.google.com/patent/US10795818B1/en">原图 2。优先处理行为落在收端。</a></td></tr><tr><th scope="row">F3</th><td>控制器限制一笔敏感 snoop 前可处理的普通请求数</td><td><a href="https://patents.google.com/patent/US10795818B1/en">原图 3。限制写在请求处理数量上。</a></td></tr><tr><th scope="row">F4</th><td>普通项数达到预设值时优先服务敏感项</td><td><a href="https://patents.google.com/patent/US10795818B1/en">原图 6。阈值触发的入口或排队策略保护敏感请求。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
+  <p>装置的两类 snoop 共用输入通道。普通请求数达到预设值时，缓存控制器提高敏感类服务优先级，并给先行普通请求数设上限。见原图 1–3。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=a%20cache%20controller%20coupled%20to%20receive%20cache%20snoop%20requests%20from%20the%20processor%20via%20a%20channel">F1</a></th><td>缓存控制器从处理器的通道接收 snoop。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=latency-sensitive%20snoop%20requests%20are%20not%20prioritized%20over%20non-latency%20sensitive%20snoop%20requests%20in%20the%20channel">F2</a></th><td>通道不给时延敏感 snoop 优先级。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=limit%2C%20to%20a%20predetermined%20value%2C%20a%20number%20of%20received%20non-latency%20sensitive%20snoop%20requests%20that%20can%20be">F3</a></th><td>控制器限制新到敏感 snoop 之前可处理的普通请求数。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=determine%20that%20the%20number%20of%20received%20non-latency%20sensitive%20requests%20has%20reached%20the%20predetermined%20value%20and%20responsively">F4</a></th><td>接收的普通请求数达到预设值后，提高敏感类服务优先级。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 3</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-8" aria-labelledby="independent-8-title">
+  <h4 id="independent-8-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></h4>
+  <p>方法限定控制器接收、判断阈值及处理两类 snoop 的先后条件。原图 3–5 的流程把入口接收和本地服务分开。</p>
+  <table class="comparison-table" aria-labelledby="independent-8-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=receiving%2C%20in%20a%20cache%20controller%20via%20a%20channel%2C%20cache%20snoop%20requests">F5</a></th><td>缓存控制器经一个输入通道接收两类请求。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=latency-sensitive%20snoop%20requests%20are%20not%20prioritized%20over%20non-latency%20sensitive%20snoop%20requests%20in%20the%20channel">F6</a></th><td>接收通道不给敏感类更高优先级。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=limiting%2C%20to%20a%20predetermined%20value%2C%20a%20number%20of%20received%20non-latency%20snoop%20requests%20that%20can%20processed%20by">F7</a></th><td>限制新到敏感 snoop 之前可处理的普通 snoop 数。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%20for%20handling%20cache%20snoop">说明书 0040</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=the%20cache%20controller%20determining%20that%20the%20number%20of%20received%20non-latency%20sensitive%20requests%20has%20reached%20the%20predetermined">F8</a></th><td>控制器检测到普通数达到预设值后优先处理敏感类。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 3</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
+  <h4 id="independent-15-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></h4>
+  <p>系统包含处理器核、缓存和缓存控制器。通过同一通道接收两类 snoop，并在普通请求数达到预设值时给敏感类优先级。见原图 1–2。</p>
+  <table class="comparison-table" aria-labelledby="independent-15-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=a%20processor%20core%3B%20a%20cache%20memory%3B%20and%20a%20cache%20controller%20coupled%20to%20the%20cache%20memory%20and">F9</a></th><td>缓存控制器连接缓存存储器，另经通信通道连接处理器核。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=cache%20snoop%20requests%20are%20not%20prioritized%20by%20type%20over%20one%20another%20in%20the%20communications%20channel">F10</a></th><td>通道本身不按请求类型授予优先级。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=prioritize%20processing%20of%20latency-sensitive%20snoop%20requests%20over%20non-latency%20sensitive%20snoop%20requests%20responsive%20to%20determining%20that%20a">F11</a></th><td>收到的普通请求数达到预设值时，控制器提高敏感类优先级。</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20having%20a%20processor%20and">说明书 0030</a> · 原图 1 · 原图 3</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>两类请求进入不区分服务优先级的通道。普通请求达到预设值时，控制器优先服务敏感请求，并限制在它之前处理的普通请求数。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20apparatus%20as%20recited%20in%20claim%201%20%2C%20wherein%20the%20cache%20controller%20is%20configured%20to%20process%20non-latency%20sensitive">查看原文限定</a></td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>普通请求已达到待处理数量上限时，可以丢弃后到的普通 snoop。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20apparatus%20as%20recited%20in%20claim%201%20%2C%20wherein%20the%20cache%20controller%20includes%20a%20request%20buffer%20configured%20to">查看原文限定</a></td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20apparatus%20as%20recited%20in%20claim%204%20%2C%20further%20comprising%20a%20retry%20buffer%2C%20wherein%20the%20cache%20controller%20is">查看原文限定</a></td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20apparatus%20as%20recited%20in%20claim%201%20%2C%20further%20comprising%20a%20counter%20configured%20to%20track%20a%20number%20of">查看原文限定</a></td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20apparatus%20as%20recited%20in%20claim%201%20%2C%20further%20comprising%20a%20re-ordering%20circuit%20configured%20to%20place%20an%20incoming">查看原文限定</a></td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=A%20method%20comprising%3A%20receiving%2C%20in%20a%20cache%20controller%20via%20a%20channel%2C%20cache%20snoop%20requests%20including%20latency-sensitive%20snoop%20requests">查看原文限定</a></td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%208%20%2C%20further%20comprising%20re-ordering%20pending%20cache%20snoop%20request%20to%20place%20an">查看原文限定</a></td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%208%20%2C%20further%20comprising%20discarding%20incoming%20non-latency%20sensitive%20snoop%20requests%20when%20a">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-8">8</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%208%20%2C%20further%20comprising%20storing%20incoming%20non-latency%20sensitive%20snoop%20requests%20in%20a">查看原文限定</a></td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-8">8</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%208%20%2C%20further%20comprising%3A%20storing%20pending%20cache%20snoop%20requests%20in%20a%20buffer%3B">查看原文限定</a></td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%2012%20%2C%20further%20comprising%20the%20cache%20controller%20processing%20pending%20snoop%20requests%20in">查看原文限定</a></td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20method%20as%20recited%20in%20claim%208%20%2C%20further%20comprising%20the%20cache%20controller%20processing%20non-latency%20sensitive%20snoop%20requests">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=A%20system%20comprising%3A%20a%20processor%20core%3B%20a%20cache%20memory%3B%20and%20a%20cache%20controller%20coupled%20to%20the%20cache%20memory">查看原文限定</a></td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20system%20as%20recited%20in%20claim%2015%20%2C%20wherein%20the%20cache%20controller%20is%20configured%20to%2C%20responsive%20to%20determining">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20system%20as%20recited%20in%20claim%2015%20%2C%20wherein%20the%20cache%20controller%20is%20configured%20to%20store%20incoming%20non-latency">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20system%20as%20recited%20in%20claim%2015%20%2C%20wherein%20the%20cache%20controller%20is%20configured%20to%20discard%20incoming%20non-latency">查看原文限定</a></td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20system%20as%20recited%20in%20claim%2015%20%2C%20wherein%20the%20cache%20controller%20is%20configured%20to%20process%20non-latency%20sensitive">查看原文限定</a></td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td><a href="https://patents.google.com/patent/US10795818B1/en#:~:text=The%20system%20as%20recited%20in%20claim%2015%20%2C%20wherein%20the%20cache%20controller%20includes%20a%20buffer%20configured%20to%20store">查看原文限定</a></td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置的两类 snoop 共用输入通道。普通请求数达到预设值时，缓存控制器提高敏感类服务优先级，并给先行普通请求数设上限。见原图 1–3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>没有收到时延敏感请求时，普通 snoop 按到达次序处理。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>待处理普通 snoop 达到预设值时丢弃新到的普通请求。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>增加待处理请求缓冲，按写入缓冲的顺序处理 snoop。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>达到普通请求阈值时，将新到普通 snoop 放入重试缓冲。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>增加计数器，跟踪待处理的普通 snoop 数。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>增加重排序电路，在达到阈值时把敏感 snoop 排在至少一笔普通请求前。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>方法限定控制器接收、判断阈值及处理两类 snoop 的先后条件。原图 3–5 的流程把入口接收和本地服务分开。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>达到预设值时重排待处理请求，让新到敏感 snoop 先于至少一笔普通请求。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>待处理普通 snoop 数等于预设值时丢弃新到的普通请求。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-8">8</a></td><td>收到的普通 snoop 数达到预设值时，新到普通项存入重试缓冲。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-8">8</a></td><td>把待处理 snoop 写入请求缓冲，处理时再从该缓冲读取。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>控制器按 snoop 写入请求缓冲的先后次序处理。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>没有时延敏感 snoop 等待时，普通请求按到达次序处理。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统包含处理器核、缓存和缓存控制器。通过同一通道接收两类 snoop，并在普通请求数达到预设值时给敏感类优先级。见原图 1–2。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>达到预设普通数时重排，新到敏感请求先于至少一笔已收普通请求。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>达到预设值时，将新到普通 snoop 放入重试缓冲。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>达到预设值时，丢弃新到普通 snoop。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>没有敏感 snoop 等待时，普通请求按到达顺序处理。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10795818B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>增加保存待处理缓存 snoop 的缓冲区。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -143,10 +161,10 @@
   </section>
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11900146B2.html#engineering">实时内存事务专表与独立 credit</a>
-<p>实时请求可能在两处被普通请求拖住。探测控制器允许普通和实时探测共用同一通道，但限制能在一笔实时探测前被处理的普通探测数。内存控制器给实时事务专表独立 credit 池，使普通请求消耗完共享 credit 时，实时请求仍可在自身有 credit 的情况下参加仲裁。</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
+    <ul class="article-related"><li><a href="US11900146B2.html#engineering">实时内存事务表使用独立信用池</a>
+<p>US10795818B1 的两类探测共用输入通道，缓存控制器限制在一笔延迟敏感 snoop 之前处理的非敏感 snoop 数。US11900146B2 给实时内存事务表配置独立信用池。当其他事务表耗尽共享信用，实时请求仍可用本表额度参与仲裁。</p></li><li><a href="US11893241B1.html#engineering">不同距离阵列组的可变且有界命中延迟</a>
 <p>近远缓存阵列同拍出数时让远组先过，暂存近组结果，以维护阵列访问延迟上限。一致性探测共享入口时则限制敏感请求之前可服务的普通探测数量，到阈值才提升优先级。读这两张时序图时要分清量纲，前者约束阵列返回时间，后者约束前方服务笔数，换算成时间还需知道每笔占用多久。</p></li><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>US12619558B2 在标签结果未知时只检查命中所需资源，避免缺失队列不足阻挡本可启动的请求。US10795818B1 的请求已通过同一个通道抵达，仲裁器限制敏感请求前可服务的普通请求数。比较时分别量取进入标签流水线前的阻塞，以及已入队探测等待服务的时间。</p></li></ul>
+<p>US12619558B2 在标签结果未知时只检查命中所需资源，第一组齐备才启动查询。US10795818B1 的两类 snoop 共用无优先分流的输入通道，缓存控制器限制到来的延迟敏感 snoop 前面可先处理的普通请求数。前者测资源可用到标签查询启动，后者测探测接入与服务的间隔。</p></li></ul>
     <p><a href="../index.html?patent=US10795818B1#knowledge">在全量关系图上定位 US10795818B1</a></p>
   </section>
 </div>
@@ -160,6 +178,7 @@
     <div><dt>美国申请日</dt><dd>2019-05-21</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2020-10-06</dd></div>
     <div><dt>美国申请号</dt><dd>US16/418,811</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Harshavardhan Kaushikkar、Per H. Hammarlund、Brian P. Lilly、Michael Bekerman、James Vash、Manu Gulati、Benjamin K. Dodge</dd></div><div><dt>分类号</dt><dd>G06F12/0815、G06F12/0831、G06F12/0822、G06F2212/1024、G06F2212/502、G06F2212/608</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US10795818B1/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://patents.google.com/patent/US10795818B1/en">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

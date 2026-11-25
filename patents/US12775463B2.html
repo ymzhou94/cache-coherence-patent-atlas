@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US12775463B2 分级存储队列与地址解析 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -39,9 +39,10 @@
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
     <p class="section-intro">在途 store 要保存在队列里，依赖它的 load 还要能查到比缓存更新的值。若每个槽都支持相同数量的查询端口，增加容量的成本也会增加。</p>
-    <p>主存储队列有空闲条目时接收 store，满时交由次队列接收。次队列可以先解析地址，待主队列释放条目后再移交。移交时按地址解析进度选择继续执行的流水级，最终由主队列处理执行与提交。</p>
+    <p>主 store 队列有空槽时直接接收请求。主队列满时，次队列接收等待的请求并可提前解析地址。有主槽后，依已完成的地址解析状态转入主队列；提交仍由主队列承担。</p>
     <ol class="walkthrough"><li><h3>主队列满后由次队列接收</h3><p>有空槽时，较早的 store 先进入主队列。主槽暂满时，后续 store 还可进入次队列。</p></li><li><h3>次队列提前求地址</h3><p>图 4 给出了与两级队列对应的地址解析阶段。store 留在次队列等待空槽期间，就可能开始解析。</p></li><li><h3>主槽释放后回迁</h3><p>较早的 store 退休并释放主槽后，可以把次队列中的请求移到主队列。相应从属权利要求规定优先迁移最旧条目。</p></li><li><h3>按已完成的阶段继续</h3><p>回迁时地址若已解析，可从后面的阶段继续。地址若尚未解析，条目需进入第一解析阶段。如果旧 store 只覆盖 load 的部分字节，还须另行决定转发、组合或重放。</p></li></ol>
     <div class="analysis-note"><h3>权项与实施例约束</h3><p>主队列接收回迁条目并承担缓存写入。说明书图 5A 单独讨论 load 字节由 store 和缓存共同提供的情况，转发要考虑覆盖范围和 store 相对于 load 的顺序。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>主 store 队列</dt><dd>有空位时优先接收 store，在相应权项中负责提交。</dd></div><div><dt>SAS</dt><dd>Store-Accumulate Sidecar，保存次队列命中条目的标识与所属 load，以便重发时定位。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
@@ -50,56 +51,57 @@
     
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
   <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">主队列提交，次队列先接收并解析</h3></div>
-    <a class="paper-open" href="../mechanisms/US12775463B2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+    <a class="paper-open" href="../mechanisms/US12775463B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="主队列提交，次队列先接收并解析">
-    <img class="paper-image native-image" src="../mechanisms/US12775463B2/diagram.svg" width="282" height="710"
-         style="--paper-width:282px" alt="主队列提交，次队列先接收并解析。主 store 队列负责执行和提交。主队列满时，次队列可先接收请求并启动地址解析，有空位后再转入主队列。两级队列的转发能力也可以不同。">
+    <img class="paper-image native-image" src="../mechanisms/US12775463B2/fig-1/diagram.svg" width="282" height="710"
+         style="--paper-width:282px" alt="主队列提交，次队列先接收并解析。主队列满时由次队列接收 store。次队列可以先求地址，再把条目交回主队列提交。">
   </div>
   <figcaption>
-    <span>主 store 队列负责执行和提交。主队列满时，次队列可先接收请求并启动地址解析，有空位后再转入主队列。两级队列的转发能力也可以不同。</span>
-    <span class="figure-evidence">原文图 1–4，权 1、9、15。 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+    <span>主队列满时由次队列接收 store。次队列可以先求地址，再把条目交回主队列提交。</span>
+    <span class="figure-evidence">原文图 1–4，权 1、9、15。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
   <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">S2 的解析与 S0 的退休等待重叠</h3></div>
-    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 S2 的解析与 S0 的退休等待重叠 的独立 SVG">打开 SVG</a>
+    <a class="paper-open" href="../mechanisms/US12775463B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="S2 的解析与 S0 的退休等待重叠">
-    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-2.svg" width="813" height="225"
-         style="--paper-width:813px" alt="S2 的解析与 S0 的退休等待重叠。示例中，S2 等待主槽期间就完成了地址解析。S0 释放主槽后，S2 保留解析结果回迁。">
+    <img class="paper-image native-image" src="../mechanisms/US12775463B2/fig-2/diagram.svg" width="648" height="440"
+         style="--paper-width:648px" alt="S2 的解析与 S0 的退休等待重叠。本例 S2 在 S0 释放主槽前已完成地址解析。若回迁时尚未完成，应在执行前完成；第一解析级没有资源时还可暂留。">
   </div>
   <figcaption>
-    <span>示例中，S2 等待主槽期间就完成了地址解析。S0 释放主槽后，S2 保留解析结果回迁。</span>
-    <span class="figure-evidence">原文图 4、6，权 9–14、17–19。横轴是逻辑阶段。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+    <span>本例 S2 在 S0 释放主槽前已完成地址解析。若回迁时尚未完成，应在执行前完成；第一解析级没有资源时还可暂留。</span>
+    <span class="figure-evidence">原文图 4、6，权 9–14、17–19。横轴是逻辑阶段。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-4-title">次队列两遍转发：SAS 记位置，重放再读数据</h3></div>
-    <a class="paper-open" href="../figures/US12775463B2/US12775463B2-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 次队列两遍转发：SAS 记位置，重放再读数据 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">次队列两遍转发：SAS 记位置，重放再读数据</h3></div>
+    <a class="paper-open" href="../mechanisms/US12775463B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
   <div class="paper-viewport" tabindex="0" role="region" aria-label="次队列两遍转发：SAS 记位置，重放再读数据">
-    <img class="paper-image" src="../figures/US12775463B2/US12775463B2-fig-4.svg" width="762" height="503"
-         style="--paper-width:762px" alt="次队列两遍转发：SAS 记位置，重放再读数据。图 5B 的实现让 SAS 记住命中条目及其所属 load。首次匹配没有搬运 store 数据，重放时才定位次队列条目、取值并释放 SAS。单项已占用时，两个请求中较老的 load 可优先持有它。">
+    <img class="paper-image native-image" src="../mechanisms/US12775463B2/fig-4/diagram.svg" width="920" height="524"
+         style="--paper-width:920px" alt="次队列两遍转发：SAS 记位置，重放再读数据。图 5B 的实现让 SAS 记住命中条目及其所属 load。首次匹配没有搬运 store 数据，重放时才定位次队列条目、取值并释放 SAS。单项已占用时，两个请求中较老的 load 可优先持有它。">
   </div>
   <figcaption>
     <span>图 5B 的实现让 SAS 记住命中条目及其所属 load。首次匹配没有搬运 store 数据，重放时才定位次队列条目、取值并释放 SAS。单项已占用时，两个请求中较老的 load 可优先持有它。</span>
-    <span class="figure-evidence">US12775463B2 图 2、5B，说明书 [0071]–[0077]。权 5–6 针对查询宽度，两遍转发见实施例。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
+    <span class="figure-evidence">原图 2、5B，说明书 0071–0077；查询并发度见权利要求 5–7。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
   <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">主队列、次队列和缓存如何为 load 提供数据</h3></div>
     
   </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">场景</th><th scope="col">主队列</th><th scope="col">次队列</th><th scope="col">动作</th></tr></thead><tbody><tr><th scope="row">501</th><td>全覆盖</td><td>无</td><td>主队列转发</td></tr><tr><th scope="row">502</th><td>部分覆盖 / cache miss</td><td>无</td><td>等待 cache fill</td></tr><tr><th scope="row">503</th><td>部分覆盖 / cache hit</td><td>无</td><td class="emphasis">主队列与缓存合并</td></tr><tr><th scope="row">504</th><td>任意</td><td>单项全覆盖</td><td>次队列转发</td></tr></tbody></table>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">场景</th><th scope="col">主队列</th><th scope="col">次队列</th><th scope="col">动作</th></tr></thead><tbody><tr><th scope="row">501</th><td>全部值</td><td>无</td><td>由主队列转发</td></tr><tr><th scope="row">502</th><td>部分值且缓存缺失</td><td>无</td><td>等缓存行回填</td></tr><tr><th scope="row">503</th><td>部分值且缓存命中</td><td>无</td><td class="emphasis">合并主队列与缓存的值</td></tr><tr><th scope="row">504</th><td>可有较老副本</td><td>单项有全部值</td><td>由次队列转发该项</td></tr><tr><th scope="row">505</th><td>无</td><td>单项部分值；缓存有其余值</td><td>合并次队列与缓存</td></tr><tr><th scope="row">506</th><td>与次队列合计仅含部分值，缓存缺失</td><td>只含部分值</td><td>等回填并重放</td></tr><tr><th scope="row">507</th><td>与次队列合计含全部值</td><td>含部分值</td><td class="emphasis">合并两级队列的转发</td></tr><tr><th scope="row">508</th><td>无更新覆盖</td><td>多个次队列项</td><td>受单路查询限制，按实施例取数</td></tr></tbody></table>
   <figcaption>
-    <span>旧 store 只覆盖部分请求字节且缓存命中时，组合结果用较新的 store 字节覆盖缓存中对应的旧字节。</span>
+    <span>这些情况比较主、次 store 队列及数据缓存的覆盖。合并用程序顺序上较新的 store 字节覆盖较老副本。</span>
     <span class="figure-evidence">说明书图 5A 的 501–504 示例。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12775463">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>次队列提前解析</dt><dd>重叠主槽等待与判址 <span class="subdued">原图 4、6，权利要求 1、9</span></dd></div><div><dt>数据保留在次队列</dt><dd>用标识定位慢速转发 <span class="subdued">原图 5B，说明书 0071–0077</span></dd></div></dl>
     <div class="analysis-note"><h3>收益与开销</h3><p>次队列加深可减轻 store 入口阻塞，对依赖 load 的取数瓶颈则要看慢路径。尤其在只找到部分字节时，还要等缓存回填，不能用次队列地址命中直接作为完成事件。</p></div>
     <div class="analysis-note"><h3>边界场景</h3><p>如果循环每次先写结构体的一个字段，马上读取跨多个字段的宽值，次队列可能常遇到部分覆盖。即使可容纳更多 store，依赖 load 仍可能先在转发和回填路径堆积。</p></div>
     <div id="example" class="article-example">
@@ -112,19 +114,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、9、15 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 1 的关键技术特征</h3>
-  <p>原图 4 的地址解析电路 425B 可以在次队列提前启动转换。若转入主队列时转换尚未完成，权利要求 2 要求完成转换后再执行。权利要求 8 给出先完成转换再转入主队列的分支。原图 5A–5B 的数据转发由其他权项限定。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>主队列还有条目时把 store 放入主队列</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=To%20summarize%2C%20various%20embodiments%20of%20an%20apparatus%20may%20include%20a%20cache%20memory%20circuit%2C%20and%20a%20hierarchal">原图 4。图 4 主队列具有自己的入队和地址解析阶段。</a></td></tr><tr><th scope="row">F2</th><td>主队列没有空闲条目时先把请求放入次队列</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2">原图 4。次队列吸收主队列无法接收的 store。</a></td></tr><tr><th scope="row">F3</th><td>可在次队列内启动这些 store 的地址解析</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2">原图 4。次队列的解析与其是否能提交属于不同动作。</a></td></tr><tr><th scope="row">F4</th><td>主队列有空间且次队列有请求时回迁</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=To%20summarize%2C%20various%20embodiments%20of%20an%20apparatus%20may%20include%20a%20cache%20memory%20circuit%2C%20and%20a%20hierarchal">原图 6。图 6 将主队列资源释放与请求回迁关联。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>原图 1、4、6。按主队列容量分流，次队列可先开始解析，主槽可用后允许回迁。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=place%20a%20first%20subset%20of%20the%20plurality%20of%20store%20requests%20in%20the%20primary%20queue%20based%20on">F1</a></th><td>主队列还有条目时把 store 放入主队列</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=To%20summarize%2C%20various%20embodiments%20of%20an%20apparatus%20may%20include%20a%20cache%20memory%20circuit%2C%20and%20a%20hierarchal">说明书 0078</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=place%20a%20second%20subset%20of%20the%20plurality%20of%20store%20requests%20in%20the%20secondary%20queue%20based%20on">F2</a></th><td>主队列没有空闲条目时先把请求放入次队列</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=initiate%20a%20resolve%20operation%20for%20addresses%20indicated%20by%20ones%20of%20the%20second%20subset%20of%20store%20requests">F3</a></th><td>可在次队列内启动这些 store 的地址解析</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=transfer%20a%20given%20store%20request%20from%20the%20secondary%20queue%20to%20the%20primary%20queue">F4</a></th><td>主队列有空间且次队列有请求时回迁</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=To%20summarize%2C%20various%20embodiments%20of%20an%20apparatus%20may%20include%20a%20cache%20memory%20circuit%2C%20and%20a%20hierarchal">说明书 0078</a> · 原图 6</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
+  <h4 id="independent-9-title">权利要求 9</h4>
+  <p>原图 4、6。方法分开主、次两种地址解析，在主队列得到目标地址后执行。</p>
+  <table class="comparison-table" aria-labelledby="independent-9-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=based%20on%20determining%20that%20the%20primary%20queue%20has%20at%20least%20one%20available%20entry">F5</a></th><td>主队列有空位时使用主队列。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=At%20block%20630%2C%20method%20600%20continues%20with%20the%20hierarchal%20store%20queue%20circuit%20committing%20store%20requests%20from">说明书 0087</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=based%20on%20determining%20that%20the%20primary%20queue%20is%20full">F6</a></th><td>主队列满时改用次队列。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=Method%20600%20further%20continues%20at%20block%20640%20by%2C%20in%20response%20to%20determining%20that%20the%20primary%20queue">说明书 0088</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=performing%20a%20first%20resolve%20operation%20on%20a%20first%20store%20request%20of%20the%20first%20subset%20of%20store">F7</a></th><td>主队列的第一条 store 解析目的地址。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=In%20some%20cases%2C%20hierarchal%20store%20queue%20circuit%20101%20may%20concurrently%20relocate%20two%20or%20more%20store%20requests">说明书 0089</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=initiating%20a%20second%20resolve%20operation%20on%20a%20second%20store%20request%20of%20the%20second%20subset%20of%20store">F8</a></th><td>次队列也可提前启动地址解析。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=As%20described%20above%2C%20store%20requests%20queued%20in%20secondary%20queue%20120%20may%20be%20resolved%20prior%20to%20being">说明书 0090</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=after%20the%20first%20destination%20address%20is%20determined%2C%20executing%20the%20first%20store%20request">F9</a></th><td>主队列地址确定后执行该 store。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=By%20maintaining%20a%20program%20order%20across%20primary%20and%20secondary%20queues%20in%20a%20hierarchal%20store%20queue%20circuit%2C">说明书 0091</a> · 原图 6</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
+  <h4 id="independent-15-title">权利要求 15</h4>
+  <p>原图 4。系统项明确第一、第二解析级、执行级和退休级，分列主次队列送入的解析路径。</p>
+  <table class="comparison-table" aria-labelledby="independent-15-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=a%20store%20instruction%20pipeline%20circuit%20that%20includes%20a%20first%20resolve%20stage%2C%20a%20second%20resolve%20stage%2C%20a">F10</a></th><td>流水线有两个解析级、执行级和退休级。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=After%20sufficient%20entries%20in%20primary%20queue%20110%20are%20available%2C%20store%20request%20140b%20enters%20transfer%20stage%20430.">说明书 0055</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=based%20on%20determining%20that%20the%20primary%20queue%20does%20not%20have%20an%20available%20entry%20for%20holding%20the">F11</a></th><td>主队列没空条目时安排第二条到次队列。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=Method%20600%20further%20continues%20at%20block%20640%20by%2C%20in%20response%20to%20determining%20that%20the%20primary%20queue">说明书 0088</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=place%20the%20first%20store%20request%20into%20the%20first%20resolve%20stage">F12</a></th><td>主队列的请求进第一解析级。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=After%20sufficient%20entries%20in%20primary%20queue%20110%20are%20available%2C%20store%20request%20140b%20enters%20transfer%20stage%20430.">说明书 0055</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=place%20the%20second%20store%20request%20into%20the%20second%20resolve%20stage">F13</a></th><td>次队列中的请求用第二解析级。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=After%20sufficient%20entries%20in%20primary%20queue%20110%20are%20available%2C%20store%20request%20140b%20enters%20transfer%20stage%20430.">说明书 0055</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=after%20the%20first%20physical%20address%20is%20determined%2C%20move%20the%20first%20store%20request%20into%20the%20store%20execution">F14</a></th><td>第一条地址出来后进入执行级。</td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=After%20sufficient%20entries%20in%20primary%20queue%20110%20are%20available%2C%20store%20request%20140b%20enters%20transfer%20stage%20430.">说明书 0055</a> · 原图 4</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>主队列有空槽时接收 store。主队列满时，次队列接收请求并启动地址解析。主队列释放槽位后，条目可回迁。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20hierarchal%20store%20queue%20circuit%20is%20further%20configured%20to%3Abased%20on%20a%20determination">查看原文限定</a></td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>主队列的请求可提交并释放空间，禁止从次队列直接提交。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20to%20transfer%20the%20given%20store%20request%2C%20the%20hierarchal%20store%20queue%20circuit%20is">查看原文限定</a></td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20hierarchal%20store%20queue%20circuit%20is%20further%20configured%20to%3Abased%20on%20an%20indication">查看原文限定</a></td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>主队列可同时匹配多笔 load，次队列一次只匹配一笔。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20primary%20queue%20includes%20a%20plurality%20of%20memory%20banks%20that%20may%20be">查看原文限定</a></td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20apparatus%20of%20claim%201%2C%20wherein%20the%20hierarchal%20store%20queue%20circuit%20is%20further%20configured%20to%20determine%20that%20an">查看原文限定</a></td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>主、次队列分别开始求目标地址。主队列中对应的地址就绪后，可执行该 store。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20method%20of%20claim%209%2C%20further%20comprising%3Aafter%20the%20first%20store%20request%20has%20completed%2C%20clearing%20an%20entry%20in%20the">查看原文限定</a></td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20method%20of%20claim%2010%2C%20wherein%20transferring%20the%20second%20store%20request%20from%20the%20secondary%20queue%20to%20the%20primary">查看原文限定</a></td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-10">10</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20method%20of%20claim%2010%2C%20further%20comprising%3Adetermining%20that%20the%20second%20resolve%20operation%20on%20the%20second%20store%20request%20completed">查看原文限定</a></td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20method%20of%20claim%2010%2C%20further%20comprising%2Cdetermining%20that%20the%20second%20resolve%20operation%20on%20the%20second%20store%20request%20has">查看原文限定</a></td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20method%20of%20claim%209%2C%20wherein%20performing%20a%20given%20resolve%20operation%20for%20a%20given%20store%20request%20includes%20identifying">查看原文限定</a></td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>主、次队列的请求进入不同地址解析级。主队列对应地址就绪后，store 转入执行。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20system%20of%20claim%2015%2C%20wherein%20the%20store%20instruction%20pipeline%20circuit%20is%20further%20configured%20to%3Aafter%20the%20first%20store">查看原文限定</a></td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20the%20store%20instruction%20pipeline%20circuit%20is%20further%20configured%20to%3Abased%20on%20a%20determination">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20the%20store%20instruction%20pipeline%20circuit%20is%20further%20configured%20to%3Abased%20on%20a%20determination">查看原文限定</a></td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20system%20of%20claim%2018%2C%20wherein%20to%20move%20the%20second%20store%20request%20into%20the%20first%20resolve%20stage%2C%20the">查看原文限定</a></td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-16">16</a></td><td><a href="https://eureka.patsnap.com/patent/US12775463B2#:~:text=The%20system%20of%20claim%2016%2C%20wherein%20to%20transfer%20the%20second%20store%20request%20to%20the%20first%20entry%20in%20the">查看原文限定</a></td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1、4、6。按主队列容量分流，次队列可先开始解析，主槽可用后允许回迁。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>转回主队列时转换未完成的，须在执行该 store 前完成转换。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>主队列的请求可提交并释放空间，禁止从次队列直接提交。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>从次队列选择最老的一项回到主队列。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>收到 load 后检查是否对应当前队列中的 store。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>主队列可同时匹配多笔 load，次队列一次只匹配一笔。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>主队列为可并行访问的多个 bank，次队列为单一 bank。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>次队列最老项完成解析后再将其转到主队列。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>原图 4、6。方法分开主、次两种地址解析，在主队列得到目标地址后执行。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>第一笔执行完后清空主槽，再将第二笔由次队列转入。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>要求回迁对象是次队列里最老的 store。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-10">10</a></td><td>若地址在回迁前已解析，仍等回迁结束后才执行。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td>若地址在回迁前没解析完，转到主队列后继续解析。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>解析从 store 携带的虚拟地址确定物理地址。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>原图 4。系统项明确第一、第二解析级、执行级和退休级，分列主次队列送入的解析路径。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>第一笔执行后退休，释放主槽并回迁次队列中的第二笔。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>第二解析级已完成时，第二笔可直接去执行级。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-16">16</a></td><td>第二解析级未完成时，先转第一解析级，得到物理地址后执行。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>第一解析级暂无资源时保留在第二级，有资源时再转入。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-16">16</a></td><td>第二笔必须是次队列最老项才能移入所释放的主槽。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -134,8 +152,8 @@
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
     <ul class="article-related"><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
-<p>预测的缓存地址即使命中，若 store queue 有更新值，load 仍须从队列取数。分级队列中，主队列支持多个 load 并行匹配，次队列每次匹配一笔。部分命中落在不同条目时，还要按字节合并，这些额外步骤会影响转发延迟。</p></li><li><a href="US20240248844A1.html#engineering">宽 load 按原子元素检查转发来源</a>
-<p>US20240248844A1 要求每个原子元素的数据完整来自一个存储操作或另一来源，才允许宽加载完成。US12775463B2 分开主、次存储队列，次队列可先记录匹配位置，等加载重放再取数据。两件分别限定来源正确性和取得队列数据的步骤，应区分原子元素来源判定、地址匹配和数据交付。</p></li></ul>
+<p>US12775463B2 的主存储队列可为多笔 load 同时搜索，次队列按单笔搜索。原图 5A 还给出一次 load 的字节由不同队列或数据缓存提供时的合并例。US11829763B2 在预测地址命中存储队列时取消预测发起的数据缓存查询，改从队列取数。两件分别处理多来源装配和早查缓存何时让位给队列数据。</p></li><li><a href="US20240248844A1.html#engineering">宽 load 按原子元素检查转发来源</a>
+<p>US20240248844A1 逐个验证宽加载中的原子元素是否完全来自同一笔存储操作或另一来源，验证通过才允许存储队列前递。US12775463B2 的原图 5B 展示一种次队列实现：首遍搜索记住匹配位置，加载重放时再读取该条目。两件分别约束前递的数据来源和读取队列数据的步骤。</p></li></ul>
     <p><a href="../index.html?patent=US12775463B2#knowledge">在全量关系图上定位 US12775463B2</a></p>
   </section>
 </div>
@@ -149,6 +167,7 @@
     <div><dt>美国申请日</dt><dd>2025-04-10</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2026-10-27</dd></div>
     <div><dt>美国申请号</dt><dd>US19/175,328</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Nikhil Gupta、Gideon N. Levinsky、Kulin N. Kothari、Mridul Agarwal、Pankaj Lnu</dd></div><div><dt>分类号</dt><dd>G06F9/30</dd></div><div><dt>著录来源</dt><dd><a href="https://patentsgazette.uspto.gov/week43/OG/patentee/alphaG_Utility.html">原始记录</a></dd></div>
   </dl>
   <p><a href="https://eureka.patsnap.com/patent/US12775463B2">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>

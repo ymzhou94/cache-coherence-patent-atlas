@@ -352,13 +352,13 @@
       },
     },
     {
-      id: "memory-pause", name: "跨裸片暂停握手", title: "内存暂停前，读缓存要装满多少，写缓存要腾出多少？",
+      id: "memory-pause", name: "跨裸片暂停握手", title: "内存暂停前，读缓冲和写缓冲各要准备多少？",
       patents: [["US12332723B2", 2, "权 1–4，专利图 5"]],
-      setup: "两个裸片各有发起访存的代理。主裸片计划暂停内存服务，读端继续取数据，写端继续产生数据。读库存和写空位各上限 12 项。内存可用时，两端可并行按净速率每拍准备 2 项，到各自门槛后维持余量。准备速率、容量及确认无需额外传播拍均为模型假设。",
+      setup: "两个裸片各有发起访存的代理。主裸片计划暂停内存服务，读端继续取数据，写端继续产生数据。读缓冲和写缓冲各有 12 项容量。内存可用时，读端预取数据、写端排出待写数据，两端并行按每拍 2 项的净速率准备，到各自门槛后维持余量。容量和准备速率由模型设定，确认传播延迟设为零。",
       fields: [num("pause", "内存暂停长度（拍）", 4, 1, 10), num("readRate", "每拍读取（项）", 2, 1, 4),
-        num("writeRate", "每拍写入（项）", 1, 1, 4), num("readStock", "初始读库存（项）", 6, 0, 12),
-        num("writeFree", "初始写空位（项）", 6, 0, 12)],
-      cases: [["只需预填读缓存", {}], ["读写两端并行准备", { readStock: 2, writeFree: 4, writeRate: 2 }],
+        num("writeRate", "每拍写入（项）", 1, 1, 4), num("readStock", "初始读缓冲有效数据（项）", 6, 0, 12),
+        num("writeFree", "初始写缓冲空闲项", 6, 0, 12)],
+      cases: [["只需预填读缓冲", {}], ["读写两端并行准备", { readStock: 2, writeFree: 4, writeRate: 2 }],
         ["任一端容量不足", { pause: 7 }], ["余量足够，立即确认", { readStock: 8 }]],
       run(v) {
         const r = t.memoryPauseTrace(v);
@@ -368,18 +368,18 @@
         const levels = state => state.read + " / " + state.free;
         const losses = state => state.missed + " / " + state.overflow;
         return {
-          metrics: [["所需读库存 / 写空位", r.readNeed + " / " + r.writeNeed + " 项"],
+          metrics: [["读缓冲所需数据 / 写缓冲所需空闲项", r.readNeed + " / " + r.writeNeed + " 项"],
             ["确认并启动暂停", r.start === null ? "持续等待" : cycle(r.start)],
             ["读欠供 / 写溢出 · 立即 → 等确认", losses(last.baseline) + " → " + (r.start === null ? "未暂停" : losses(last.guarded))]],
           explanation: r.start === null
             ? "至少一端的需求超过 12 项。主裸片未收到正向确认，内存继续提供服务。有限窗口里的持续等待表示这组固定条件无法放行。"
-            : "读端要在暂停期间持续供数，写端要吸收同一时段的新数据。两端可以并行准备，备妥较晚的一端决定确认时刻。暂停尽头库存或空位恰好归零也能安全完成。",
+            : "读端要在暂停期间持续供数，写端要吸收同一时段的新数据。两端可以并行准备，较晚达到门槛的一端决定确认时刻。暂停结束时，读缓冲可用数据或写缓冲空闲项恰好归零也能完成。",
           lanes: [lane("立即启动暂停", [segment("内存暂停", 0, safeUntil), segment("欠供或溢出", safeUntil, v.pause, "wait")]),
             lane("等两端确认后暂停", r.start === null ? [segment("继续服务，等待确认", 0, last.time, "wait")] : [
               segment("准备读写余量", 0, r.start, "wait"), segment("内存暂停", r.start, last.time),
             ], r.start)],
-          data: table("拍边界上的缓存余量及累计损失", ["时刻", "基线库存 / 空位", "基线欠供 / 溢出",
-            "握手状态", "握手库存 / 空位", "握手欠供 / 溢出"], r.rows.map(row => [cycle(row.time),
+          data: table("各拍边界的缓冲余量与累计损失", ["时刻", "基线读数据 / 写空闲项", "基线欠供 / 溢出",
+            "握手状态", "握手读数据 / 写空闲项", "握手欠供 / 溢出"], r.rows.map(row => [cycle(row.time),
             row.time <= v.pause ? levels(row.baseline) : "—", row.time <= v.pause ? losses(row.baseline) : "—",
             row.time === r.start ? "确认 / 开始暂停" : r.start === null || row.time < r.start ? "等待确认" :
               row.time === last.time ? "恢复内存服务" : "暂停中",

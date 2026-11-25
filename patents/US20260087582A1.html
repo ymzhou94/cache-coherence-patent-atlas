@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>US20260087582A1 GPU 分发硬件根据待运行工作控制子单元电源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=corpus-review">
+<link rel="stylesheet" href="../assets/site.css?edition=full-review">
 
 </head>
 <body>
@@ -24,7 +24,7 @@
   <p class="document-id"><code>US20260087582A1</code><span>美国公开申请</span><time datetime="2026-03-26">2026-03-26</time></p>
   <h1>GPU 分发硬件根据待运行工作控制子单元电源</h1>
   <p class="english-title" lang="en">Graphics Processor Power Management Controlled by Distribution Hardware</p>
-  <p class="document-question">某个 shader 子单元正空闲，但已排队的大任务即将用到它，能否提前上电？</p>
+  <p class="document-question">两个 GPU 子单元处理同一 kick 时，先完成的单元有什么条件可以先断电？</p>
 </div>
 </div>
 <div class="frame article-layout">
@@ -38,70 +38,72 @@
   </section>
   <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
     <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">传统做法可以让固件处理器先看见工作，再通知电源处理器。此案把队列和跟踪状态直接接入分发硬件，使电源控件能利用它已经掌握的工作范围。</p>
-    <p>GPU 的工作控制硬件同时观察主队列和尚未完成的已分发工作，发出 GPU 子单元的供电状态请求。可以在确认要扩展分发范围时提前唤醒所需子单元。</p>
+    <p class="section-intro">GPU 工作控制电路同时看到即将派发的图形工作和正在执行的工作。公开说明书把主机直提和分发硬件参与供电列为可分别实现的机制。</p>
+    <p>GPU 工作控制电路同时查看主队列和已派发工作的状态，据此向电源控制电路请求调整 GPU 子单元或内部电路的供电。队列可见也可用于预唤醒。</p>
     <ol class="walkthrough"><li><h3>主机提交并准备调度硬件</h3><p>应用和驱动向主 kick 队列提交，主机可先保证调度逻辑可达。硬件读取队列并准备分配。</p></li><li><h3>观察待发与已发两类工作</h3><p>读取主队列中的 kick 大小、优先级或依赖。跟踪单元同时知道已分发的工作是否还在使用具体子单元。</p></li><li><h3>按所需范围控制电源</h3><p>当较大的 kick 将跨更多 GPU 子单元时，请求唤醒必要部分。没有分发需要时可收小通电范围；迟滞定时器可推迟关闭。</p></li><li><h3>电源就绪后分发</h3><p>需要上电的 shader 在就绪前不能开始执行。部分实施例由硬件直接推动门控，部分仍由电源处理器最终执行。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>图 5–6 的提前量始自主队列中能辨认目标子单元的时点。上电需要在真正分发之前完成才可能隐藏全部唤醒延迟，已分发任务仍影响何时允许掉电。</p></div>
+    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 1 要求工作控制使用主队列和已派发状态。权 3 才规定同一组工作中第一子单元完成后可在第二子单元继续执行时被关闭。原图 6 等先完成方冲刷缓存后再启动该方断电。</p></div>
+    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>图形工作组（kick）</dt><dd>提交给 GPU 硬件的一组图形或计算工作，可包含多个线程和依赖关系。</dd></div><div><dt>GPU 子单元（mGPU）</dt><dd>同一个 GPU 内部的可复制单元，含分布式工作槽和着色器等处理电路。</dd></div><div><dt>工作记分板（kick scoreboard）</dt><dd>记录已派发工作的状态、使用的槽及依赖等信息，供派发和电源控制读取。</dd></div></dl></details>
   </section>
   <section class="figure-section" id="figures" aria-labelledby="figures-title">
     <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">大 kick 可见时开始唤醒第二个子单元</a></li><li><a href="#fig-1">GPU 工作进度和主队列共同驱动电源控制</a></li><li><a href="#fig-4">队列提前量覆盖部分上电时间</a></li><li><a href="#fig-3">不同队列和跟踪状态需要不同供电范围</a></li></ul></nav>
+    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">待发工作扩大时预唤醒 mGPU</a></li><li><a href="#fig-1">GPU 派发器的两路电源控制输入</a></li><li><a href="#fig-4">先完成的 mGPU 何时开始断电</a></li><li><a href="#fig-3">两类状态如何共同限制电源动作</a></li></ul></nav>
     <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
     
 <figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务顺序</p><h3 id="fig-2-title">大 kick 可见时开始唤醒第二个子单元</h3></div>
-    <a class="paper-open" href="../figures/US20260087582A1/US20260087582A1-fig-2.svg" target="_blank" rel="noopener" aria-label="打开 大 kick 可见时开始唤醒第二个子单元 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">待发工作扩大时预唤醒 mGPU</h3></div>
+    <a class="paper-open" href="../mechanisms/US20260087582A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="大 kick 可见时开始唤醒第二个子单元">
-    <img class="paper-image" src="../figures/US20260087582A1/US20260087582A1-fig-2.svg" width="762" height="389"
-         style="--paper-width:762px" alt="大 kick 可见时开始唤醒第二个子单元。已就绪的 mGPU0 可先处理小工作。图中不把唤醒当成即时动作。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="待发工作扩大时预唤醒 mGPU">
+    <img class="paper-image native-image" src="../mechanisms/US20260087582A1/fig-2/diagram.svg" width="920" height="452"
+         style="--paper-width:920px" alt="待发工作扩大时预唤醒 mGPU。原文以会跨多个 mGPU 的大型工作说明何时可提前上电。这是根据队列信息推导的实施例路径，需等子单元上电就绪。">
   </div>
   <figcaption>
-    <span>已就绪的 mGPU0 可先处理小工作。图中不把唤醒当成即时动作。</span>
-    <span class="figure-evidence">图 5–6、权 1 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
+    <span>原文以会跨多个 mGPU 的大型工作说明何时可提前上电。这是根据队列信息推导的实施例路径，需等子单元上电就绪。</span>
+    <span class="figure-evidence">原图 3–4，说明书 [0070]、[0080]–[0082]，权利要求 6–7 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">GPU 工作进度和主队列共同驱动电源控制</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260087582A1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
+  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">GPU 派发器的两路电源控制输入</h3></div>
+    <a class="paper-open" href="../mechanisms/US20260087582A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="GPU 工作进度和主队列共同驱动电源控制">
-    <img class="paper-image native-image" src="../mechanisms/US20260087582A1/diagram.svg" width="606" height="664"
-         style="--paper-width:606px" alt="GPU 工作进度和主队列共同驱动电源控制。硬件分发器结合主队列状态和已派发工作进度，确定哪些部件仍需供电。原图 6 分两条时间线标出各子单元完成工作与冲刷的时刻。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="GPU 派发器的两路电源控制输入">
+    <img class="paper-image native-image" src="../mechanisms/US20260087582A1/fig-1/diagram.svg" width="606" height="664"
+         style="--paper-width:606px" alt="GPU 派发器的两路电源控制输入。主队列提供未派发工作信息，记分板提供已派发工作信息。工作控制电路把二者用于给供电控制提出请求。">
   </div>
   <figcaption>
-    <span>硬件分发器结合主队列状态和已派发工作进度，确定哪些部件仍需供电。原图 6 分两条时间线标出各子单元完成工作与冲刷的时刻。</span>
-    <span class="figure-evidence">图 3–4，权 1 · <a href="#claim-features">逐项查看权利要求与原文</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
+    <span>主队列提供未派发工作信息，记分板提供已派发工作信息。工作控制电路把二者用于给供电控制提出请求。</span>
+    <span class="figure-evidence">原图 2、4、8，说明书 [0072]–[0076]，权利要求 1、10、17 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">队列提前量覆盖部分上电时间</h3></div>
-    <a class="paper-open" href="../figures/US20260087582A1/US20260087582A1-fig-4.svg" target="_blank" rel="noopener" aria-label="打开 队列提前量覆盖部分上电时间 的独立 SVG">打开 SVG</a>
+  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">先完成的 mGPU 何时开始断电</h3></div>
+    <a class="paper-open" href="../mechanisms/US20260087582A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
   </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="队列提前量覆盖部分上电时间">
-    <img class="paper-image" src="../figures/US20260087582A1/US20260087582A1-fig-4.svg" width="813" height="249"
-         style="--paper-width:813px" alt="队列提前量覆盖部分上电时间。与等到大工作分发才唤醒的基线相比，提前唤醒重叠既有小工作的处理时间。">
+  <div class="paper-viewport" tabindex="0" role="region" aria-label="先完成的 mGPU 何时开始断电">
+    <img class="paper-image native-image" src="../mechanisms/US20260087582A1/fig-4/diagram.svg" width="824" height="652"
+         style="--paper-width:824px" alt="先完成的 mGPU 何时开始断电。原图 5 对整个 GPU 发出一次断电写入。原图 6 可在 mGPU1 完成并冲刷缓存后先启动该单元的断电。步宽仅表示先后。">
   </div>
   <figcaption>
-    <span>与等到大工作分发才唤醒的基线相比，提前唤醒重叠既有小工作的处理时间。</span>
-    <span class="figure-evidence">图 5–6；定性对照 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
+    <span>原图 5 对整个 GPU 发出一次断电写入。原图 6 可在 mGPU1 完成并冲刷缓存后先启动该单元的断电。步宽仅表示先后。</span>
+    <span class="figure-evidence">原图 5–6，说明书 [0087]–[0093]，权利要求 2–3 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
   </figcaption>
 </figure>
 <figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同队列和跟踪状态需要不同供电范围</h3></div>
+  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">两类状态如何共同限制电源动作</h3></div>
     
   </div>
   <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">待发需求</th><th scope="col">已发工作</th><th scope="col">可能的动作</th></tr></thead><tbody><tr><th scope="row">小 kick 只需 mGPU0</th><td>mGPU1 无在途</td><td>让 mGPU1 保持低功耗</td></tr><tr><th scope="row">大 kick 需两个子单元</th><td>mGPU1 尚未上电</td><td class="emphasis">提前请求 mGPU1 唤醒</td></tr><tr><th scope="row">新的主队列为空</th><td>mGPU1 仍有在途</td><td class="emphasis">等跟踪完成</td></tr><tr><th scope="row">都空</th><td>mGPU1 无在途</td><td class="emphasis">迟滞计时后可关闭</td></tr></tbody></table>
   <figcaption>
-    <span>状态来自主队列和已发工作两条观察路径。</span>
-    <span class="figure-evidence">图 4、6、8；定性规则 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
+    <span>即使没有新的主队列工作，已派发工作仍可能阻止关断。迟滞计时是说明书的可选做法。</span>
+    <span class="figure-evidence">原图 4、8，说明书 [0076]、[0080]–[0085]，权利要求 1、4–7 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20260087582">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20260087582A1">专利全文</a></span>
   </figcaption>
 </figure>
   </section>
   <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
     <h2 id="evaluation-title">工程推演与验证</h2>
-    <div class="analysis-note"><h3>收益与开销</h3><p>收益来自分发后等待上电的时长缩短。代价来自等待交付期间提前通电，以及目标集合改变时多唤醒的子单元。工作组排队延迟须单列。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>安排同一批工作在主队列等待外部依赖，再让最终目标集合收缩。若执行启动时点没有前移、额外通电子单元时间却增加，提前上电没有改善关键路径。</p></div>
+    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>合并主队列与已派发状态</dt><dd>在满足现有工作的前提下选择供电范围 <span class="subdued">原图 4、8，说明书 [0075]–[0076]，权利要求 1</span></dd></div><div><dt>根据待发工作请求预唤醒</dt><dd>可在实际派发前开始上电 <span class="subdued">原图 4，说明书 [0080]–[0082]</span></dd></div><div><dt>独立关断先完成子单元</dt><dd>缩短先结束子单元的通电时间 <span class="subdued">原图 6，说明书 [0093]，权利要求 2–3</span></dd></div></dl>
+    <div class="analysis-note"><h3>收益与开销</h3><p>提早关断主要缩短先结束子单元的通电驻留。独立记录执行完成、缓存冲刷完成、断电请求和轨电压下降；若随后还要开机，则测恢复开销及每组工作能量。</p></div>
+    <div class="analysis-note"><h3>边界场景</h3><p>交替运行短间隔图形工作，让每批都需要刚关闭的子单元。对照整组断电和选择性断电；若逐批能量不降、开始执行的尾延迟增大，提前断电窗口过短。</p></div>
     <div id="example" class="article-example">
       <h3>条件推演</h3>
       <dl class="explanation example"><div><dt>初始条件</dt><dd>一个小 kick 仅需 mGPU0。尚未启动的小任务之后有一项会使用 mGPU0、mGPU1 的大 kick。</dd></div><div><dt>处理结果</dt><dd>系统可让 mGPU1 在小任务期间休眠。若大任务的需求已经可见，就能提前开始唤醒 mGPU1；在就绪前不会向它发送实际执行。</dd></div><div><dt>结果解读</dt><dd>是否省延迟由可预见的提前量和唤醒成本决定。及时获知队列和活跃状态本身不会消除上电时间。</dd></div></dl>
@@ -112,19 +114,35 @@
     <h2 id="claims-title">权利要求与出处</h2>
     <p class="subdued">独立权利要求为第 1、10、17 项。</p>
     <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
-  <h3 id="claim-features-title">独立权利要求 1 的关键技术特征</h3>
-  <p>原图 5、6 对照整颗 GPU 与子单元分别门控的时序。原图 4 中，分发器可以直接控制供电，也可以通知电源处理器。原图 7 的主机直接提交与原图 8 的供电决策可分别实现。</p>
-  <table class="comparison-table" aria-labelledby="claim-features-title">
-    <thead><tr><th scope="col">特征</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row">F1</th><td>至少两个 GPU 子单元各有分布式工作队列和执行队列内指令的着色电路</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=mGPUs%20280%20may%20each%20implement%20multiple%20distributed%20hardware%20slots%20configured%20to%20receive%20portions%20of%20different%20kicks">原图 2。图 2 的 mGPU 280A–N 使用 dSlot 接收各自的部分；mGPU 是单 GPU 内部的可复制单元。</a></td></tr><tr><th scope="row">F2</th><td>工作控制电路从多个主队列访问待运行图形工作</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Stream%20control%20252%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20select%20among%20queues%20in%20kick%20queues%20244">原图 2。流控制 252 选择可调度队列，文中示例先读队首再判断依赖。</a></td></tr><tr><th scope="row">F3</th><td>将从多个主队列取得的各组图形工作分为部分，派发给第一和第二个 GPU 子单元执行</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Data%20manager%20270%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20help%20manage%20a%20category%20of%20work%20%28e.g.%2C">原图 2。数据管理器 270 在说明书示例将逻辑槽工作发给各 mGPU 的分布硬件槽。逻辑槽映射细节属于权 8。</a></td></tr><tr><th scope="row">F4</th><td>工作控制硬件跟踪已派发工作状态</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Generally%2C%20power%20processor%20230%20may%20have%20less%20visibility%20%28or%20slower%20visibility%29%20into%20the%20current%20work%20distribution">原图 4。记分板 254 持有已派发工作状态及分布槽映射。它与队列 244 的未来需求对应不同时间。</a></td></tr><tr><th scope="row">F5</th><td>工作控制和供电控制电路通信，调节部分 GPU 的电源状态</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=FIG.%204%20is%20a%20block%20diagram%20illustrating%20example%20hardware%20scheduler%20control%20of%20power%20gating%20of%20graphics">原图 4。工作控制器 250 发供电控制信号，可直达门控硬件或经电源处理器。</a></td></tr><tr><th scope="row">F6</th><td>电源动作同时参考主队列状态和跟踪到的已派发工作状态</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">原图 4。待派发工作可延后断电。原图 6 的 mGPU1 完成并冲刷缓存后更早开始断电，权 3 另明确在 mGPU0 仍执行同组工作时触发第一单元断电。</a></td></tr></tbody>
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>图形处理器工作控制电路从多个队列派发到两个子单元，并基于主队列、已派发状态控制部分 GPU 的电源。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=at%20least%20first%20and%20second%20graphics%20processor%20sub-units">F1</a></th><td>图形处理器至少具有两个 GPU 子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=mGPUs%20280%20may%20each%20implement%20multiple%20distributed%20hardware%20slots%20configured%20to%20receive%20portions%20of%20different%20kicks">说明书 0050</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=distributed%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work">F2</a></th><td>每个子单元有用于保存图形工作的分布式工作队列。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=shader%20circuitry%20configured%20to%20execute%20instructions%20specified%20by%20stored%20graphics%20work">F3</a></th><td>每个子单元的着色电路执行本地分布式队列内工作指定的指令。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 1B · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=access%20graphics%20work%20in%20multiple%20primary%20queues">F4</a></th><td>工作控制电路访问多个主队列里的图形工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Stream%20control%20252%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20select%20among%20queues%20in%20kick%20queues%20244">说明书 0054</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=assign%20portions%20of%20respective%20sets%20of%20graphics%20work%20accessed%20from%20the%20multiple%20primary%20queues">F5</a></th><td>工作控制电路把各项工作的一部分派发给两个子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Data%20manager%20270%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20help%20manage%20a%20category%20of%20work%20%28e.g.%2C">说明书 0049</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=track%20status%20of%20assigned%20sets%20of%20graphics%20work">F6</a></th><td>工作控制电路跟踪已派发工作的状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Generally%2C%20power%20processor%20230%20may%20have%20less%20visibility%20%28or%20slower%20visibility%29%20into%20the%20current%20work%20distribution">说明书 0076</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=control%20power%20state%20of%20portions%20of%20the%20graphics%20processor%20based%20on">F7</a></th><td>工作控制电路与供电控制电路通信，对 GPU 的部分电路调整电源状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=FIG.%204%20is%20a%20block%20diagram%20illustrating%20example%20hardware%20scheduler%20control%20of%20power%20gating%20of%20graphics">说明书 0073</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20multiple%20primary%20queues">F8</a></th><td>电源动作取决于主队列状态，包含尚未分发的工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20assigned%20sets%20of%20graphics%20work%20tracked%20by%20the%20tracking%20circuitry">F9</a></th><td>电源动作同时取决于跟踪到的已派发工作状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr></tbody>
   </table>
-  <p class="source-links"><a href="#fig-1">在机制图中查看</a></p>
+</section><section class="independent-claim" id="independent-10" aria-labelledby="independent-10-title">
+  <h4 id="independent-10-title">权利要求 10</h4>
+  <p>方法在各分布式队列保存并执行工作，访问主队列、派发、跟踪，再向供电电路发出基于两类状态的控制。</p>
+  <table class="comparison-table" aria-labelledby="independent-10-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=first%20and%20second%20graphics%20processor%20sub-units">F10</a></th><td>图形处理器至少具有两个 GPU 子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=mGPUs%20280%20may%20each%20implement%20multiple%20distributed%20hardware%20slots%20configured%20to%20receive%20portions%20of%20different%20kicks">说明书 0050</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=storing%20graphics%20work%2C%20by%20respective%20distributed%20work%20queue%20circuitry">F11</a></th><td>每个子单元有用于保存图形工作的分布式工作队列。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=executing%2C%20by%20respective%20shader%20circuitry">F12</a></th><td>每个子单元的着色电路执行本地分布式队列内工作指定的指令。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 1B · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=access%2C%20by%20work%20control%20circuitry%2C%20graphics%20work%20in%20multiple%20primary%20queues">F13</a></th><td>工作控制电路访问多个主队列里的图形工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Stream%20control%20252%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20select%20among%20queues%20in%20kick%20queues%20244">说明书 0054</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=portions%20of%20respective%20sets%20of%20graphics%20work%20accessed%20from%20the%20multiple%20primary%20queues">F14</a></th><td>工作控制电路把各项工作的一部分派发给两个子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Data%20manager%20270%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20help%20manage%20a%20category%20of%20work%20%28e.g.%2C">说明书 0049</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=tracking%2C%20by%20the%20work%20control%20circuitry%2C%20status%20of%20assigned%20sets%20of%20graphics%20work">F15</a></th><td>工作控制电路跟踪已派发工作的状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Generally%2C%20power%20processor%20230%20may%20have%20less%20visibility%20%28or%20slower%20visibility%29%20into%20the%20current%20work%20distribution">说明书 0076</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=control%20power%20state%20of%20portions%20of%20the%20graphics%20processor%20based%20on">F16</a></th><td>工作控制电路与供电控制电路通信，对 GPU 的部分电路调整电源状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=FIG.%204%20is%20a%20block%20diagram%20illustrating%20example%20hardware%20scheduler%20control%20of%20power%20gating%20of%20graphics">说明书 0073</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20multiple%20primary%20queues">F17</a></th><td>电源动作取决于主队列状态，包含尚未分发的工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20assigned%20and%20tracked%20sets%20of%20graphics%20work">F18</a></th><td>电源动作同时取决于跟踪到的已派发工作状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
+  <h4 id="independent-17-title">权利要求 17</h4>
+  <p>非暂态介质存储硬件描述语言指令，生成的仿真模型表示具有相同队列、派发和双状态供电控制的硬件。</p>
+  <table class="comparison-table" aria-labelledby="independent-17-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=instructions%20of%20a%20hardware%20description%20programming%20language%20stored%20thereon">F19</a></th><td>介质保存硬件描述语言指令。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Design%20information%201115%20may%20be%20specified%20using%20any%20of%20various%20appropriate%20computer%20languages%2C%20including%20hardware%20description">说明书 0136</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=program%20the%20computing%20system%20to%20generate%20a%20computer%20simulation%20model">F20</a></th><td>执行指令可得到反映所述硬件的计算机仿真模型。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=In%20the%20illustrated%20example%2C%20computing%20system%201140%20processes%20the%20design%20information%20to%20generate%20both%20a%20computer">说明书 0132</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=at%20least%20first%20and%20second%20graphics%20processor%20sub-units">F21</a></th><td>图形处理器至少具有两个 GPU 子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=mGPUs%20280%20may%20each%20implement%20multiple%20distributed%20hardware%20slots%20configured%20to%20receive%20portions%20of%20different%20kicks">说明书 0050</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=distributed%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work">F22</a></th><td>每个子单元有用于保存图形工作的分布式工作队列。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=shader%20circuitry%20configured%20to%20execute%20instructions%20specified%20by%20stored%20graphics%20work">F23</a></th><td>每个子单元的着色电路执行本地分布式队列内工作指定的指令。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Each%20distributed%20hardware%20slot%20may%20include%20various%20circuitry%20configured%20to%20process%20an%20assigned%20kick%20or%20portion">说明书 0051</a> · 原图 1B · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=access%20graphics%20work%20in%20multiple%20primary%20queues">F24</a></th><td>工作控制电路访问多个主队列里的图形工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Stream%20control%20252%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20select%20among%20queues%20in%20kick%20queues%20244">说明书 0054</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=assign%20portions%20of%20respective%20sets%20of%20graphics%20work%20accessed%20from%20the%20multiple%20primary%20queues">F25</a></th><td>工作控制电路把各项工作的一部分派发给两个子单元。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Data%20manager%20270%2C%20in%20some%20embodiments%2C%20is%20configured%20to%20help%20manage%20a%20category%20of%20work%20%28e.g.%2C">说明书 0049</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=track%20status%20of%20assigned%20sets%20of%20graphics%20work">F26</a></th><td>工作控制电路跟踪已派发工作的状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=Generally%2C%20power%20processor%20230%20may%20have%20less%20visibility%20%28or%20slower%20visibility%29%20into%20the%20current%20work%20distribution">说明书 0076</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=control%20power%20state%20of%20portions%20of%20the%20graphics%20processor%20based%20on">F27</a></th><td>工作控制电路与供电控制电路通信，对 GPU 的部分电路调整电源状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=FIG.%204%20is%20a%20block%20diagram%20illustrating%20example%20hardware%20scheduler%20control%20of%20power%20gating%20of%20graphics">说明书 0073</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20multiple%20primary%20queues">F28</a></th><td>电源动作取决于主队列状态，包含尚未分发的工作。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=status%20of%20assigned%20sets%20of%20graphics%20work%20tracked%20by%20the%20tracking%20circuitry">F29</a></th><td>电源动作同时取决于跟踪到的已派发工作状态。</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=For%20example%2C%20power%20control%20circuitry%20256%20may%20determine%20that%20an%20mGPU%20or%20portion%20of%20an%20mGPU">说明书 0077</a> · 原图 4 · 原图 8</td></tr></tbody>
+  </table>
+</section>
 </section>
     <details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>GPU 的工作控制依据多个主队列和已分配工作状态，与电源控制电路通信。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>根据工作控制器的请求，仅关闭第一 GPU 子单元，保持第二个。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>同一工作组第一子单元处理结束后对它断电，第二个仍继续执行。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>根据一组或多组工作将用到的 GPU 执行硬件类别参与电源决策。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>控制第一 GPU 子单元中部分电路的电源状态，同时排除其他部分。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>考虑一组或多组图形工作的大小来确定电源状态。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>用多个主队列的优先级影响供电状态决策。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>加入配置寄存器和主队列存储结构，并把逻辑槽映射至多个子单元的分布槽。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>把装置限定为另有 CPU、显示器与网络接口电路的计算设备。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>从分布式队列存取执行并基于队列、已分发状态控制电源的方法权项。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>方法可给第一 GPU 子单元断电，同时保持第二个子单元供电。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>第一子单元完成同组工作后断电时，第二个还在执行此组的一部分。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td>方法按某组或多组工作所需硬件类型使相应 GPU 电路上电。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>控制电源状态时考虑一组或多组图形工作的规模。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>把各主队列的优先级加入方法的电源控制依据。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>方法用控制寄存器和内存主队列，将逻辑槽映射至多个子单元的分布式硬件槽。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td><a href="https://eureka.patsnap.com/patent/US20260087582A1#:~:text=A%20non-transitory%20computer-readable%20medium%20having%20instructions%20of%20a%20hardware%20description%20programming%20language%20stored%20thereon%20that%2C%20when%20processed%20by">查看原文限定</a></td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>介质描述的硬件按工作控制器请求关闭第一 GPU 子单元，第二个继续供电。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>介质描述的电源控制考虑硬件类别、工作规模或主队列优先级。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>介质描述对第一 GPU 子单元只控制其部分电路的电源状态。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>图形处理器工作控制电路从多个队列派发到两个子单元，并基于主队列、已派发状态控制部分 GPU 的电源。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>根据工作控制器的请求，仅关闭第一 GPU 子单元，保持第二个。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>同一工作组第一子单元处理结束后对它断电，第二个仍继续执行。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>根据一组或多组工作将用到的 GPU 执行硬件类别参与电源决策。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>控制第一 GPU 子单元中部分电路的电源状态，同时排除其他部分。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>考虑一组或多组图形工作的大小来确定电源状态。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>用多个主队列的优先级影响供电状态决策。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>加入配置寄存器和主队列存储结构，并把逻辑槽映射至多个子单元的分布槽。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>把装置限定为另有 CPU、显示器与网络接口电路的计算设备。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>方法在各分布式队列保存并执行工作，访问主队列、派发、跟踪，再向供电电路发出基于两类状态的控制。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>方法可给第一 GPU 子单元断电，同时保持第二个子单元供电。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>第一子单元完成同组工作后断电时，第二个还在执行此组的一部分。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td>方法按某组或多组工作所需硬件类型使相应 GPU 电路上电。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>控制电源状态时考虑一组或多组图形工作的规模。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>把各主队列的优先级加入方法的电源控制依据。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>方法用控制寄存器和内存主队列，将逻辑槽映射至多个子单元的分布式硬件槽。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>非暂态介质存储硬件描述语言指令，生成的仿真模型表示具有相同队列、派发和双状态供电控制的硬件。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>介质描述的硬件按工作控制器请求关闭第一 GPU 子单元，第二个继续供电。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>介质描述的电源控制考虑硬件类别、工作规模或主队列优先级。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>介质描述对第一 GPU 子单元只控制其部分电路的电源状态。</td></tr></tbody>
   </table>
 </details>
     <h3 class="evidence-heading">原文位置</h3>
@@ -133,7 +151,7 @@
   </section>
   <section class="article-section" id="related" aria-labelledby="related-title">
     <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按共享缓存亲和性分派工作并在空出时重分配</a>
+    <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按缓存亲和性分派，并按组进度重分配</a>
 <p>US20260087582A1 的 GPU 工作控制根据多个队列和已经分派的工作状态与电源控制电路通信。US12333339B2 读取工作组的分派进度，决定是否把余下工作交给其他组。前者决定执行资源的供电状态，后者重新分配工作，时间线上需分开标记唤醒、可分派和已分派。</p></li></ul>
     <p><a href="../index.html?patent=US20260087582A1#knowledge">在全量关系图上定位 US20260087582A1</a></p>
   </section>
@@ -148,6 +166,7 @@
     <div><dt>美国申请日</dt><dd>2024-11-27</dd></div>
     <div><dt>公开 / 授权日</dt><dd>2026-03-26</dd></div>
     <div><dt>美国申请号</dt><dd>US18/962,225</dd></div>
+    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Steven Fishwick、Abdul Rehman S. Sharif、Cyrus Goodarzi、David A. Gotwalt、Jackson DSOUZA、Jairaj Dave、Jason P. Jane、Jatin Kumar、Piotr A. Dittrich、Pratik Chandresh Shah、Subodh Asthana</dd></div><div><dt>分类号</dt><dd>G06T1/60、G06F1/329、G06F1/3296、G06F9/4881、G06F9/4893、G06F9/5027、G06F9/5094、G06F9/54、G06T1/20、G06F2209/543</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20260087582A1/en">原始记录</a></dd></div>
   </dl>
   <p><a href="https://eureka.patsnap.com/patent/US20260087582A1">打开审读全文</a></p>
   <details><summary>全文审读记录</summary>
