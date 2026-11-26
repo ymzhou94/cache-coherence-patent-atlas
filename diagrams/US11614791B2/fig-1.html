@@ -4,27 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>预制帧怎样脱离应用处理器</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
-main{max-width:960px;margin:auto;min-width:0}
-h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
-p{margin:.6rem 0}
-figure{margin:1.25rem 0}
-.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
-svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1024px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:960px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
 .node-name{font-weight:600;font-size:17px}
-.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
 .signal-title{font-weight:600;font-size:16px}
-ol{padding-inline-start:1.45rem}
-li+li{margin-top:.45rem}
-a{color:#2e5aa8;text-underline-offset:.19em}
-.component-index dt{font-weight:600}
-.component-index dd{margin:0 0 .45rem}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
 svg :target{scroll-margin:1rem}
-svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
-@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
 </style>
 </head>
 <body><main>
@@ -64,7 +71,7 @@ svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[
 </svg></div>
 <figcaption>依据 US11614791B2 原图 6、7、8、9、10、说明书归档段 0034、0037、0038、0040、0041、0042、0044、0045、0046、0049、0051、0052、0053、0054、0056、0064、0065、0066、权利要求 1、3、9、14、17</figcaption>
 </figure>
-<ol aria-label="图中机制"><li><a href="#us11614791b2-fig-1-memory">外部内存</a> 应用处理器在断电前写完每帧的像素、配置和呈现时间。最后还可生成流水线上电恢复配置，并发出预制帧就绪指示。像素和配置可以放在不同内存位置。</li><li><a href="#us11614791b2-fig-1-queue">时间戳队列</a> 队列条目保存目标呈现时间与逐帧配置指针。取出当前条目后读取下一个条目的时间戳，为后续关断和恢复计算提前量。</li><li><a href="#us11614791b2-fig-1-config">配置缓冲区</a> DMA 按指针读取逐帧配置，写入配置缓冲区。配置在对应的图像进入流水线处理前生效，所以相邻预制帧可以使用不同的寄存器设置。</li><li><a href="#us11614791b2-fig-1-pixel">图像处理模块</a> 取数模块借 DMA 读取像素，处理后先写入输出缓冲区，显示驱动再按目标时间呈现。预制模式期间，外部内存和必要的读取路径必须在需要时可用。</li></ol>
-<details class="component-index"><summary>原图标号对照</summary><dl><div><dt>应用处理器</dt><dd>FIG. 6 · 52</dd></div><div><dt>外部内存</dt><dd>FIG. 6 · 40</dd></div><div><dt>DMA</dt><dd>FIG. 6 · 64</dd></div><div><dt>配置缓冲区</dt><dd>FIG. 6 · 66</dd></div><div><dt>图像处理模块／取数模块</dt><dd>FIG. 6 · 46 / 70</dd></div><div><dt>输出缓冲区／显示驱动</dt><dd>FIG. 6 · 68 / 42</dd></div><div><dt>生成并存储上电恢复配置；预制帧就绪指示</dt><dd>FIG. 7 · 112–116</dd></div><div><dt>时间戳队列／条目／目标呈现时间／配置指针</dt><dd>FIG. 8 · 72 / 156 / 162 / 168</dd></div><div><dt>按指针取配置、配置流水线、处理并输出图像</dt><dd>FIG. 9 · 206–212</dd></div><div><dt>数据路径、逐帧记录与呈现时刻。B2 用列定位，站内数值是归档段。</dt><dd>授权 PDF 说明书第 8–15 栏</dd></div></dl></details>
+<ol aria-label="图中机制"><li><a href="#us11614791b2-fig-1-memory">外部内存</a><span>应用处理器在断电前写完每帧的像素、配置和呈现时间。最后还可生成流水线上电恢复配置，并发出预制帧就绪指示。像素和配置可以放在不同内存位置。</span></li><li><a href="#us11614791b2-fig-1-queue">时间戳队列</a><span>队列条目保存目标呈现时间与逐帧配置指针。取出当前条目后读取下一个条目的时间戳，为后续关断和恢复计算提前量。</span></li><li><a href="#us11614791b2-fig-1-config">配置缓冲区</a><span>DMA 按指针读取逐帧配置，写入配置缓冲区。配置在对应的图像进入流水线处理前生效，所以相邻预制帧可以使用不同的寄存器设置。</span></li><li><a href="#us11614791b2-fig-1-pixel">图像处理模块</a><span>取数模块借 DMA 读取像素，处理后先写入输出缓冲区，显示驱动再按目标时间呈现。预制模式期间，外部内存和必要的读取路径必须在需要时可用。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">10 项</span></summary><dl><div><dt>应用处理器</dt><dd>FIG. 6 · 52</dd></div><div><dt>外部内存</dt><dd>FIG. 6 · 40</dd></div><div><dt>DMA</dt><dd>FIG. 6 · 64</dd></div><div><dt>配置缓冲区</dt><dd>FIG. 6 · 66</dd></div><div><dt>图像处理模块／取数模块</dt><dd>FIG. 6 · 46 / 70</dd></div><div><dt>输出缓冲区／显示驱动</dt><dd>FIG. 6 · 68 / 42</dd></div><div><dt>生成并存储上电恢复配置；预制帧就绪指示</dt><dd>FIG. 7 · 112–116</dd></div><div><dt>时间戳队列／条目／目标呈现时间／配置指针</dt><dd>FIG. 8 · 72 / 156 / 162 / 168</dd></div><div><dt>按指针取配置、配置流水线、处理并输出图像</dt><dd>FIG. 9 · 206–212</dd></div><div><dt>数据路径、逐帧记录与呈现时刻。B2 用列定位，站内数值是归档段。</dt><dd>授权 PDF 说明书第 8–15 栏</dd></div></dl></details>
 </main></body>
 </html>

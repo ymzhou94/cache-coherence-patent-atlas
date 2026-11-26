@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>改变预装顺序，把缓冲区的连续 miss 分散开 · US11893251B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11893251B2</code> · <a href="https://patents.google.com/patent/US11893251B2/en">专利全文</a></p>
-<h1>改变预装顺序，把缓冲区的连续 miss 分散开</h1><p class="reading-question">当缓冲区多个位置映射到同一候选缓存行时，怎样避免连续使用缓冲区时遇到一串缺失？这份顺序能否根据实际访问调整？</p>
-<p class="reading-answer">先从不同连续块轮流预装，使一部分较靠后的地址获得先分配的机会。缓冲区投入使用后跟踪真实访问的 miss，达到设定阈值时修改下一次预装顺序。实时用途中，尚未缓存的位置也可以通过实时取数访问后备内存。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-02-06</dd></div><div><dt>申请号</dt><dd>US17/462,812</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Rohit Natarajan、Jurgen M. Schulz、Christopher D. Shuler、Rohit K. Gupta、Thomas T. Zou、Srinivasa Rangan Sridharan</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#flow">预装的发出顺序与作业的访问顺序是两回事</a></li><li><a href="#feedback">反馈用实际访问的缺失率，只改变后续预装</a></li><li><a href="#collision">先占候选行的位置变了，缺失的位置也跟着变</a></li><li><a href="#qos">初始化可以用 bulk，缺失取数可以用实时通道</a></li><li><a href="#scope">独立权项的共同核心是非线性预装与缺失反馈</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="flow"><h2>预装的发出顺序与作业的访问顺序是两回事</h2><p>图 1 的上半部先在系统内存划出缓冲区，处理器核把源地址及发出次序配置给 DMA，DMA 发出用于缓存这些位置的事务。缓存控制器按地址尝试分配缓存行。它可能只接受一部分返回内容。原图 9 的示例用地址哈希说明两个位置可以竞争同一候选缓存行。</p><p>下半部是作业开始以后的路径。使用方仍可按连续地址读取缓冲区。缓存记录这些实际访问的 hit 和 miss。系统内存仍是缓冲区所在位置。这个流程分析原图 9–15 的缓存预装机制，原图 1–8 另披露直接寻址的缓存区。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　CPU 配置 DMA 后，预装路径和缺失反馈分开运作</h3>
-    <p id="fig-1-basis">显示系统内存、DMA、缓存和使用方如何连接，强调观测实际 miss 的时点。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11893251B2 改变预装顺序，把缓冲区的连续 miss 分散开 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-slc" href="../index.html?topic=slc#catalog">SLC 与内存控制器</a>
+  </nav>
+  <p class="document-id">
+    <code>US11893251B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-02-06">2024-02-06</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11893251B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>改变预装顺序，把缓冲区的连续 miss 分散开</h1>
+  <p class="english-title" lang="en">Allocation of a buffer located in system memory into a cache memory</p>
+  <p class="document-question">当缓冲区多个位置映射到同一候选缓存行时，怎样避免连续使用缓冲区时遇到一串缺失？这份顺序能否根据实际访问调整？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#flow">预装的发出顺序与作业的访问顺序是两回事</a></li><li><a href="#feedback">反馈用实际访问的缺失率，只改变后续预装</a></li><li><a href="#collision">先占候选行的位置变了，缺失的位置也跟着变</a></li><li><a href="#qos">初始化可以用 bulk，缺失取数可以用实时通道</a></li><li><a href="#scope">独立权项的共同核心是非线性预装与缺失反馈</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">先从不同连续块轮流预装，使一部分较靠后的地址获得先分配的机会。缓冲区投入使用后跟踪真实访问的 miss，达到设定阈值时修改下一次预装顺序。实时用途中，尚未缓存的位置也可以通过实时取数访问后备内存。</p>
+  </section>
+  <div id="mechanism"><section id="flow" class="article-section reading-chapter" aria-labelledby="flow-title"><h2 id="flow-title">预装的发出顺序与作业的访问顺序是两回事</h2><p>图 1 的上半部先在系统内存划出缓冲区，处理器核把源地址及发出次序配置给 DMA，DMA 发出用于缓存这些位置的事务。缓存控制器按地址尝试分配缓存行。它可能只接受一部分返回内容。原图 9 的示例用地址哈希说明两个位置可以竞争同一候选缓存行。</p><p>下半部是作业开始以后的路径。使用方仍可按连续地址读取缓冲区。缓存记录这些实际访问的 hit 和 miss。系统内存仍是缓冲区所在位置。这个流程分析原图 9–15 的缓存预装机制，原图 1–8 另披露直接寻址的缓存区。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">CPU 配置 DMA 后，预装路径和缺失反馈分开运作</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893251B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">显示系统内存、DMA、缓存和使用方如何连接，强调观测实际 miss 的时点。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="CPU 配置 DMA 后，预装路径和缺失反馈分开运作" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 605" role="img" aria-labelledby="us11893251b2-fig-1-svg-title us11893251b2-fig-1-svg-desc">
 <title id="us11893251b2-fig-1-svg-title">CPU 配置 DMA 后，预装路径和缺失反馈分开运作</title>
 <desc id="us11893251b2-fig-1-svg-desc">显示系统内存、DMA、缓存和使用方如何连接，强调观测实际 miss 的时点。</desc>
@@ -39,12 +85,21 @@
 <text x="44" y="57" class="signal-title" text-anchor="start">DMA 按预装顺序发请求，缺失率由缓冲区投入使用后的访问形成</text>
 <text x="44" y="576" class="legend" text-anchor="start">图画处理器核筛查统计并重新配置 DMA 的实施例。部分权项把统计与改序配置在缓存电路。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893251b2-fig-1-program">DMA 编程</a> 处理器核写入位置地址和发出顺序。</li><li><a href="#us11893251b2-fig-1-data">系统内存返回内容</a> 缓存按地址尝试分配。</li><li><a href="#us11893251b2-fig-1-demand">实际使用路径</a> 应用访问顺序可以与预装发出次序不同。</li><li><a href="#us11893251b2-fig-1-feedback">调整下一轮</a> 只有实际访问缺失率达到判定阈值才触发重排。</li></ul>
-  <p class="figure-evidence">原图 9、11、15；说明书归档段 0092、0093、0094、0099、0102、0112、0113、0114、0115、0116；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11893251B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理电路</dt><dd>901</dd></div><div><dt>缓存电路</dt><dd>905</dd></div><div><dt>系统内存</dt><dd>910</dd></div><div><dt>系统内存缓冲区</dt><dd>915</dd></div><div><dt>DMA</dt><dd>1101</dd></div><div><dt>处理器核</dt><dd>1190</dd></div></dl></details>
-</figure></section><section id="feedback"><h2>反馈用实际访问的缺失率，只改变后续预装</h2><p>图 2 在首轮预装后才开始观察应用访问。原文 ¶0115 区分未预装的地址比例和观测到的缺失率。少数未预装的位置如果频繁被访问，造成的缺失率可能更高；相反，冷位置未预装对实际缺失贡献较小。</p><p>原文的阈值例子中，观察到 18% 的访问缺失并达到 15% 的门限。处理器可以把频繁访问且 misses 较多的位置前移，把低访问频度的位置后移。原图 11 的实施例将修改后的地址序列重新写入 DMA。图 2 的反馈只作用于后续使用。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　首轮访问的缺失率决定是否改写下一轮 DMA 顺序</h3>
-    <p id="fig-2-basis">分开首轮预装、投入使用、测缺失率和后续更改。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893251b2-fig-1-program" data-reading-target="us11893251b2-fig-1-program">DMA 编程</a><p>处理器核写入位置地址和发出顺序。</p></li><li><a href="#us11893251b2-fig-1-data" data-reading-target="us11893251b2-fig-1-data">系统内存返回内容</a><p>缓存按地址尝试分配。</p></li><li><a href="#us11893251b2-fig-1-demand" data-reading-target="us11893251b2-fig-1-demand">实际使用路径</a><p>应用访问顺序可以与预装发出次序不同。</p></li><li><a href="#us11893251b2-fig-1-feedback" data-reading-target="us11893251b2-fig-1-feedback">调整下一轮</a><p>只有实际访问缺失率达到判定阈值才触发重排。</p></li></ul>
+  <p class="figure-evidence">原图 9、11、15；说明书归档段 0092、0093、0094、0099、0102、0112、0113、0114、0115、0116；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>处理电路</dt><dd>901</dd></div><div><dt>缓存电路</dt><dd>905</dd></div><div><dt>系统内存</dt><dd>910</dd></div><div><dt>系统内存缓冲区</dt><dd>915</dd></div><div><dt>DMA</dt><dd>1101</dd></div><div><dt>处理器核</dt><dd>1190</dd></div></dl></details>
+</figure></section><section id="feedback" class="article-section reading-chapter" aria-labelledby="feedback-title"><h2 id="feedback-title">反馈用实际访问的缺失率，只改变后续预装</h2><p>图 2 在首轮预装后才开始观察应用访问。原文 ¶0115 区分未预装的地址比例和观测到的缺失率。少数未预装的位置如果频繁被访问，造成的缺失率可能更高；相反，冷位置未预装对实际缺失贡献较小。</p><p>原文的阈值例子中，观察到 18% 的访问缺失并达到 15% 的门限。处理器可以把频繁访问且 misses 较多的位置前移，把低访问频度的位置后移。原图 11 的实施例将修改后的地址序列重新写入 DMA。图 2 的反馈只作用于后续使用。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">首轮访问的缺失率决定是否改写下一轮 DMA 顺序</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893251B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">分开首轮预装、投入使用、测缺失率和后续更改。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="首轮访问的缺失率决定是否改写下一轮 DMA 顺序" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 511" role="img" aria-labelledby="us11893251b2-fig-2-svg-title us11893251b2-fig-2-svg-desc">
 <title id="us11893251b2-fig-2-svg-title">首轮访问的缺失率决定是否改写下一轮 DMA 顺序</title>
 <desc id="us11893251b2-fig-2-svg-desc">分开首轮预装、投入使用、测缺失率和后续更改。</desc>
@@ -67,19 +122,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">使用缓冲区的代理</text>
 <text x="28" y="484" class="legend" text-anchor="start">按原图 11、15 综合。缺失率基于实际访问。达到阈值后修改的是后续预装次序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893251b2-fig-2-fill">按初始序列进行预装</a> 成功驻留的只是部分位置。</li><li><a href="#us11893251b2-fig-2-measure">按真实工作集观察</a> 频繁访问的未驻留位置可能贡献大量 miss。</li><li><a href="#us11893251b2-fig-2-revise">达到门限后重排</a> 根据缺失与使用频度调整可能先装入的位置。</li><li><a href="#us11893251b2-fig-2-next">变化作用于后续预装</a> 重排不会即时使这次缓冲区中未驻留的所有位置驻留。</li></ul>
-  <p class="figure-evidence">原图 9、10、11、15；说明书归档段 0102、0114、0115、0116、0120、0145、0146、0147、0148；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11893251B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理器核</dt><dd>1190</dd></div><div><dt>DMA</dt><dd>1101</dd></div><div><dt>缓存电路</dt><dd>905</dd></div><div><dt>系统内存缓冲区</dt><dd>915</dd></div></dl></details>
-</figure></section><section id="collision"><h2>先占候选行的位置变了，缺失的位置也跟着变</h2><p>表 3 复原原图 11 的三个连续块轮转，先发 a、d、g，再发 b、e、h，最后发 c、f、i。图 5 改从竞争关系观察同样的发出次序。线性预装时 b 先进入候选缓存行 h，f 先占候选缓存行 e。交错预装后分别由 g 和 h 先占。位置 i 在两种次序中均无法进入已被 a 占用的候选缓存行 c。</p><p>按原图 9 的固定地址映射，用首次分配成功且不替换的模型复算。两种发出次序均有 3 个位置未驻留。作业按 a 到 i 逐个访问时，线性预装的最长连续缺失为 3，交错预装为 1。这里的差是缺失的聚集程度。访问时长还与多个 DRAM 取数能否并行、每次回填的延迟有关。</p><p>第 4、9 项另允许某位置失败后在继续下一个前重试。原图 10 举例，另一路的候选缓存行原由缓冲区外数据占用；旧行之后被逐出，重试才可能成功。上述首次分配模型只用于原图 9 对照。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　依次从每个连续块取同一相对位置</h3>
-    <p id="fig-3-basis">复原原图 11 的九位置轮转。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">发出轮次</th><th scope="col">连续块 A</th><th scope="col">连续块 B</th><th scope="col">连续块 C</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">第 1 轮</th><td>位置 a</td><td>位置 d</td><td>位置 g</td></tr><tr id="fig-3-table-row-2"><th scope="row">第 2 轮</th><td>位置 b</td><td>位置 e</td><td>位置 h</td></tr><tr id="fig-3-table-row-3"><th scope="row">第 3 轮</th><td>位置 c</td><td>位置 f</td><td>位置 i</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-basis">按行展开 DMA 发出序列</a> 每轮从连续块 A、B、C 取相同相对位置。说明书允许改变块长和块内次序。</li></ul>
-  <p class="figure-evidence">原图 11；说明书归档段 0117、0118、0119、0120；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>三个连续块</dt><dd>1130a–1130c</dd></div><div><dt>缓冲区位置 a–i</dt><dd>935a–935i</dd></div><div><dt>DMA</dt><dd>1101</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　三组地址映射冲突如何改变驻留位置</h3>
-    <p id="fig-5-basis">把同一缓存行的两个可能竞争者放在一起，比较线性和交错预装谁先占到。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893251b2-fig-2-fill" data-reading-target="us11893251b2-fig-2-fill">按初始序列进行预装</a><p>成功驻留的只是部分位置。</p></li><li><a href="#us11893251b2-fig-2-measure" data-reading-target="us11893251b2-fig-2-measure">按真实工作集观察</a><p>频繁访问的未驻留位置可能贡献大量 miss。</p></li><li><a href="#us11893251b2-fig-2-revise" data-reading-target="us11893251b2-fig-2-revise">达到门限后重排</a><p>根据缺失与使用频度调整可能先装入的位置。</p></li><li><a href="#us11893251b2-fig-2-next" data-reading-target="us11893251b2-fig-2-next">变化作用于后续预装</a><p>重排不会即时使这次缓冲区中未驻留的所有位置驻留。</p></li></ul>
+  <p class="figure-evidence">原图 9、10、11、15；说明书归档段 0102、0114、0115、0116、0120、0145、0146、0147、0148；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>处理器核</dt><dd>1190</dd></div><div><dt>DMA</dt><dd>1101</dd></div><div><dt>缓存电路</dt><dd>905</dd></div><div><dt>系统内存缓冲区</dt><dd>915</dd></div></dl></details>
+</figure></section><section id="collision" class="article-section reading-chapter" aria-labelledby="collision-title"><h2 id="collision-title">先占候选行的位置变了，缺失的位置也跟着变</h2><p>表 3 复原原图 11 的三个连续块轮转，先发 a、d、g，再发 b、e、h，最后发 c、f、i。图 5 改从竞争关系观察同样的发出次序。线性预装时 b 先进入候选缓存行 h，f 先占候选缓存行 e。交错预装后分别由 g 和 h 先占。位置 i 在两种次序中均无法进入已被 a 占用的候选缓存行 c。</p><p>按原图 9 的固定地址映射，用首次分配成功且不替换的模型复算。两种发出次序均有 3 个位置未驻留。作业按 a 到 i 逐个访问时，线性预装的最长连续缺失为 3，交错预装为 1。这里的差是缺失的聚集程度。访问时长还与多个 DRAM 取数能否并行、每次回填的延迟有关。</p><p>第 4、9 项另允许某位置失败后在继续下一个前重试。原图 10 举例，另一路的候选缓存行原由缓冲区外数据占用；旧行之后被逐出，重试才可能成功。上述首次分配模型只用于原图 9 对照。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">依次从每个连续块取同一相对位置</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">复原原图 11 的九位置轮转。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="依次从每个连续块取同一相对位置"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">发出轮次</th><th scope="col">连续块 A</th><th scope="col">连续块 B</th><th scope="col">连续块 C</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">第 1 轮</th><td>位置 a</td><td>位置 d</td><td>位置 g</td></tr><tr id="fig-3-table-row-2"><th scope="row">第 2 轮</th><td>位置 b</td><td>位置 e</td><td>位置 h</td></tr><tr id="fig-3-table-row-3"><th scope="row">第 3 轮</th><td>位置 c</td><td>位置 f</td><td>位置 i</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-basis" data-reading-target="fig-3-basis">按行展开 DMA 发出序列</a><p>每轮从连续块 A、B、C 取相同相对位置。说明书允许改变块长和块内次序。</p></li></ul>
+  <p class="figure-evidence">原图 11；说明书归档段 0117、0118、0119、0120；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>三个连续块</dt><dd>1130a–1130c</dd></div><div><dt>缓冲区位置 a–i</dt><dd>935a–935i</dd></div><div><dt>DMA</dt><dd>1101</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">三组地址映射冲突如何改变驻留位置</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893251B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">把同一缓存行的两个可能竞争者放在一起，比较线性和交错预装谁先占到。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="三组地址映射冲突如何改变驻留位置" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 577" role="img" aria-labelledby="us11893251b2-fig-5-svg-title us11893251b2-fig-5-svg-desc">
 <title id="us11893251b2-fig-5-svg-title">三组地址映射冲突如何改变驻留位置</title>
 <desc id="us11893251b2-fig-5-svg-desc">把同一缓存行的两个可能竞争者放在一起，比较线性和交错预装谁先占到。</desc>
@@ -109,12 +182,21 @@
 <text x="39" y="58" class="signal-title" text-anchor="start">地址映射不变，实际驻留由同一缓存行的请求先后决定</text>
 <text x="39" y="546" class="legend" text-anchor="start">原图 9 的三组竞争。用 a–i 顺序读取时，线性预装会连续缺失 g、h、i，交错后缺失分散到 b、f、i。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893251b2-fig-5-hslot">缓存行 h 的竞争</a> 交错预装先遇到位置 g，线性预装则更早遇到 b。</li><li><a href="#us11893251b2-fig-5-eslot">缓存行 e 的竞争</a> 交错预装先遇到位置 h，线性预装先遇到 f。</li><li><a href="#us11893251b2-fig-5-cslot">两种顺序均由位置 a 先占</a> 位置 i 均无法分配。连续读时由此形成 3 连续 miss 与分散 miss 两种结果。</li></ul>
-  <p class="figure-evidence">原图 9；说明书归档段 0095、0098、0099、0100、0101、0135、0145；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11893251B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>候选缓存行 h</dt><dd>920h</dd></div><div><dt>候选缓存行 e</dt><dd>920e</dd></div><div><dt>候选缓存行 c</dt><dd>920c</dd></div><div><dt>缓冲区位置 a–i</dt><dd>935a–935i</dd></div></dl></details>
-</figure></section><section id="qos"><h2>初始化可以用 bulk，缺失取数可以用实时通道</h2><p>沿图 4 先看预装。初始化时还未到实时任务，使用 bulk 事务即可。被成功缓存且后续将用于实时访问的行可以在 cache tag 中标记。原文举例让这些行在选择逐出候选时优先保留。</p><p>实时读位置 c 可从缓存返回。位置 f 未能驻留，缓存向系统内存发实时取数。若另一个 bulk 取数尚未发出，实时请求可以排在它前面。已经发出的 bulk 取数不在这个超越条件中。说明书 ¶0127 也讨论限制在途 bulk 或预留总线 credit，为实时缺失保留服务余量。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　bulk 预装之后，实时 miss 可提前取得内存服务</h3>
-    <p id="fig-4-basis">命中由缓存直接满足，缺失向内存发带实时 QoS 的取数。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893251b2-fig-5-hslot" data-reading-target="us11893251b2-fig-5-hslot">缓存行 h 的竞争</a><p>交错预装先遇到位置 g，线性预装则更早遇到 b。</p></li><li><a href="#us11893251b2-fig-5-eslot" data-reading-target="us11893251b2-fig-5-eslot">缓存行 e 的竞争</a><p>交错预装先遇到位置 h，线性预装先遇到 f。</p></li><li><a href="#us11893251b2-fig-5-cslot" data-reading-target="us11893251b2-fig-5-cslot">两种顺序均由位置 a 先占</a><p>位置 i 均无法分配。连续读时由此形成 3 连续 miss 与分散 miss 两种结果。</p></li></ul>
+  <p class="figure-evidence">原图 9；说明书归档段 0095、0098、0099、0100、0101、0135、0145；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>候选缓存行 h</dt><dd>920h</dd></div><div><dt>候选缓存行 e</dt><dd>920e</dd></div><div><dt>候选缓存行 c</dt><dd>920c</dd></div><div><dt>缓冲区位置 a–i</dt><dd>935a–935i</dd></div></dl></details>
+</figure></section><section id="qos" class="article-section reading-chapter" aria-labelledby="qos-title"><h2 id="qos-title">初始化可以用 bulk，缺失取数可以用实时通道</h2><p>沿图 4 先看预装。初始化时还未到实时任务，使用 bulk 事务即可。被成功缓存且后续将用于实时访问的行可以在 cache tag 中标记。原文举例让这些行在选择逐出候选时优先保留。</p><p>实时读位置 c 可从缓存返回。位置 f 未能驻留，缓存向系统内存发实时取数。若另一个 bulk 取数尚未发出，实时请求可以排在它前面。已经发出的 bulk 取数不在这个超越条件中。说明书 ¶0127 也讨论限制在途 bulk 或预留总线 credit，为实时缺失保留服务余量。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 事务时序</p>
+        <h3 id="fig-4-title">bulk 预装之后，实时 miss 可提前取得内存服务</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893251B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">命中由缓存直接满足，缺失向内存发带实时 QoS 的取数。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="bulk 预装之后，实时 miss 可提前取得内存服务" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 607" role="img" aria-labelledby="us11893251b2-fig-4-svg-title us11893251b2-fig-4-svg-desc">
 <title id="us11893251b2-fig-4-svg-title">bulk 预装之后，实时 miss 可提前取得内存服务</title>
 <desc id="us11893251b2-fig-4-svg-desc">命中由缓存直接满足，缺失向内存发带实时 QoS 的取数。</desc>
@@ -139,12 +221,14 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">系统内存</text>
 <text x="28" y="580" class="legend" text-anchor="start">说明书中实时取数可优先于还未发出的 bulk 请求。图中两类通道也可部分共用物理连接。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893251b2-fig-4-tag">记录以后由实时事务使用</a> 成功缓存时可设置 cache tag，影响逐出选择。</li><li><a href="#us11893251b2-fig-4-hit">实时命中</a> 访问位置 c 可直接从缓存取得数据。</li><li><a href="#us11893251b2-fig-4-issue">实时缺失取数</a> 位置 f 未缓存，实时 fetch 可以先于尚未发出的 bulk fetch。</li><li><a href="#us11893251b2-fig-4-return">系统内存响应</a> 返回的是未驻留位置的数据，是否再次填入缓存由实现规定。</li></ul>
-  <p class="figure-evidence">原图 12、14；说明书归档段 0123、0124、0125、0126、0127、0128、0129、0139、0140、0141、0142；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11893251B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>bulk 通道</dt><dd>1240</dd></div><div><dt>实时通道</dt><dd>1245</dd></div><div><dt>交错预装 bulk 事务</dt><dd>1242a–1242c</dd></div><div><dt>实时读命中已预装位置</dt><dd>1250a</dd></div><div><dt>实时读访问未预装位置</dt><dd>1250b</dd></div><div><dt>实时缺失取数</dt><dd>1290</dd></div><div><dt>在途与待发的 bulk 取数</dt><dd>1265a–1265b</dd></div></dl></details>
-</figure></section><section id="scope"><h2>独立权项的共同核心是非线性预装与缺失反馈</h2><p>授权第 1、8、15 项均写到非线性顺序、尝试缓存、跟踪缺失率和阈值调整。第 7、18、19 项涉及 DMA 配置；第 10–12 项增加实时缓冲区、bulk 预装及实时缺失取数。这些选择的作用点分别在预装调度、后续缓存占用和内存服务。</p><p>手机 SoC 上的可验证结果包括按访问窗口统计的 miss 分布、最长连续 miss、DRAM 服务重叠和实时任务尾延迟。缓存映射和真实缓冲区访问顺序共同决定重排收益。若已有充足相联度或大量并行回填，固定的 miss 分布变化未必等同于相同幅度的延迟变化。</p></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893251b2-fig-4-tag" data-reading-target="us11893251b2-fig-4-tag">记录以后由实时事务使用</a><p>成功缓存时可设置 cache tag，影响逐出选择。</p></li><li><a href="#us11893251b2-fig-4-hit" data-reading-target="us11893251b2-fig-4-hit">实时命中</a><p>访问位置 c 可直接从缓存取得数据。</p></li><li><a href="#us11893251b2-fig-4-issue" data-reading-target="us11893251b2-fig-4-issue">实时缺失取数</a><p>位置 f 未缓存，实时 fetch 可以先于尚未发出的 bulk fetch。</p></li><li><a href="#us11893251b2-fig-4-return" data-reading-target="us11893251b2-fig-4-return">系统内存响应</a><p>返回的是未驻留位置的数据，是否再次填入缓存由实现规定。</p></li></ul>
+  <p class="figure-evidence">原图 12、14；说明书归档段 0123、0124、0125、0126、0127、0128、0129、0139、0140、0141、0142；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">7 项</span></summary><dl><div><dt>bulk 通道</dt><dd>1240</dd></div><div><dt>实时通道</dt><dd>1245</dd></div><div><dt>交错预装 bulk 事务</dt><dd>1242a–1242c</dd></div><div><dt>实时读命中已预装位置</dt><dd>1250a</dd></div><div><dt>实时读访问未预装位置</dt><dd>1250b</dd></div><div><dt>实时缺失取数</dt><dd>1290</dd></div><div><dt>在途与待发的 bulk 取数</dt><dd>1265a–1265b</dd></div></dl></details>
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">独立权项的共同核心是非线性预装与缺失反馈</h2><p>授权第 1、8、15 项均写到非线性顺序、尝试缓存、跟踪缺失率和阈值调整。第 7、18、19 项涉及 DMA 配置；第 10–12 项增加实时缓冲区、bulk 预装及实时缺失取数。这些选择的作用点分别在预装调度、后续缓存占用和内存服务。</p><p>手机 SoC 上的可验证结果包括按访问窗口统计的 miss 分布、最长连续 miss、DRAM 服务重叠和实时任务尾延迟。缓存映射和真实缓冲区访问顺序共同决定重排收益。若已有充足相联度或大量并行回填，固定的 miss 分布变化未必等同于相同幅度的延迟变化。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项；全文核对覆盖 189 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -174,6 +258,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>非暂态介质保存分配缓冲、非线性预装、跟踪缓冲区缺失率及超出配置条件后更新顺序的指令。见原图 9、11、15。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将缓冲区划成多个连续地址块，预装先访问各选定块的第一个位置。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>访问各选定块的首位置后，再访问同一批块的第二位置。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>若某位置未缓存成功，可在访问其他位置前重试它。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>缓冲用于较高 QoS 的实时事务，成功驻留位置为实时用途打标。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>为实时事务缺失之后的系统内存取数预留带宽。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>把选定的访存顺序编程进可编程 DMA 电路。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>方法由处理电路分配并发请求，缓存尝试按到达内容驻留；按与本次顺序有关的缺失率调整下一次。见原图 9、15。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>某位置预装失败时，先重试该位置，再继续预定次序。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>缓冲区用较高 QoS 的实时事务访问。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>批量事务进行预装，给成功驻留位置打实时标志，实际访问用实时事务。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>访问未成功驻留的位置发生缺失时，以实时事务到系统内存取数。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>根据缓冲区存储位置所期望的缓存缺失率选择次序。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>尝试预装后，处理电路按线性顺序访问这些位置。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>装置按系统内存、处理电路及缓存分工。处理电路分配缓冲并发事务；缓存逻辑接收、驻留、统计缺失率并依阈值修改顺序。见原图 9、15。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>把缓冲划成有逻辑顺序的块，以增量选择块的非线性访问次序。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>至少两个块包含不同数量的存储位置。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>处理器将顺序编程到 DMA，并通过 DMA 访问缓冲位置。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>缺失率达到相应条件时，重新编程 DMA 内的访问顺序。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893251B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>某位置未预装导致缺失时，以高于批量级别的 QoS 完成访存。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11893251B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11893251B2#knowledge">在关系图谱中定位 US11893251B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11704245B2</code>
+  </div>
+  <h3><a href="US11704245B2.html">将缓存 way 暂时映射成独立的实时 RAM 地址区</a></h3>
+  <p class="related-edge-label">普通缓存预装与直寻址</p>
+  <p class="related-edge-summary">US11893251B2 保留系统内存中的缓冲区，通过非线性顺序把内容预装到普通缓存，再按缺失率调整顺序。US11704245B2 把部分缓存物理容量改作直接寻址 RAM，并将这些行排除在普通替换外。两种方式分别需要检查实际驻留与可分配容量。</p>
+<p class="related-evidence"><a href="#claim-8">本篇权项 8</a><a href="#fig-1">本篇图表 1</a><a href="US11704245B2.html#claim-1">对照篇权项 1</a><a href="US11704245B2.html#fig-1">对照篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11232033B2</code>
+  </div>
+  <h3><a href="US11232033B2.html">根据数据流的预计带宽变化重新分配缓存配额</a></h3>
+  <p class="related-edge-label">反馈调整预装顺序与缓存配额</p>
+  <p class="related-edge-summary">US11893251B2 让程序按非线性顺序访问系统内存缓冲区，使用对应访问的缺失率调整下一次预装顺序。US11232033B2 监测数据流的运行状态和缓存用量，根据预计的带宽变化调整各组可占的容量。两种机制的控制变量分别是访问顺序和空间配额，评估时分别记录缺失率变化和各组占用量。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US11232033B2.html#claim-1">对照篇权项 1</a><a href="US11232033B2.html#fig-2">对照篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#flow">预装的发出顺序与作业的访问顺序是两回事</a></li><li><a href="#feedback">反馈用实际访问的缺失率，只改变后续预装</a></li><li><a href="#collision">先占候选行的位置变了，缺失的位置也跟着变</a></li><li><a href="#qos">初始化可以用 bulk，缺失取数可以用实时通道</a></li><li><a href="#scope">独立权项的共同核心是非线性预装与缺失反馈</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-02-06</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/462,812</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0895、G06F3/0631、G06F12/0284 <details class="inline-more"><summary>其余 18 项</summary><span>G06F12/0835、G06F12/0864、G06F12/1441、G06F3/0619、G06F3/0656、G06F3/0659、G06F3/0679、G06F11/141、G06F11/3037、G06F11/3409、G06F2201/885、G06F2212/1021、G06F2212/1024、G06F2212/1052、G06F2212/305、G06F2212/502、G06F2212/601、G06F2212/603</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Rohit Natarajan、Jurgen M. Schulz、Christopher D. Shuler、Rohit K. Gupta <details class="inline-more"><summary>其余 2 位</summary><span>Thomas T. Zou、Srinivasa Rangan Sridharan</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11893251B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11893251B2#knowledge">关系图谱定位</a></div>
+  </section>
+<section class="sidebar-family"><h2>同族对照</h2><ul class="sidebar-family-list"><li><a href="US11704245B2.html"><code>US11704245B2</code><span>将缓存 way 暂时映射成独立的实时 RAM 地址区</span></a></li></ul></section>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

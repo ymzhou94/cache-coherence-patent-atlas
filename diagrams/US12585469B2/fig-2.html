@@ -4,27 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>预测缺失但标签命中，本次仍可从 I-cache 取指</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
-main{max-width:966px;margin:auto;min-width:0}
-h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
-p{margin:.6rem 0}
-figure{margin:1.25rem 0}
-.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
-svg{display:block;width:100%;min-width:966px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1030px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:966px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
 .node-name{font-weight:600;font-size:17px}
-.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
 .signal-title{font-weight:600;font-size:16px}
-ol{padding-inline-start:1.45rem}
-li+li{margin-top:.45rem}
-a{color:#2e5aa8;text-underline-offset:.19em}
-.component-index dt{font-weight:600}
-.component-index dd{margin:0 0 .45rem}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
 svg :target{scroll-margin:1rem}
-svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
-@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
 </style>
 </head>
 <body><main>
@@ -57,7 +64,7 @@ svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[
 </svg></div>
 <figcaption>依据 US12585469B2 原图 24、25、30、说明书 0254、0255、0257、0261、0307、0308、0309、权利要求 1、8、11、18</figcaption>
 </figure>
-<ol aria-label="图中机制"><li><a href="#fig-2-off">先决定关闭数据读</a> 读预测提前判定 trace 缺失。之后实际 trace 标签命中也不会为本次访问重新开启数据读。</li><li><a href="#fig-2-hit">标签返回真实命中</a> 标签证实了一个潜在的 trace 命中。它只提供状态，不能作为前端指令数据。</li><li><a href="#fig-2-ret">I-cache 提供指令</a> 本例普通 I-cache 命中。若它缺失，需要等对应回填，除非已有其他符合条件的前端数据来源。</li><li><a href="#fig-2-learn">训练下一次判断</a> 对照实际命中和关读，识别一次误预测。是否立即改值取决于预测器字段和置信度更新规则。</li></ol>
-<details class="component-index"><summary>原图标号对照</summary><dl><div><dt>读预测与训练</dt><dd>2410 / 2440</dd></div><div><dt>trace 标签所属电路和普通指令缓存</dt><dd>2420 / 2430</dd></div><div><dt>预判命中及选择读哪个阵列</dt><dd>3050 / 3060</dd></div></dl></details>
+<ol aria-label="图中机制"><li><a href="#fig-2-off">先决定关闭数据读</a><span>读预测提前判定 trace 缺失。之后实际 trace 标签命中也不会为本次访问重新开启数据读。</span></li><li><a href="#fig-2-hit">标签返回真实命中</a><span>标签证实了一个潜在的 trace 命中。它只提供状态，不能作为前端指令数据。</span></li><li><a href="#fig-2-ret">I-cache 提供指令</a><span>本例普通 I-cache 命中。若它缺失，需要等对应回填，除非已有其他符合条件的前端数据来源。</span></li><li><a href="#fig-2-learn">训练下一次判断</a><span>对照实际命中和关读，识别一次误预测。是否立即改值取决于预测器字段和置信度更新规则。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>读预测与训练</dt><dd>2410 / 2440</dd></div><div><dt>trace 标签所属电路和普通指令缓存</dt><dd>2420 / 2430</dd></div><div><dt>预判命中及选择读哪个阵列</dt><dd>3050 / 3060</dd></div></dl></details>
 </main></body>
 </html>

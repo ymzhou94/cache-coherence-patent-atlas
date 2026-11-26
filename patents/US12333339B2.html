@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GPU 先按共享缓存亲和性分派，再把未分派批次交给其他组 · US12333339B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12333339B2</code> · <a href="https://eureka.patsnap.com/patent/US12333339B2">专利全文</a></p>
-<h1>GPU 先按共享缓存亲和性分派，再把未分派批次交给其他组</h1><p class="reading-question">软件希望访问相同数据的工作组落在同一共享缓存。某个 GPU 子单元组发完自己的份额之后，硬件怎样利用它处理剩余批次？</p>
-<p class="reading-answer">GPU 从软件选定的亲和映射开始分派。只有在接收组已发完原分配工作等条件满足时，共享控制才更新硬件有限状态机并扩展可选的 GPU 子单元集合。供给组的遍历器继续生成批次，尚未分派的批次可交给接收组。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-06-17</dd></div><div><dt>申请号</dt><dd>US17/399,784</dd></div><div><dt>最早优先权</dt><dd>2021-08-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew M. Havlir、Ajay Simha Modugala、Benjamin Bowman、Yunjun Zhang</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#mapping">软件设置亲和区域，GPU 硬件选择实际执行资源</a></li><li><a href="#handoff">发完 B 组原份额以后，共享控制怎样接入 A 组</a></li><li><a href="#limits">分派状态、可用资源和执行结束观察什么</a></li><li><a href="#window">比较固定亲和与允许共享之间的批次窗口</a></li><li><a href="#workgroups">亲和子块怎样变为批次与目标子单元</a></li><li><a href="#states">共享状态何时扩展掩码，又何时撤回</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="mapping"><h2>软件设置亲和区域，GPU 硬件选择实际执行资源</h2><p>计算 kernel 的工作组（workgroup）可按坐标切分为若干亲和子块。软件可从多张亲和映射中为本 kernel 指定一张。原图 15 的表项把第几个子块映射到哪个 GPU 子单元组，也允许先映射到亲和区域，再由硬件选目标组。</p><p>图 1 根据原图 3、15 展开两个组。每组下有多个 GPU 子单元，原文称 mGPU，多组分别共享不同的缓存。在原图 3 的一例中，子单元有私有 L1，组共享 L2。若同组的子块会复用同一片数据，在同组分发可减少跨组的重复回填。</p><p>第 1、8、14 项要求两组各有共享缓存，软件提供初始工作映射，硬件可在满足条件后覆盖映射。第 2、9 项限定用配置寄存器容纳多张映射。逻辑工作槽描述分派资源，OS 线程与 CPU cluster 的调度使用其他状态。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　亲和表怎样把 kernel 子块交给两个共享缓存域</h3>
-    <p id="fig-1-basis">软件为 kernel 选择一张映射。硬件按子块指向 GPU 子单元组，各组沿组内共享缓存执行。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12333339B2 GPU 先按共享缓存亲和性分派，再把未分派批次交给其他组 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-clpc" href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a>
+  </nav>
+  <p class="document-id">
+    <code>US12333339B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2025-06-17">2025-06-17</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12333339B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>GPU 先按共享缓存亲和性分派，再把未分派批次交给其他组</h1>
+  <p class="english-title" lang="en">Affinity-based graphics scheduling</p>
+  <p class="document-question">软件希望访问相同数据的工作组落在同一共享缓存。某个 GPU 子单元组发完自己的份额之后，硬件怎样利用它处理剩余批次？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#mapping">软件设置亲和区域，GPU 硬件选择实际执行资源</a></li><li><a href="#handoff">发完 B 组原份额以后，共享控制怎样接入 A 组</a></li><li><a href="#limits">分派状态、可用资源和执行结束观察什么</a></li><li><a href="#window">比较固定亲和与允许共享之间的批次窗口</a></li><li><a href="#workgroups">亲和子块怎样变为批次与目标子单元</a></li><li><a href="#states">共享状态何时扩展掩码，又何时撤回</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">GPU 从软件选定的亲和映射开始分派。只有在接收组已发完原分配工作等条件满足时，共享控制才更新硬件有限状态机并扩展可选的 GPU 子单元集合。供给组的遍历器继续生成批次，尚未分派的批次可交给接收组。</p>
+  </section>
+  <div id="mechanism"><section id="mapping" class="article-section reading-chapter" aria-labelledby="mapping-title"><h2 id="mapping-title">软件设置亲和区域，GPU 硬件选择实际执行资源</h2><p>计算 kernel 的工作组（workgroup）可按坐标切分为若干亲和子块。软件可从多张亲和映射中为本 kernel 指定一张。原图 15 的表项把第几个子块映射到哪个 GPU 子单元组，也允许先映射到亲和区域，再由硬件选目标组。</p><p>图 1 根据原图 3、15 展开两个组。每组下有多个 GPU 子单元，原文称 mGPU，多组分别共享不同的缓存。在原图 3 的一例中，子单元有私有 L1，组共享 L2。若同组的子块会复用同一片数据，在同组分发可减少跨组的重复回填。</p><p>第 1、8、14 项要求两组各有共享缓存，软件提供初始工作映射，硬件可在满足条件后覆盖映射。第 2、9 项限定用配置寄存器容纳多张映射。逻辑工作槽描述分派资源，OS 线程与 CPU cluster 的调度使用其他状态。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">亲和表怎样把 kernel 子块交给两个共享缓存域</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12333339B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">软件为 kernel 选择一张映射。硬件按子块指向 GPU 子单元组，各组沿组内共享缓存执行。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="亲和表怎样把 kernel 子块交给两个共享缓存域" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 679" role="img" aria-labelledby="us12333339b2-fig-1-svg-title us12333339b2-fig-1-svg-desc">
 <title id="us12333339b2-fig-1-svg-title">亲和表怎样把 kernel 子块交给两个共享缓存域</title>
 <desc id="us12333339b2-fig-1-svg-desc">软件为 kernel 选择一张映射。硬件按子块指向 GPU 子单元组，各组沿组内共享缓存执行。</desc>
@@ -39,12 +85,21 @@
 <g id="us12333339b2-fig-1-cacheb"><rect x="687" y="503" width="231" height="76" rx="6" fill="#f5f5f5"/><rect x="687" y="503" width="231" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="529" class="node-name" text-anchor="middle">B 组共享缓存</text><text x="802.5" y="551" class="node-detail" text-anchor="middle">B0、B1 等共同访问</text></g>
 <text x="35" y="630" class="legend" text-anchor="start">这里的子块编号来自 2×2 示例。亲和映射决定初始分组，组内具体 mGPU 可由硬件选择。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12333339b2-fig-1-kernel">软件提交计算 kernel</a> 软件提交一组 GPU 计算工作，同时提供其亲和映射标识。</li><li><a href="#us12333339b2-fig-1-map">亲和映射配置表</a> 配置寄存器可存多张亲和表。表项索引可以隐式表示第几个子块。</li><li><a href="#us12333339b2-fig-1-walker">主 kernel 遍历器</a> 硬件按 kernel 维度选择相应的切分。示例为 2×2 四个子块。</li><li><a href="#us12333339b2-fig-1-a">GPU 子单元 A 组</a> 亲和映射将子块 0、2 指向 A 组。该组的多个 mGPU 共享缓存 A。</li><li><a href="#us12333339b2-fig-1-b">GPU 子单元 B 组</a> 同一次 kernel 可把另外的子块指向 B 组，访问其共享缓存。</li><li><a href="#us12333339b2-fig-1-cachea">A 组共享缓存</a> 若不同子块读取同一区域，组内共享缓存可以复用先前数据。</li><li><a href="#us12333339b2-fig-1-cacheb">B 组共享缓存</a> 缓存 B 由 B 组共享。跨组时可能再次填入原已在 A 组中的数据。</li></ul>
-  <p class="figure-evidence">原图 2、3、15、16、24；说明书归档段 0046、0047、0049、0050、0053、0054、0055、0143、0144、0145、0146、0147、0148、0149、0150、0151、0213、0214、0215、0216；权利要求 1、2、3、6、7、8、9、12、14、16 <a href="../diagrams/US12333339B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>亲和映射索引／亲和映射表</dt><dd>1515/1520</dd></div><div><dt>GPU 子单元组／mGPU／组内共享缓存</dt><dd>305/320/360</dd></div></dl></details>
-</figure></section><section id="handoff"><h2>发完 B 组原份额以后，共享控制怎样接入 A 组</h2><p>原图 18 的主遍历器按组追踪供给进度。例子中某组的七个子块已经给出四个，尚余三个。共享控制选择供给组与接收组。一个实施例优先选择剩余待分派部分最多的组；接收组须发完该 kernel 原始分配。部分实施例还要求接收组曾在亲和映射中。</p><p>图 2 展开授权主项强调的时点。B 发完原份额后，已发批次仍可能在执行队列或 shader 流水线。有限状态机能够依据分派进度更新目标，实际接收批次还要经过分配器与可用资源仲裁。</p><p>共享期间，供给组遍历器依然生成尚未分派的工作组批次。主遍历器向接收端同步起始坐标等状态，扩展的 mGPU 掩码允许把后续批次交给另一组。当前亲和子块派发完毕后，实施例可解锁接收组，重新选择供给组。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　B 发完原始批次后，A 组遍历器如何继续供批次</h3>
-    <p id="fig-2-basis">共享控制确认 B 的原份额已派发，随后同步坐标和扩大目标掩码。供给端继续生成未分派批次。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12333339b2-fig-1-kernel" data-reading-target="us12333339b2-fig-1-kernel">软件提交计算 kernel</a><p>软件提交一组 GPU 计算工作，同时提供其亲和映射标识。</p></li><li><a href="#us12333339b2-fig-1-map" data-reading-target="us12333339b2-fig-1-map">亲和映射配置表</a><p>配置寄存器可存多张亲和表。表项索引可以隐式表示第几个子块。</p></li><li><a href="#us12333339b2-fig-1-walker" data-reading-target="us12333339b2-fig-1-walker">主 kernel 遍历器</a><p>硬件按 kernel 维度选择相应的切分。示例为 2×2 四个子块。</p></li><li><a href="#us12333339b2-fig-1-a" data-reading-target="us12333339b2-fig-1-a">GPU 子单元 A 组</a><p>亲和映射将子块 0、2 指向 A 组。该组的多个 mGPU 共享缓存 A。</p></li><li><a href="#us12333339b2-fig-1-b" data-reading-target="us12333339b2-fig-1-b">GPU 子单元 B 组</a><p>同一次 kernel 可把另外的子块指向 B 组，访问其共享缓存。</p></li><li><a href="#us12333339b2-fig-1-cachea" data-reading-target="us12333339b2-fig-1-cachea">A 组共享缓存</a><p>若不同子块读取同一区域，组内共享缓存可以复用先前数据。</p></li><li><a href="#us12333339b2-fig-1-cacheb" data-reading-target="us12333339b2-fig-1-cacheb">B 组共享缓存</a><p>缓存 B 由 B 组共享。跨组时可能再次填入原已在 A 组中的数据。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、15、16、24；说明书归档段 0046、0047、0049、0050、0053、0054、0055、0143、0144、0145、0146、0147、0148、0149、0150、0151、0213、0214、0215、0216；权利要求 1、2、3、6、7、8、9、12、14、16</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>亲和映射索引／亲和映射表</dt><dd>1515/1520</dd></div><div><dt>GPU 子单元组／mGPU／组内共享缓存</dt><dd>305/320/360</dd></div></dl></details>
+</figure></section><section id="handoff" class="article-section reading-chapter" aria-labelledby="handoff-title"><h2 id="handoff-title">发完 B 组原份额以后，共享控制怎样接入 A 组</h2><p>原图 18 的主遍历器按组追踪供给进度。例子中某组的七个子块已经给出四个，尚余三个。共享控制选择供给组与接收组。一个实施例优先选择剩余待分派部分最多的组；接收组须发完该 kernel 原始分配。部分实施例还要求接收组曾在亲和映射中。</p><p>图 2 展开授权主项强调的时点。B 发完原份额后，已发批次仍可能在执行队列或 shader 流水线。有限状态机能够依据分派进度更新目标，实际接收批次还要经过分配器与可用资源仲裁。</p><p>共享期间，供给组遍历器依然生成尚未分派的工作组批次。主遍历器向接收端同步起始坐标等状态，扩展的 mGPU 掩码允许把后续批次交给另一组。当前亲和子块派发完毕后，实施例可解锁接收组，重新选择供给组。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">B 发完原始批次后，A 组遍历器如何继续供批次</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12333339B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">共享控制确认 B 的原份额已派发，随后同步坐标和扩大目标掩码。供给端继续生成未分派批次。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="B 发完原始批次后，A 组遍历器如何继续供批次" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 512" role="img" aria-labelledby="us12333339b2-fig-2-svg-title us12333339b2-fig-2-svg-desc">
 <title id="us12333339b2-fig-2-svg-title">B 发完原始批次后，A 组遍历器如何继续供批次</title>
 <desc id="us12333339b2-fig-2-svg-desc">共享控制确认 B 的原份额已派发，随后同步坐标和扩大目标掩码。供给端继续生成未分派批次。</desc>
@@ -69,19 +124,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">B 组 mGPU</text>
 <text x="28" y="484" class="legend" text-anchor="start">时间向下。B 发完其原份额时仍可能有已分派批次在执行。图中关注后续未分派批次。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12333339b2-fig-2-progress">A 仍有未分派子块</a> 原图 18 按组跟踪剩余待分派的子块。例子选择剩余最多的组。</li><li><a href="#us12333339b2-fig-2-sent">B 原始批次发完</a> 接收组报告已发完亲和映射分给自己的份额。这里观察的是分派端。</li><li><a href="#us12333339b2-fig-2-sync">同步起始坐标</a> 更新共享状态后，主遍历器可给接收组提供初始坐标或同类信息。</li><li><a href="#us12333339b2-fig-2-mask">批次与扩展 mGPU 掩码</a> 原供给组遍历器继续生成批次，附加一个包含接收组子单元的允许掩码。</li><li><a href="#us12333339b2-fig-2-assign">分派 A 的剩余批次</a> 分配器按掩码和负载挑目标。某个原属 A 的待发批次可使用 B 的 mGPU。</li><li><a href="#us12333339b2-fig-2-unlock">解除本轮锁定</a> 当前子块派发完毕时，释放本轮锁定，下一个子块可重新选择两个组的角色。</li></ul>
-  <p class="figure-evidence">原图 16、17、18、24；说明书归档段 0150、0152、0153、0154、0156、0158、0159、0160、0161、0162、0163、0164、0165、0218；权利要求 1、4、5、8、10、11、14 <a href="../diagrams/US12333339B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>各组剩余待分派子块／共享控制</dt><dd>1810/1820</dd></div><div><dt>供给组／接收组</dt><dd>1830/1840</dd></div><div><dt>供给组遍历器</dt><dd>1620A</dd></div></dl></details>
-</figure></section><section id="limits"><h2>分派状态、可用资源和执行结束观察什么</h2><p>表 3 将软件亲和映射、分派进度、物理资源可用性和 kernel 完成分开。第 7、13、17、18 项涉及逻辑工作槽与分布式硬件槽（dSlot）的关联和软件可指定的掩码、范围、组或策略。硬件重分派依据授权主项的分派事件，发出目的地仍受实现的硬件资源控制。</p><p>评估时，可分别量化分派排空与实际执行结束之间的时间、原映射内重复利用共享缓存的数据比例、跨组回填流量、组内批次待调度时间。原文没有给出固定的负载均衡门槛或缓存层耗时。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　发完原份额、能够承接新批次、计算结束的观测条件</h3>
-    <p id="fig-3-basis">分派进度决定共享控制是否启动；执行资源和完成状态由其他控制信号观察。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">状态</th><th scope="col">观测位置</th><th scope="col">用途</th></tr></thead><tbody><tr id="fig-3-map"><th scope="row">目标亲和组</th><td>配置表与主遍历器</td><td>确定初始分派去向</td></tr><tr id="fig-3-dispatch"><th scope="row">原始份额已派发</th><td>主遍历器和组遍历器的进度</td><td>决定接收组是否有资格</td></tr><tr id="fig-3-resource"><th scope="row">实际资源可用</th><td>目标掩码、批次队列与硬件槽</td><td>决定本次是否发给某 mGPU</td></tr><tr id="fig-3-done"><th scope="row">执行结束</th><td>分布式硬件槽状态</td><td>记录 kernel 完成时点</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-map">目标亲和组</a> 初始软件映射不分配某个未指定的组，硬件覆盖后才可能分配。</li><li><a href="#fig-3-dispatch">原始份额已派发</a> 计数由主遍历器和组遍历器更新，观察是否发完。</li><li><a href="#fig-3-resource">实际资源可用</a> 扩展掩码定义能够参选的组，是否取得真实硬件槽由分配器和仲裁器判定。</li><li><a href="#fig-3-done">执行结束</a> 最后批次的实际执行完成有另外的进度状态。</li></ul>
-  <p class="figure-evidence">原图 4、7、16、18；说明书归档段 0060、0061、0062、0072、0075、0076、0077、0082、0083、0084、0090、0153、0154、0156、0160、0161、0162、0164；权利要求 1、5、7、8、11、13、14、17、18 </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>逻辑槽映射控制／分布式硬件槽</dt><dd>215/230</dd></div><div><dt>剩余待分派子块状态</dt><dd>1810</dd></div></dl></details>
-</figure></section><section id="window"><h2>比较固定亲和与允许共享之间的批次窗口</h2><p>图 4 的模型给 A 八批、B 三批。两组都能每拍开始向一个 dSlot 分派一个批次，第 t 拍开始分派，第 t＋1 拍进入执行，第 t＋2 拍完成。静态映射下 A 在第 8 拍发完，最后一批第 9 拍完成。</p><p>允许共享时，B 第 3 拍发完自己的批次，此时最后一批要到第 4 拍才完成。模型在第 3 拍起允许 B 接手 A 的两个未分派批次；A 继续发三批。最后一批在第 7 拍完成。真实收益还受可用槽、批次大小和迁入组的缓存缺失影响。若跨组产生 3 拍额外执行等待，本示例的收益可能消失。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　原亲和分配和共享分配下，尾部批次什么时候完成</h3>
-    <p id="fig-4-basis">模型较早结束的组从第 3 拍接收两批新工作。最后批次完成早于静态映射，跨组执行额外等待会缩小差额。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12333339b2-fig-2-progress" data-reading-target="us12333339b2-fig-2-progress">A 仍有未分派子块</a><p>原图 18 按组跟踪剩余待分派的子块。例子选择剩余最多的组。</p></li><li><a href="#us12333339b2-fig-2-sent" data-reading-target="us12333339b2-fig-2-sent">B 原始批次发完</a><p>接收组报告已发完亲和映射分给自己的份额。这里观察的是分派端。</p></li><li><a href="#us12333339b2-fig-2-sync" data-reading-target="us12333339b2-fig-2-sync">同步起始坐标</a><p>更新共享状态后，主遍历器可给接收组提供初始坐标或同类信息。</p></li><li><a href="#us12333339b2-fig-2-mask" data-reading-target="us12333339b2-fig-2-mask">批次与扩展 mGPU 掩码</a><p>原供给组遍历器继续生成批次，附加一个包含接收组子单元的允许掩码。</p></li><li><a href="#us12333339b2-fig-2-assign" data-reading-target="us12333339b2-fig-2-assign">分派 A 的剩余批次</a><p>分配器按掩码和负载挑目标。某个原属 A 的待发批次可使用 B 的 mGPU。</p></li><li><a href="#us12333339b2-fig-2-unlock" data-reading-target="us12333339b2-fig-2-unlock">解除本轮锁定</a><p>当前子块派发完毕时，释放本轮锁定，下一个子块可重新选择两个组的角色。</p></li></ul>
+  <p class="figure-evidence">原图 16、17、18、24；说明书归档段 0150、0152、0153、0154、0156、0158、0159、0160、0161、0162、0163、0164、0165、0218；权利要求 1、4、5、8、10、11、14</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>各组剩余待分派子块／共享控制</dt><dd>1810/1820</dd></div><div><dt>供给组／接收组</dt><dd>1830/1840</dd></div><div><dt>供给组遍历器</dt><dd>1620A</dd></div></dl></details>
+</figure></section><section id="limits" class="article-section reading-chapter" aria-labelledby="limits-title"><h2 id="limits-title">分派状态、可用资源和执行结束观察什么</h2><p>表 3 将软件亲和映射、分派进度、物理资源可用性和 kernel 完成分开。第 7、13、17、18 项涉及逻辑工作槽与分布式硬件槽（dSlot）的关联和软件可指定的掩码、范围、组或策略。硬件重分派依据授权主项的分派事件，发出目的地仍受实现的硬件资源控制。</p><p>评估时，可分别量化分派排空与实际执行结束之间的时间、原映射内重复利用共享缓存的数据比例、跨组回填流量、组内批次待调度时间。原文没有给出固定的负载均衡门槛或缓存层耗时。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">发完原份额、能够承接新批次、计算结束的观测条件</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">分派进度决定共享控制是否启动；执行资源和完成状态由其他控制信号观察。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="发完原份额、能够承接新批次、计算结束的观测条件"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">状态</th><th scope="col">观测位置</th><th scope="col">用途</th></tr></thead><tbody><tr id="fig-3-map"><th scope="row">目标亲和组</th><td>配置表与主遍历器</td><td>确定初始分派去向</td></tr><tr id="fig-3-dispatch"><th scope="row">原始份额已派发</th><td>主遍历器和组遍历器的进度</td><td>决定接收组是否有资格</td></tr><tr id="fig-3-resource"><th scope="row">实际资源可用</th><td>目标掩码、批次队列与硬件槽</td><td>决定本次是否发给某 mGPU</td></tr><tr id="fig-3-done"><th scope="row">执行结束</th><td>分布式硬件槽状态</td><td>记录 kernel 完成时点</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-map" data-reading-target="fig-3-map">目标亲和组</a><p>初始软件映射不分配某个未指定的组，硬件覆盖后才可能分配。</p></li><li><a href="#fig-3-dispatch" data-reading-target="fig-3-dispatch">原始份额已派发</a><p>计数由主遍历器和组遍历器更新，观察是否发完。</p></li><li><a href="#fig-3-resource" data-reading-target="fig-3-resource">实际资源可用</a><p>扩展掩码定义能够参选的组，是否取得真实硬件槽由分配器和仲裁器判定。</p></li><li><a href="#fig-3-done" data-reading-target="fig-3-done">执行结束</a><p>最后批次的实际执行完成有另外的进度状态。</p></li></ul>
+  <p class="figure-evidence">原图 4、7、16、18；说明书归档段 0060、0061、0062、0072、0075、0076、0077、0082、0083、0084、0090、0153、0154、0156、0160、0161、0162、0164；权利要求 1、5、7、8、11、13、14、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>逻辑槽映射控制／分布式硬件槽</dt><dd>215/230</dd></div><div><dt>剩余待分派子块状态</dt><dd>1810</dd></div></dl></details>
+</figure></section><section id="window" class="article-section reading-chapter" aria-labelledby="window-title"><h2 id="window-title">比较固定亲和与允许共享之间的批次窗口</h2><p>图 4 的模型给 A 八批、B 三批。两组都能每拍开始向一个 dSlot 分派一个批次，第 t 拍开始分派，第 t＋1 拍进入执行，第 t＋2 拍完成。静态映射下 A 在第 8 拍发完，最后一批第 9 拍完成。</p><p>允许共享时，B 第 3 拍发完自己的批次，此时最后一批要到第 4 拍才完成。模型在第 3 拍起允许 B 接手 A 的两个未分派批次；A 继续发三批。最后一批在第 7 拍完成。真实收益还受可用槽、批次大小和迁入组的缓存缺失影响。若跨组产生 3 拍额外执行等待，本示例的收益可能消失。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 同轴时序</p>
+        <h3 id="fig-4-title">原亲和分配和共享分配下，尾部批次什么时候完成</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12333339B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">模型较早结束的组从第 3 拍接收两批新工作。最后批次完成早于静态映射，跨组执行额外等待会缩小差额。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="原亲和分配和共享分配下，尾部批次什么时候完成" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12333339b2-fig-4-svg-title us12333339b2-fig-4-svg-desc">
 <title id="us12333339b2-fig-4-svg-title">原亲和分配和共享分配下，尾部批次什么时候完成</title>
 <desc id="us12333339b2-fig-4-svg-desc">模型较早结束的组从第 3 拍接收两批新工作。最后批次完成早于静态映射，跨组执行额外等待会缩小差额。</desc>
@@ -138,12 +211,21 @@
 <text x="580.8" y="447" class="arrow-label" text-anchor="end">最后完成</text></g>
 <text x="24" y="512" class="legend" text-anchor="start">横条表示批次分派区间。圆点表示最后批次完成。模型假定每拍可分派一批，分派结束后再执行一拍。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12333339b2-fig-4-afixed">静态分派 A</a> A 静态有八批，分派结束于第 8 拍，最后一批在第 9 拍完成。</li><li><a href="#us12333339b2-fig-4-bfixed">静态分派 B</a> B 静态只处理初始三批。第 3 拍可继续分派但没有本组剩余份额，原最后一批第 4 拍完成。</li><li><a href="#us12333339b2-fig-4-adynamic">共享分派 A</a> 共享条件触发后，A 由八批变为六批。仍由 A 组遍历器生成供给这两个组的批次。</li><li><a href="#us12333339b2-fig-4-bdynamic">共享分派 B</a> B 第 3 拍起分派 A 的两个批次。这个时点标记的是发完 B 原份额，不要求 B 的已发批次已执行完。</li></ul>
-  <p class="figure-evidence">原图 15、16、17、18；说明书归档段 0143、0144、0145、0148、0149、0152、0153、0154、0156、0158、0159、0160、0161、0162、0163、0164、0165；权利要求 1、4、5、8、14 <a href="../diagrams/US12333339B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>各组剩余待分派子块／共享控制</dt><dd>1810/1820</dd></div></dl></details>
-</figure></section><section id="workgroups"><h2>亲和子块怎样变为批次与目标子单元</h2><p>原图 16、17 把主遍历器、组遍历器与两级仲裁拆开。主遍历器按一维、二维、三维坐标决定亲和子块，传送初始工作组坐标。每组遍历器在它负责的子块中产生一批或多批工作组。原图 17 有受线程数约束的遍历区域，每个小格表示一个工作组。</p><p>组遍历仲裁器选择可发批次，mGPU 分配器结合当前允许掩码和负载来选择具体子单元。最后工作槽仲裁器在多个逻辑工作槽之间仲裁，再经互连将批次描述发送给目标 mGPU。第 4、5、10、11 项分别给出遍历、批次和仲裁方面的从属限制。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　批次从哪个遍历器出来，再经哪两级仲裁</h3>
-    <p id="fig-5-basis">组遍历器生成工作组坐标范围。组遍历仲裁选择批次；目标掩码与工作槽仲裁决定实际发送顺序和资源。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12333339b2-fig-4-afixed" data-reading-target="us12333339b2-fig-4-afixed">静态分派 A</a><p>A 静态有八批，分派结束于第 8 拍，最后一批在第 9 拍完成。</p></li><li><a href="#us12333339b2-fig-4-bfixed" data-reading-target="us12333339b2-fig-4-bfixed">静态分派 B</a><p>B 静态只处理初始三批。第 3 拍可继续分派但没有本组剩余份额，原最后一批第 4 拍完成。</p></li><li><a href="#us12333339b2-fig-4-adynamic" data-reading-target="us12333339b2-fig-4-adynamic">共享分派 A</a><p>共享条件触发后，A 由八批变为六批。仍由 A 组遍历器生成供给这两个组的批次。</p></li><li><a href="#us12333339b2-fig-4-bdynamic" data-reading-target="us12333339b2-fig-4-bdynamic">共享分派 B</a><p>B 第 3 拍起分派 A 的两个批次。这个时点标记的是发完 B 原份额，不要求 B 的已发批次已执行完。</p></li></ul>
+  <p class="figure-evidence">原图 15、16、17、18；说明书归档段 0143、0144、0145、0148、0149、0152、0153、0154、0156、0158、0159、0160、0161、0162、0163、0164、0165；权利要求 1、4、5、8、14</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">1 项</span></summary><dl><div><dt>各组剩余待分派子块／共享控制</dt><dd>1810/1820</dd></div></dl></details>
+</figure></section><section id="workgroups" class="article-section reading-chapter" aria-labelledby="workgroups-title"><h2 id="workgroups-title">亲和子块怎样变为批次与目标子单元</h2><p>原图 16、17 把主遍历器、组遍历器与两级仲裁拆开。主遍历器按一维、二维、三维坐标决定亲和子块，传送初始工作组坐标。每组遍历器在它负责的子块中产生一批或多批工作组。原图 17 有受线程数约束的遍历区域，每个小格表示一个工作组。</p><p>组遍历仲裁器选择可发批次，mGPU 分配器结合当前允许掩码和负载来选择具体子单元。最后工作槽仲裁器在多个逻辑工作槽之间仲裁，再经互连将批次描述发送给目标 mGPU。第 4、5、10、11 项分别给出遍历、批次和仲裁方面的从属限制。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">批次从哪个遍历器出来，再经哪两级仲裁</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12333339B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">组遍历器生成工作组坐标范围。组遍历仲裁选择批次；目标掩码与工作槽仲裁决定实际发送顺序和资源。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="批次从哪个遍历器出来，再经哪两级仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 793" role="img" aria-labelledby="us12333339b2-fig-5-svg-title us12333339b2-fig-5-svg-desc">
 <title id="us12333339b2-fig-5-svg-title">批次从哪个遍历器出来，再经哪两级仲裁</title>
 <desc id="us12333339b2-fig-5-svg-desc">组遍历器生成工作组坐标范围。组遍历仲裁选择批次；目标掩码与工作槽仲裁决定实际发送顺序和资源。</desc>
@@ -175,12 +257,21 @@
 <g id="us12333339b2-fig-5-mask"><rect x="348" y="641" width="226" height="76" rx="6" fill="#f5f5f5"/><rect x="348" y="641" width="226" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="461" y="667" class="node-name" text-anchor="middle">允许的 mGPU 掩码</text><text x="461" y="689" class="node-detail" text-anchor="middle">亲和映射与共享状态</text></g>
 <text x="35" y="760" class="legend" text-anchor="start">工作组批次可包含多个工作组。图中发送坐标和调度属性，与执行数据的缓存访问是两条路径。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12333339b2-fig-5-csp">控制流处理器</a> 控制流处理器负责工作槽内的 kernel 顺序，提供工作和已分配资源信息。</li><li><a href="#us12333339b2-fig-5-primary">主 kernel 遍历器</a> 主遍历器给每个组对应的相应亲和子块坐标。这里传递的是工作描述。</li><li><a href="#us12333339b2-fig-5-ga">A 组遍历器</a> A 组遍历器迭代自己的亲和子块，产生多批工作组。</li><li><a href="#us12333339b2-fig-5-gb">B 组遍历器</a> B 组遍历器独立推进。原图 17 的图块表示如何从亲和子块内读取可分派工作组。</li><li><a href="#us12333339b2-fig-5-arb">组遍历仲裁器</a> 组遍历仲裁在产生的批次之间选择。</li><li><a href="#us12333339b2-fig-5-assign">mGPU 分配器</a> 分配器结合候选 mGPU 掩码、负载与软件约束选择具体目标。</li><li><a href="#us12333339b2-fig-5-mask">允许的 mGPU 掩码</a> 掩码限制可接收该批次的 mGPU。共享场景可通过扩展掩码允许另一组。</li><li><a href="#us12333339b2-fig-5-dslot">工作槽仲裁与互连</a> 工作槽仲裁可以在多个逻辑槽之间选择待发的批次，随后经分布互连送至对应 dSlot。</li></ul>
-  <p class="figure-evidence">原图 3、6、16、17、24；说明书归档段 0049、0050、0053、0054、0055、0071、0072、0073、0074、0075、0076、0077、0078、0149、0150、0151、0152、0153、0154、0155、0156、0157、0158、0217；权利要求 4、5、7、10、11、13、16、17、18 <a href="../diagrams/US12333339B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>控制流处理器／主 kernel 遍历器／组遍历器</dt><dd>630/1610/1620</dd></div><div><dt>组遍历仲裁器／mGPU 分配器／工作槽仲裁器／分派互连</dt><dd>1630/650/660/1660</dd></div></dl></details>
-</figure></section><section id="states"><h2>共享状态何时扩展掩码，又何时撤回</h2><p>图 6 依授权第 1、8、14 项与原图 18，分开等待接收条件、锁定供给组、同步状态、允许跨组派发和子块派发完毕解锁。各状态表示控制职责。授权主项要求有限状态机由时序和组合电路实现，具体状态位编码由实现者决定。</p><p>覆盖软件映射只影响尚未交付的批次。供给组按同一个遍历状态推进，仲裁器依据扩展掩码把新批次发到供给组或接收组。子块发完就解除锁定。这样能把缓存亲和用于常态，把跨组执行限制到需要消化尾部不均衡的阶段。</p><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">图 6　供给组锁定、接收掩码扩展与解锁的状态条件</h3>
-    <p id="fig-6-basis">以分派进度为输入更新共享控制。接收组和供给组同步后，掩码作用于后续批次；当前子块发完后释放该关系。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12333339b2-fig-5-csp" data-reading-target="us12333339b2-fig-5-csp">控制流处理器</a><p>控制流处理器负责工作槽内的 kernel 顺序，提供工作和已分配资源信息。</p></li><li><a href="#us12333339b2-fig-5-primary" data-reading-target="us12333339b2-fig-5-primary">主 kernel 遍历器</a><p>主遍历器给每个组对应的相应亲和子块坐标。这里传递的是工作描述。</p></li><li><a href="#us12333339b2-fig-5-ga" data-reading-target="us12333339b2-fig-5-ga">A 组遍历器</a><p>A 组遍历器迭代自己的亲和子块，产生多批工作组。</p></li><li><a href="#us12333339b2-fig-5-gb" data-reading-target="us12333339b2-fig-5-gb">B 组遍历器</a><p>B 组遍历器独立推进。原图 17 的图块表示如何从亲和子块内读取可分派工作组。</p></li><li><a href="#us12333339b2-fig-5-arb" data-reading-target="us12333339b2-fig-5-arb">组遍历仲裁器</a><p>组遍历仲裁在产生的批次之间选择。</p></li><li><a href="#us12333339b2-fig-5-assign" data-reading-target="us12333339b2-fig-5-assign">mGPU 分配器</a><p>分配器结合候选 mGPU 掩码、负载与软件约束选择具体目标。</p></li><li><a href="#us12333339b2-fig-5-mask" data-reading-target="us12333339b2-fig-5-mask">允许的 mGPU 掩码</a><p>掩码限制可接收该批次的 mGPU。共享场景可通过扩展掩码允许另一组。</p></li><li><a href="#us12333339b2-fig-5-dslot" data-reading-target="us12333339b2-fig-5-dslot">工作槽仲裁与互连</a><p>工作槽仲裁可以在多个逻辑槽之间选择待发的批次，随后经分布互连送至对应 dSlot。</p></li></ul>
+  <p class="figure-evidence">原图 3、6、16、17、24；说明书归档段 0049、0050、0053、0054、0055、0071、0072、0073、0074、0075、0076、0077、0078、0149、0150、0151、0152、0153、0154、0155、0156、0157、0158、0217；权利要求 4、5、7、10、11、13、16、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>控制流处理器／主 kernel 遍历器／组遍历器</dt><dd>630/1610/1620</dd></div><div><dt>组遍历仲裁器／mGPU 分配器／工作槽仲裁器／分派互连</dt><dd>1630/650/660/1660</dd></div></dl></details>
+</figure></section><section id="states" class="article-section reading-chapter" aria-labelledby="states-title"><h2 id="states-title">共享状态何时扩展掩码，又何时撤回</h2><p>图 6 依授权第 1、8、14 项与原图 18，分开等待接收条件、锁定供给组、同步状态、允许跨组派发和子块派发完毕解锁。各状态表示控制职责。授权主项要求有限状态机由时序和组合电路实现，具体状态位编码由实现者决定。</p><p>覆盖软件映射只影响尚未交付的批次。供给组按同一个遍历状态推进，仲裁器依据扩展掩码把新批次发到供给组或接收组。子块发完就解除锁定。这样能把缓存亲和用于常态，把跨组执行限制到需要消化尾部不均衡的阶段。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 6 · 微架构与信号</p>
+        <h3 id="fig-6-title">供给组锁定、接收掩码扩展与解锁的状态条件</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12333339B2/fig-6.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">以分派进度为输入更新共享控制。接收组和供给组同步后，掩码作用于后续批次；当前子块发完后释放该关系。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="供给组锁定、接收掩码扩展与解锁的状态条件" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 655" role="img" aria-labelledby="us12333339b2-fig-6-svg-title us12333339b2-fig-6-svg-desc">
 <title id="us12333339b2-fig-6-svg-title">供给组锁定、接收掩码扩展与解锁的状态条件</title>
 <desc id="us12333339b2-fig-6-svg-desc">以分派进度为输入更新共享控制。接收组和供给组同步后，掩码作用于后续批次；当前子块发完后释放该关系。</desc>
@@ -207,12 +298,14 @@
 <text x="36" y="523" class="legend" text-anchor="start">时序电路保存供给组和接收组状态，组合逻辑依据分派进度与允许条件更新。</text>
 <text x="36" y="552" class="legend" text-anchor="start">图中显示的是控制职责。实际掩码编码和时钟间隔由实现决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12333339b2-fig-6-wait">等待共享条件</a> 默认按亲和映射分派，主遍历器按组维护未分派工作。</li><li><a href="#us12333339b2-fig-6-donor">选择并锁定供给组</a> 当某个 B 组已分派完本 kernel 的原始份额，控制可选择并暂时锁定一个有剩余批次的供给组。</li><li><a href="#us12333339b2-fig-6-sync">同步接收组状态</a> 向接收组同步当前供给块的基准坐标。图中动作描述状态职责。</li><li><a href="#us12333339b2-fig-6-expand">扩展目标 mGPU 掩码</a> 供给组遍历器产生批次时，mGPU 掩码允许原供给组以及通过选择的接收组参选。</li><li><a href="#us12333339b2-fig-6-share">分派后续批次</a> 实际批次仍需按允许掩码和负载选 mGPU，未派批次经同一进度持续取出。</li><li><a href="#us12333339b2-fig-6-release">释放本轮锁定</a> 供给组当前亲和子块派发完成，解锁接收组并回到选择下一轮。</li></ul>
-  <p class="figure-evidence">原图 16、18、24；说明书归档段 0151、0153、0154、0159、0160、0161、0162、0163、0164、0165、0214、0215、0218；权利要求 1、5、8、11、14 <a href="../diagrams/US12333339B2/fig-6.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>分派余量／共享控制／供给组／接收组</dt><dd>1810/1820/1830/1840</dd></div><div><dt>供给组遍历器及扩展 mGPU 掩码</dt><dd>1620A</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12333339b2-fig-6-wait" data-reading-target="us12333339b2-fig-6-wait">等待共享条件</a><p>默认按亲和映射分派，主遍历器按组维护未分派工作。</p></li><li><a href="#us12333339b2-fig-6-donor" data-reading-target="us12333339b2-fig-6-donor">选择并锁定供给组</a><p>当某个 B 组已分派完本 kernel 的原始份额，控制可选择并暂时锁定一个有剩余批次的供给组。</p></li><li><a href="#us12333339b2-fig-6-sync" data-reading-target="us12333339b2-fig-6-sync">同步接收组状态</a><p>向接收组同步当前供给块的基准坐标。图中动作描述状态职责。</p></li><li><a href="#us12333339b2-fig-6-expand" data-reading-target="us12333339b2-fig-6-expand">扩展目标 mGPU 掩码</a><p>供给组遍历器产生批次时，mGPU 掩码允许原供给组以及通过选择的接收组参选。</p></li><li><a href="#us12333339b2-fig-6-share" data-reading-target="us12333339b2-fig-6-share">分派后续批次</a><p>实际批次仍需按允许掩码和负载选 mGPU，未派批次经同一进度持续取出。</p></li><li><a href="#us12333339b2-fig-6-release" data-reading-target="us12333339b2-fig-6-release">释放本轮锁定</a><p>供给组当前亲和子块派发完成，解锁接收组并回到选择下一轮。</p></li></ul>
+  <p class="figure-evidence">原图 16、18、24；说明书归档段 0151、0153、0154、0159、0160、0161、0162、0163、0164、0165、0214、0215、0218；权利要求 1、5、8、11、14</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>分派余量／共享控制／供给组／接收组</dt><dd>1810/1820/1830/1840</dd></div><div><dt>供给组遍历器及扩展 mGPU 掩码</dt><dd>1620A</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、14 项；全文核对覆盖 276 个说明书归档段与 18 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -242,6 +335,76 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>设备由两组共享不同缓存，硬件根据接收组的分派进度改变软件映射。见原图 15 至 18。一个 GPU 子单元组已提交其亲和性映射范围内的全部工作；状态机此时可给它分派别组尚未分派的工作。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>用配置寄存器保存多套工作部分到子单元组的映射。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>将图形工作限定为计算内核。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>为计算内核设主遍历器和分组遍历器，后者将各组份额展开为工作组批次。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>在组遍历结果间仲裁，再将选中的批次发给对应组的一个或多个子单元。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>支持一维、二维和三维的工作映射。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>加逻辑槽和分布式硬件槽；指定全部或部分子单元的分派范围，结合组映射来确定槽映射。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>介质中保存具有组级缓存、软件映射和硬件重新分派逻辑的电路设计。见原图 15 至 18。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>设计包含保存多套工作部分到组映射的配置寄存器。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>设计包括主遍历和两个组遍历器，分别产生各组的工作子集。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>设计加入组遍历结果仲裁和将所选批次分发给对应组内子单元的电路。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>设计支持一、二、三维工作映射。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>设计加入逻辑槽、分布式硬件槽和由分派范围、组映射共同确定的槽映射。</td></tr><tr id="claim-14"><th scope="row">14</th><td>独立项</td><td>方法从接收软件映射开始，比较分派进度后更新硬件状态机并覆盖部分映射。见原图 15 至 18。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td>在一种或多种运行模式下禁用按亲和性分派。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td>使用多个不同映射分派工作子集，至少覆盖两种工作维数。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td>用一个或多个软件覆盖项部分控制逻辑槽到分布式硬件槽的映射。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>列出软件覆盖项可选的子单元掩码、分派范围、目标组或调度策略。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12333339B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12333339B2#knowledge">在关系图谱中定位 US12333339B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12147839B2</code>
+  </div>
+  <h3><a href="US12147839B2.html">根据共享 BIU 拥塞标记迁移单个 CPU 线程</a></h3>
+  <p class="related-edge-label">GPU 工作组与 OS 线程的放置</p>
+  <p class="related-edge-summary">US12333339B2 的 GPU 分派硬件从软件给出的初始工作映射开始，在某组已发完原份额后按硬件状态重新分派。US12147839B2 由性能控制逻辑识别 CPU cluster 的共享资源压力，再由 OS 调度器决定具体线程是否迁移。两边的调度对象分别是 GPU 工作组和 CPU 线程，观测点分别在硬件分派器和CPU cluster 的资源。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12147839B2.html#claim-1">对照篇权项 1</a><a href="US12147839B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11775811B2</code>
+  </div>
+  <h3><a href="US11775811B2.html">异构运行时如何利用推理依赖，让 CPU、GPU 和神经处理器重叠执行</a></h3>
+  <p class="related-edge-label">跨处理器依赖与 GPU 内部分派</p>
+  <p class="related-edge-summary">US11775811B2 为算法节点标出所属处理器，遍历依赖图时从就绪节点中选择能增加同时使用的处理器数量的节点。US12333339B2 在 GPU 内按软件指定的映射分派工作组，并允许硬件在接收组发完原份额后重分派其余工作。前者决定就绪算法节点的提交次序，后者决定 GPU 内部的工作归属。</p>
+<p class="related-evidence"><a href="US11775811B2.html#claim-1">对照篇权项 1</a><a href="US11775811B2.html#fig-4">对照篇图表 4</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12175300B2</code>
+  </div>
+  <h3><a href="US12175300B2.html">GPU 按优先级保留分布式硬件槽，并在检查状态后分配</a></h3>
+  <p class="related-edge-label">预留硬件槽与重分派工作组</p>
+  <p class="related-edge-summary">US12175300B2 用软件优先级约束逻辑槽到硬件槽的映射，低优先级工作只能使用未预留槽。US12333339B2 在先有的软件映射上允许 GPU 硬件按分派进度重新分配工作组。对照时注意预留槽影响工作能否映射，重分派影响获准进入的工作交给哪组执行资源。</p>
+<p class="related-evidence"><a href="US12175300B2.html#claim-1">对照篇权项 1</a><a href="US12175300B2.html#fig-2">对照篇图表 2</a><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US20260087582A1</code>
+  </div>
+  <h3><a href="US20260087582A1.html">GPU 派工硬件怎样决定局部断电</a></h3>
+  <p class="related-edge-label">GPU 分派进度与资源控制</p>
+  <p class="related-edge-summary">US20260087582A1 的 GPU 工作控制根据多个队列和已经分派的工作状态与电源控制电路通信。US12333339B2 读取工作组的分派进度，决定是否把余下工作交给其他组。前者决定执行资源的供电状态，后者重新分配工作，时间线上需分开标记唤醒、可分派和已分派。</p>
+<p class="related-evidence"><a href="US20260087582A1.html#claim-1">对照篇权项 1</a><a href="US20260087582A1.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#mapping">软件设置亲和区域，GPU 硬件选择实际执行资源</a></li><li><a href="#handoff">发完 B 组原份额以后，共享控制怎样接入 A 组</a></li><li><a href="#limits">分派状态、可用资源和执行结束观察什么</a></li><li><a href="#window">比较固定亲和与允许共享之间的批次窗口</a></li><li><a href="#workgroups">亲和子块怎样变为批次与目标子单元</a></li><li><a href="#states">共享状态何时扩展掩码，又何时撤回</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2025-06-17</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-11</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-08-11</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/399,784</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0804、G06F12/0808、G06F12/0813 <details class="inline-more"><summary>其余 18 项</summary><span>G06F12/084、G06F12/0842、G06F9/4881、G06F9/5027、G06F9/5066、G06T1/20、G06F12/0811、G06F12/0857、G06F12/0888、G06F12/126、G06F2209/509、G06F2212/1008、G06F2212/1016、G06F2212/1028、G06F2212/1048、G06F2212/455、G06F2212/502、G06T2200/28</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Andrew M. Havlir、Ajay Simha Modugala、Benjamin Bowman、Yunjun Zhang</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12333339B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12333339B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

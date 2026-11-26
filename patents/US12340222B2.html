@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>融合缓冲让宽寄存器生产者与后续消费者共享执行 · US12340222B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12340222B2</code> · <a href="https://eureka.patsnap.com/patent/US12340222B2">专利全文</a></p>
-<h1>融合缓冲让宽寄存器生产者与后续消费者共享执行</h1><p class="reading-question">宽查表或搬运操作本来要先写多个寄存器。前端怎样暂存生产者、直接为后续消费者提供中间值，并判断什么时候可以省掉那些寄存器写？</p>
-<p class="reading-answer">前端把适用的生产者 op 暂存在常规分派之前。发现可融合的消费者时生成组合操作，在执行路径中直接取用所需数据。原生产者可留给后续消费者。需要腾空而无法证明旧寄存器版本无人读取时，仍要分派并执行原生产者。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-06-24</dd></div><div><dt>申请号</dt><dd>US18/628,403</dd></div><div><dt>最早优先权</dt><dd>2023-09-27</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ran Aharon Chachick、Rajdeep L. Bhuyar、Kanghong Yan</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#admit">进入缓冲的是原生产者操作</a></li><li><a href="#fuse">为什么第一次融合后还要留着原生产者</a></li><li><a href="#vacate">腾空并不自动等于丢弃</a></li><li><a href="#ports">写端口上少的是哪些访问</a></li><li><a href="#parallel-buffers">多个融合缓冲可以服务不同执行资源</a></li><li><a href="#scope">独立权利要求的核心是处置原生产者</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="admit"><h2>进入缓冲的是原生产者操作</h2><p>图 1 的输入来自译码。原图 6A、6B 用中间通道上的一条生产者展示分流。硬件检查操作类型、目的寄存器数量及调度条件。符合条件的 op 暂存到融合缓冲，同组其他工作仍走其对应路径。</p><p>例如，宽 LUTI 或特定 MOVA 可成为候选。说明书列出一种情况，单目的 MOVA 可以和同译码组的消费者立即融合，却不一定允许单独留在缓冲等待。缓存的是生产者 op，以及取得操作数所需的描述。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　生产者从译码通道进入融合缓冲，先不占常规调度入口</h3>
-    <p id="fig-1-basis">一个宽操作数生产者经过适用性检查后，从常规分派路径暂时移走。缓冲保存译码操作，等未来可能出现的消费者。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12340222B2 融合缓冲让宽寄存器生产者与后续消费者共享执行 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US12340222B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2025-06-24">2025-06-24</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12340222B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>融合缓冲让宽寄存器生产者与后续消费者共享执行</h1>
+  <p class="english-title" lang="en">Processor operand management using fusion buffer</p>
+  <p class="document-question">宽查表或搬运操作本来要先写多个寄存器。前端怎样暂存生产者、直接为后续消费者提供中间值，并判断什么时候可以省掉那些寄存器写？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#admit">进入缓冲的是原生产者操作</a></li><li><a href="#fuse">为什么第一次融合后还要留着原生产者</a></li><li><a href="#vacate">腾空并不自动等于丢弃</a></li><li><a href="#ports">写端口上少的是哪些访问</a></li><li><a href="#parallel-buffers">多个融合缓冲可以服务不同执行资源</a></li><li><a href="#scope">独立权利要求的核心是处置原生产者</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">前端把适用的生产者 op 暂存在常规分派之前。发现可融合的消费者时生成组合操作，在执行路径中直接取用所需数据。原生产者可留给后续消费者。需要腾空而无法证明旧寄存器版本无人读取时，仍要分派并执行原生产者。</p>
+  </section>
+  <div id="mechanism"><section id="admit" class="article-section reading-chapter" aria-labelledby="admit-title"><h2 id="admit-title">进入缓冲的是原生产者操作</h2><p>图 1 的输入来自译码。原图 6A、6B 用中间通道上的一条生产者展示分流。硬件检查操作类型、目的寄存器数量及调度条件。符合条件的 op 暂存到融合缓冲，同组其他工作仍走其对应路径。</p><p>例如，宽 LUTI 或特定 MOVA 可成为候选。说明书列出一种情况，单目的 MOVA 可以和同译码组的消费者立即融合，却不一定允许单独留在缓冲等待。缓存的是生产者 op，以及取得操作数所需的描述。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">生产者从译码通道进入融合缓冲，先不占常规调度入口</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12340222B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">一个宽操作数生产者经过适用性检查后，从常规分派路径暂时移走。缓冲保存译码操作，等未来可能出现的消费者。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="生产者从译码通道进入融合缓冲，先不占常规调度入口" style="--figure-width:1450px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 655" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">生产者从译码通道进入融合缓冲，先不占常规调度入口</title>
 <desc id="fig-1-svg-desc">一个宽操作数生产者经过适用性检查后，从常规分派路径暂时移走。缓冲保存译码操作，等未来可能出现的消费者。</desc>
@@ -40,12 +86,21 @@
 <text x="48" y="47" class="signal-title" text-anchor="start">来自同一组或后续译码组的操作</text>
 <text x="49" y="623" class="signal-title" text-anchor="start">入缓冲发生在普通分派之前。是否还能丢弃原生产者，要到图 3 的检查才能决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-decode">已译码操作与寄存器信息</a> 译码组包含多条 op。原图 6A 的中间通道带一条可生成寄存器操作数的生产者。</li><li><a href="#fig-1-eligible">生产者适用性</a> 可看指令种类、目的寄存器数量、程序顺序和流水线时序。例如宽 LUTI 或特定 MOVA。立刻可融合和可以缓冲是不同的准入条件。</li><li><a href="#fig-1-buffer">保存 op</a> 融合缓冲保存操作的来源、目标等描述。提前把生产者结果写入常规目的寄存器会损失这条路径要解决的收益。</li><li><a href="#fig-1-dispatch">普通分派仍是存在的路径</a> 未入缓冲的 op 继续到调度站。缓冲生产者后来若需正常执行也可以回到调度路径。</li></ul>
-  <p class="figure-evidence">原图 1、3、5、6A、6B；说明书归档段 0044、0045、0054、0055、0075、0076、0077、0078、0079、0095、0096；权利要求 1、2、10、13、17、18 <a href="../diagrams/US12340222B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>译码逻辑</dt><dd>312</dd></div><div><dt>映射、分派与重命名阶段</dt><dd>314 / 514</dd></div><div><dt>原生产者适用性检测</dt><dd>324 / 524</dd></div><div><dt>保存原生产者的融合缓冲</dt><dd>326 / 606</dd></div><div><dt>调度站</dt><dd>602</dd></div><div><dt>控制生产者分流的多路选择器</dt><dd>608</dd></div></dl></details>
-</figure></section><section id="fuse"><h2>为什么第一次融合后还要留着原生产者</h2><p>图 2 先让消费者 A 匹配。它的来源包含生产者原本要写的寄存器，并且这种指令组合有适用的执行资源。融合 op 直接产生并消费所需部分。若 A 输出不覆盖原目的寄存器，原生产者仍可留在缓冲。后续消费者 B 到达时，硬件可以再组成一次融合。</p><p>如果 B 把原目的寄存器覆盖为新版本，还须核对在途的旧版本消费者。只有旧值无后续可见读者、也没有当前读者时，才有依据删除原生产者。说明书也允许只做一次融合；是否允许再次融合取决于缓冲管理策略。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　一次融合后可以保留生产者，继续与后续消费者组合</h3>
-    <p id="fig-2-basis">当第一次消费者没有覆盖原目的寄存器，源操作可以仍在融合缓冲。第二个匹配消费者到达时重新生成对应的融合 op。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-decode" data-reading-target="fig-1-decode">已译码操作与寄存器信息</a><p>译码组包含多条 op。原图 6A 的中间通道带一条可生成寄存器操作数的生产者。</p></li><li><a href="#fig-1-eligible" data-reading-target="fig-1-eligible">生产者适用性</a><p>可看指令种类、目的寄存器数量、程序顺序和流水线时序。例如宽 LUTI 或特定 MOVA。立刻可融合和可以缓冲是不同的准入条件。</p></li><li><a href="#fig-1-buffer" data-reading-target="fig-1-buffer">保存 op</a><p>融合缓冲保存操作的来源、目标等描述。提前把生产者结果写入常规目的寄存器会损失这条路径要解决的收益。</p></li><li><a href="#fig-1-dispatch" data-reading-target="fig-1-dispatch">普通分派仍是存在的路径</a><p>未入缓冲的 op 继续到调度站。缓冲生产者后来若需正常执行也可以回到调度路径。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、5、6A、6B；说明书归档段 0044、0045、0054、0055、0075、0076、0077、0078、0079、0095、0096；权利要求 1、2、10、13、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>译码逻辑</dt><dd>312</dd></div><div><dt>映射、分派与重命名阶段</dt><dd>314 / 514</dd></div><div><dt>原生产者适用性检测</dt><dd>324 / 524</dd></div><div><dt>保存原生产者的融合缓冲</dt><dd>326 / 606</dd></div><div><dt>调度站</dt><dd>602</dd></div><div><dt>控制生产者分流的多路选择器</dt><dd>608</dd></div></dl></details>
+</figure></section><section id="fuse" class="article-section reading-chapter" aria-labelledby="fuse-title"><h2 id="fuse-title">为什么第一次融合后还要留着原生产者</h2><p>图 2 先让消费者 A 匹配。它的来源包含生产者原本要写的寄存器，并且这种指令组合有适用的执行资源。融合 op 直接产生并消费所需部分。若 A 输出不覆盖原目的寄存器，原生产者仍可留在缓冲。后续消费者 B 到达时，硬件可以再组成一次融合。</p><p>如果 B 把原目的寄存器覆盖为新版本，还须核对在途的旧版本消费者。只有旧值无后续可见读者、也没有当前读者时，才有依据删除原生产者。说明书也允许只做一次融合；是否允许再次融合取决于缓冲管理策略。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">一次融合后可以保留生产者，继续与后续消费者组合</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12340222B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">当第一次消费者没有覆盖原目的寄存器，源操作可以仍在融合缓冲。第二个匹配消费者到达时重新生成对应的融合 op。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="一次融合后可以保留生产者，继续与后续消费者组合" style="--figure-width:969px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 969 585" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">一次融合后可以保留生产者，继续与后续消费者组合</title>
 <desc id="fig-2-svg-desc">当第一次消费者没有覆盖原目的寄存器，源操作可以仍在融合缓冲。第二个匹配消费者到达时重新生成对应的融合 op。</desc>
@@ -69,12 +124,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">映射与使用检查</text>
 <text x="28" y="532" class="legend" text-anchor="start">图中 A、B 是两条消费者指令。是否保留生产者由各自的数据依赖与腾空条件决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-consumer-a">第一个符合条件的消费者</a> 比对解码后的源寄存器与缓冲生产者的目的寄存器。指令组合还需满足目标执行单元的支持条件。</li><li><a href="#fig-2-fuse-a">合成消费者 op</a> 融合 op 直接取得所需中间值执行消费者功能。本次不经原目的寄存器。</li><li><a href="#fig-2-keep">保留原生产者</a> 第一个消费者的输出未覆盖原目的寄存器，不能据此证明中间值没有其他用途。原生产者继续占缓冲，以供下一次匹配。</li><li><a href="#fig-2-fuse-b">后续消费者覆盖旧目的时</a> 另一个消费者也可以融合。若它覆盖原目的寄存器并且已无其他在途读者，原生产者可按图 3 的判断移除。</li></ul>
-  <p class="figure-evidence">原图 1、7A、7B、7C、9、11；说明书归档段 0058、0059、0060、0061、0082、0097、0098、0099、0105、0106、0111；权利要求 2、3、4、13、14、15、18 <a href="../diagrams/US12340222B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原寄存器生产者 op</dt><dd>112</dd></div><div><dt>匹配消费者 op</dt><dd>114</dd></div><div><dt>分派的融合 op</dt><dd>116</dd></div><div><dt>识别与融合逻辑</dt><dd>330 / 332</dd></div><div><dt>原图中的融合缓冲</dt><dd>606</dd></div></dl></details>
-</figure></section><section id="vacate"><h2>腾空并不自动等于丢弃</h2><p>图 3 左侧先收到腾空事件。例如第二个生产者要使用缓冲，或同一执行队列需要维护分派顺序。此时用物理寄存器或等价计数检查有没有当前读者，再用体系结构寄存器映射看还会不会有未来读者解析到旧版本。</p><p>两项都没有读者时，可从缓冲移除且不分派原生产者。遇到仍然引用旧版本的读者，或映射还可能给出旧版本，就要把原生产者送去正常执行。原图 7C 和 8 分别给出这两种去向。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　缓冲需要腾空时，先证明旧寄存器版本没有读者</h3>
-    <p id="fig-3-basis">出现下一个候选或其他腾空条件，只要求腾位置。是否丢掉生产者还要检查在途消费者与未来映射。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-consumer-a" data-reading-target="fig-2-consumer-a">第一个符合条件的消费者</a><p>比对解码后的源寄存器与缓冲生产者的目的寄存器。指令组合还需满足目标执行单元的支持条件。</p></li><li><a href="#fig-2-fuse-a" data-reading-target="fig-2-fuse-a">合成消费者 op</a><p>融合 op 直接取得所需中间值执行消费者功能。本次不经原目的寄存器。</p></li><li><a href="#fig-2-keep" data-reading-target="fig-2-keep">保留原生产者</a><p>第一个消费者的输出未覆盖原目的寄存器，不能据此证明中间值没有其他用途。原生产者继续占缓冲，以供下一次匹配。</p></li><li><a href="#fig-2-fuse-b" data-reading-target="fig-2-fuse-b">后续消费者覆盖旧目的时</a><p>另一个消费者也可以融合。若它覆盖原目的寄存器并且已无其他在途读者，原生产者可按图 3 的判断移除。</p></li></ul>
+  <p class="figure-evidence">原图 1、7A、7B、7C、9、11；说明书归档段 0058、0059、0060、0061、0082、0097、0098、0099、0105、0106、0111；权利要求 2、3、4、13、14、15、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>原寄存器生产者 op</dt><dd>112</dd></div><div><dt>匹配消费者 op</dt><dd>114</dd></div><div><dt>分派的融合 op</dt><dd>116</dd></div><div><dt>识别与融合逻辑</dt><dd>330 / 332</dd></div><div><dt>原图中的融合缓冲</dt><dd>606</dd></div></dl></details>
+</figure></section><section id="vacate" class="article-section reading-chapter" aria-labelledby="vacate-title"><h2 id="vacate-title">腾空并不自动等于丢弃</h2><p>图 3 左侧先收到腾空事件。例如第二个生产者要使用缓冲，或同一执行队列需要维护分派顺序。此时用物理寄存器或等价计数检查有没有当前读者，再用体系结构寄存器映射看还会不会有未来读者解析到旧版本。</p><p>两项都没有读者时，可从缓冲移除且不分派原生产者。遇到仍然引用旧版本的读者，或映射还可能给出旧版本，就要把原生产者送去正常执行。原图 7C 和 8 分别给出这两种去向。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">缓冲需要腾空时，先证明旧寄存器版本没有读者</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12340222B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">出现下一个候选或其他腾空条件，只要求腾位置。是否丢掉生产者还要检查在途消费者与未来映射。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="缓冲需要腾空时，先证明旧寄存器版本没有读者" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 692" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">缓冲需要腾空时，先证明旧寄存器版本没有读者</title>
 <desc id="fig-3-svg-desc">出现下一个候选或其他腾空条件，只要求腾位置。是否丢掉生产者还要检查在途消费者与未来映射。</desc>
@@ -101,12 +165,21 @@
 <text x="47" y="47" class="signal-title" text-anchor="start">先检查寄存器版本的生命期，再决定腾空后的去向</text>
 <text x="50" y="650" class="signal-title" text-anchor="start">例示检查使用映射表与消费者计数。不同处理器可用不同等价结构。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-vacate">腾空触发</a> 新生产者等待进入、同执行队列必须保持顺序、状态指令或超时等均可能要求腾空。腾空本身不能决定中间值是否已死。</li><li><a href="#fig-3-count">还有没有在途读者</a> 使用物理寄存器版本的计数或等价映射。当前没有消费者只是第一个条件。</li><li><a href="#fig-3-map">新读者还能否解析到旧版本</a> 检查体系结构寄存器到物理版本的映射。目标已被后续写入覆盖且旧版本无在途消费者时，可判定将来没有消费者。</li><li><a href="#fig-3-drop">无需分派原生产者</a> 同时满足两项条件才可丢弃。原生产者的独立寄存器写被消除。</li><li><a href="#fig-3-execute">仍需要结果时执行原操作</a> 若任一检查不满足，将原生产者交回原执行路径，正常产生中间寄存器值。</li></ul>
-  <p class="figure-evidence">原图 3、7B、7C、8、9、10、11；说明书归档段 0045、0046、0056、0057、0061、0076、0079、0080、0081、0098、0099、0100、0103、0104；权利要求 1、4、5、10、11、12、15、16、17 <a href="../diagrams/US12340222B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>寄存器映射、可用位与消费者信息</dt><dd>322</dd></div><div><dt>缓冲管理和丢弃检查</dt><dd>328</dd></div><div><dt>检测丢弃条件及处理取出的原生产者</dt><dd>940 / 950</dd></div><div><dt>丢弃与正常执行的对照</dt><dd>原图 7C／8</dd></div></dl></details>
-</figure></section><section id="ports"><h2>写端口上少的是哪些访问</h2><p>图 4 上路把中间写读画成两个相邻的独立动作。宽 LUTI 从表中取得数据，MOVA 从阵列搬运。独立生产者写寄存器，消费者读寄存器后再执行。融合路径由执行单元直接从原来源取得所需数据，最终结果按消费者自己的规则写回。</p><p>表 6 通过两个写端口验证这条机制可能覆盖的等待。如果原生产者仍有读者，先融合可以让一个消费者提前，但原来的四笔中间写最后仍会发生。该模型固定了融合执行的结果就绪条件。真实收益还需要看执行单元吞吐量、重复生成的成本和回写仲裁。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　融合把消费所需的数据接到执行单元，绕过中间寄存器写读</h3>
-    <p id="fig-4-basis">顶行按两条独立指令执行。底行在同一执行路径生成并使用所需中间值，只有最终结果进入写回。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-vacate" data-reading-target="fig-3-vacate">腾空触发</a><p>新生产者等待进入、同执行队列必须保持顺序、状态指令或超时等均可能要求腾空。腾空本身不能决定中间值是否已死。</p></li><li><a href="#fig-3-count" data-reading-target="fig-3-count">还有没有在途读者</a><p>使用物理寄存器版本的计数或等价映射。当前没有消费者只是第一个条件。</p></li><li><a href="#fig-3-map" data-reading-target="fig-3-map">新读者还能否解析到旧版本</a><p>检查体系结构寄存器到物理版本的映射。目标已被后续写入覆盖且旧版本无在途消费者时，可判定将来没有消费者。</p></li><li><a href="#fig-3-drop" data-reading-target="fig-3-drop">无需分派原生产者</a><p>同时满足两项条件才可丢弃。原生产者的独立寄存器写被消除。</p></li><li><a href="#fig-3-execute" data-reading-target="fig-3-execute">仍需要结果时执行原操作</a><p>若任一检查不满足，将原生产者交回原执行路径，正常产生中间寄存器值。</p></li></ul>
+  <p class="figure-evidence">原图 3、7B、7C、8、9、10、11；说明书归档段 0045、0046、0056、0057、0061、0076、0079、0080、0081、0098、0099、0100、0103、0104；权利要求 1、4、5、10、11、12、15、16、17</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>寄存器映射、可用位与消费者信息</dt><dd>322</dd></div><div><dt>缓冲管理和丢弃检查</dt><dd>328</dd></div><div><dt>检测丢弃条件及处理取出的原生产者</dt><dd>940 / 950</dd></div><div><dt>丢弃与正常执行的对照</dt><dd>原图 7C／8</dd></div></dl></details>
+</figure></section><section id="ports" class="article-section reading-chapter" aria-labelledby="ports-title"><h2 id="ports-title">写端口上少的是哪些访问</h2><p>图 4 上路把中间写读画成两个相邻的独立动作。宽 LUTI 从表中取得数据，MOVA 从阵列搬运。独立生产者写寄存器，消费者读寄存器后再执行。融合路径由执行单元直接从原来源取得所需数据，最终结果按消费者自己的规则写回。</p><p>表 6 通过两个写端口验证这条机制可能覆盖的等待。如果原生产者仍有读者，先融合可以让一个消费者提前，但原来的四笔中间写最后仍会发生。该模型固定了融合执行的结果就绪条件。真实收益还需要看执行单元吞吐量、重复生成的成本和回写仲裁。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">融合把消费所需的数据接到执行单元，绕过中间寄存器写读</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12340222B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">顶行按两条独立指令执行。底行在同一执行路径生成并使用所需中间值，只有最终结果进入写回。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="融合把消费所需的数据接到执行单元，绕过中间寄存器写读" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 647" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">融合把消费所需的数据接到执行单元，绕过中间寄存器写读</title>
 <desc id="fig-4-svg-desc">顶行按两条独立指令执行。底行在同一执行路径生成并使用所需中间值，只有最终结果进入写回。</desc>
@@ -133,12 +206,21 @@
 <text x="43" y="43" class="signal-title" text-anchor="start">单独执行两条指令</text>
 <text x="43" y="593" class="signal-title" text-anchor="start">将同一对指令融合执行</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-source">中间值的原始来源</a> LUTI 从查找表取值，MOVA 可从已有存储阵列搬运。图中将来源与目标寄存器的位置分开。</li><li><a href="#fig-4-intermediate">普通流需要写入再读出</a> 原生产者生成的宽结果占用寄存器写端口。消费者就绪取决于其所需的中间值。</li><li><a href="#fig-4-direct">融合路径在内部取得操作数</a> 融合 op 用原来源提供必要值，直接执行缩位宽、移位饱和或交织等合适的消费者操作。</li><li><a href="#fig-4-result">最终结果照常提交</a> 绕过的是原生产者本来需要的中间写，消费者最终结果仍可写寄存器。若另有用户需要中间值，原生产者还可能另行执行。</li></ul>
-  <p class="figure-evidence">原图 1、3、5、7B、7C、11；说明书归档段 0041、0042、0043、0047、0059、0060、0061、0076、0077、0082、0098、0099、0105；权利要求 2、6、7、8、9、13、18、19、20 <a href="../diagrams/US12340222B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>数据存储和目的寄存器</dt><dd>108 / 110</dd></div><div><dt>产生中间值的原 op</dt><dd>112</dd></div><div><dt>消费该值的 op</dt><dd>114</dd></div><div><dt>不经原目的寄存器的融合 op</dt><dd>116</dd></div><div><dt>执行电路</dt><dd>106 / 318</dd></div></dl></details>
-</figure></section><section id="parallel-buffers"><h2>多个融合缓冲可以服务不同执行资源</h2><p>原图 4 的协处理器示例为 LUTI 和 MOVA 设置不同的融合缓冲。沿图 5 看，兼容的消费者触发融合后可选择具有所需功能的执行队列。原生产者若仍需执行，可走原有队列。两个缓冲允许采用不同的准入和腾空规则。</p><p>原图 2、12–18 另披露交织／去交织执行电路，为其中一类消费者提供执行资源。例如按行或列组织向量元素可以直接改变数据排列。权利要求 9 在从属项限定该类功能。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　LUTI 与 MOVA 可进不同缓冲，融合后可转到其他执行队列</h3>
-    <p id="fig-5-basis">原图 4 的双缓冲例按生产者类型分配入口。融合 op 根据具体功能选择执行资源，未丢弃的生产者仍能走原本的执行队列。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-source" data-reading-target="fig-4-source">中间值的原始来源</a><p>LUTI 从查找表取值，MOVA 可从已有存储阵列搬运。图中将来源与目标寄存器的位置分开。</p></li><li><a href="#fig-4-intermediate" data-reading-target="fig-4-intermediate">普通流需要写入再读出</a><p>原生产者生成的宽结果占用寄存器写端口。消费者就绪取决于其所需的中间值。</p></li><li><a href="#fig-4-direct" data-reading-target="fig-4-direct">融合路径在内部取得操作数</a><p>融合 op 用原来源提供必要值，直接执行缩位宽、移位饱和或交织等合适的消费者操作。</p></li><li><a href="#fig-4-result" data-reading-target="fig-4-result">最终结果照常提交</a><p>绕过的是原生产者本来需要的中间写，消费者最终结果仍可写寄存器。若另有用户需要中间值，原生产者还可能另行执行。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、5、7B、7C、11；说明书归档段 0041、0042、0043、0047、0059、0060、0061、0076、0077、0082、0098、0099、0105；权利要求 2、6、7、8、9、13、18、19、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>数据存储和目的寄存器</dt><dd>108 / 110</dd></div><div><dt>产生中间值的原 op</dt><dd>112</dd></div><div><dt>消费该值的 op</dt><dd>114</dd></div><div><dt>不经原目的寄存器的融合 op</dt><dd>116</dd></div><div><dt>执行电路</dt><dd>106 / 318</dd></div></dl></details>
+</figure></section><section id="parallel-buffers" class="article-section reading-chapter" aria-labelledby="parallel-buffers-title"><h2 id="parallel-buffers-title">多个融合缓冲可以服务不同执行资源</h2><p>原图 4 的协处理器示例为 LUTI 和 MOVA 设置不同的融合缓冲。沿图 5 看，兼容的消费者触发融合后可选择具有所需功能的执行队列。原生产者若仍需执行，可走原有队列。两个缓冲允许采用不同的准入和腾空规则。</p><p>原图 2、12–18 另披露交织／去交织执行电路，为其中一类消费者提供执行资源。例如按行或列组织向量元素可以直接改变数据排列。权利要求 9 在从属项限定该类功能。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">LUTI 与 MOVA 可进不同缓冲，融合后可转到其他执行队列</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12340222B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">原图 4 的双缓冲例按生产者类型分配入口。融合 op 根据具体功能选择执行资源，未丢弃的生产者仍能走原本的执行队列。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="LUTI 与 MOVA 可进不同缓冲，融合后可转到其他执行队列" style="--figure-width:1470px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1470 666" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
 <title id="fig-5-svg-title">LUTI 与 MOVA 可进不同缓冲，融合后可转到其他执行队列</title>
 <desc id="fig-5-svg-desc">原图 4 的双缓冲例按生产者类型分配入口。融合 op 根据具体功能选择执行资源，未丢弃的生产者仍能走原本的执行队列。</desc>
@@ -170,19 +252,30 @@
 <text x="50" y="46" class="signal-title" text-anchor="start">协处理器的双缓冲实施例</text>
 <text x="50" y="620" class="signal-title" text-anchor="start">权利要求另允许单缓冲。两类入口和三个队列用于说明资源选择。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-5-luti">查找表生产者候选</a> 说明书列出 LUTI 等查表 op，可由第一缓冲管理。融合资格可受目的寄存器数量和后续消费者控制。</li><li><a href="#fig-5-mova">存储阵列搬运候选</a> MOVA 从存储阵列取要送到寄存器的操作数，可进入另一缓冲。两者的停留或腾空规则可以不同。</li><li><a href="#fig-5-consumer">消费者决定融合后的功能单元</a> 比如查表后进入矩阵／网格运算，或搬运后执行缩位宽。原图允许融合 op 分派到与生产者不同的队列。</li><li><a href="#fig-5-q-fused">融合后的分派队列</a> 队列分配取决于融合 op 需要的执行电路。原 op 若不能丢弃，需要保有各自原队列路径。</li></ul>
-  <p class="figure-evidence">原图 3、4、5；说明书归档段 0062、0071、0075、0077、0078、0079、0082、0084、0085、0086、0087、0088；权利要求 6、7、8、9、18、19、20 <a href="../diagrams/US12340222B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>分别存两类生产者的融合缓冲</dt><dd>426A / 426B</dd></div><div><dt>生产者检测、消费者检测与融合</dt><dd>424 / 430 / 432</dd></div><div><dt>可分别服务不同操作的队列</dt><dd>434A–434C</dd></div><div><dt>相应执行资源</dt><dd>418</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">表 6　两个写端口下，省中间写的时机怎样影响完成时间</h3>
-    <p id="fig-6-basis">模型中寄存器文件每周期接受两次写。第 2 周期有一笔无关写。独立生产者有四笔写在第 2 周期就绪，独立消费者在这些写全部完成后再经过两周期才可写结果。融合路径假定结果在第 4 周期就绪。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">路径</th><th scope="col">原生产者的独立写</th><th scope="col">融合／独立消费者结果可写时点</th><th scope="col">写端口总活动</th></tr></thead><tbody><tr id="fig-6-plain"><th scope="row">生产者、消费者分别执行</th><td>4 笔，第 2–4 周期</td><td>第 6 周期</td><td>6 笔</td></tr><tr id="fig-6-removed"><th scope="row">融合，原生产者可丢弃</th><td>0 笔</td><td>第 4 周期</td><td>2 笔</td></tr><tr id="fig-6-still-live"><th scope="row">融合，仍需正常执行原生产者</th><td>4 笔，第 5–6 周期</td><td>第 4 周期</td><td>6 笔</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-6-plain">独立执行受寄存器写端口限制</a> 第 2 周期先写一笔无关结果与一笔中间值，剩余三笔跨第 3、4 周期。消费者结果第 6 周期才能写。</li><li><a href="#fig-6-removed">能够丢弃原生产者时</a> 融合消费者结果第 4 周期写入。中间四笔写整个消失。这个完成差仅针对模型规定的两条执行路径。</li><li><a href="#fig-6-still-live">仍有读者时，中间写仍会出现</a> 融合消费者先写结果。演示设原生产者正常执行后，四笔写从第 5 周期开始就绪，仍占第 5、6 周期。其他读取该中间值的消费者仍需等待。</li></ul>
-  <p class="figure-evidence">原图 1、7B、7C、8、11；说明书归档段 0042、0043、0046、0057、0060、0061、0098、0099、0100、0105；权利要求 1、2、3、10、11、12、13 </p>
-  
-</figure></section><section id="scope"><h2>独立权利要求的核心是处置原生产者</h2><p>权利要求 1、10、17 关注缓冲、腾空与随后决定丢弃或正常执行。权利要求 2、3、13、14、18 加入识别消费者、生成融合 op 以及与额外消费者融合。权利要求 4、15 涉及不再存在读者的判定。</p><p>原文的 storage instruction operation 产生要写入寄存器的值，典型示例是查表或从阵列搬运到寄存器。本文按这个职责称作寄存器生产者。</p></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-luti" data-reading-target="fig-5-luti">查找表生产者候选</a><p>说明书列出 LUTI 等查表 op，可由第一缓冲管理。融合资格可受目的寄存器数量和后续消费者控制。</p></li><li><a href="#fig-5-mova" data-reading-target="fig-5-mova">存储阵列搬运候选</a><p>MOVA 从存储阵列取要送到寄存器的操作数，可进入另一缓冲。两者的停留或腾空规则可以不同。</p></li><li><a href="#fig-5-consumer" data-reading-target="fig-5-consumer">消费者决定融合后的功能单元</a><p>比如查表后进入矩阵／网格运算，或搬运后执行缩位宽。原图允许融合 op 分派到与生产者不同的队列。</p></li><li><a href="#fig-5-q-fused" data-reading-target="fig-5-q-fused">融合后的分派队列</a><p>队列分配取决于融合 op 需要的执行电路。原 op 若不能丢弃，需要保有各自原队列路径。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、5；说明书归档段 0062、0071、0075、0077、0078、0079、0082、0084、0085、0086、0087、0088；权利要求 6、7、8、9、18、19、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>分别存两类生产者的融合缓冲</dt><dd>426A / 426B</dd></div><div><dt>生产者检测、消费者检测与融合</dt><dd>424 / 430 / 432</dd></div><div><dt>可分别服务不同操作的队列</dt><dd>434A–434C</dd></div><div><dt>相应执行资源</dt><dd>418</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 6 · 参数与边界对照</p>
+        <h3 id="fig-6-title">两个写端口下，省中间写的时机怎样影响完成时间</h3>
+      </div>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">模型中寄存器文件每周期接受两次写。第 2 周期有一笔无关写。独立生产者有四笔写在第 2 周期就绪，独立消费者在这些写全部完成后再经过两周期才可写结果。融合路径假定结果在第 4 周期就绪。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="两个写端口下，省中间写的时机怎样影响完成时间"><table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">路径</th><th scope="col">原生产者的独立写</th><th scope="col">融合／独立消费者结果可写时点</th><th scope="col">写端口总活动</th></tr></thead><tbody><tr id="fig-6-plain"><th scope="row">生产者、消费者分别执行</th><td>4 笔，第 2–4 周期</td><td>第 6 周期</td><td>6 笔</td></tr><tr id="fig-6-removed"><th scope="row">融合，原生产者可丢弃</th><td>0 笔</td><td>第 4 周期</td><td>2 笔</td></tr><tr id="fig-6-still-live"><th scope="row">融合，仍需正常执行原生产者</th><td>4 笔，第 5–6 周期</td><td>第 4 周期</td><td>6 笔</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-6-plain" data-reading-target="fig-6-plain">独立执行受寄存器写端口限制</a><p>第 2 周期先写一笔无关结果与一笔中间值，剩余三笔跨第 3、4 周期。消费者结果第 6 周期才能写。</p></li><li><a href="#fig-6-removed" data-reading-target="fig-6-removed">能够丢弃原生产者时</a><p>融合消费者结果第 4 周期写入。中间四笔写整个消失。这个完成差仅针对模型规定的两条执行路径。</p></li><li><a href="#fig-6-still-live" data-reading-target="fig-6-still-live">仍有读者时，中间写仍会出现</a><p>融合消费者先写结果。演示设原生产者正常执行后，四笔写从第 5 周期开始就绪，仍占第 5、6 周期。其他读取该中间值的消费者仍需等待。</p></li></ul>
+  <p class="figure-evidence">原图 1、7B、7C、8、11；说明书归档段 0042、0043、0046、0057、0060、0061、0098、0099、0100、0105；权利要求 1、2、3、10、11、12、13</p>
+
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">独立权利要求的核心是处置原生产者</h2><p>权利要求 1、10、17 关注缓冲、腾空与随后决定丢弃或正常执行。权利要求 2、3、13、14、18 加入识别消费者、生成融合 op 以及与额外消费者融合。权利要求 4、15 涉及不再存在读者的判定。</p><p>原文的 storage instruction operation 产生要写入寄存器的值，典型示例是查表或从阵列搬运到寄存器。本文按这个职责称作寄存器生产者。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、17 项；全文核对覆盖 198 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -212,6 +305,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 6A–8。处理器缓冲原生产者；检测到丢弃条件时删除，须腾空而不可丢弃时正常执行。判定缓冲的生产者可移除且无需送入流水线的条件。需释放条目但不允许丢弃时，硬件须转发原生产者。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>遇到合格消费者时融合生产者与消费者，绕过中间目的寄存器写入。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>同一缓冲中的生产者还可与额外的合格消费者融合。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>当前和将来均无消费者可以构成丢弃条件。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>检测到另一条寄存器生产者时可以触发腾空。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>原生产者用索引从查找表取得所需操作数。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-2">2</a></td><td>原生产者从存储阵列搬运部分数据来构成寄存器操作数。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-7">7</a></td><td>合格消费者可缩小操作数的位宽。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-7">7</a></td><td>消费者可交织或去交织操作数，执行电路包含相应功能单元。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>先把生产操作存入缓冲，触发腾空后取出，再根据丢弃判定处理。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>检查发现丢弃条件时，删除原操作且不发出，从而不写其目的寄存器。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-10">10</a></td><td>丢弃条件不成立时，把原生产操作交给执行流水线。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td>对合格消费者生成融合操作，取用中间值并省去独立目的寄存器写入。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>允许还在缓冲区的生产者再次与其他合格消费者融合。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>判断是否仍有当前或未来消费者，以确定能否丢弃。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>检测另一条生产者时可触发旧项腾空。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>可制造的电路设计描述按腾空和丢弃条件处置融合缓冲中的生产者。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>设计电路让合格消费者融合取用操作数，并绕过中间寄存器写。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>设计的生产者用索引从查找表取得操作数。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>处理器为执行向量和矩阵运算的协处理器。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12340222B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12340222B2#knowledge">在关系图谱中定位 US12340222B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12547401B2</code>
+  </div>
+  <h3><a href="US12547401B2.html">在 LSU 内执行依赖 load 的比较和算术操作</a></h3>
+  <p class="related-edge-label">融合缓冲与 LSU 内执行</p>
+  <p class="related-edge-summary">US12340222B2 先暂存写目的寄存器的生产者。遇到合格消费者便融合。缓冲项需要腾出且不满足丢弃条件时，仍会发出原生产者执行。US12547401B2 在译码阶段识别合格的 load 及依赖操作，让 LSU 在取数后完成比较或其他运算。</p>
+<p class="related-evidence"><a href="#claim-2">本篇权项 2</a><a href="#fig-4">本篇图表 4</a><a href="US12547401B2.html#claim-1">对照篇权项 1</a><a href="US12547401B2.html#fig-1">对照篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#admit">进入缓冲的是原生产者操作</a></li><li><a href="#fuse">为什么第一次融合后还要留着原生产者</a></li><li><a href="#vacate">腾空并不自动等于丢弃</a></li><li><a href="#ports">写端口上少的是哪些访问</a></li><li><a href="#parallel-buffers">多个融合缓冲可以服务不同执行资源</a></li><li><a href="#scope">独立权利要求的核心是处置原生产者</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2025-06-24</dd></div>
+      <div><dt>最早优先权</dt><dd>2023-09-27</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-04-05</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/628,403</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F7/76、G06F9/30032、G06F9/30036 <details class="inline-more"><summary>其余 2 项</summary><span>G06F9/30043、G06F9/30181</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Ran Aharon Chachick、Rajdeep L. Bhuyar、Kanghong Yan</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12340222B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12340222B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

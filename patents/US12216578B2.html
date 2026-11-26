@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>用两级 token 恢复分散设备请求的发出顺序 · US12216578B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12216578B2</code> · <a href="https://eureka.patsnap.com/patent/US12216578B2">专利全文</a></p>
-<h1>用两级 token 恢复分散设备请求的发出顺序</h1><p class="reading-question">设备请求按地址分到不同流水线，又按空位进入不同缓冲。控制器怎样从这些物理位置找回严格的到达顺序，同时允许其他设备的请求独立推进？</p>
-<p class="reading-answer">严格流用该处理器的二级 token FIFO 记录请求所在流水线，再用一级 FIFO 记录流水线内的缓冲。发送时按两级队首定位最老请求。有限重排流可只用独立的一级 token 维持同一设备顺序。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-02-04</dd></div><div><dt>申请号</dt><dd>US18/353,830</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sandeep Gupta、Brian P Lilly、Krishna C Potnuru</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#write-order">设备地址确定存放位置，token 另存到达顺序</a></li><li><a href="#strict-dequeue">发出时两级队首先后决定可读位置</a></li><li><a href="#local-order">有限重排只保存该设备需要的次序</a></li><li><a href="#blocked-target">设备暂不能接收时，等待会怎样传播</a></li><li><a href="#multi-issue">同周期可发多笔时，先找最老的共同前缀</a></li><li><a href="#claim-scope">授权权利要求关注的是定位与发出顺序</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="write-order"><h2>设备地址确定存放位置，token 另存到达顺序</h2><p>从图 1 左侧跟住一笔请求。处理器的 bank 选择接口先按设备地址选处理流水线，再看该流水线的哪个缓冲有空间。地址映射与空位分配都不提供时间顺序，不能仅从缓冲编号推断谁先到。</p><p>对严格流，接口把流水线编号放到该处理器的二级 token FIFO，并把缓冲编号放到该流水线对应的一级 FIFO。原始地址、请求类型和数据仍只保存在实际缓冲，token 用来还原位置。另一个处理器可用独立的两级顺序记录。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　请求数据分散存放，两级 token 描述顺序</h3>
-    <p id="fig-1-basis">请求地址决定处理流水线，空余条目决定那条流水线内的缓冲。对于严格有序请求，把两次选择分别写入两个顺序 FIFO。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12216578B2 用两级 token 恢复分散设备请求的发出顺序 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US12216578B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2025-02-04">2025-02-04</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12216578B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>用两级 token 恢复分散设备请求的发出顺序</h1>
+  <p class="english-title" lang="en">Request ordering in a cache</p>
+  <p class="document-question">设备请求按地址分到不同流水线，又按空位进入不同缓冲。控制器怎样从这些物理位置找回严格的到达顺序，同时允许其他设备的请求独立推进？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#write-order">设备地址确定存放位置，token 另存到达顺序</a></li><li><a href="#strict-dequeue">发出时两级队首先后决定可读位置</a></li><li><a href="#local-order">有限重排只保存该设备需要的次序</a></li><li><a href="#blocked-target">设备暂不能接收时，等待会怎样传播</a></li><li><a href="#multi-issue">同周期可发多笔时，先找最老的共同前缀</a></li><li><a href="#claim-scope">授权权利要求关注的是定位与发出顺序</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">严格流用该处理器的二级 token FIFO 记录请求所在流水线，再用一级 FIFO 记录流水线内的缓冲。发送时按两级队首定位最老请求。有限重排流可只用独立的一级 token 维持同一设备顺序。</p>
+  </section>
+  <div id="mechanism"><section id="write-order" class="article-section reading-chapter" aria-labelledby="write-order-title"><h2 id="write-order-title">设备地址确定存放位置，token 另存到达顺序</h2><p>从图 1 左侧跟住一笔请求。处理器的 bank 选择接口先按设备地址选处理流水线，再看该流水线的哪个缓冲有空间。地址映射与空位分配都不提供时间顺序，不能仅从缓冲编号推断谁先到。</p><p>对严格流，接口把流水线编号放到该处理器的二级 token FIFO，并把缓冲编号放到该流水线对应的一级 FIFO。原始地址、请求类型和数据仍只保存在实际缓冲，token 用来还原位置。另一个处理器可用独立的两级顺序记录。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">请求数据分散存放，两级 token 描述顺序</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12216578B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">请求地址决定处理流水线，空余条目决定那条流水线内的缓冲。对于严格有序请求，把两次选择分别写入两个顺序 FIFO。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="请求数据分散存放，两级 token 描述顺序" style="--figure-width:1490px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1490 696" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">请求数据分散存放，两级 token 描述顺序</title>
 <desc id="fig-1-svg-desc">请求地址决定处理流水线，空余条目决定那条流水线内的缓冲。对于严格有序请求，把两次选择分别写入两个顺序 FIFO。</desc>
@@ -42,12 +88,21 @@
 <text x="49" y="49" class="signal-title" text-anchor="start">写入请求的地址和空位选择</text>
 <text x="50" y="638" class="signal-title" text-anchor="start">同一份完整请求只写一个缓冲。两级 token 用较短的编号保存取出顺序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-address">先按地址选择处理流水线</a> 银行选择电路查设备地址所在区域。地址到管线的映射不提供请求到达顺序。</li><li><a href="#fig-1-occupancy">再选有空间的请求缓冲</a> 所选流水线可以有两个缓冲。控制器可比较空余条目，再写入完整请求。</li><li><a href="#fig-1-l2tok">二级 token 记录流水线</a> 在该处理器的严格有序序列中，按请求到达顺序保存被选流水线。二级 FIFO 不存完整请求数据。</li><li><a href="#fig-1-l1tok">一级 token 记录流水线内的缓冲</a> 对严格请求只在已选流水线对应 FIFO 记录缓冲。其他处理器可以有自己的两级 token 系统。</li></ul>
-  <p class="figure-evidence">原图 1、2、3A；说明书归档段 0016、0017、0018、0019、0020、0023、0024、0025、0026、0027、0039、0041；权利要求 1、2、5、6、8、9、12、13、15、16、19、20 <a href="../diagrams/US12216578B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>各处理器的 bank 选择接口</dt><dd>141 / 142</dd></div><div><dt>多个请求处理流水线</dt><dd>151–154</dd></div><div><dt>请求缓冲</dt><dd>161–168</dd></div><div><dt>处理器及管线对应的一级 token 存储</dt><dd>171–178</dd></div><div><dt>各处理器的二级 token 存储</dt><dd>193 / 194</dd></div></dl></details>
-</figure></section><section id="strict-dequeue"><h2>发出时两级队首先后决定可读位置</h2><p>在图 2 的实例中，二级队首依次指向 A、B、A。第一笔必须从 A 找。再读 A 的一级队首，得到缓冲 1。若缓冲按 FIFO 存放相应请求，直接取最老项。说明书另允许一级条目带请求 ID，以在非 FIFO 的请求缓冲里定位。</p><p>第二笔 B 即使已在另一条流水线准备好，也不属于本次严格队首。这里使用的是请求从缓存向设备发出的顺序。设备处理时间和返回应答要另按接口协议定义。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　取出最老请求时，二级队首先选流水线，一级队首再选缓冲</h3>
-    <p id="fig-2-basis">以三个严格有序请求为例。二级先指向 A 管线，A 的一级队首对应缓冲 1。即使 B 也有一条可发请求，它在这条严格序列中排在后面。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-address" data-reading-target="fig-1-address">先按地址选择处理流水线</a><p>银行选择电路查设备地址所在区域。地址到管线的映射不提供请求到达顺序。</p></li><li><a href="#fig-1-occupancy" data-reading-target="fig-1-occupancy">再选有空间的请求缓冲</a><p>所选流水线可以有两个缓冲。控制器可比较空余条目，再写入完整请求。</p></li><li><a href="#fig-1-l2tok" data-reading-target="fig-1-l2tok">二级 token 记录流水线</a><p>在该处理器的严格有序序列中，按请求到达顺序保存被选流水线。二级 FIFO 不存完整请求数据。</p></li><li><a href="#fig-1-l1tok" data-reading-target="fig-1-l1tok">一级 token 记录流水线内的缓冲</a><p>对严格请求只在已选流水线对应 FIFO 记录缓冲。其他处理器可以有自己的两级 token 系统。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3A；说明书归档段 0016、0017、0018、0019、0020、0023、0024、0025、0026、0027、0039、0041；权利要求 1、2、5、6、8、9、12、13、15、16、19、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>各处理器的 bank 选择接口</dt><dd>141 / 142</dd></div><div><dt>多个请求处理流水线</dt><dd>151–154</dd></div><div><dt>请求缓冲</dt><dd>161–168</dd></div><div><dt>处理器及管线对应的一级 token 存储</dt><dd>171–178</dd></div><div><dt>各处理器的二级 token 存储</dt><dd>193 / 194</dd></div></dl></details>
+</figure></section><section id="strict-dequeue" class="article-section reading-chapter" aria-labelledby="strict-dequeue-title"><h2 id="strict-dequeue-title">发出时两级队首先后决定可读位置</h2><p>在图 2 的实例中，二级队首依次指向 A、B、A。第一笔必须从 A 找。再读 A 的一级队首，得到缓冲 1。若缓冲按 FIFO 存放相应请求，直接取最老项。说明书另允许一级条目带请求 ID，以在非 FIFO 的请求缓冲里定位。</p><p>第二笔 B 即使已在另一条流水线准备好，也不属于本次严格队首。这里使用的是请求从缓存向设备发出的顺序。设备处理时间和返回应答要另按接口协议定义。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">取出最老请求时，二级队首先选流水线，一级队首再选缓冲</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12216578B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">以三个严格有序请求为例。二级先指向 A 管线，A 的一级队首对应缓冲 1。即使 B 也有一条可发请求，它在这条严格序列中排在后面。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="取出最老请求时，二级队首先选流水线，一级队首再选缓冲" style="--figure-width:1480px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1480 661" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">取出最老请求时，二级队首先选流水线，一级队首再选缓冲</title>
 <desc id="fig-2-svg-desc">以三个严格有序请求为例。二级先指向 A 管线，A 的一级队首对应缓冲 1。即使 B 也有一条可发请求，它在这条严格序列中排在后面。</desc>
@@ -72,12 +127,21 @@
 <text x="50" y="48" class="signal-title" text-anchor="start">两个 token 层次定位同一笔请求</text>
 <text x="49" y="638" class="signal-title" text-anchor="start">这里的顺序是设备请求从缓存发出的顺序。设备侧完成顺序由其他协议条件决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-global">读取二级队首</a> 这一处理器在 A、B、A 三条路径顺序写入。二级队首表明第一笔在 A。</li><li><a href="#fig-2-local">再读取 A 的一级队首</a> A 有两项，最老的在缓冲 1。后面的 A 请求位于另一缓冲，不能先发。</li><li><a href="#fig-2-fifo">选择该缓冲的最老项</a> 在 FIFO 的例子，缓冲顶部提供被选请求。若缓冲结构不同，一级信息也可携带请求 ID。</li><li><a href="#fig-2-out">选出的请求送出</a> 出队条件同时依赖严格流的两级位置。其他流的本地仲裁规则见图 3。</li></ul>
-  <p class="figure-evidence">原图 1、2、3B；说明书归档段 0023、0024、0025、0026、0028、0029、0030、0031、0040；权利要求 1、5、8、12、15、19 <a href="../diagrams/US12216578B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>二级 FIFO 选流水线</dt><dd>193</dd></div><div><dt>A 所用的一级 FIFO 选缓冲</dt><dd>171</dd></div><div><dt>两个请求缓冲</dt><dd>161 / 162</dd></div><div><dt>严格有序请求选择器</dt><dd>181</dd></div></dl></details>
-</figure></section><section id="local-order"><h2>有限重排只保存该设备需要的次序</h2><p>图 3 的有限重排条目仍按空闲位置分散在多个缓冲，但同一设备地址在这一例中映射到同一条流水线。独立一级 FIFO 足以定位同设备最老请求。其他流水线可各自提名，无需从同一个二级 FIFO 决定次序。</p><p>严格流和有限重排流可能同一周期在某条流水线产生候选。局部出口可采用 FIFO、优先级或轮询。各流水线提名后，还要由相应出口选择哪笔能够占用设备接口。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　有限重排请求使用独立一级 token，再与严格候选仲裁</h3>
-    <p id="fig-3-basis">同一设备地址映射到同一条流水线时，有限重排请求只需保持该设备内的顺序。它和严格有序路径在出口选择器汇合。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-global" data-reading-target="fig-2-global">读取二级队首</a><p>这一处理器在 A、B、A 三条路径顺序写入。二级队首表明第一笔在 A。</p></li><li><a href="#fig-2-local" data-reading-target="fig-2-local">再读取 A 的一级队首</a><p>A 有两项，最老的在缓冲 1。后面的 A 请求位于另一缓冲，不能先发。</p></li><li><a href="#fig-2-fifo" data-reading-target="fig-2-fifo">选择该缓冲的最老项</a><p>在 FIFO 的例子，缓冲顶部提供被选请求。若缓冲结构不同，一级信息也可携带请求 ID。</p></li><li><a href="#fig-2-out" data-reading-target="fig-2-out">选出的请求送出</a><p>出队条件同时依赖严格流的两级位置。其他流的本地仲裁规则见图 3。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3B；说明书归档段 0023、0024、0025、0026、0028、0029、0030、0031、0040；权利要求 1、5、8、12、15、19</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>二级 FIFO 选流水线</dt><dd>193</dd></div><div><dt>A 所用的一级 FIFO 选缓冲</dt><dd>171</dd></div><div><dt>两个请求缓冲</dt><dd>161 / 162</dd></div><div><dt>严格有序请求选择器</dt><dd>181</dd></div></dl></details>
+</figure></section><section id="local-order" class="article-section reading-chapter" aria-labelledby="local-order-title"><h2 id="local-order-title">有限重排只保存该设备需要的次序</h2><p>图 3 的有限重排条目仍按空闲位置分散在多个缓冲，但同一设备地址在这一例中映射到同一条流水线。独立一级 FIFO 足以定位同设备最老请求。其他流水线可各自提名，无需从同一个二级 FIFO 决定次序。</p><p>严格流和有限重排流可能同一周期在某条流水线产生候选。局部出口可采用 FIFO、优先级或轮询。各流水线提名后，还要由相应出口选择哪笔能够占用设备接口。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">有限重排请求使用独立一级 token，再与严格候选仲裁</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12216578B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">同一设备地址映射到同一条流水线时，有限重排请求只需保持该设备内的顺序。它和严格有序路径在出口选择器汇合。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="有限重排请求使用独立一级 token，再与严格候选仲裁" style="--figure-width:1500px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 693" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">有限重排请求使用独立一级 token，再与严格候选仲裁</title>
 <desc id="fig-3-svg-desc">同一设备地址映射到同一条流水线时，有限重排请求只需保持该设备内的顺序。它和严格有序路径在出口选择器汇合。</desc>
@@ -105,12 +169,21 @@
 <text x="49" y="46" class="signal-title" text-anchor="start">两个范围的顺序如何汇合</text>
 <text x="50" y="643" class="signal-title" text-anchor="start">有限重排也维持同一目标的必要顺序。图例不假定不同目标会写入同一流水线。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-strict">严格有序候选</a> 从图 2 的两级队首得出。严格候选和有限重排候选之间若竞争同个出口，出口还要仲裁。</li><li><a href="#fig-3-limited">同一设备的有限重排 FIFO</a> 独立一级 FIFO 反馈所选缓冲。设备地址在这个例子落同一流水线，不需要二级 FIFO 判跨线顺序。</li><li><a href="#fig-3-out">出口仲裁</a> 同一流水线先仲裁严格候选与有限重排候选。出口实现也可在各流水线提名之间再选择。</li><li><a href="#fig-3-parallel">两个目标设备可分别提名</a> 另一流水线可独立得到有限重排候选。跨设备是否提前发，取决于接口资源和出口仲裁。</li></ul>
-  <p class="figure-evidence">原图 1、2、4A、4B；说明书归档段 0020、0021、0022、0028、0032、0033、0034、0035、0036、0042、0043；权利要求 3、4、10、11、17、18 <a href="../diagrams/US12216578B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>严格请求选择器</dt><dd>181</dd></div><div><dt>有限重排的一级 token 与选择器</dt><dd>271 / 281</dd></div><div><dt>同周期两类候选的出口仲裁</dt><dd>291</dd></div></dl></details>
-</figure></section><section id="blocked-target"><h2>设备暂不能接收时，等待会怎样传播</h2><p>图 4 固定 A1、B1、A2 到达顺序和设备接收状态。严格流先等 A1，这会推迟可以在 B 侧接收的 B1。有限重排流保留 A1 先于 A2，可用空闲的第 0 周期先发 B1。表 6 对照发出端点。</p><p>图中设定接口每周期接受一笔，并让 A 在窗口内暂时失去接收能力。通过在外发接口记录候选、选择与实际接受，可以区分等待来自两级顺序，还是来自设备接收门槛。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　设备 A 暂停接收时，设备 B 是否也需要等</h3>
-    <p id="fig-4-basis">同一条到达序列 A1、B1、A2 进入两个处理流水线。严格流必须等 A1。仅保留设备内顺序的流可先发送 B1。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-strict" data-reading-target="fig-3-strict">严格有序候选</a><p>从图 2 的两级队首得出。严格候选和有限重排候选之间若竞争同个出口，出口还要仲裁。</p></li><li><a href="#fig-3-limited" data-reading-target="fig-3-limited">同一设备的有限重排 FIFO</a><p>独立一级 FIFO 反馈所选缓冲。设备地址在这个例子落同一流水线，不需要二级 FIFO 判跨线顺序。</p></li><li><a href="#fig-3-out" data-reading-target="fig-3-out">出口仲裁</a><p>同一流水线先仲裁严格候选与有限重排候选。出口实现也可在各流水线提名之间再选择。</p></li><li><a href="#fig-3-parallel" data-reading-target="fig-3-parallel">两个目标设备可分别提名</a><p>另一流水线可独立得到有限重排候选。跨设备是否提前发，取决于接口资源和出口仲裁。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、4A、4B；说明书归档段 0020、0021、0022、0028、0032、0033、0034、0035、0036、0042、0043；权利要求 3、4、10、11、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>严格请求选择器</dt><dd>181</dd></div><div><dt>有限重排的一级 token 与选择器</dt><dd>271 / 281</dd></div><div><dt>同周期两类候选的出口仲裁</dt><dd>291</dd></div></dl></details>
+</figure></section><section id="blocked-target" class="article-section reading-chapter" aria-labelledby="blocked-target-title"><h2 id="blocked-target-title">设备暂不能接收时，等待会怎样传播</h2><p>图 4 固定 A1、B1、A2 到达顺序和设备接收状态。严格流先等 A1，这会推迟可以在 B 侧接收的 B1。有限重排流保留 A1 先于 A2，可用空闲的第 0 周期先发 B1。表 6 对照发出端点。</p><p>图中设定接口每周期接受一笔，并让 A 在窗口内暂时失去接收能力。通过在外发接口记录候选、选择与实际接受，可以区分等待来自两级顺序，还是来自设备接收门槛。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 信号波形</p>
+        <h3 id="fig-4-title">设备 A 暂停接收时，设备 B 是否也需要等</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12216578B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">同一条到达序列 A1、B1、A2 进入两个处理流水线。严格流必须等 A1。仅保留设备内顺序的流可先发送 B1。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="设备 A 暂停接收时，设备 B 是否也需要等" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 630" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">设备 A 暂停接收时，设备 B 是否也需要等</title>
 <desc id="fig-4-svg-desc">同一条到达序列 A1、B1、A2 进入两个处理流水线。严格流必须等 A1。仅保留设备内顺序的流可先发送 B1。</desc>
@@ -144,12 +217,21 @@
 <g id="fig-4-a-completes"><circle cx="923" cy="480" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="924" y="444" width="52" height="18" fill="#f5f5f5"/><text x="950" y="458" class="arrow-label" text-anchor="middle">A2</text></g>
 <text x="24" y="592" class="legend" text-anchor="start">接收时点和单发射宽度为模型设定。说明书给出必要次序，未规定设备何时恢复接收。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-b-ready">设备 B 一开始可接收</a> 教学模型中每周期总共只发送一笔。设备 A 在前两个周期暂不能接收。</li><li><a href="#fig-4-strict">严格序列先等 A1</a> B1 虽然对应的设备已准备好，仍要排在 A1 之后。</li><li><a href="#fig-4-limited">只保同一设备内顺序时</a> B1 可以先发送。A1、A2 的内在次序仍保留。</li><li><a href="#fig-4-a-completes">A 重新接收后的两笔发出</a> 图上计的是接口发出时点，对设备执行和返回数据没有计时。</li></ul>
-  <p class="figure-evidence">原图 1、2、3B、4B；说明书归档段 0020、0021、0022、0029、0030、0031、0032、0034、0035、0036、0040、0043；权利要求 1、3、4、8、10、11、15、17、18 <a href="../diagrams/US12216578B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>严格流的两级顺序记录</dt><dd>193 / 171</dd></div><div><dt>有限重排的设备内顺序记录</dt><dd>271</dd></div></dl></details>
-</figure></section><section id="multi-issue"><h2>同周期可发多笔时，先找最老的共同前缀</h2><p>图 5 展开说明书披露的多发射实施例。若二级队首连续三项都指向同一流水线，控制器可以一起考虑这三笔最老请求。再看该流水线的一级 FIFO，若前两项来自同一个允许多读的缓冲，这两项可在同周期发出。后一项和下一条流水线的请求继续等候。</p><p>同时发出只是可选带宽。硬件还需要读出多个请求、提供设备接口资源，并维持要求的顺序。原文也披露一次只发一笔的实施例。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　允许同周期发多笔时，要看两级队首的共同前缀</h3>
-    <p id="fig-5-basis">可同时发出的候选必须是当前最老且连续的一段。先比二级的同流水线前缀，再比一级的同缓冲前缀。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-b-ready" data-reading-target="fig-4-b-ready">设备 B 一开始可接收</a><p>教学模型中每周期总共只发送一笔。设备 A 在前两个周期暂不能接收。</p></li><li><a href="#fig-4-strict" data-reading-target="fig-4-strict">严格序列先等 A1</a><p>B1 虽然对应的设备已准备好，仍要排在 A1 之后。</p></li><li><a href="#fig-4-limited" data-reading-target="fig-4-limited">只保同一设备内顺序时</a><p>B1 可以先发送。A1、A2 的内在次序仍保留。</p></li><li><a href="#fig-4-a-completes" data-reading-target="fig-4-a-completes">A 重新接收后的两笔发出</a><p>图上计的是接口发出时点，对设备执行和返回数据没有计时。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3B、4B；说明书归档段 0020、0021、0022、0029、0030、0031、0032、0034、0035、0036、0040、0043；权利要求 1、3、4、8、10、11、15、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>严格流的两级顺序记录</dt><dd>193 / 171</dd></div><div><dt>有限重排的设备内顺序记录</dt><dd>271</dd></div></dl></details>
+</figure></section><section id="multi-issue" class="article-section reading-chapter" aria-labelledby="multi-issue-title"><h2 id="multi-issue-title">同周期可发多笔时，先找最老的共同前缀</h2><p>图 5 展开说明书披露的多发射实施例。若二级队首连续三项都指向同一流水线，控制器可以一起考虑这三笔最老请求。再看该流水线的一级 FIFO，若前两项来自同一个允许多读的缓冲，这两项可在同周期发出。后一项和下一条流水线的请求继续等候。</p><p>同时发出只是可选带宽。硬件还需要读出多个请求、提供设备接口资源，并维持要求的顺序。原文也披露一次只发一笔的实施例。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">允许同周期发多笔时，要看两级队首的共同前缀</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12216578B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">可同时发出的候选必须是当前最老且连续的一段。先比二级的同流水线前缀，再比一级的同缓冲前缀。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="允许同周期发多笔时，要看两级队首的共同前缀" style="--figure-width:1430px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1430 607" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
 <title id="fig-5-svg-title">允许同周期发多笔时，要看两级队首的共同前缀</title>
 <desc id="fig-5-svg-desc">可同时发出的候选必须是当前最老且连续的一段。先比二级的同流水线前缀，再比一级的同缓冲前缀。</desc>
@@ -171,19 +253,30 @@
 <text x="48" y="50" class="signal-title" text-anchor="start">队首连续性限制该例的可批量发送范围</text>
 <text x="49" y="554" class="signal-title" text-anchor="start">这里是说明书的多发射示例。其他实现可以一次只发送一笔。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-5-prefix-pipe">二级 FIFO 读取连续前缀</a> 前面连续三个 token 指向 A，说明跨流水线序列的最老三笔都在 A。第四笔 B 不能并入该例同线批次。</li><li><a href="#fig-5-prefix-bank">一级 FIFO 再限制可并发读的缓冲</a> A 的最老两笔都在缓冲 1，第三笔在缓冲 0。这个简化的同缓冲批次止于两笔。</li><li><a href="#fig-5-send">发出以设备接口支持为前提</a> 原文同时披露每周期只发一笔的实现。示意的是多个请求恰可同周期由所选缓冲送出的选项。</li></ul>
-  <p class="figure-evidence">原图 1、2；说明书归档段 0025、0026、0029、0030、0031、0037、0038 <a href="../diagrams/US12216578B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>连续流水线的二级 token</dt><dd>193</dd></div><div><dt>连续缓冲的一级 token</dt><dd>171</dd></div><div><dt>可一次取出多项的例示请求缓冲</dt><dd>161</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">表 6　固定设备接收时点，比较两类请求的发出时间</h3>
-    <p id="fig-6-basis">教学模型一次最多发一笔。到达顺序是 A1、B1、A2，开始时都已缓存。A 在第 2 周期起可以接收，B 从第 0 周期可接收。计时止于设备接口接受。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">规则</th><th scope="col">A1</th><th scope="col">B1</th><th scope="col">A2</th><th scope="col">全部发出</th></tr></thead><tbody><tr id="fig-6-strict"><th scope="row">严格有序</th><td>2</td><td>3</td><td>4</td><td>4</td></tr><tr id="fig-6-limited"><th scope="row">仅维持同设备顺序</th><td>2</td><td>0</td><td>3</td><td>3</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-6-strict">严格序列等 A1</a> B 在起点已准备好，但是 B1 必须在更老的 A1 之后发。A2 仍等 B1。</li><li><a href="#fig-6-limited">有限重排只等待同设备队首</a> B1 可以用第 0 周期。A1、A2 均仍在 A 的设备内顺序约束下。</li></ul>
-  <p class="figure-evidence">原图 1、2、3B、4B；说明书归档段 0020、0021、0022、0029、0033、0034、0036、0040、0043；权利要求 1、3、4、8、10、11、15、17、18 </p>
-  
-</figure></section><section id="claim-scope"><h2>授权权利要求关注的是定位与发出顺序</h2><p>权利要求 1、8、15 关注两级 token 对严格有序请求的定位与发出。权利要求 3、4、10、11、17、18 增加不使用二级队首的有限重排路径，权利要求 6、13、20 涉及其他处理器独立记录。图 5 的同周期多发机制来自说明书。</p></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-prefix-pipe" data-reading-target="fig-5-prefix-pipe">二级 FIFO 读取连续前缀</a><p>前面连续三个 token 指向 A，说明跨流水线序列的最老三笔都在 A。第四笔 B 不能并入该例同线批次。</p></li><li><a href="#fig-5-prefix-bank" data-reading-target="fig-5-prefix-bank">一级 FIFO 再限制可并发读的缓冲</a><p>A 的最老两笔都在缓冲 1，第三笔在缓冲 0。这个简化的同缓冲批次止于两笔。</p></li><li><a href="#fig-5-send" data-reading-target="fig-5-send">发出以设备接口支持为前提</a><p>原文同时披露每周期只发一笔的实现。示意的是多个请求恰可同周期由所选缓冲送出的选项。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0025、0026、0029、0030、0031、0037、0038</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>连续流水线的二级 token</dt><dd>193</dd></div><div><dt>连续缓冲的一级 token</dt><dd>171</dd></div><div><dt>可一次取出多项的例示请求缓冲</dt><dd>161</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 6 · 参数与边界对照</p>
+        <h3 id="fig-6-title">固定设备接收时点，比较两类请求的发出时间</h3>
+      </div>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">教学模型一次最多发一笔。到达顺序是 A1、B1、A2，开始时都已缓存。A 在第 2 周期起可以接收，B 从第 0 周期可接收。计时止于设备接口接受。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="固定设备接收时点，比较两类请求的发出时间"><table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">规则</th><th scope="col">A1</th><th scope="col">B1</th><th scope="col">A2</th><th scope="col">全部发出</th></tr></thead><tbody><tr id="fig-6-strict"><th scope="row">严格有序</th><td>2</td><td>3</td><td>4</td><td>4</td></tr><tr id="fig-6-limited"><th scope="row">仅维持同设备顺序</th><td>2</td><td>0</td><td>3</td><td>3</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-6-strict" data-reading-target="fig-6-strict">严格序列等 A1</a><p>B 在起点已准备好，但是 B1 必须在更老的 A1 之后发。A2 仍等 B1。</p></li><li><a href="#fig-6-limited" data-reading-target="fig-6-limited">有限重排只等待同设备队首</a><p>B1 可以用第 0 周期。A1、A2 均仍在 A 的设备内顺序约束下。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3B、4B；说明书归档段 0020、0021、0022、0029、0033、0034、0036、0040、0043；权利要求 1、3、4、8、10、11、15、17、18</p>
+
+</figure></section><section id="claim-scope" class="article-section reading-chapter" aria-labelledby="claim-scope-title"><h2 id="claim-scope-title">授权权利要求关注的是定位与发出顺序</h2><p>权利要求 1、8、15 关注两级 token 对严格有序请求的定位与发出。权利要求 3、4、10、11、17、18 增加不使用二级队首的有限重排路径，权利要求 6、13、20 涉及其他处理器独立记录。图 5 的同周期多发机制来自说明书。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项；全文核对覆盖 104 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -213,6 +306,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1–3B。设备请求分散存储，两级令牌共同定位全局最老的有序请求。面向设备的请求对外发出顺序。全局令牌和局部令牌分别指向请求流水线和该流水线内的缓冲区。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>按请求地址选管道，并在该管道内按可用槽位选缓冲。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>为不受全局顺序约束的请求设独立一级令牌和选择器。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>设备请求先按各流水线一级队首挑选，再不查二级令牌地发出其中之一。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>两级令牌用 FIFO 实现，各缓冲区保持本地时间顺序。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>为另一处理器的独立时间序列增设两级令牌和分配电路。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>收到访问缓存内部地址的请求后，直接访问缓存中数据。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>在缓存接收有序设备请求，并分别用两个令牌记位置，出队据二级和一级定位。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>按请求地址选流水线，再按缓冲可用条目选内部位置。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>为不受同一顺序约束的请求分配缓冲，并在额外一级令牌登记。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>每条流水线用额外一级令牌找本地最老请求，无需二级令牌即可选发。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>两个令牌存储均采用先进先出，实际缓冲区也保持时间顺序。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>来自另一处理器的请求对应另一个时间序列，另记两级令牌。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-8">8</a></td><td>接收针对缓存内部地址的另一请求，访问实际缓存数据。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>共享缓存用多条流水线承载设备请求，两级令牌定位最老的有序请求。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>依地址选流水线，依其缓冲可用条目选位置。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>不受全局顺序约束的请求用独立一级令牌登记和发出。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>每条流水线从有限重排队首找请求，不查全局二级令牌即选发。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>用先进先出寄存器实现两级令牌，同时保持请求缓冲内部顺序。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>另一个处理器的有序设备流使用附加的分配电路和两级令牌。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12216578B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12216578B2#knowledge">在关系图谱中定位 US12216578B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-family">申请关系</span>
+    <code>US11741009B1</code>
+  </div>
+  <h3><a href="US11741009B1.html">LLC 如何按序发出分散在多条流水线的设备请求</a></h3>
+  <p class="related-edge-label">继续申请突出两级令牌</p>
+  <p class="related-edge-summary">US12216578B2 说明书首段将申请 US17/526,944 列为母申请。继续申请独权 1 指定每条请求处理管线有一级令牌存储，跨管线设二级令牌，用两级令牌记录受顺序约束的设备请求位置。</p>
+<p class="related-evidence"><a href="https://eureka.patsnap.com/patent/US12216578B2#desc">查看继续申请说明</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-citation">文献引用</span>
+    <code>US11741009B1</code>
+  </div>
+  <h3><a href="US11741009B1.html">LLC 如何按序发出分散在多条流水线的设备请求</a></h3>
+  <p class="related-edge-label">审查员引用</p>
+  <p class="related-edge-summary">US12216578B2 的专利参考文献列出 US11741009B1。该条目在引用表中标为审查员引用。</p>
+<p class="related-evidence"><a href="https://patents.google.com/patent/US12216578B2/en#:~:text=Patent%20Citations">查看参考文献表</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#write-order">设备地址确定存放位置，token 另存到达顺序</a></li><li><a href="#strict-dequeue">发出时两级队首先后决定可读位置</a></li><li><a href="#local-order">有限重排只保存该设备需要的次序</a></li><li><a href="#blocked-target">设备暂不能接收时，等待会怎样传播</a></li><li><a href="#multi-issue">同周期可发多笔时，先找最老的共同前缀</a></li><li><a href="#claim-scope">授权权利要求关注的是定位与发出顺序</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2025-02-04</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2023-07-17</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/353,830</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0811、G06F12/0802、G06F12/084 <details class="inline-more"><summary>其余 5 项</summary><span>G06F12/0857、G06F12/0895、G06F2212/1008、G06F2212/1024、G06F2212/60</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Sandeep Gupta、Brian P Lilly、Krishna C Potnuru</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12216578B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12216578B2#knowledge">关系图谱定位</a></div>
+  </section>
+<section class="sidebar-family"><h2>同族对照</h2><ul class="sidebar-family-list"><li><a href="US11741009B1.html"><code>US11741009B1</code><span>LLC 如何按序发出分散在多条流水线的设备请求</span></a></li></ul></section>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

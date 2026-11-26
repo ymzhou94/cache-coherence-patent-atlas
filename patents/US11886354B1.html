@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>用两级缓存的窗口指标判断何时改变插入策略 · US11886354B1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11886354B1</code> · <a href="https://patents.google.com/patent/US11886354B1/en">专利全文</a></p>
-<h1>用两级缓存的窗口指标判断何时改变插入策略</h1><p class="reading-question">前级命中率低，可能是重复逐出即将复用的行，也可能是工作集在整条层次中都放不下。硬件怎样利用后级反馈区分这两种情形？</p>
-<p class="reading-answer">前后两级分别统计自己的命中率或其他指标。前级未达到门槛、后级达到更高门槛时，控制器可为后续窗口改变前级新行的插入位置。预取覆盖、指针追踪 load 和 store 缺失可加入判定或驱动其他动作。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-01-30</dd></div><div><dt>申请号</dt><dd>US17/664,379</dd></div><div><dt>最早优先权</dt><dd>2022-05-20</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Anwar Q. Rohillah、Tyler J. Huberty</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#measure">两个命中率分别来自哪些请求</a></li><li><a href="#signals">其他反馈怎样影响门槛和写分配</a></li><li><a href="#evict">为什么按 LRU 插入会保留部分旧行</a></li><li><a href="#windows">先统计窗口，再改变后一批回填</a></li><li><a href="#scope">权利要求覆盖的是哪些反馈和动作</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="measure"><h2>两个命中率分别来自哪些请求</h2><p>图 1 先看实际请求。核心发出访问，前级命中就使用本地数据。例示层次让前级缺失进入后级。前级命中率以全部前级访问为分母，后级命中率以发往后级的查询为分母。后级若另接其他来源，指标口径要相应定义。</p><p>前级低命中而后级高命中，说明这一段缺失大多在后级满足。原文将其解释为工作集可能放得下后级，却无法在前级稳定保留。两个比例都低时，单靠这条规则不能推得相同结论。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　两级各自计数，才能识别缺失是否大多停在后级</h3>
-    <p id="fig-1-basis">本例以前级和后级的命中率为指标。后级见到的是已离开前级的请求子集，两个比例分别从自己的事件计数得到。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11886354B1 用两级缓存的窗口指标判断何时改变插入策略 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US11886354B1</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-01-30">2024-01-30</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11886354B1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>用两级缓存的窗口指标判断何时改变插入策略</h1>
+  <p class="english-title" lang="en">Cache thrash detection</p>
+  <p class="document-question">前级命中率低，可能是重复逐出即将复用的行，也可能是工作集在整条层次中都放不下。硬件怎样利用后级反馈区分这两种情形？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#measure">两个命中率分别来自哪些请求</a></li><li><a href="#signals">其他反馈怎样影响门槛和写分配</a></li><li><a href="#evict">为什么按 LRU 插入会保留部分旧行</a></li><li><a href="#windows">先统计窗口，再改变后一批回填</a></li><li><a href="#scope">权利要求覆盖的是哪些反馈和动作</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">前后两级分别统计自己的命中率或其他指标。前级未达到门槛、后级达到更高门槛时，控制器可为后续窗口改变前级新行的插入位置。预取覆盖、指针追踪 load 和 store 缺失可加入判定或驱动其他动作。</p>
+  </section>
+  <div id="mechanism"><section id="measure" class="article-section reading-chapter" aria-labelledby="measure-title"><h2 id="measure-title">两个命中率分别来自哪些请求</h2><p>图 1 先看实际请求。核心发出访问，前级命中就使用本地数据。例示层次让前级缺失进入后级。前级命中率以全部前级访问为分母，后级命中率以发往后级的查询为分母。后级若另接其他来源，指标口径要相应定义。</p><p>前级低命中而后级高命中，说明这一段缺失大多在后级满足。原文将其解释为工作集可能放得下后级，却无法在前级稳定保留。两个比例都低时，单靠这条规则不能推得相同结论。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">两级各自计数，才能识别缺失是否大多停在后级</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11886354B1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">本例以前级和后级的命中率为指标。后级见到的是已离开前级的请求子集，两个比例分别从自己的事件计数得到。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="两级各自计数，才能识别缺失是否大多停在后级" style="--figure-width:1460px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1460 653" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">两级各自计数，才能识别缺失是否大多停在后级</title>
 <desc id="fig-1-svg-desc">本例以前级和后级的命中率为指标。后级见到的是已离开前级的请求子集，两个比例分别从自己的事件计数得到。</desc>
@@ -43,12 +89,21 @@
 <g id="fig-1-policy"><rect x="48" y="497" width="263" height="115" rx="6" fill="#f5f5f5"/><rect x="48" y="497" width="263" height="115" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="179.5" y="523" class="node-name" text-anchor="middle">前级插入策略寄存器</text><text x="179.5" y="545" class="node-detail" text-anchor="middle">控制后续回填的排名</text></g>
 <text x="49" y="51" class="signal-title" text-anchor="start">请求路径与两级指标的采集位置</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-inner">前级观测窗口</a> 在当前策略期间，记录前级的请求和命中数。若前级命中率偏低，可能一再回填同组并很快逐出。</li><li><a href="#fig-1-outer">后级观测窗口</a> 图中的后级查询来自前级缺失；其他实现的访问群可能有额外来源，报告时要明确分母是哪些后级请求。</li><li><a href="#fig-1-compare">对照两个独立阈值</a> 实例把前级低命中且后级高命中解释为工作集可能在后级放得下，但前级反复失去长复用的数据。</li><li><a href="#fig-1-policy">改变前级新行的插入位置</a> 策略改变作用于后一段周期的回填插入。其他策略选择及是否改变后级由实现决定。</li></ul>
-  <p class="figure-evidence">原图 1、3、4；说明书归档段 0012、0013、0014、0017、0019、0020、0026、0027、0028、0029、0030、0031、0032、0054、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11886354B1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>前级及后级 cache</dt><dd>120 / 130</dd></div><div><dt>缓存控制器与插入策略控制</dt><dd>110 / 115</dd></div><div><dt>评价两级运行信息并决定是否改变插入</dt><dd>420 / 430</dd></div></dl></details>
-</figure></section><section id="signals"><h2>其他反馈怎样影响门槛和写分配</h2><p>沿图 2 上路看，预取覆盖率可以反映需求缺失有多少已被预取覆盖。它既可充当切换门槛，也可调整两个主门槛。指针追踪检测的是一个 load 的结果参与下一条 load 的地址生成。说明书允许用这类缺失增加来提高预取覆盖率门槛，从而更早尝试缓解抖动。</p><p>下路跟踪前级 store 缺失。在一种实施例中，这项统计参与插入策略判断。在另一条控制路径中，连续出现许多 store 缺失时，后续 store miss 可改为 no-write-allocate，跳过前级分配，有时在后级分配。授权权利要求 9 的表述使用 loads，说明书 0041、0062 明确讨论 subsequent stores。此处按说明书画 store 路径，并在权项解释中保留授权文本的对象用词。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　同一控制器可接三类辅助反馈，也可改变写分配条件</h3>
-    <p id="fig-2-basis">预取覆盖率可作为额外门槛。指针追踪缺失可以调门槛。store 缺失还能独立决定后续 store 是否在前级分配。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-inner" data-reading-target="fig-1-inner">前级观测窗口</a><p>在当前策略期间，记录前级的请求和命中数。若前级命中率偏低，可能一再回填同组并很快逐出。</p></li><li><a href="#fig-1-outer" data-reading-target="fig-1-outer">后级观测窗口</a><p>图中的后级查询来自前级缺失；其他实现的访问群可能有额外来源，报告时要明确分母是哪些后级请求。</p></li><li><a href="#fig-1-compare" data-reading-target="fig-1-compare">对照两个独立阈值</a><p>实例把前级低命中且后级高命中解释为工作集可能在后级放得下，但前级反复失去长复用的数据。</p></li><li><a href="#fig-1-policy" data-reading-target="fig-1-policy">改变前级新行的插入位置</a><p>策略改变作用于后一段周期的回填插入。其他策略选择及是否改变后级由实现决定。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、4；说明书归档段 0012、0013、0014、0017、0019、0020、0026、0027、0028、0029、0030、0031、0032、0054、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>前级及后级 cache</dt><dd>120 / 130</dd></div><div><dt>缓存控制器与插入策略控制</dt><dd>110 / 115</dd></div><div><dt>评价两级运行信息并决定是否改变插入</dt><dd>420 / 430</dd></div></dl></details>
+</figure></section><section id="signals" class="article-section reading-chapter" aria-labelledby="signals-title"><h2 id="signals-title">其他反馈怎样影响门槛和写分配</h2><p>沿图 2 上路看，预取覆盖率可以反映需求缺失有多少已被预取覆盖。它既可充当切换门槛，也可调整两个主门槛。指针追踪检测的是一个 load 的结果参与下一条 load 的地址生成。说明书允许用这类缺失增加来提高预取覆盖率门槛，从而更早尝试缓解抖动。</p><p>下路专门跟踪前级 store 缺失：在一种实施例中该统计参与插入策略判断；在另一条控制路径中，连续出现大量 store 缺失时，后续 store miss 可切换为 no-write-allocate，跳过前级分配并在部分情况下直接分配到后级。</p><p>需区分文本口径：授权权利要求 9 的字面对象写作 loads，而说明书 0041、0062 明确讨论 subsequent stores。图与正文按说明书画 store 路径，权项解释则保留授权原文的对象用词。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">同一控制器可接三类辅助反馈，也可改变写分配条件</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11886354B1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">预取覆盖率可作为额外门槛。指针追踪缺失可以调门槛。store 缺失还能独立决定后续 store 是否在前级分配。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同一控制器可接三类辅助反馈，也可改变写分配条件" style="--figure-width:1450px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 733" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">同一控制器可接三类辅助反馈，也可改变写分配条件</title>
 <desc id="fig-2-svg-desc">预取覆盖率可作为额外门槛。指针追踪缺失可以调门槛。store 缺失还能独立决定后续 store 是否在前级分配。</desc>
@@ -81,12 +136,21 @@
 <text x="49" y="43" class="signal-title" text-anchor="start">上半控制插入位置，下半控制 store 缺失时是否分配</text>
 <text x="46" y="693" class="signal-title" text-anchor="start">不同辅助条件在说明书中为可选实施方式。权利要求 9 的用词见正文。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-prefetch">预取覆盖如何进入切换判定</a> 用区间内被预取覆盖的需求缺失比例。覆盖门槛可与两级命中率条件组合。</li><li><a href="#fig-2-chase">指针追踪是地址数据依赖</a> 一条 load 的结果参与下一条 load 的地址生成。可用保留站的来源信息追踪这一类访问的缺失或命中。</li><li><a href="#fig-2-store">store 缺失的另一条作用路径</a> store 指标可参与前级插入策略判定。说明书还举出切换到 no-write-allocate 的另一个动作。</li><li><a href="#fig-2-no-wa">后续 store 可跳过前级分配</a> 当特定 store 缺失条件满足时，可以到后级分配，降低这类写进前级造成的替换。现存命中处理按对应实现。</li></ul>
-  <p class="figure-evidence">原图 2、4；说明书归档段 0034、0035、0036、0037、0038、0039、0040、0041、0042、0048、0059、0060、0061、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11886354B1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>预取电路及覆盖输入</dt><dd>240</dd></div><div><dt>指针追踪 load 检测</dt><dd>250</dd></div><div><dt>store 监测</dt><dd>260</dd></div><div><dt>插入策略控制</dt><dd>115</dd></div></dl></details>
-</figure></section><section id="evict"><h2>为什么按 LRU 插入会保留部分旧行</h2><p>图 3 比较一个两路组的两种插入位置。两路实现都在分配时选最久未使用的行作为牺牲行。第一次新行 C 替换 B。MRU 插入会把 A 推到末尾，下一笔 D 就移除 A。把 C 插在 LRU，下一笔先移除的是 C，A 还留在前级。</p><p>这个逆转来自新行的初始替换位置。若马上重访 C，过低的插入位置也可能让 C 失去命中机会。双模策略可以偶尔给新行 MRU 位置，说明书还列出可以在候选策略间切换的动态策略。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　连续两笔回填进入同一组时，插入位置决定哪条旧行留下</h3>
-    <p id="fig-3-basis">两个分支采用相同的 LRU 逐出顺序。前级每次都按 LRU 选择旧行。不同的是回填后把新行放 MRU 还是 LRU。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-prefetch" data-reading-target="fig-2-prefetch">预取覆盖如何进入切换判定</a><p>用区间内被预取覆盖的需求缺失比例。覆盖门槛可与两级命中率条件组合。</p></li><li><a href="#fig-2-chase" data-reading-target="fig-2-chase">指针追踪是地址数据依赖</a><p>一条 load 的结果参与下一条 load 的地址生成。可用保留站的来源信息追踪这一类访问的缺失或命中。</p></li><li><a href="#fig-2-store" data-reading-target="fig-2-store">store 缺失的另一条作用路径</a><p>store 指标可参与前级插入策略判定。说明书还举出切换到 no-write-allocate 的另一个动作。</p></li><li><a href="#fig-2-no-wa" data-reading-target="fig-2-no-wa">后续 store 可跳过前级分配</a><p>当特定 store 缺失条件满足时，可以到后级分配，降低这类写进前级造成的替换。现存命中处理按对应实现。</p></li></ul>
+  <p class="figure-evidence">原图 2、4；说明书归档段 0034、0035、0036、0037、0038、0039、0040、0041、0042、0048、0059、0060、0061、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>预取电路及覆盖输入</dt><dd>240</dd></div><div><dt>指针追踪 load 检测</dt><dd>250</dd></div><div><dt>store 监测</dt><dd>260</dd></div><div><dt>插入策略控制</dt><dd>115</dd></div></dl></details>
+</figure></section><section id="evict" class="article-section reading-chapter" aria-labelledby="evict-title"><h2 id="evict-title">为什么按 LRU 插入会保留部分旧行</h2><p>图 3 比较一个两路组的两种插入位置。两路实现都在分配时选最久未使用的行作为牺牲行。第一次新行 C 替换 B。MRU 插入会把 A 推到末尾，下一笔 D 就移除 A。把 C 插在 LRU，下一笔先移除的是 C，A 还留在前级。</p><p>这个逆转来自新行的初始替换位置。若马上重访 C，过低的插入位置也可能让 C 失去命中机会。双模策略可以偶尔给新行 MRU 位置，说明书还列出可以在候选策略间切换的动态策略。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">连续两笔回填进入同一组时，插入位置决定哪条旧行留下</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11886354B1/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">两个分支采用相同的 LRU 逐出顺序。前级每次都按 LRU 选择旧行。不同的是回填后把新行放 MRU 还是 LRU。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="连续两笔回填进入同一组时，插入位置决定哪条旧行留下" style="--figure-width:1470px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1470 686" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">连续两笔回填进入同一组时，插入位置决定哪条旧行留下</title>
 <desc id="fig-3-svg-desc">两个分支采用相同的 LRU 逐出顺序。前级每次都按 LRU 选择旧行。不同的是回填后把新行放 MRU 还是 LRU。</desc>
@@ -113,12 +177,21 @@
 <text x="47" y="43" class="signal-title" text-anchor="start">同一个 LRU 逐出规则，两个不同的插入位置</text>
 <text x="45" y="620" class="signal-title" text-anchor="start">每个组状态框中按 MRU → LRU 排列。示例不包含后台预取或写分配。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-initial">同一个两路组</a> 最初 A 在 MRU，B 在 LRU。固定下一序列 C、D 两次缺失，随后同组再请求 A。</li><li><a href="#fig-3-mru-d">在 MRU 插入并让剩余行后移</a> C 先替换 B 并进入 MRU，此时 A 到 LRU。随后 D 替换 A，下一次访问 A 缺失。</li><li><a href="#fig-3-lru-d">在 LRU 位置插入新行</a> C 先替换 B，但插在 LRU。D 接着替换 C，A 仍能在前级命中。</li><li><a href="#fig-3-probe">收益取决于哪些行再被访问</a> 相同条件下若接下来访问刚被覆盖的 C，结果可能反过来。插入策略由反馈驱动。</li></ul>
-  <p class="figure-evidence">原图 1、3；说明书归档段 0012、0013、0014、0015、0021、0022、0023、0024、0029、0044、0046、0051、0052；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11886354B1/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>被切换插入策略的前级缓存</dt><dd>120</dd></div><div><dt>由窗口指标选择默认或调整后的插入配置</dt><dd>原图 3</dd></div><div><dt>旧窗口插入与后续窗口策略切换</dt><dd>410 / 430</dd></div></dl></details>
-</figure></section><section id="windows"><h2>先统计窗口，再改变后一批回填</h2><p>图 4 在第一窗口按既有策略插入。两个计数器统计自己的请求。控制器评价窗口结果，再配置下一窗口。例中按命中率低与高作方向比较。权利要求规定后级门槛高于前级门槛。说明书还允许换成缺失率或其他指标，所以通过门槛的方向依选用指标而变。</p><p>表 5 从同一状态独立重跑两个后续窗口。数据并没有换工作集，只有新行的插入位置不同。改用 LRU 插入后，前级少三次缺失，后级少三次查询。另一个不同地址流虽同样让前级全缺失，后级全缺失却不会触发这条切换规则。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　旧窗口先观察两级，新窗口才按新策略插入</h3>
-    <p id="fig-4-basis">两个命中率对各自访问集合采样。控制器用第一窗口结果作一次比较，策略修改在后续窗口影响新回填。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-initial" data-reading-target="fig-3-initial">同一个两路组</a><p>最初 A 在 MRU，B 在 LRU。固定下一序列 C、D 两次缺失，随后同组再请求 A。</p></li><li><a href="#fig-3-mru-d" data-reading-target="fig-3-mru-d">在 MRU 插入并让剩余行后移</a><p>C 先替换 B 并进入 MRU，此时 A 到 LRU。随后 D 替换 A，下一次访问 A 缺失。</p></li><li><a href="#fig-3-lru-d" data-reading-target="fig-3-lru-d">在 LRU 位置插入新行</a><p>C 先替换 B，但插在 LRU。D 接着替换 C，A 仍能在前级命中。</p></li><li><a href="#fig-3-probe" data-reading-target="fig-3-probe">收益取决于哪些行再被访问</a><p>相同条件下若接下来访问刚被覆盖的 C，结果可能反过来。插入策略由反馈驱动。</p></li></ul>
+  <p class="figure-evidence">原图 1、3；说明书归档段 0012、0013、0014、0015、0021、0022、0023、0024、0029、0044、0046、0051、0052；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>被切换插入策略的前级缓存</dt><dd>120</dd></div><div><dt>由窗口指标选择默认或调整后的插入配置</dt><dd>原图 3</dd></div><div><dt>旧窗口插入与后续窗口策略切换</dt><dd>410 / 430</dd></div></dl></details>
+</figure></section><section id="windows" class="article-section reading-chapter" aria-labelledby="windows-title"><h2 id="windows-title">先统计窗口，再改变后一批回填</h2><p>图 4 在第一窗口按既有策略插入。两个计数器统计自己的请求。控制器评价窗口结果，再配置下一窗口。例中按命中率低与高作方向比较。权利要求规定后级门槛高于前级门槛。说明书还允许换成缺失率或其他指标，所以通过门槛的方向依选用指标而变。</p><p>表 5 从同一状态独立重跑两个后续窗口。数据并没有换工作集，只有新行的插入位置不同。改用 LRU 插入后，前级少三次缺失，后级少三次查询。另一个不同地址流虽同样让前级全缺失，后级全缺失却不会触发这条切换规则。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 信号波形</p>
+        <h3 id="fig-4-title">旧窗口先观察两级，新窗口才按新策略插入</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11886354B1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">两个命中率对各自访问集合采样。控制器用第一窗口结果作一次比较，策略修改在后续窗口影响新回填。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="旧窗口先观察两级，新窗口才按新策略插入" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 613" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">旧窗口先观察两级，新窗口才按新策略插入</title>
 <desc id="fig-4-svg-desc">两个命中率对各自访问集合采样。控制器用第一窗口结果作一次比较，策略修改在后续窗口影响新回填。</desc>
@@ -147,19 +220,30 @@
 <g id="fig-4-next-policy"><circle cx="828" cy="474" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="924" y="437" width="140" height="18" fill="#f5f5f5"/><text x="994" y="451" class="arrow-label" text-anchor="middle">改用 LRU 插入</text></g>
 <text x="24" y="575" class="legend" text-anchor="start">比例轨在评价点画出窗口汇总值，纵轴相对各自门槛。说明书没有给出固定周期数。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-measure">观测期使用旧策略</a> 前级与后级同时累计各自的事件。策略变化前的请求产生这一份反馈。</li><li><a href="#fig-4-inner-bound">前级命中率未达门槛</a> 实线是一个教学性的窗口汇总输出。虚线只表示这一层的门槛。</li><li><a href="#fig-4-outer-bound">后级命中率达到门槛</a> 后级结果在其独立的阈值上方。两条事件源不要求有相同分母。</li><li><a href="#fig-4-next-policy">在后一窗口采用新插入位置</a> 本例画从 MRU 插入切换到 LRU 插入。若前级和后级都低，不满足这组条件。</li></ul>
-  <p class="figure-evidence">原图 1、3、4；说明书归档段 0028、0029、0030、0046、0048、0050、0051、0054、0056、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11886354B1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>第一周期集合按第一策略插入</dt><dd>410</dd></div><div><dt>比较两级窗口指标</dt><dd>420</dd></div><div><dt>第二周期集合改用第二策略</dt><dd>430</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">表 5　两段窗口复算缓存抖动与策略切换</h3>
-    <p id="fig-5-basis">教学模型只有一个组。前级两路，后级四路，后级只处理前级缺失。两个层次以 LRU 逐出，命中升到 MRU。前级切换门槛 20%，后级门槛 60%。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">窗口及访问</th><th scope="col">前级插入</th><th scope="col">前级命中／访问</th><th scope="col">后级命中／访问</th><th scope="col">读出的结果</th></tr></thead><tbody><tr id="fig-5-detect"><th scope="row">第一窗，ABCD 三遍，初始为空</th><td>MRU</td><td>0/12</td><td>8/12</td><td>满足双阈值</td></tr><tr id="fig-5-stay"><th scope="row">后一窗，工作集相同</th><td>继续 MRU</td><td>0/12</td><td>12/12</td><td>前级仍全部缺失</td></tr><tr id="fig-5-move"><th scope="row">后一窗，同一起始状态</th><td>改用 LRU</td><td>3/12</td><td>9/9</td><td>少发 3 笔后级请求</td></tr><tr id="fig-5-cold"><th scope="row">独立对照，12 个不同地址</th><td>MRU</td><td>0/12</td><td>0/12</td><td>后级未达门槛</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-5-detect">同样的地址在两级得到不同事件数</a> 首窗重复 A、B、C、D 三遍。前级十二笔都缺失，后级第一次装入四行，后八笔命中，满足示例切换条件。</li><li><a href="#fig-5-move">用同一起始状态比较后续回填</a> 下一窗从第一窗口结束的同一状态出发。只改新行插在 MRU 还是 LRU。LRU 插入使其中一行保留并命中三次。</li><li><a href="#fig-5-cold">一次性访问不能由该条件判为相同情形</a> 十二个不同地址在两级都无命中。相同的前级低命中仍不足以触发本表的双阈值条件。</li></ul>
-  <p class="figure-evidence">原图 1、3、4；说明书归档段 0012、0013、0022、0023、0028、0029、0051、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
-  
-</figure></section><section id="scope"><h2>权利要求覆盖的是哪些反馈和动作</h2><p>独立权利要求 1、11、17 覆盖根据两级指标切换前级插入策略，并将该策略用于后续周期集合。权利要求 2、12 进一步限定采用命中比。权利要求 3–8、13–16、18–20 描述预取覆盖、指针追踪、门槛调整或 store 指标。</p></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-measure" data-reading-target="fig-4-measure">观测期使用旧策略</a><p>前级与后级同时累计各自的事件。策略变化前的请求产生这一份反馈。</p></li><li><a href="#fig-4-inner-bound" data-reading-target="fig-4-inner-bound">前级命中率未达门槛</a><p>实线是一个教学性的窗口汇总输出。虚线只表示这一层的门槛。</p></li><li><a href="#fig-4-outer-bound" data-reading-target="fig-4-outer-bound">后级命中率达到门槛</a><p>后级结果在其独立的阈值上方。两条事件源不要求有相同分母。</p></li><li><a href="#fig-4-next-policy" data-reading-target="fig-4-next-policy">在后一窗口采用新插入位置</a><p>本例画从 MRU 插入切换到 LRU 插入。若前级和后级都低，不满足这组条件。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、4；说明书归档段 0028、0029、0030、0046、0048、0050、0051、0054、0056、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>第一周期集合按第一策略插入</dt><dd>410</dd></div><div><dt>比较两级窗口指标</dt><dd>420</dd></div><div><dt>第二周期集合改用第二策略</dt><dd>430</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 5 · 参数与边界对照</p>
+        <h3 id="fig-5-title">两段窗口复算缓存抖动与策略切换</h3>
+      </div>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">教学模型只有一个组。前级两路，后级四路，后级只处理前级缺失。两个层次以 LRU 逐出，命中升到 MRU。前级切换门槛 20%，后级门槛 60%。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="两段窗口复算缓存抖动与策略切换"><table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">窗口及访问</th><th scope="col">前级插入</th><th scope="col">前级命中／访问</th><th scope="col">后级命中／访问</th><th scope="col">读出的结果</th></tr></thead><tbody><tr id="fig-5-detect"><th scope="row">第一窗，ABCD 三遍，初始为空</th><td>MRU</td><td>0/12</td><td>8/12</td><td>满足双阈值</td></tr><tr id="fig-5-stay"><th scope="row">后一窗，工作集相同</th><td>继续 MRU</td><td>0/12</td><td>12/12</td><td>前级仍全部缺失</td></tr><tr id="fig-5-move"><th scope="row">后一窗，同一起始状态</th><td>改用 LRU</td><td>3/12</td><td>9/9</td><td>少发 3 笔后级请求</td></tr><tr id="fig-5-cold"><th scope="row">独立对照，12 个不同地址</th><td>MRU</td><td>0/12</td><td>0/12</td><td>后级未达门槛</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-detect" data-reading-target="fig-5-detect">同样的地址在两级得到不同事件数</a><p>首窗重复 A、B、C、D 三遍。前级十二笔都缺失，后级第一次装入四行，后八笔命中，满足示例切换条件。</p></li><li><a href="#fig-5-move" data-reading-target="fig-5-move">用同一起始状态比较后续回填</a><p>下一窗从第一窗口结束的同一状态出发。只改新行插在 MRU 还是 LRU。LRU 插入使其中一行保留并命中三次。</p></li><li><a href="#fig-5-cold" data-reading-target="fig-5-cold">一次性访问不能由该条件判为相同情形</a><p>十二个不同地址在两级都无命中。相同的前级低命中仍不足以触发本表的双阈值条件。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、4；说明书归档段 0012、0013、0022、0023、0028、0029、0051、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">权利要求覆盖的是哪些反馈和动作</h2><p>独立权利要求 1、11、17 覆盖根据两级指标切换前级插入策略，并将该策略用于后续周期集合。权利要求 2、12 进一步限定采用命中比。权利要求 3–8、13–16、18–20 描述预取覆盖、指针追踪、门槛调整或 store 指标。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、11、17 项；全文核对覆盖 117 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -189,6 +273,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 1–4。缓存控制器在两个周期集合间切换第一层插入策略，第二阈值高于第一阈值。反复回填和逐出使缓存很难保留将被再次访问的数据。两级缓存的指标分别描述各自的运行状态。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>把两层的性能指标限定为命中比。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>另测前级预取覆盖，覆盖未达门槛才切换。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>以前级预取在一定区间覆盖的需求缺失比例定义预取覆盖水平。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>切换还要求前级的指针追踪 load 指标达到阈值。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>根据其他缓存指标调整两层阈值中的至少一个。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>切换判断还取决于 store 性能指标。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>该 store 指标是前级的 store 命中率或缺失率。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>在 store 性能指标满足条件时切换写分配规则。授权文字限定一组 loads，说明书 0041、0062 的对应实施例描述后续 store。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>计算设备还包含显示器与网络接口。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>先按原策略填前级，再在前级未达阈值且后级达较高阈值时为下一窗口更换策略。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将两层的性能指标限定为命中比。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>测量前级预取覆盖率，覆盖未达阈值时再决定切换。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>切换还取决于前级访问中的指针追踪 load 指标达到阈值。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>依据其他缓存指标调整两层阈值中的至少一个。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>进一步用 store 性能指标决定是否切换。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>介质存储供制造系统识别的电路设计，电路按两级指标切换前级插入策略。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>所描述电路还在前级预取覆盖未达门槛时据此判定切换。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>所描述电路还根据前级指针追踪 load 指标是否达阈值判定切换。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11886354B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>所描述电路还用 store 性能指标判定切换。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11886354B1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11886354B1#knowledge">在关系图谱中定位 US11886354B1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-handoff">机制衔接</span>
+    <code>US10963392B1</code>
+  </div>
+  <h3><a href="US10963392B1.html">用其他请求的统计决定共享系统缓存是否接纳逐出行</a></h3>
+  <p class="related-edge-label">填充与逐出接纳</p>
+  <p class="related-edge-summary">US11886354B1 对照前后两级的性能指标。前一级未达到一个阈值而第二级达到更高的阈值时，在下一组周期更换前一级插入规则。US10963392B1 决定是否接纳从前级逐出的当前行，评分来自前级中其他取入数据的用途。可分别检查插入规则的观察窗口和逐出接纳的评分对象。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-4">本篇图表 4</a><a href="US10963392B1.html#claim-1">对照篇权项 1</a><a href="US10963392B1.html#fig-1">对照篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#measure">两个命中率分别来自哪些请求</a></li><li><a href="#signals">其他反馈怎样影响门槛和写分配</a></li><li><a href="#evict">为什么按 LRU 插入会保留部分旧行</a></li><li><a href="#windows">先统计窗口，再改变后一批回填</a></li><li><a href="#scope">权利要求覆盖的是哪些反馈和动作</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-01-30</dd></div>
+      <div><dt>最早优先权</dt><dd>2022-05-20</dd></div>
+      <div><dt>美国申请日</dt><dd>2022-05-20</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/664,379</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0897、G06F12/128、G06F1/3225 <details class="inline-more"><summary>其余 6 项</summary><span>G06F1/3275、G06F12/0888、G06F12/0891、G06F2212/1021、G06F2212/502、G06F2212/6046</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Anwar Q. Rohillah、Tyler J. Huberty</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11886354B1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11886354B1#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

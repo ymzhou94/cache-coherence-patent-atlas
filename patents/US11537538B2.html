@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>一致性点如何指示跨 cluster 回填旁路 · US11537538B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11537538B2</code> · <a href="https://patents.google.com/patent/US11537538B2/en">专利全文</a></p>
-<h1>一致性点如何指示跨 cluster 回填旁路</h1><p class="reading-question">一致性点发现修改副本后，节点怎样知道这笔返回应直接交给原读方？</p>
-<p class="reading-answer">控制器在发往供数 cluster 的 copy-back 请求中指明旁路。原读代理标识是披露的一种编码。响应抵达共享节点后，节点可依据有效标识生成回填并选定目标下行队列。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2022-12-27</dd></div><div><dt>申请号</dt><dd>US17/242,051</dd></div><div><dt>最早优先权</dt><dd>2020-03-30</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Harshavardhan Kaushikkar、Christopher D. Shuler、Srinivasa Rangan Sridharan、Yu Zhang、Kaushik Kannan、Deniz Balkan</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#identity">旁路的去向在 copy-back 请求里确定</a></li><li><a href="#completion">读方拿到数据与控制器结束事务可以分开</a></li><li><a href="#credit">预留信用针对的是 copy-back 请求发出之前的等待</a></li><li><a href="#claim-scope">控制器请求、节点回填与内存访问各有权项边界</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="identity"><h2>旁路的去向在 copy-back 请求里确定</h2><p>当 cluster A 的读遇到 cluster B 中的修改副本，控制器一致性点（coherence point，CP）构造发往 B 的 copy-back 请求（CpBkRq），并写入该副本应经旁路交付给 A 的指示。发起 cluster 的标识是权利要求 5 和 16 明确限定的一种编码。图 6 描述 B 把相关字段复制到响应的实施例，字段可另含有效位。 这里的 copy-back 由另一 cluster 的读触发，将持有者的最新副本交给读请求方。逐出触发的一致性写回可对照 US11868258B2 原图 4。</p><p>共享汇聚节点在 cluster B 上行队列收到 B 的响应后，cluster A 回填转换电路用响应的数据和有效去向构造回填。cluster A 下行选择器把回填写入 cluster A 下行队列。旁路指示要在这段事务中保留，才能把修改副本交给正确的读方。</p><p>图 5 展开原图 6 的两种响应。发起 cluster 标识有效时，节点可用返回的数据构造回填，把回填写入发起端下行队列，同时给将要上送的原响应加旁路标记。若原请求来自非缓存代理或未共用汇聚节点，标识可能缺失。节点只上送响应，控制器仍可生成回填。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　copy-back 请求中的标识怎样抵达共享汇聚节点</h3>
-    <p id="fig-1-basis">旁路指示随控制器 copy-back 请求走向 B。响应数据随有效目的标识返回节点，由 cluster A 回填转换电路生成发往 cluster A 的回填。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11537538B2 一致性点如何指示跨 cluster 回填旁路 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-snoop" href="../index.html?topic=snoop#catalog">Snoop 与一致性</a>
+  </nav>
+  <p class="document-id">
+    <code>US11537538B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2022-12-27">2022-12-27</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11537538B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>一致性点如何指示跨 cluster 回填旁路</h1>
+  <p class="english-title" lang="en">Inter cluster snoop latency reduction</p>
+  <p class="document-question">一致性点发现修改副本后，节点怎样知道这笔返回应直接交给原读方？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#identity">旁路的去向在 copy-back 请求里确定</a></li><li><a href="#completion">读方拿到数据与控制器结束事务可以分开</a></li><li><a href="#credit">预留信用针对的是 copy-back 请求发出之前的等待</a></li><li><a href="#claim-scope">控制器请求、节点回填与内存访问各有权项边界</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+<a class="lab-link" href="../lab.html#bypass">在原型中复算 →</a>
+    </div>
+    <p class="reading-answer">控制器在发往供数 cluster 的 copy-back 请求中指明旁路。原读代理标识是披露的一种编码。响应抵达共享节点后，节点可依据有效标识生成回填并选定目标下行队列。</p>
+  </section>
+  <div id="mechanism"><section id="identity" class="article-section reading-chapter" aria-labelledby="identity-title"><h2 id="identity-title">旁路的去向在 copy-back 请求里确定</h2><p>当 cluster A 的读遇到 cluster B 中的修改副本，控制器一致性点（coherence point，CP）构造发往 B 的 copy-back 请求（CpBkRq），并写入该副本应经旁路交付给 A 的指示。发起 cluster 的标识是权利要求 5 和 16 明确限定的一种编码；图 6 描述 B 把相关字段复制到响应的实施例，字段可另含有效位。</p><p>这里的 copy-back 由另一 cluster 的读触发，将持有者的最新副本交给读请求方；逐出触发的一致性写回可对照 US11868258B2 原图 4。</p><p>共享汇聚节点在 cluster B 上行队列收到 B 的响应后，cluster A 回填转换电路用响应的数据和有效去向构造回填。cluster A 下行选择器把回填写入 cluster A 下行队列。旁路指示要在这段事务中保留，才能把修改副本交给正确的读方。</p><p>图 5 展开原图 6 的两种响应。发起 cluster 标识有效时，节点可用返回的数据构造回填，把回填写入发起端下行队列，同时给将要上送的原响应加旁路标记。若原请求来自非缓存代理或未共用汇聚节点，标识可能缺失。节点只上送响应，控制器仍可生成回填。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">copy-back 请求中的标识怎样抵达共享汇聚节点</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11537538B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">旁路指示随控制器 copy-back 请求走向 B。响应数据随有效目的标识返回节点，由 cluster A 回填转换电路生成发往 cluster A 的回填。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="copy-back 请求中的标识怎样抵达共享汇聚节点" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us11537538b2-fig-1-svg-title us11537538b2-fig-1-svg-desc">
 <title id="us11537538b2-fig-1-svg-title">copy-back 请求中的标识怎样抵达共享汇聚节点</title>
 <desc id="us11537538b2-fig-1-svg-desc">旁路指示随控制器 copy-back 请求走向 B。响应数据随有效目的标识返回节点，由 cluster A 回填转换电路生成发往 cluster A 的回填。</desc>
@@ -40,22 +86,40 @@
 <text x="270" y="272" class="signal-title" text-anchor="start">返回方向 · 用标识选择回填出口</text>
 <text x="36" y="431" class="legend" text-anchor="start">实线承载数据与回填，蓝色虚线为请求。原响应的控制器路径见图 2。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11537538b2-fig-1-flag">一致性点写入旁路指示</a> 在找到修改副本后，一致性点用 copy-back 请求告诉互连这笔副本应交给读方。</li><li><a href="#us11537538b2-fig-1-rsp">B 返回修改副本</a> 图 6 描述 B 保留原读方字段并随响应返回，使 共享汇聚节点 可定位 A。</li><li><a href="#us11537538b2-fig-1-fill">构造回填并选择 cluster A 下行通路</a> 目的标识用于选择向 A 的下行队列。图 2 的选择器仍有来自普通下行缓冲的另一输入。</li></ul>
-  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0035、0036、0039、0048、0049、0053、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11537538B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>cluster A</dt><dd>14A</dd></div><div><dt>cluster B</dt><dd>14B</dd></div><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>cluster B 上行队列</dt><dd>42B</dd></div><div><dt>cluster A 回填转换电路</dt><dd>50A</dd></div><div><dt>cluster A 下行选择器</dt><dd>52A</dd></div><div><dt>cluster A 下行队列</dt><dd>48A</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　相同的修改副本可以有两个回填出口</h3>
-    <p id="fig-3-basis">重复标签结果约束控制器的请求类型。有修改副本时，节点还要检查响应是否能定位旁路去向。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">副本与响应条件</th><th scope="col">节点动作</th><th scope="col">正常回填的生成点</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">修改副本，响应携带有效发起 cluster 的标识</th><td>转换为指定 cluster 的回填，可并行上送原响应</td><td>互连节点</td></tr><tr id="fig-3-table-row-2"><th scope="row">修改副本，响应缺少有效发起 cluster 的标识</th><td>上送原响应</td><td>内存控制器</td></tr><tr id="fig-3-table-row-3"><th scope="row">重复标签查不到修改副本</th><td>按具体标签状态或未命中路径处理</td><td>内存控制器可访问内存缓存或内存</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-table-row-1">带有效去向</a> 节点能为另一个 cluster 生成回填。该分支依据图 6 的字段实施例。</li><li><a href="#fig-3-table-row-2">缺去向仍要处理原响应</a> 把 copy-back 响应送到控制器后，控制器可生成原路径回填。</li></ul>
-  <p class="figure-evidence">原图 5、6；说明书归档段 0052、0053、0054、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>比较重复缓存标签，检查副本是否可能已修改</dt><dd>120/122</dd></div><div><dt>直接使用内存输出事务表的预留信用</dt><dd>128</dd></div><div><dt>从 copy-back 响应中提取发起 cluster 标识</dt><dd>140</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　发起 cluster 标识决定汇聚节点是否生成回填</h3>
-    <p id="fig-5-basis">共享节点能用 copy-back 响应中的有效标识识别原读请求者。有效时可以生成下行回填并给上送原响应加旁路标记。缺少有效标识时，原响应沿互连交给控制器生成回填。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11537538b2-fig-1-flag" data-reading-target="us11537538b2-fig-1-flag">一致性点写入旁路指示</a><p>在找到修改副本后，一致性点用 copy-back 请求告诉互连这笔副本应交给读方。</p></li><li><a href="#us11537538b2-fig-1-rsp" data-reading-target="us11537538b2-fig-1-rsp">B 返回修改副本</a><p>图 6 描述 B 保留原读方字段并随响应返回，使 共享汇聚节点 可定位 A。</p></li><li><a href="#us11537538b2-fig-1-fill" data-reading-target="us11537538b2-fig-1-fill">构造回填并选择 cluster A 下行通路</a><p>目的标识用于选择向 A 的下行队列。图 2 的选择器仍有来自普通下行缓冲的另一输入。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0035、0036、0039、0048、0049、0053、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">8 项</span></summary><dl><div><dt>cluster A</dt><dd>14A</dd></div><div><dt>cluster B</dt><dd>14B</dd></div><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>cluster B 上行队列</dt><dd>42B</dd></div><div><dt>cluster A 回填转换电路</dt><dd>50A</dd></div><div><dt>cluster A 下行选择器</dt><dd>52A</dd></div><div><dt>cluster A 下行队列</dt><dd>48A</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">相同的修改副本可以有两个回填出口</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">重复标签结果约束控制器的请求类型。有修改副本时，节点还要检查响应是否能定位旁路去向。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="相同的修改副本可以有两个回填出口"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">副本与响应条件</th><th scope="col">节点动作</th><th scope="col">正常回填的生成点</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">修改副本，响应携带有效发起 cluster 的标识</th><td>转换为指定 cluster 的回填，可并行上送原响应</td><td>互连节点</td></tr><tr id="fig-3-table-row-2"><th scope="row">修改副本，响应缺少有效发起 cluster 的标识</th><td>上送原响应</td><td>内存控制器</td></tr><tr id="fig-3-table-row-3"><th scope="row">重复标签查不到修改副本</th><td>按具体标签状态或未命中路径处理</td><td>内存控制器可访问内存缓存或内存</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-table-row-1" data-reading-target="fig-3-table-row-1">带有效去向</a><p>节点能为另一个 cluster 生成回填。该分支依据图 6 的字段实施例。</p></li><li><a href="#fig-3-table-row-2" data-reading-target="fig-3-table-row-2">缺去向仍要处理原响应</a><p>把 copy-back 响应送到控制器后，控制器可生成原路径回填。</p></li></ul>
+  <p class="figure-evidence">原图 5、6；说明书归档段 0052、0053、0054、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>比较重复缓存标签，检查副本是否可能已修改</dt><dd>120/122</dd></div><div><dt>直接使用内存输出事务表的预留信用</dt><dd>128</dd></div><div><dt>从 copy-back 响应中提取发起 cluster 标识</dt><dd>140</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 条件判定与分支</p>
+        <h3 id="fig-5-title">发起 cluster 标识决定汇聚节点是否生成回填</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11537538B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">共享节点按 copy-back 响应中的有效标识识别原读请求者：标识有效时生成下行回填并为上送原响应加旁路标记；缺少有效标识时则交由控制器生成回填。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="发起 cluster 标识决定汇聚节点是否生成回填" style="--figure-width:1176px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1176 602" role="img" aria-labelledby="us11537538b2-fig-5-svg-title us11537538b2-fig-5-svg-desc">
 <title id="us11537538b2-fig-5-svg-title">发起 cluster 标识决定汇聚节点是否生成回填</title>
-<desc id="us11537538b2-fig-5-svg-desc">共享节点能用 copy-back 响应中的有效标识识别原读请求者。有效时可以生成下行回填并给上送原响应加旁路标记。缺少有效标识时，原响应沿互连交给控制器生成回填。</desc>
+<desc id="us11537538b2-fig-5-svg-desc">共享节点按 copy-back 响应中的有效标识识别原读请求者：标识有效时生成下行回填并为上送原响应加旁路标记；缺少有效标识时则交由控制器生成回填。</desc>
 <defs><marker id="us11537538b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11537538b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11537538b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11537538b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
 <rect width="100%" height="100%" fill="#f5f5f5"/>
 <path id="us11537538b2-fig-5-test" d="M 226 254 L 324 254" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11537538b2-fig-5-arrow-data)"/>
@@ -82,12 +146,21 @@
 <text x="30" y="49" class="signal-title" text-anchor="start">响应中的发起者标识确定本地回填是否可用</text>
 <text x="30" y="563" class="legend" text-anchor="start">上方两条输出属于标识有效分支。回填与原响应上送的并行关系见图 2。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11537538b2-fig-5-valid">在合流点判定标识是否能定位原请求者</a> 节点读取由一致性点提供、供数端转回的标识。原文说明，与供数端不在同一节点汇聚流量的代理，或非缓存代理，可以使用无标识的包。</li><li><a href="#us11537538b2-fig-5-fill">有效时生成数据回填和控制器收尾所需的响应</a> 回填写入原读请求者的下行队列。原响应可在上送时标明本节点已构造回填，避免控制器重复交付同一请求。</li><li><a href="#us11537538b2-fig-5-controller">无有效标识时控制器保留回填职责</a> 原响应仍进入控制器，用于一致性处理并可生成常规回填。上行路径在有效和无效分支都存在。</li></ul>
-  <p class="figure-evidence">原图 3、4、6；说明书归档段 0047、0048、0049、0050、0051、0053、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11537538B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>节点旁路转换电路</dt><dd>40</dd></div><div><dt>检查发起 cluster 标识</dt><dd>140</dd></div><div><dt>为原读请求者构造回填</dt><dd>142</dd></div><div><dt>写入对应下行队列</dt><dd>144</dd></div><div><dt>向内存控制器上送原响应</dt><dd>146</dd></div></dl></details>
-</figure></section><section id="completion"><h2>读方拿到数据与控制器结束事务可以分开</h2><p>图 3 的节点从响应处分出两条路径。一条把新回填送往 A，另一条经节点上行仲裁器把原响应送往控制器。节点可在原响应上标记回填已旁路，控制器以此抑制第二份回填，并更新重复缓存标签。</p><p>图 4 中没有旁路时，原响应经过控制器的处理器事务表和控制器输入仲裁器。在一致性点生成回填后，还要进入内存输出事务表，赢得控制器发出仲裁器才能沿互连返回节点。两条路径在节点处的差异说明，控制器收尾仍可继续而不延后 A 的数据到达。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　节点回填和上送原响应可以并行</h3>
-    <p id="fig-2-basis">A 收到节点构造的回填后可开始处理数据，控制器接收原响应后更新一致性记录。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11537538b2-fig-5-valid" data-reading-target="us11537538b2-fig-5-valid">在合流点判定标识是否能定位原请求者</a><p>节点读取由一致性点提供、供数端转回的标识。原文说明，与供数端不在同一节点汇聚流量的代理，或非缓存代理，可以使用无标识的包。</p></li><li><a href="#us11537538b2-fig-5-fill" data-reading-target="us11537538b2-fig-5-fill">有效时生成数据回填和控制器收尾所需的响应</a><p>回填写入原读请求者的下行队列。原响应可在上送时标明本节点已构造回填，避免控制器重复交付同一请求。</p></li><li><a href="#us11537538b2-fig-5-controller" data-reading-target="us11537538b2-fig-5-controller">无有效标识时控制器保留回填职责</a><p>原响应仍进入控制器，用于一致性处理并可生成常规回填。上行路径在有效和无效分支都存在。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、6；说明书归档段 0047、0048、0049、0050、0051、0053、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>节点旁路转换电路</dt><dd>40</dd></div><div><dt>检查发起 cluster 标识</dt><dd>140</dd></div><div><dt>为原读请求者构造回填</dt><dd>142</dd></div><div><dt>写入对应下行队列</dt><dd>144</dd></div><div><dt>向内存控制器上送原响应</dt><dd>146</dd></div></dl></details>
+</figure></section><section id="completion" class="article-section reading-chapter" aria-labelledby="completion-title"><h2 id="completion-title">读方拿到数据与控制器结束事务可以分开</h2><p>图 3 的节点从响应处分出两条路径。一条把新回填送往 A，另一条经节点上行仲裁器把原响应送往控制器。节点可在原响应上标记回填已旁路，控制器以此抑制第二份回填，并更新重复缓存标签。</p><p>图 4 中没有旁路时，原响应经过控制器的处理器事务表和控制器输入仲裁器。在一致性点生成回填后，还要进入内存输出事务表，赢得控制器发出仲裁器才能沿互连返回节点。两条路径在节点处的差异说明，控制器收尾仍可继续而不延后 A 的数据到达。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">节点回填和上送原响应可以并行</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11537538B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">A 收到节点构造的回填后可开始处理数据，控制器接收原响应后更新一致性记录。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="节点回填和上送原响应可以并行" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us11537538b2-fig-2-svg-title us11537538b2-fig-2-svg-desc">
 <title id="us11537538b2-fig-2-svg-title">节点回填和上送原响应可以并行</title>
 <desc id="us11537538b2-fig-2-svg-desc">A 收到节点构造的回填后可开始处理数据，控制器接收原响应后更新一致性记录。</desc>
@@ -113,12 +186,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">cluster B（供数端）</text>
 <text x="28" y="532" class="legend" text-anchor="start">节点回填和控制器方向的原响应上送可并行。纵向间距只表示消息先后。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11537538b2-fig-2-response">携带 x 的原响应</a> cluster B 上行队列收到 copy-back 响应。自这条交互后，旁路数据与控制器收尾都可以推进。</li><li><a href="#us11537538b2-fig-2-retire">控制器收尾</a> 原包仍服务一致性处理。若记录显示节点已旁路回填，则控制器抑制重复包。</li></ul>
-  <p class="figure-evidence">原图 3、6；说明书归档段 0047、0048、0049、0050、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a> <a href="../diagrams/US11537538B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>处理器事务表</dt><dd>60</dd></div><div><dt>cluster A 下行队列</dt><dd>48A</dd></div><div><dt>cluster B 下行队列</dt><dd>48B</dd></div><div><dt>cluster B 上行队列</dt><dd>42B</dd></div><div><dt>节点上行仲裁器</dt><dd>44</dd></div><div><dt>内存控制器</dt><dd>18</dd></div></dl></details>
-</figure></section><section id="credit"><h2>预留信用针对的是 copy-back 请求发出之前的等待</h2><p>节点旁路缩短响应返回后的路径。说明书 §0053 还给出独立的优化点，在一致性点形成 copy-back 请求后，可以直接使用内存输出事务表中为旁路请求预留的信用。这样可省去动态申请信用的往返，写表后仍要等待控制器发出仲裁器。</p><p>是否预留信用、预留多少以及普通请求是否让出表容量，属于实现和资源分配问题。若旁路测试观测的是 B 发出响应到 A 收到数据，就需要另外记录这段更早的信用等待，才能区分两项优化。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　copy-back 请求写入内存输出事务表前可以省一次信用往返</h3>
-    <p id="fig-4-basis">预留信用影响请求能否尽早写入事务表。请求仍需等待仲裁器选中。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11537538b2-fig-2-response" data-reading-target="us11537538b2-fig-2-response">携带 x 的原响应</a><p>cluster B 上行队列收到 copy-back 响应。自这条交互后，旁路数据与控制器收尾都可以推进。</p></li><li><a href="#us11537538b2-fig-2-retire" data-reading-target="us11537538b2-fig-2-retire">控制器收尾</a><p>原包仍服务一致性处理。若记录显示节点已旁路回填，则控制器抑制重复包。</p></li></ul>
+  <p class="figure-evidence">原图 3、6；说明书归档段 0047、0048、0049、0050、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">7 项</span></summary><dl><div><dt>共享汇聚节点</dt><dd>28A</dd></div><div><dt>处理器事务表</dt><dd>60</dd></div><div><dt>cluster A 下行队列</dt><dd>48A</dd></div><div><dt>cluster B 下行队列</dt><dd>48B</dd></div><div><dt>cluster B 上行队列</dt><dd>42B</dd></div><div><dt>节点上行仲裁器</dt><dd>44</dd></div><div><dt>内存控制器</dt><dd>18</dd></div></dl></details>
+</figure></section><section id="credit" class="article-section reading-chapter" aria-labelledby="credit-title"><h2 id="credit-title">预留信用针对的是 copy-back 请求发出之前的等待</h2><p>节点旁路缩短响应返回后的路径。说明书 §0053 还给出独立的优化点，在一致性点形成 copy-back 请求后，可以直接使用内存输出事务表中为旁路请求预留的信用。这样可省去动态申请信用的往返，写表后仍要等待控制器发出仲裁器。</p><p>是否预留信用、预留多少以及普通请求是否让出表容量，属于实现和资源分配问题。若旁路测试观测的是 B 发出响应到 A 收到数据，就需要另外记录这段更早的信用等待，才能区分两项优化。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">copy-back 请求写入内存输出事务表前可以省一次信用往返</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11537538B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">预留信用影响请求能否尽早写入事务表。请求仍需等待仲裁器选中。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="copy-back 请求写入内存输出事务表前可以省一次信用往返" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 445" role="img" aria-labelledby="us11537538b2-fig-4-svg-title us11537538b2-fig-4-svg-desc">
 <title id="us11537538b2-fig-4-svg-title">copy-back 请求写入内存输出事务表前可以省一次信用往返</title>
 <desc id="us11537538b2-fig-4-svg-desc">预留信用影响请求能否尽早写入事务表。请求仍需等待仲裁器选中。</desc>
@@ -144,12 +226,14 @@
 <text x="34" y="343" class="legend" text-anchor="start">预留信用省去临时申请与响应。</text>
 <text x="34" y="367" class="legend" text-anchor="start">进入事务表后仍需等待发送仲裁。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11537538b2-fig-4-claim-credit">预留信用</a> 图 5 对应说明书的可选实现，以独立支路标出可供 copy-back 请求直接使用的信用。</li><li><a href="#us11537538b2-fig-4-arbitrate">控制器发出仲裁器</a> 事务表信用允许写入队列。队列中的请求仍参与发送仲裁。</li></ul>
-  <p class="figure-evidence">原图 2、5；说明书归档段 0042、0048、0053；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11537538B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>直接使用内存输出事务表的预留信用</dt><dd>128</dd></div><div><dt>内存输出事务表</dt><dd>64</dd></div><div><dt>控制器发出仲裁器</dt><dd>66</dd></div><div><dt>构造 copy-back 请求并写入发起 cluster 标识</dt><dd>124/126</dd></div><div><dt>将 copy-back 请求写入内存输出事务表</dt><dd>130</dd></div></dl></details>
-</figure></section><section id="claim-scope"><h2>控制器请求、节点回填与内存访问各有权项边界</h2><p>独立权利要求 1 和 10 的重心是控制器生成带旁路指示的 copy-back 请求。权利要求 17 从方法叙述到发出该请求。权利要求 4 和 9 进一步限定互连生成回填，权利要求 2 和 3 加上原响应上送与抑制控制器回填。</p><p>权利要求 11、12 专门限定基于旁路指示抑制对这项读请求的内存或内存缓存访问。图 3 中控制器接收原响应后维护目录以及可选的数据更新，属于事务收尾。</p><p class="subdued"><a href="#fig-1">对照图 1　copy-back 请求中的标识怎样抵达共享汇聚节点</a></p><p class="subdued"><a href="#fig-2">对照图 2　节点回填和上送原响应可以并行</a></p></section></div>
-<p><a class="lab-link" href="../lab.html#bypass">在原型中复算</a></p>
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11537538b2-fig-4-claim-credit" data-reading-target="us11537538b2-fig-4-claim-credit">预留信用</a><p>图 5 对应说明书的可选实现，以独立支路标出可供 copy-back 请求直接使用的信用。</p></li><li><a href="#us11537538b2-fig-4-arbitrate" data-reading-target="us11537538b2-fig-4-arbitrate">控制器发出仲裁器</a><p>事务表信用允许写入队列。队列中的请求仍参与发送仲裁。</p></li></ul>
+  <p class="figure-evidence">原图 2、5；说明书归档段 0042、0048、0053；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>控制器一致性点</dt><dd>30</dd></div><div><dt>直接使用内存输出事务表的预留信用</dt><dd>128</dd></div><div><dt>内存输出事务表</dt><dd>64</dd></div><div><dt>控制器发出仲裁器</dt><dd>66</dd></div><div><dt>构造 copy-back 请求并写入发起 cluster 标识</dt><dd>124/126</dd></div><div><dt>将 copy-back 请求写入内存输出事务表</dt><dd>130</dd></div></dl></details>
+</figure></section><section id="claim-scope" class="article-section reading-chapter" aria-labelledby="claim-scope-title"><h2 id="claim-scope-title">控制器请求、节点回填与内存访问各有权项边界</h2><p>独立权利要求 1 和 10 的重心是控制器生成带旁路指示的 copy-back 请求。权利要求 17 从方法叙述到发出该请求。权利要求 4 和 9 进一步限定互连生成回填，权利要求 2 和 3 加上原响应上送与抑制控制器回填。</p><p>权利要求 11、12 专门限定基于旁路指示抑制对这项读请求的内存或内存缓存访问。图 3 中控制器接收原响应后维护目录以及可选的数据更新，属于事务收尾。</p><p class="cross-ref"><a href="#fig-1">对照图 1 · copy-back 请求中的标识怎样抵达共享汇聚节点</a></p><p class="cross-ref"><a href="#fig-2">对照图 2 · 节点回填和上送原响应可以并行</a></p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、17 项；全文核对覆盖 67 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -179,6 +263,67 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统的内存控制器是多个代理的一致性点。收到读后识别修改副本，再发带旁路指示的 copy-back 请求。见原图 2、5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>除把已修改副本旁路给请求代理外，互连还将复制返回响应转发给控制器。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>请求已经旁路时，内存控制器抑制给原读方的重复回填。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>互连根据请求带来的旁路指示，为读请求代理生成回填包。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>旁路指示及互连生成的回填都带原读方标识。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>两个一致性代理各包含至少一个处理器。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两个一致性代理均为含共享缓存的 CPU cluster。供数方的共享缓存响应 copy-back 请求，请求方接收回填并转发。该项原文将写入目标写作第一共享缓存。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>将旁路落实到两代理请求汇往控制器的共同互连节点。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>共同节点将 copy-back 响应转换为给请求方的回填。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>独立内存控制器权项把生成一致性请求、定位修改副本并添加旁路指示的职责放在一致性点电路。见原图 5。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>控制器的内存接口依据旁路指示抑制为该读请求访问内存。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>内存接口包含内存缓存，并依据旁路指示抑制该读访问内存缓存。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>以供数代理末级缓存的重复缓存标签跟踪状态并识别修改副本。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>另设一套重复缓存标签，对应请求代理的另一末级缓存。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>为多个含末级缓存的一致性代理配置对应的多套重复缓存标签。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>旁路指示包含原读请求代理的标识。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>方法从内存控制器接收原读、确定副本持有者，到发出含旁路指示的 copy-back 请求。实际旁路和抑制回填写入从属权利要求 18、20。见原图 5–6。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>执行实际旁路，把 copy-back 响应的数据送给原读代理。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>旁路由两代理上行请求汇合的互连节点执行。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11537538B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>内存控制器依据旁路指示抑制为该读请求生成回填。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11537538B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11537538B2#knowledge">在关系图谱中定位 US11537538B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11016913B1</code>
+  </div>
+  <h3><a href="US11016913B1.html">跨 cluster 回填在哪里提早完成</a></h3>
+  <p class="related-edge-label">谁决定回填走旁路</p>
+  <p class="related-edge-summary">两件同族专利分别描述回填旁路的指示和执行。US11537538B2 权 1 由一致性点在 copy-back 请求中携带旁路指示，持有修改副本的代理据此返回响应。US11016913B1 权 1 由互连汇聚节点把该响应转换为直达读请求者的回填。两件各自的权 2 另规定原响应也送往内存控制器。</p>
+<p class="related-evidence"><a href="US11016913B1.html#claim-1">对照篇权项 1</a><a href="US11016913B1.html#fig-2">对照篇图表 2</a><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-family">申请关系</span>
+    <code>US11016913B1</code>
+  </div>
+  <h3><a href="US11016913B1.html">跨 cluster 回填在哪里提早完成</a></h3>
+  <p class="related-edge-label">继续申请</p>
+  <p class="related-edge-summary">US11537538B2 对申请 16/834,148 提出继续申请，两者共享 2020 年 3 月 30 日优先权。母案权利要求 1 限定汇聚节点怎样构造回填，继续案权利要求 1 限定控制器怎样在 copy-back 请求中指定旁路。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US11016913B1.html#claim-1">对照篇权项 1</a><a href="US11016913B1.html#fig-5">对照篇图表 5</a><a href="https://patents.google.com/patent/US11537538B2/en#description">查看原文的申请关系</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-citation">文献引用</span>
+    <code>US11016913B1</code>
+  </div>
+  <h3><a href="US11016913B1.html">跨 cluster 回填在哪里提早完成</a></h3>
+  <p class="related-edge-label">参考文献列出母案</p>
+  <p class="related-edge-summary">US11537538B2 原件首页 References Cited 将 US11016913B1 标为审查员引用。申请沿革和两份权利要求的差异可分别沿旁边两条边核对。</p>
+<p class="related-evidence"><a href="https://patentimages.storage.googleapis.com/85/0d/8b/c624f9a98ae545/US11537538.pdf#page=1">查看原件首页参考文献</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#identity">旁路的去向在 copy-back 请求里确定</a></li><li><a href="#completion">读方拿到数据与控制器结束事务可以分开</a></li><li><a href="#credit">预留信用针对的是 copy-back 请求发出之前的等待</a></li><li><a href="#claim-scope">控制器请求、节点回填与内存访问各有权项边界</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2022-12-27</dd></div>
+      <div><dt>最早优先权</dt><dd>2020-03-30</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-04-27</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/242,051</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F13/1668、G06F12/0804、G06F12/0815 <details class="inline-more"><summary>其余 5 项</summary><span>G06F12/0895、G06F12/0811、G06F12/0813、G06F13/4027、G06F2212/1024</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Harshavardhan Kaushikkar、Christopher D. Shuler、Srinivasa Rangan Sridharan、Yu Zhang <details class="inline-more"><summary>其余 2 位</summary><span>Kaushik Kannan、Deniz Balkan</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11537538B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11537538B2#knowledge">关系图谱定位</a><a class="sidebar-btn sidebar-btn-accent" href="../lab.html#bypass">原型实验室复算</a></div>
+  </section>
+<section class="sidebar-family"><h2>同族对照</h2><ul class="sidebar-family-list"><li><a href="US11016913B1.html"><code>US11016913B1</code><span>跨 cluster 回填在哪里提早完成</span></a></li></ul></section>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

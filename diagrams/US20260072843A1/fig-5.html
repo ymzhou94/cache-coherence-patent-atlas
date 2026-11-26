@@ -4,27 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>按更新计数老化每条图，再统计仍活跃的寄存器</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
-main{max-width:960px;margin:auto;min-width:0}
-h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
-p{margin:.6rem 0}
-figure{margin:1.25rem 0}
-.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
-svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1024px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:960px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
 .node-name{font-weight:600;font-size:17px}
-.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
 .signal-title{font-weight:600;font-size:16px}
-ol{padding-inline-start:1.45rem}
-li+li{margin-top:.45rem}
-a{color:#2e5aa8;text-underline-offset:.19em}
-.component-index dt{font-weight:600}
-.component-index dd{margin:0 0 .45rem}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
 svg :target{scroll-margin:1rem}
-svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
-@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
 </style>
 </head>
 <body><main>
@@ -62,7 +69,7 @@ svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[
 </svg></div>
 <figcaption>依据 US20260072843A1 原图 9、10、18、说明书 0044、0108、0109、0118、0119、0120、0121、0181、0182、权利要求 1、2、5、6、18、19</figcaption>
 </figure>
-<ol aria-label="图中机制"><li><a href="#us20260072843a1-fig-5-update">单图需求更新</a> 一个需求训练命中并更新某条访问图，只把对应的寄存器置 001。</li><li><a href="#us20260072843a1-fig-5-tick">全表需求训练计数</a> 计时来源是全表累计的需求训练。每 M 次训练触发一次移位，并非每 M 个 CPU 周期。</li><li><a href="#us20260072843a1-fig-5-ma">图 A 的移位寄存器</a> 以三位寄存器为例，A 更新后置 001，若连续三次全表移位前都没更新，就依次变为 010、100、000。</li><li><a href="#us20260072843a1-fig-5-mb">图 B 的移位寄存器</a> 如果 B 在最近一次移位之后又更新，B 仍是 001。更新 B 不会刷新 A。</li><li><a href="#us20260072843a1-fig-5-ora">图 A 按位或</a> 把 A 的所有位归约为一个活跃标记。000 导出 0。</li><li><a href="#us20260072843a1-fig-5-orb">图 B 按位或</a> 同样处理 B。B 的 001 导出 1。</li><li><a href="#us20260072843a1-fig-5-count">活跃图统计</a> 计数器只数活跃标志。例子里两条图贡献 1，控制器再按门槛决定限制。</li></ol>
+<ol aria-label="图中机制"><li><a href="#us20260072843a1-fig-5-update">单图需求更新</a><span>一个需求训练命中并更新某条访问图，只把对应的寄存器置 001。</span></li><li><a href="#us20260072843a1-fig-5-tick">全表需求训练计数</a><span>计时来源是全表累计的需求训练。每 M 次训练触发一次移位，并非每 M 个 CPU 周期。</span></li><li><a href="#us20260072843a1-fig-5-ma">图 A 的移位寄存器</a><span>以三位寄存器为例，A 更新后置 001，若连续三次全表移位前都没更新，就依次变为 010、100、000。</span></li><li><a href="#us20260072843a1-fig-5-mb">图 B 的移位寄存器</a><span>如果 B 在最近一次移位之后又更新，B 仍是 001。更新 B 不会刷新 A。</span></li><li><a href="#us20260072843a1-fig-5-ora">图 A 按位或</a><span>把 A 的所有位归约为一个活跃标记。000 导出 0。</span></li><li><a href="#us20260072843a1-fig-5-orb">图 B 按位或</a><span>同样处理 B。B 的 001 导出 1。</span></li><li><a href="#us20260072843a1-fig-5-count">活跃图统计</a><span>计数器只数活跃标志。例子里两条图贡献 1，控制器再按门槛决定限制。</span></li></ol>
 
 </main></body>
 </html>

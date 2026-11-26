@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>在读突发前写回脏行，保留缓存副本 · US12524344B1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12524344B1</code> · <a href="https://patents.google.com/patent/US12524344B1/en">专利全文</a></p>
-<h1>在读突发前写回脏行，保留缓存副本</h1><p class="reading-question">读缺失触发的脏行写回占走了 DRAM 带宽。哪些写回可以提前，什么时候提前反而增加流量？</p>
-<p class="reading-answer">硬件可以先从最近的观测窗口发现读缺失与脏逐出争用。在当前内存通道有余量时，后台遍历会写回一部分有效且脏的缓存行，保留它们的有效位。下一轮读缺失需要替换这些行时，只要它们尚未被重新写脏，就能省下对应的突发内写回。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-01-13</dd></div><div><dt>申请号</dt><dd>US18/891,497</dd></div><div><dt>最早优先权</dt><dd>2024-09-20</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Alexander Gendler、Ilya Granovsky、Idan Mondjak Kedem、Or DAVIDI</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#detect">先找发生过争用的窗口，再判断现在能否扫查</a></li><li><a href="#control">暂停、恢复和复位怎样保存遍历进度</a></li><li><a href="#metadata">只清脏位，为什么后面的读还能命中</a></li><li><a href="#tradeoff">写回提前后，收益来自哪个时窗</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="detect"><h2>先找发生过争用的窗口，再判断现在能否扫查</h2><p>原图 1A 的问题发生在内存缓存与更下一级存储之间。一个 GPU 读突发到达，未命中的读取向 DRAM 发送读请求。新读占用缓存位置时，还可能逐出旧的脏行。两类请求都通过内存通道，数据方向不同，带宽却会彼此竞争。</p><p>图 1 追踪原图 4B–4G 的一个触发实现。两个滑动历史分别统计缺失访问与脏逐出。缺失比较器给每个窗产生一位，写回比较器只对缺失达到门槛的同一窗判断逐出量。之后还看当前 credit、剩余脏行数与内存性能状态。第 2、16 项明确要求在对应的历史窗口核对缺失与逐出。原图的其余门槛按具体权项或实施例分别核对。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　历史争用与当前带宽余量怎样共同触发 cache scrubbing</h3>
-    <p id="fig-1-basis">历史队列定位缺失和脏逐出同时超阈值的窗口。当下还要看可用 credit、剩余脏行量和内存运行点，才启动后台遍历。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12524344B1 在读突发前写回脏行，保留缓存副本 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-slc" href="../index.html?topic=slc#catalog">SLC 与内存控制器</a>
+  </nav>
+  <p class="document-id">
+    <code>US12524344B1</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2026-01-13">2026-01-13</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US12524344B1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>在读突发前写回脏行，保留缓存副本</h1>
+  <p class="english-title" lang="en">Cache writeback circuit</p>
+  <p class="document-question">读缺失触发的脏行写回占走了 DRAM 带宽。哪些写回可以提前，什么时候提前反而增加流量？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#detect">先找发生过争用的窗口，再判断现在能否扫查</a></li><li><a href="#control">暂停、恢复和复位怎样保存遍历进度</a></li><li><a href="#metadata">只清脏位，为什么后面的读还能命中</a></li><li><a href="#tradeoff">写回提前后，收益来自哪个时窗</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">硬件可以先从最近的观测窗口发现读缺失与脏逐出争用。在当前内存通道有余量时，后台遍历会写回一部分有效且脏的缓存行，保留它们的有效位。下一轮读缺失需要替换这些行时，只要它们尚未被重新写脏，就能省下对应的突发内写回。</p>
+  </section>
+  <div id="mechanism"><section id="detect" class="article-section reading-chapter" aria-labelledby="detect-title"><h2 id="detect-title">先找发生过争用的窗口，再判断现在能否扫查</h2><p>原图 1A 的问题发生在内存缓存与更下一级存储之间。一个 GPU 读突发到达，未命中的读取向 DRAM 发送读请求。新读占用缓存位置时，还可能逐出旧的脏行。两类请求都通过内存通道，数据方向不同，带宽却会彼此竞争。</p><p>图 1 追踪原图 4B–4G 的一个触发实现。两个滑动历史分别统计缺失访问与脏逐出。缺失比较器给每个窗产生一位，写回比较器只对缺失达到门槛的同一窗判断逐出量。之后还看当前 credit、剩余脏行数与内存性能状态。第 2、16 项明确要求在对应的历史窗口核对缺失与逐出。原图的其余门槛按具体权项或实施例分别核对。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">历史争用与当前带宽余量怎样共同触发 cache scrubbing</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12524344B1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">历史队列定位缺失和脏逐出同时超阈值的窗口。当下还要看可用 credit、剩余脏行量和内存运行点，才启动后台遍历。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="历史争用与当前带宽余量怎样共同触发 cache scrubbing" style="--figure-width:1160px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 638" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">历史争用与当前带宽余量怎样共同触发 cache scrubbing</title>
 <desc id="fig-1-svg-desc">历史队列定位缺失和脏逐出同时超阈值的窗口。当下还要看可用 credit、剩余脏行量和内存运行点，才启动后台遍历。</desc>
@@ -41,12 +87,21 @@
 <text x="35" y="573" class="signal-title" text-anchor="start">当前输入回答「现在能扫吗」</text>
 <text x="35" y="609" class="legend" text-anchor="start">图中归并了原图 4B 的两条历史输入。原图 4C–4D 定义同一窗口的比较条件。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-miss">缺失流量按窗口采样</a> 每个时间窗形成独立统计。滑动历史保存最近 N 个窗，每个窗分别和缓存缺失带宽阈值比较。</li><li><a href="#fig-1-dirty-traffic">逐出写回必须和同一观察窗对齐</a> 写回比较器只检查缺失比较为真的相应窗口，再把这些窗的结果归并。缺失高峰和写回高峰各自出现于不同窗时，这一实施例不把它们算作同一次争用。</li><li><a href="#fig-1-credits">当前读写 credit 是占用的代理量</a> 用于判断当前能否让后台请求通过。其值来自通道可用槽位，和历史缺失带宽的统计对象不同。</li><li><a href="#fig-1-condition">原图 4B 是五个条件并且</a> 图中合并了缺失阈值和同窗的逐出阈值，并保留当前 credit、脏行数和内存状态三个门槛。说明书允许其它组合，具体独权也有不同边界。</li></ul>
-  <p class="figure-evidence">原图 2、4B、4C、4D、4E、4F、4G；说明书归档段 0041、0047、0065、0066、0067、0068、0069、0070、0071、0072、0074、0075、0076、0078、0079、0080、0084；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12524344B1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>状态变更检测电路</dt><dd>220</dd></div><div><dt>缺失带宽和脏逐出写回观测</dt><dd>410、414</dd></div><div><dt>每个窗的缺失门槛命中位</dt><dd>440A–N</dd></div><div><dt>分别使能的写回比较器</dt><dd>449A–N</dd></div><div><dt>内存 credit 充足</dt><dd>420</dd></div><div><dt>脏行数条件</dt><dd>424</dd></div><div><dt>运行点条件</dt><dd>428</dd></div><div><dt>开始遍历触发信号</dt><dd>305A</dd></div></dl></details>
-</figure></section><section id="control"><h2>暂停、恢复和复位怎样保存遍历进度</h2><p>图 2 把暂停与复位放在状态机不同出口上。通道 credit 不足或高优先级维护请求到来时，扫描可以暂停在当前 set/way。解除后可从已保存位置续扫。遍历完成、运行点降到不再适合扫查，或缓存被 flush、disable 等操作改变时，控制器可以结束该轮并复位扫描位置。</p><p>扫描、正常缓存访问和写回请求会在缓存仲裁处竞争。即使启动条件成立，后台仍需随前台负载变化而暂停或限速。把空闲状态的启动门槛当作已运行阶段唯一的限制，会漏掉图 2 两条重要控制边。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　暂停保留当次遍历的位置，复位会丢弃位置</h3>
-    <p id="fig-2-basis">回写控制器根据门槛和更高优先级维护操作发出暂停、恢复或复位命令。暂停后保留 set/way，复位后下次从起点开始。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-miss" data-reading-target="fig-1-miss">缺失流量按窗口采样</a><p>每个时间窗形成独立统计。滑动历史保存最近 N 个窗，每个窗分别和缓存缺失带宽阈值比较。</p></li><li><a href="#fig-1-dirty-traffic" data-reading-target="fig-1-dirty-traffic">逐出写回必须和同一观察窗对齐</a><p>写回比较器只检查缺失比较为真的相应窗口，再把这些窗的结果归并。缺失高峰和写回高峰各自出现于不同窗时，这一实施例不把它们算作同一次争用。</p></li><li><a href="#fig-1-credits" data-reading-target="fig-1-credits">当前读写 credit 是占用的代理量</a><p>用于判断当前能否让后台请求通过。其值来自通道可用槽位，和历史缺失带宽的统计对象不同。</p></li><li><a href="#fig-1-condition" data-reading-target="fig-1-condition">原图 4B 是五个条件并且</a><p>图中合并了缺失阈值和同窗的逐出阈值，并保留当前 credit、脏行数和内存状态三个门槛。说明书允许其它组合，具体独权也有不同边界。</p></li></ul>
+  <p class="figure-evidence">原图 2、4B、4C、4D、4E、4F、4G；说明书归档段 0041、0047、0065、0066、0067、0068、0069、0070、0071、0072、0074、0075、0076、0078、0079、0080、0084；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">8 项</span></summary><dl><div><dt>状态变更检测电路</dt><dd>220</dd></div><div><dt>缺失带宽和脏逐出写回观测</dt><dd>410、414</dd></div><div><dt>每个窗的缺失门槛命中位</dt><dd>440A–N</dd></div><div><dt>分别使能的写回比较器</dt><dd>449A–N</dd></div><div><dt>内存 credit 充足</dt><dd>420</dd></div><div><dt>脏行数条件</dt><dd>424</dd></div><div><dt>运行点条件</dt><dd>428</dd></div><div><dt>开始遍历触发信号</dt><dd>305A</dd></div></dl></details>
+</figure></section><section id="control" class="article-section reading-chapter" aria-labelledby="control-title"><h2 id="control-title">暂停、恢复和复位怎样保存遍历进度</h2><p>图 2 把暂停与复位放在状态机不同出口上。通道 credit 不足或高优先级维护请求到来时，扫描可以暂停在当前 set/way。解除后可从已保存位置续扫。遍历完成、运行点降到不再适合扫查，或缓存被 flush、disable 等操作改变时，控制器可以结束该轮并复位扫描位置。</p><p>扫描、正常缓存访问和写回请求会在缓存仲裁处竞争。即使启动条件成立，后台仍需随前台负载变化而暂停或限速。把空闲状态的启动门槛当作已运行阶段唯一的限制，会漏掉图 2 两条重要控制边。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">暂停保留当次遍历的位置，复位会丢弃位置</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12524344B1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">回写控制器根据门槛和更高优先级维护操作发出暂停、恢复或复位命令。暂停后保留 set/way，复位后下次从起点开始。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="暂停保留当次遍历的位置，复位会丢弃位置" style="--figure-width:1140px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 553" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">暂停保留当次遍历的位置，复位会丢弃位置</title>
 <desc id="fig-2-svg-desc">回写控制器根据门槛和更高优先级维护操作发出暂停、恢复或复位命令。暂停后保留 set/way，复位后下次从起点开始。</desc>
@@ -69,12 +124,21 @@
 <text x="35" y="465" class="legend" text-anchor="start">ACTIVE 到 SUSPEND 保留位置。回到 IDLE 的复位路径取消这轮遍历。</text>
 <text x="35" y="508" class="legend" text-anchor="start">图 3 则从一次具体的 cache walk 请求追到写回提交点。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-idle">满足检测条件才启动扫查</a> 开始命令会初始化 set/way 位置。空闲状态下不持续遍历和发写回。</li><li><a href="#fig-2-active">后台读标签并写回符合条件的脏行</a> 遍历可以设置写回限速。电路层还可与正常访问竞争 cache 仲裁。</li><li><a href="#fig-2-pause">当前 credit 不足或来高优先级操作</a> 原图 4H 将两类事件组合。暂停保存当前遍历位置，使已有进展可复用。</li><li><a href="#fig-2-resume">阻塞条件消失后恢复</a> 重进 active 时从保存的位置继续。此处与第一次开始时初始化计数器不同。</li><li><a href="#fig-2-reset-active">低运行点、全遍历完成或其他重置条件</a> 满足复位条件时，该轮不再从上次停处续扫。原图 4I 同时列出 cache flush、disable 等触发。</li></ul>
-  <p class="figure-evidence">原图 3A、3B、4E、4H、4I、5B；说明书归档段 0051、0052、0053、0054、0055、0056、0057、0058、0059、0060、0098、0100、0103、0104、0105、0106；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12524344B1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>空闲状态</dt><dd>340</dd></div><div><dt>活跃状态</dt><dd>350</dd></div><div><dt>暂停状态</dt><dd>360</dd></div><div><dt>暂停和恢复信号</dt><dd>310A、315A</dd></div><div><dt>高优先级维护与 credit 判定</dt><dd>485、487</dd></div><div><dt>复位条件组合</dt><dd>498</dd></div></dl></details>
-</figure></section><section id="metadata"><h2>只清脏位，为什么后面的读还能命中</h2><p>图 3 从 set/way 读出有效位和脏位。符合条件的行向下层写数据，缓存继续持有副本。写回后原行有效且干净，随后仍可命中。后来若选中该行做逐出，且期间没有再写，这次逐出只需失效本地行，免去新的写回。有效位、脏位和替换状态需要分别观察。</p><p>限速实施例在提交确认前只允许一笔后台写回在途。确认可以来自内存子系统的全局排序点（global ordering point）。专利还允许在确认之后插入间隔，或支持不止一笔写回。清除脏位的语义来自成功的写回，确认在图 3 中用于控制后续请求何时可以发出。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　检查有效位和脏位，写回后保留能命中的缓存行</h3>
-    <p id="fig-3-basis">遍历逻辑取得 set/way 对应的标签，再让回写路径向下层存储提交那一行。写回清除脏状态，保留有效位。限速实施例等待提交确认后继续。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-idle" data-reading-target="fig-2-idle">满足检测条件才启动扫查</a><p>开始命令会初始化 set/way 位置。空闲状态下不持续遍历和发写回。</p></li><li><a href="#fig-2-active" data-reading-target="fig-2-active">后台读标签并写回符合条件的脏行</a><p>遍历可以设置写回限速。电路层还可与正常访问竞争 cache 仲裁。</p></li><li><a href="#fig-2-pause" data-reading-target="fig-2-pause">当前 credit 不足或来高优先级操作</a><p>原图 4H 将两类事件组合。暂停保存当前遍历位置，使已有进展可复用。</p></li><li><a href="#fig-2-resume" data-reading-target="fig-2-resume">阻塞条件消失后恢复</a><p>重进 active 时从保存的位置继续。此处与第一次开始时初始化计数器不同。</p></li><li><a href="#fig-2-reset-active" data-reading-target="fig-2-reset-active">低运行点、全遍历完成或其他重置条件</a><p>满足复位条件时，该轮不再从上次停处续扫。原图 4I 同时列出 cache flush、disable 等触发。</p></li></ul>
+  <p class="figure-evidence">原图 3A、3B、4E、4H、4I、5B；说明书归档段 0051、0052、0053、0054、0055、0056、0057、0058、0059、0060、0098、0100、0103、0104、0105、0106；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>空闲状态</dt><dd>340</dd></div><div><dt>活跃状态</dt><dd>350</dd></div><div><dt>暂停状态</dt><dd>360</dd></div><div><dt>暂停和恢复信号</dt><dd>310A、315A</dd></div><div><dt>高优先级维护与 credit 判定</dt><dd>485、487</dd></div><div><dt>复位条件组合</dt><dd>498</dd></div></dl></details>
+</figure></section><section id="metadata" class="article-section reading-chapter" aria-labelledby="metadata-title"><h2 id="metadata-title">只清脏位，为什么后面的读还能命中</h2><p>图 3 从 set/way 读出有效位和脏位。符合条件的行向下层写数据，缓存继续持有副本。写回后原行有效且干净，随后仍可命中。后来若选中该行做逐出，且期间没有再写，这次逐出只需失效本地行，免去新的写回。有效位、脏位和替换状态需要分别观察。</p><p>限速实施例在提交确认前只允许一笔后台写回在途。确认可以来自内存子系统的全局排序点（global ordering point）。专利还允许在确认之后插入间隔，或支持不止一笔写回。清除脏位的语义来自成功的写回，确认在图 3 中用于控制后续请求何时可以发出。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 事务时序</p>
+        <h3 id="fig-3-title">检查有效位和脏位，写回后保留能命中的缓存行</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12524344B1/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">遍历逻辑取得 set/way 对应的标签，再让回写路径向下层存储提交那一行。写回清除脏状态，保留有效位。限速实施例等待提交确认后继续。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="检查有效位和脏位，写回后保留能命中的缓存行" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 596" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">检查有效位和脏位，写回后保留能命中的缓存行</title>
 <desc id="fig-3-svg-desc">遍历逻辑取得 set/way 对应的标签，再让回写路径向下层存储提交那一行。写回清除脏状态，保留有效位。限速实施例等待提交确认后继续。</desc>
@@ -98,12 +162,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">下层内存子系统</text>
 <text x="28" y="532" class="legend" text-anchor="start">跳过无效行和未修改行时不发写回。图中显示的是单笔在途的限速实施例。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-lookup">遍历位置由 set/way 给出</a> 缓存读仲裁要和其它来源共享。扫描先读出有效位、脏位及所需元数据。</li><li><a href="#fig-3-qualify">只有有效且脏才进入写回</a> 原图 5C 对其它缓存行直接步进。部分权项进一步按特定的数据流挑选脏行。</li><li><a href="#fig-3-keep">下层获得修改值，缓存保留本地副本</a> 写回后有效位仍置位，脏位被清除。因此没有再次写入时，这一行随后被逐出不需要再写同一份数据。</li><li><a href="#fig-3-complete">提交确认用于限速</a> 单在途实施例等待系统定义的 global ordering point 给出提交确认。该确认与 DRAM 引脚完成并非同一观测点。</li><li><a href="#fig-3-next">推进到下一路或下一个集合</a> 确认后可另加拍数延迟。说明书也给出允许多笔在途或采用不同限速的实现。</li></ul>
-  <p class="figure-evidence">原图 1B、5A、5B、5C、5D；说明书归档段 0039、0040、0108、0109、0110、0111、0112、0113、0119、0120、0122、0123、0124；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12524344B1/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>cache walk 电路</dt><dd>230</dd></div><div><dt>缓存访问电路</dt><dd>510</dd></div><div><dt>写回电路</dt><dd>520</dd></div><div><dt>缓存仲裁</dt><dd>530</dd></div><div><dt>遍历请求</dt><dd>512</dd></div><div><dt>写回请求</dt><dd>522</dd></div><div><dt>提交确认</dt><dd>524</dd></div><div><dt>限速控制</dt><dd>568</dd></div></dl></details>
-</figure></section><section id="tradeoff"><h2>写回提前后，收益来自哪个时窗</h2><p>图 4 固定六笔读的到达时间，只改变三笔写回被通道服务的时刻。就算总写回数相同，背景先完成的部分也不会在读突发期间争用通道。真实内存还受 bank 并行和读写切换影响，原图 1A、1C 主要用于定位争用窗口。</p><p>表 5 用同一模型复算提前完成和后来重写的区别。先写回三行后若有一行又被写脏，读突发仍会触发一笔写回，总写回数从三变四。工程上可以按受害行地址或流量类别统计提前清理后被重新写脏的比例，再结合读尾延迟、写入总字节数和能耗看适用边界。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　将写回挪出读突发窗口，读请求少等待什么</h3>
-    <p id="fig-4-basis">原图 1C 将部分写回从后一轮读突发挪到前面的可用带宽。下面的单服务槽模型显示的是争用关系，R 为读缺失，W 为同一行的脏数据写回。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-lookup" data-reading-target="fig-3-lookup">遍历位置由 set/way 给出</a><p>缓存读仲裁要和其它来源共享。扫描先读出有效位、脏位及所需元数据。</p></li><li><a href="#fig-3-qualify" data-reading-target="fig-3-qualify">只有有效且脏才进入写回</a><p>原图 5C 对其它缓存行直接步进。部分权项进一步按特定的数据流挑选脏行。</p></li><li><a href="#fig-3-keep" data-reading-target="fig-3-keep">下层获得修改值，缓存保留本地副本</a><p>写回后有效位仍置位，脏位被清除。因此没有再次写入时，这一行随后被逐出不需要再写同一份数据。</p></li><li><a href="#fig-3-complete" data-reading-target="fig-3-complete">提交确认用于限速</a><p>单在途实施例等待系统定义的 global ordering point 给出提交确认。该确认与 DRAM 引脚完成并非同一观测点。</p></li><li><a href="#fig-3-next" data-reading-target="fig-3-next">推进到下一路或下一个集合</a><p>确认后可另加拍数延迟。说明书也给出允许多笔在途或采用不同限速的实现。</p></li></ul>
+  <p class="figure-evidence">原图 1B、5A、5B、5C、5D；说明书归档段 0039、0040、0108、0109、0110、0111、0112、0113、0119、0120、0122、0123、0124；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">8 项</span></summary><dl><div><dt>cache walk 电路</dt><dd>230</dd></div><div><dt>缓存访问电路</dt><dd>510</dd></div><div><dt>写回电路</dt><dd>520</dd></div><div><dt>缓存仲裁</dt><dd>530</dd></div><div><dt>遍历请求</dt><dd>512</dd></div><div><dt>写回请求</dt><dd>522</dd></div><div><dt>提交确认</dt><dd>524</dd></div><div><dt>限速控制</dt><dd>568</dd></div></dl></details>
+</figure></section><section id="tradeoff" class="article-section reading-chapter" aria-labelledby="tradeoff-title"><h2 id="tradeoff-title">写回提前后，收益来自哪个时窗</h2><p>图 4 固定六笔读的到达时间，只改变三笔写回被通道服务的时刻。就算总写回数相同，背景先完成的部分也不会在读突发期间争用通道。真实内存还受 bank 并行和读写切换影响，原图 1A、1C 主要用于定位争用窗口。</p><p>表 5 用同一模型复算提前完成和后来重写的区别。先写回三行后若有一行又被写脏，读突发仍会触发一笔写回，总写回数从三变四。工程上可以按受害行地址或流量类别统计提前清理后被重新写脏的比例，再结合读尾延迟、写入总字节数和能耗看适用边界。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 同轴时序</p>
+        <h3 id="fig-4-title">将写回挪出读突发窗口，读请求少等待什么</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12524344B1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">原图 1C 将部分写回从后一轮读突发挪到前面的可用带宽。下面的单服务槽模型显示的是争用关系，R 为读缺失，W 为同一行的脏数据写回。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="将写回挪出读突发窗口，读请求少等待什么" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 383" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">将写回挪出读突发窗口，读请求少等待什么</title>
 <desc id="fig-4-svg-desc">原图 1C 将部分写回从后一轮读突发挪到前面的可用带宽。下面的单服务槽模型显示的是争用关系，R 为读缺失，W 为同一行的脏数据写回。</desc>
@@ -166,19 +239,30 @@
 <text x="690.462" y="263" class="arrow-label" text-anchor="end">尾端读完成</text></g>
 <text x="24" y="328" class="legend" text-anchor="start">任一时槽只服务一个读或写。图未计入 DRAM bank 并行、读写切换以及正常流量。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-baseline">读突发与脏逐出共用通道</a> 读到前三个待替换脏行时，各增加一次写回。模型把写回排在对应读服务之后、下一读服务之前，因此尾端读排队更久。</li><li><a href="#fig-4-scrub">背景写预先提交、保留缓存行</a> 假设在突发到达前写完相同的三份脏数据，并且三行未被重新写脏。读缺失仍然存在，随后不需为这些替换项发重复写回。</li><li><a href="#fig-4-axis">对齐同一读突发的到达点</a> 模型先给后台 3 个服务槽，之后同在第 4 槽发出 6 个读。图中差异来自写回所在的时间窗。表 5 展开重写和未扫完两种边界。</li></ul>
-  <p class="figure-evidence">原图 1A、1B、1C；说明书归档段 0030、0031、0032、0034、0040、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US12524344B1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原图 1A 两次读突发</dt><dd>20、40</dd></div><div><dt>原图 1A 与读争用的脏逐出</dt><dd>25、45</dd></div><div><dt>原图 1C 在可用窗口完成的后台写回</dt><dd>60、80</dd></div><div><dt>原图 1C 后一轮读突发</dt><dd>90</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">表 5　扫完多少、后面是否再写脏，会改变争用收益</h3>
-    <p id="fig-5-basis">六笔需求读同时到达，三条替换候选最初都脏。按图 4 的单服务槽模型，从需求读到达计到第六笔读完成。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">模型状态</th><th scope="col">后台写回</th><th scope="col">与读同窗的逐出写回</th><th scope="col">尾读时间</th><th scope="col">总写回</th></tr></thead><tbody><tr id="fig-5-baseline"><th scope="row">基线</th><td>0</td><td>3</td><td>9 槽</td><td>3</td></tr><tr id="fig-5-preclean"><th scope="row">先清理三条</th><td>3</td><td>0</td><td>6 槽</td><td>3</td></tr><tr id="fig-5-partial"><th scope="row">先清理两条</th><td>2</td><td>1</td><td>7 槽</td><td>3</td></tr><tr id="fig-5-redirty"><th scope="row">清理三条后再写脏一条</th><td>3</td><td>1</td><td>7 槽</td><td>4</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-5-preclean">先清理全部三条</a> 偏移的是写回时间。模型总写回数仍是三，只是读窗口内没有由这些候选行触发的写回。</li><li><a href="#fig-5-partial">只清理其中两条</a> 剩下一条仍会在读窗口中消耗一个写槽，尾读较全部清理晚一槽。</li><li><a href="#fig-5-redirty">已清理的行又被写脏</a> 同一地址的新修改需要再写一次。此时总写回数增加至四，提前清理的收益和代价都要计入。</li></ul>
-  <p class="figure-evidence">原图 1A、1B、1C；说明书归档段 0030、0034、0040、0042、0043；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> </p>
-  
-</figure></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-baseline" data-reading-target="fig-4-baseline">读突发与脏逐出共用通道</a><p>读到前三个待替换脏行时，各增加一次写回。模型把写回排在对应读服务之后、下一读服务之前，因此尾端读排队更久。</p></li><li><a href="#fig-4-scrub" data-reading-target="fig-4-scrub">背景写预先提交、保留缓存行</a><p>假设在突发到达前写完相同的三份脏数据，并且三行未被重新写脏。读缺失仍然存在，随后不需为这些替换项发重复写回。</p></li><li><a href="#fig-4-axis" data-reading-target="fig-4-axis">对齐同一读突发的到达点</a><p>模型先给后台 3 个服务槽，之后同在第 4 槽发出 6 个读。图中差异来自写回所在的时间窗。表 5 展开重写和未扫完两种边界。</p></li></ul>
+  <p class="figure-evidence">原图 1A、1B、1C；说明书归档段 0030、0031、0032、0034、0040、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>原图 1A 两次读突发</dt><dd>20、40</dd></div><div><dt>原图 1A 与读争用的脏逐出</dt><dd>25、45</dd></div><div><dt>原图 1C 在可用窗口完成的后台写回</dt><dd>60、80</dd></div><div><dt>原图 1C 后一轮读突发</dt><dd>90</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 5 · 参数与边界对照</p>
+        <h3 id="fig-5-title">扫完多少、后面是否再写脏，会改变争用收益</h3>
+      </div>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">六笔需求读同时到达，三条替换候选最初都脏。按图 4 的单服务槽模型，从需求读到达计到第六笔读完成。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="扫完多少、后面是否再写脏，会改变争用收益"><table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">模型状态</th><th scope="col">后台写回</th><th scope="col">与读同窗的逐出写回</th><th scope="col">尾读时间</th><th scope="col">总写回</th></tr></thead><tbody><tr id="fig-5-baseline"><th scope="row">基线</th><td>0</td><td>3</td><td>9 槽</td><td>3</td></tr><tr id="fig-5-preclean"><th scope="row">先清理三条</th><td>3</td><td>0</td><td>6 槽</td><td>3</td></tr><tr id="fig-5-partial"><th scope="row">先清理两条</th><td>2</td><td>1</td><td>7 槽</td><td>3</td></tr><tr id="fig-5-redirty"><th scope="row">清理三条后再写脏一条</th><td>3</td><td>1</td><td>7 槽</td><td>4</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-preclean" data-reading-target="fig-5-preclean">先清理全部三条</a><p>偏移的是写回时间。模型总写回数仍是三，只是读窗口内没有由这些候选行触发的写回。</p></li><li><a href="#fig-5-partial" data-reading-target="fig-5-partial">只清理其中两条</a><p>剩下一条仍会在读窗口中消耗一个写槽，尾读较全部清理晚一槽。</p></li><li><a href="#fig-5-redirty" data-reading-target="fig-5-redirty">已清理的行又被写脏</a><p>同一地址的新修改需要再写一次。此时总写回数增加至四，提前清理的收益和代价都要计入。</p></li></ul>
+  <p class="figure-evidence">原图 1A、1B、1C；说明书归档段 0030、0034、0040、0042、0043；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+
+</figure></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、5、15 项；全文核对覆盖 200 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -208,6 +292,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 1A–1C、2、5A。系统上有上层内存缓存与下层易失内存；读导致脏写回后，控制器扫描并写回保留有效。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>在同一个历史时窗中同时检测下层访问量和缓存行逐出量达到阈值。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>启动还要满足脏行数量、易失内存性能档位和可用写带宽条件。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>限定只写回满足此轮扫描指定参数的脏行。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td>独立项</td><td>缺失造成下层访问和缓存逐出时进入执行态，找脏行并写回且不使其失效。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>接受写回数据的下层电路是易失性内存。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-5">5</a></td><td>遍历缓存读脏位找候选，扫完后退出执行态。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>按组、路检查脏位，发写回后等提交再检查其余组和路。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-5">5</a></td><td>扫描只处理由指定事务标识对应的数据流写入的行。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-5">5</a></td><td>写带宽不足或有更高优先级操作时暂停，条件解除后继续。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-5">5</a></td><td>检测到足够数量的脏行才满足额外启动条件。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-5">5</a></td><td>入口检查内存性能状态，状态降到阈值要求之外时退出。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-5">5</a></td><td>同一历史窗口须达到缺失带宽及逐出流量阈值，以检测争用。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-5">5</a></td><td>行带软件禁止清洗提示时，即使其他条件满足也不触发。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>计算机侦测缺失触发的脏逐出，读取缓存元数据，并将筛出的脏行写入易失内存保留有效。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>历史窗口内缺失带宽与逐出量都达到各自阈值再触发。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>另外判断易失内存的性能状态是否满足阈值。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>扫描并写回全部脏行后退出写回模式。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>缓存被刷新或停用时退出写回模式。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12524344B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>收到更高优先级缓存操作时暂挂，条件消失后恢复。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12524344B1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12524344B1#knowledge">在关系图谱中定位 US12524344B1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12730763B2</code>
+  </div>
+  <h3><a href="US12730763B2.html">关键读到达时，内存控制器何时提前结束写轮次</a></h3>
+  <p class="related-edge-label">预先写回与提前切换读轮次</p>
+  <p class="related-edge-summary">US12524344B1 在读引起写回后启动后台扫描，清洗脏行并保持缓存副本有效。US12730763B2 收到处理器标注的关键读后，若指定优先级写队列的可用项达到阈值且满足其他条件，由内存系统提前切到读轮次。前者在缓存侧安排写回，后者在内存控制器侧改变候选读写的服务顺序。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-3">本篇图表 3</a><a href="US12730763B2.html#claim-1">对照篇权项 1</a><a href="US12730763B2.html#fig-3">对照篇图表 3</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#detect">先找发生过争用的窗口，再判断现在能否扫查</a></li><li><a href="#control">暂停、恢复和复位怎样保存遍历进度</a></li><li><a href="#metadata">只清脏位，为什么后面的读还能命中</a></li><li><a href="#tradeoff">写回提前后，收益来自哪个时窗</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2026-01-13</dd></div>
+      <div><dt>最早优先权</dt><dd>2024-09-20</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-09-20</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/891,497</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0804、G06F12/0802、G06F12/0857 <details class="inline-more"><summary>其余 7 项</summary><span>G06F12/0895、G06F12/0811、G06F12/0879、G06F2212/1008、G06F2212/1024、G06F2212/502、G06F2212/60</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Alexander Gendler、Ilya Granovsky、Idan Mondjak Kedem、Or DAVIDI</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US12524344B1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12524344B1#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

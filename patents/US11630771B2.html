@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>远端缓存失效如何延到同步边界 · US11630771B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11630771B2</code> · <a href="https://patents.google.com/patent/US11630771B2/en">专利全文</a></p>
-<h1>远端缓存失效如何延到同步边界</h1><p class="reading-question">连续 TLBI 或 ICache Invalidate 到达时，目标 CPU 核心如何保持前进，同时在规定时刻真正失效？</p>
-<p class="reading-answer">目标核心在满足作用域条件时把条目标为待失效。检测到关联同步事件后，将已标记条目实际失效并清除标记。某些实现允许同步前的访问继续命中这些条目。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-04-18</dd></div><div><dt>申请号</dt><dd>US17/373,814</dd></div><div><dt>最早优先权</dt><dd>2021-07-13</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>John D Pape、Mahesh K Reddy、Prasanna Utchani Varadharajan、Pruthivi Vuyyuru</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#scope">先判断哪种远端失效可以延后</a></li><li><a href="#tracking">一批命令怎样汇到实际失效时刻</a></li><li><a href="#triggers">同步事件按目标与命令定义</a></li><li><a href="#access">等待同步期间的命中和边界之后的访问</a></li><li><a href="#dsb-dependency">一串 TLBI 延迟的可能是另一个核心</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="scope"><h2>先判断哪种远端失效可以延后</h2><p>原图 2 的缓存管理逻辑可管理 ICache、ITLB、DTLB，也可在多级缓存中使用。原图 3 的例子中，一串 TLBI 可能拖延目标端处理屏障，进而让发起屏障的另一核心等待。原图 4A、4B 关注连续 ICache Invalidate 干扰取指的情况。</p><p>图 1 按独立权利要求 1 和 14 展开作用域比较。目标核心从当前执行状态导出作用域，再和命令携带的作用域比较，结果匹配才走权项规定的延期分支。VM_ID、PROCESS_ID 或 SCOPE_ID 来自相应实施例。说明书 0085 的另一比较用缓存条目自身的作用域，且匹配时可直接失效。它用的是不同输入。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　作用域条件决定是否进入延期分支</h3>
-    <p id="fig-1-basis">命令作用域与当前执行状态导出的作用域匹配后，进入独立权利要求规定的延期处理。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11630771B2 远端缓存失效如何延到同步边界 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-snoop" href="../index.html?topic=snoop#catalog">Snoop 与一致性</a>
+  </nav>
+  <p class="document-id">
+    <code>US11630771B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2023-04-18">2023-04-18</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11630771B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>远端缓存失效如何延到同步边界</h1>
+  <p class="english-title" lang="en">Poison mechanisms for deferred invalidates</p>
+  <p class="document-question">连续 TLBI 或 ICache Invalidate 到达时，目标 CPU 核心如何保持前进，同时在规定时刻真正失效？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#scope">先判断哪种远端失效可以延后</a></li><li><a href="#tracking">一批命令怎样汇到实际失效时刻</a></li><li><a href="#triggers">同步事件按目标与命令定义</a></li><li><a href="#access">等待同步期间的命中和边界之后的访问</a></li><li><a href="#dsb-dependency">一串 TLBI 延迟的可能是另一个核心</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">目标核心在满足作用域条件时把条目标为待失效。检测到关联同步事件后，将已标记条目实际失效并清除标记。某些实现允许同步前的访问继续命中这些条目。</p>
+  </section>
+  <div id="mechanism"><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">先判断哪种远端失效可以延后</h2><p>原图 2 的缓存管理逻辑可管理 ICache、ITLB、DTLB，也可在多级缓存中使用。原图 3 的例子中，一串 TLBI 可能拖延目标端处理屏障，进而让发起屏障的另一核心等待。原图 4A、4B 关注连续 ICache Invalidate 干扰取指的情况。</p><p>图 1 按独立权利要求 1 和 14 展开作用域比较。目标核心从当前执行状态导出作用域，再和命令携带的作用域比较，结果匹配才走权项规定的延期分支。VM_ID、PROCESS_ID 或 SCOPE_ID 来自相应实施例。说明书 0085 的另一比较用缓存条目自身的作用域，且匹配时可直接失效。它用的是不同输入。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 条件判定与分支</p>
+        <h3 id="fig-1-title">作用域条件决定是否进入延期分支</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630771B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">命令作用域与当前执行状态导出的作用域匹配后，进入独立权利要求规定的延期处理。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="作用域条件决定是否进入延期分支" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 550" role="img" aria-labelledby="us11630771b2-fig-1-svg-title us11630771b2-fig-1-svg-desc">
 <title id="us11630771b2-fig-1-svg-title">作用域条件决定是否进入延期分支</title>
 <desc id="us11630771b2-fig-1-svg-desc">命令作用域与当前执行状态导出的作用域匹配后，进入独立权利要求规定的延期处理。</desc>
@@ -40,12 +86,21 @@
 <text x="31" y="44" class="signal-title" text-anchor="start">权利要求 1 与 14 的作用域条件</text>
 <text x="31" y="529" class="legend" text-anchor="start">本图比较命令作用域和当前执行状态。条目自身的作用域另由从属权项及其他实施例处理。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11630771b2-fig-1-scope">按当前执行状态导出作用域</a> 两项独立权利要求都写明这个判定。比较目标是当前执行状态导出的值。</li><li><a href="#us11630771b2-fig-1-mark">只设待失效状态</a> 原图 5 的描述用 poisoned 表示后续需失效。</li><li><a href="#us11630771b2-fig-1-clear">同步后执行失效</a> 原图 5 在关联事件路径才真正使标记项失效。</li></ul>
-  <p class="figure-evidence">原图 2、5；说明书归档段 0009、0058、0069、0070、0071、0072、0073、0074、0083、0085、0087；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US11630771B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>缓存管理逻辑</dt><dd>127</dd></div><div><dt>ICache、ITLB 和 DTLB</dt><dd>102/103/125</dd></div><div><dt>检测失效命令</dt><dd>144</dd></div><div><dt>设待失效标记</dt><dd>148</dd></div><div><dt>检测关联同步</dt><dd>152</dd></div><div><dt>执行实际失效</dt><dd>156</dd></div></dl></details>
-</figure></section><section id="tracking"><h2>一批命令怎样汇到实际失效时刻</h2><p>原文把待失效状态称作 poisoned。存储方式可以是每项标记、整组位图、有限长度列表或专用存放区域。有限列表溢出时，原文允许立刻处理被挤出的记录，或扩大跟踪粒度。正文使用“待失效”，因为该状态标记之后需要的维护。</p><p>图 2 固定同一地址 X，两条远端命令都命中 X 并通过延期判定。在下一次相关同步前，第二条命令没有再制造一次实际失效。这里的直接收益是减少目标阵列被反复更新的机会，实际减少的停顿还取决于地址重合、标记容量、流水线争用和同步频率。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　两条匹配命令共享一个实际失效边界</h3>
-    <p id="fig-2-basis">对同一条目重复标记可以合并。关联同步到达后，条目才从仍可命中转为无效。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630771b2-fig-1-scope" data-reading-target="us11630771b2-fig-1-scope">按当前执行状态导出作用域</a><p>两项独立权利要求都写明这个判定。比较目标是当前执行状态导出的值。</p></li><li><a href="#us11630771b2-fig-1-mark" data-reading-target="us11630771b2-fig-1-mark">只设待失效状态</a><p>原图 5 的描述用 poisoned 表示后续需失效。</p></li><li><a href="#us11630771b2-fig-1-clear" data-reading-target="us11630771b2-fig-1-clear">同步后执行失效</a><p>原图 5 在关联事件路径才真正使标记项失效。</p></li></ul>
+  <p class="figure-evidence">原图 2、5；说明书归档段 0009、0058、0069、0070、0071、0072、0073、0074、0083、0085、0087；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>缓存管理逻辑</dt><dd>127</dd></div><div><dt>ICache、ITLB 和 DTLB</dt><dd>102/103/125</dd></div><div><dt>检测失效命令</dt><dd>144</dd></div><div><dt>设待失效标记</dt><dd>148</dd></div><div><dt>检测关联同步</dt><dd>152</dd></div><div><dt>执行实际失效</dt><dd>156</dd></div></dl></details>
+</figure></section><section id="tracking" class="article-section reading-chapter" aria-labelledby="tracking-title"><h2 id="tracking-title">一批命令怎样汇到实际失效时刻</h2><p>原文把待失效状态称作 poisoned。存储方式可以是每项标记、整组位图、有限长度列表或专用存放区域。有限列表溢出时，原文允许立刻处理被挤出的记录，或扩大跟踪粒度。正文使用“待失效”，因为该状态标记之后需要的维护。</p><p>图 2 固定同一地址 X，两条远端命令都命中 X 并通过延期判定。在下一次相关同步前，第二条命令没有再制造一次实际失效。这里的直接收益是减少目标阵列被反复更新的机会，实际减少的停顿还取决于地址重合、标记容量、流水线争用和同步频率。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 同轴时序</p>
+        <h3 id="fig-2-title">两条匹配命令共享一个实际失效边界</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630771B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">对同一条目重复标记可以合并。关联同步到达后，条目才从仍可命中转为无效。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="两条匹配命令共享一个实际失效边界" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 405" role="img" aria-labelledby="us11630771b2-fig-2-svg-title us11630771b2-fig-2-svg-desc">
 <title id="us11630771b2-fig-2-svg-title">两条匹配命令共享一个实际失效边界</title>
 <desc id="us11630771b2-fig-2-svg-desc">对同一条目重复标记可以合并。关联同步到达后，条目才从仍可命中转为无效。</desc>
@@ -82,19 +137,37 @@
 <text x="678" y="263" class="arrow-label" text-anchor="end">实际失效</text></g>
 <text x="24" y="328" class="legend" text-anchor="start">两条命令定位同一条目，且各自满足延期条件。本图只表示先后，无周期参数。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11630771b2-fig-2-pending">待失效标记</a> 第一次命令置标记，第二次仍指同一条目。实际失效后标记被清除。</li><li><a href="#us11630771b2-fig-2-valid">实际有效状态</a> 同步之前条目仍有效，图 4 用权利要求 7 演示命中。</li></ul>
-  <p class="figure-evidence">原图 5；说明书归档段 0007、0008、0070、0071、0074、0077、0078、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11630771B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>设待失效标记</dt><dd>148</dd></div><div><dt>检测关联同步</dt><dd>152</dd></div><div><dt>执行实际失效</dt><dd>156</dd></div></dl></details>
-</figure></section><section id="triggers"><h2>同步事件按目标与命令定义</h2><p>表 3 按权项列出触发时点。TLB 路径的实施例可以等 DSB。ICache 路径可以等 ISB，也可以等一次在 ICache 之外成功的取指。上下文切换路径的实施例可依即将切入的上下文筛选，也可在每次切换时维护。各实现仍需满足其 ISA 的顺序约束。</p><p>权利要求 11 可以在条目作用域与命令作用域不匹配时仍做延期。它讨论的是条目属性，权利要求 1、14 的当前执行状态匹配条件仍按原文阅读。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　TLB 与 ICache 的同步事件各有定义</h3>
-    <p id="fig-3-basis">按权项和实施例选择目标阵列对应的同步事件，再使已标记项失效。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">目标或场景</th><th scope="col">关联事件</th><th scope="col">随后动作</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">TLB</th><td>DSB</td><td>使待失效的翻译条目失效</td></tr><tr id="fig-3-table-row-2"><th scope="row">ICache</th><td>ISB</td><td>使待失效的指令缓存行失效</td></tr><tr id="fig-3-table-row-3"><th scope="row">ICache 的另一实施例</th><td>在 ICache 之外成功取指</td><td>使待失效的指令缓存行失效</td></tr><tr id="fig-3-table-row-4"><th scope="row">上下文切换</th><td>按实现检测上下文变化</td><td>处理仍待失效的条目</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-table-row-1">TLB 的 DSB</a> 这是权利要求 3、15 写明的一种关联事件。</li><li><a href="#fig-3-table-row-3">ICache 外成功取指</a> 权利要求 6、16 披露另一种 ICache 事件。</li></ul>
-  <p class="figure-evidence">原图 3、4A、4B、5；说明书归档段 0004、0005、0010、0024、0025、0026、0072、0073、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
-  
-</figure></section><section id="access"><h2>等待同步期间的命中和边界之后的访问</h2><p>图 4 选择权利要求 7 的实现。条目 X 仍有效时，即使它已标待失效，也可返回命中。检测到关联同步后，缓存管理逻辑使 X 失效并清标记。随后的访问需要走普通缺失处理。权利要求 10 用避免连续失效造成处理器停顿来界定效果。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　同步前命中待失效条目，之后按缺失处理</h3>
-    <p id="fig-4-basis">目标核心在同步前可以获得 X 的有效值。关联同步完成时，管理逻辑使 X 失效。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630771b2-fig-2-pending" data-reading-target="us11630771b2-fig-2-pending">待失效标记</a><p>第一次命令置标记，第二次仍指同一条目。实际失效后标记被清除。</p></li><li><a href="#us11630771b2-fig-2-valid" data-reading-target="us11630771b2-fig-2-valid">实际有效状态</a><p>同步之前条目仍有效，图 4 用权利要求 7 演示命中。</p></li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0007、0008、0070、0071、0074、0077、0078、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>设待失效标记</dt><dd>148</dd></div><div><dt>检测关联同步</dt><dd>152</dd></div><div><dt>执行实际失效</dt><dd>156</dd></div></dl></details>
+</figure></section><section id="triggers" class="article-section reading-chapter" aria-labelledby="triggers-title"><h2 id="triggers-title">同步事件按目标与命令定义</h2><p>表 3 按权项列出触发时点。TLB 路径的实施例可以等 DSB。ICache 路径可以等 ISB，也可以等一次在 ICache 之外成功的取指。上下文切换路径的实施例可依即将切入的上下文筛选，也可在每次切换时维护。各实现仍需满足其 ISA 的顺序约束。</p><p>权利要求 11 可以在条目作用域与命令作用域不匹配时仍做延期。它讨论的是条目属性，权利要求 1、14 的当前执行状态匹配条件仍按原文阅读。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">TLB 与 ICache 的同步事件各有定义</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">按权项和实施例选择目标阵列对应的同步事件，再使已标记项失效。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="TLB 与 ICache 的同步事件各有定义"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">目标或场景</th><th scope="col">关联事件</th><th scope="col">随后动作</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">TLB</th><td>DSB</td><td>使待失效的翻译条目失效</td></tr><tr id="fig-3-table-row-2"><th scope="row">ICache</th><td>ISB</td><td>使待失效的指令缓存行失效</td></tr><tr id="fig-3-table-row-3"><th scope="row">ICache 的另一实施例</th><td>在 ICache 之外成功取指</td><td>使待失效的指令缓存行失效</td></tr><tr id="fig-3-table-row-4"><th scope="row">上下文切换</th><td>按实现检测上下文变化</td><td>处理仍待失效的条目</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-table-row-1" data-reading-target="fig-3-table-row-1">TLB 的 DSB</a><p>这是权利要求 3、15 写明的一种关联事件。</p></li><li><a href="#fig-3-table-row-3" data-reading-target="fig-3-table-row-3">ICache 外成功取指</a><p>权利要求 6、16 披露另一种 ICache 事件。</p></li></ul>
+  <p class="figure-evidence">原图 3、4A、4B、5；说明书归档段 0004、0005、0010、0024、0025、0026、0072、0073、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+
+</figure></section><section id="access" class="article-section reading-chapter" aria-labelledby="access-title"><h2 id="access-title">等待同步期间的命中和边界之后的访问</h2><p>图 4 选择权利要求 7 的实现。条目 X 仍有效时，即使它已标待失效，也可返回命中。检测到关联同步后，缓存管理逻辑使 X 失效并清标记。随后的访问需要走普通缺失处理。权利要求 10 用避免连续失效造成处理器停顿来界定效果。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 事务时序</p>
+        <h3 id="fig-4-title">同步前命中待失效条目，之后按缺失处理</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630771B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">目标核心在同步前可以获得 X 的有效值。关联同步完成时，管理逻辑使 X 失效。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同步前命中待失效条目，之后按缺失处理" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 455" role="img" aria-labelledby="us11630771b2-fig-4-svg-title us11630771b2-fig-4-svg-desc">
 <title id="us11630771b2-fig-4-svg-title">同步前命中待失效条目，之后按缺失处理</title>
 <desc id="us11630771b2-fig-4-svg-desc">目标核心在同步前可以获得 X 的有效值。关联同步完成时，管理逻辑使 X 失效。</desc>
@@ -116,12 +189,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">目标 CPU 核心</text>
 <text x="28" y="436" class="legend" text-anchor="start">示例选同步之前可以返回已标记条目的权利要求 7；同步信号也可来自远端。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11630771b2-fig-4-mark">待失效标记</a> 标记写入后仍保留当时的有效性。</li><li><a href="#us11630771b2-fig-4-hit">本地访问命中</a> 权利要求 7 明确这一配置。</li><li><a href="#us11630771b2-fig-4-actual">同步后实际失效</a> 失效时同时清除标记，后续访问重新走命中查询。</li></ul>
-  <p class="figure-evidence">原图 3、4A、4B、5；说明书归档段 0006、0022、0023、0061、0066、0071、0072、0073、0074；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11630771B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>缓存管理逻辑</dt><dd>127</dd></div><div><dt>为条目设置待失效状态</dt><dd>148</dd></div><div><dt>检测关联同步事件</dt><dd>152</dd></div><div><dt>使已标记条目失效</dt><dd>156</dd></div></dl></details>
-</figure></section><section id="dsb-dependency"><h2>一串 TLBI 延迟的可能是另一个核心</h2><p>原图 3 中，guest 的一个 CPU 核心发出一串 TLBI，另一个 guest 核心收到它们。运行 host 的 CPU 核心另外发出 DSB，也需要目标核心响应。若目标端被持续的失效处理占用，host 迟迟收不到响应，其 DSB 就不能完成。</p><p>图 5 只画三方互相影响的消息。延期方案把符合条件的 TLBI 先变成待失效状态，再在关联同步时处理。这给目标核心保留处理进度。关注的延迟是 host 发出 DSB 到获得目标响应的时间，和图 4 中本地条目能否命中分别观测。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　TLBI 流量怎样拖延另一个 CPU 核心的 DSB</h3>
-    <p id="fig-5-basis">同一个目标核心要服务来自 guest 的 TLBI 与 host 的 DSB。后者等到目标端完成其相关工作后才收到响应。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630771b2-fig-4-mark" data-reading-target="us11630771b2-fig-4-mark">待失效标记</a><p>标记写入后仍保留当时的有效性。</p></li><li><a href="#us11630771b2-fig-4-hit" data-reading-target="us11630771b2-fig-4-hit">本地访问命中</a><p>权利要求 7 明确这一配置。</p></li><li><a href="#us11630771b2-fig-4-actual" data-reading-target="us11630771b2-fig-4-actual">同步后实际失效</a><p>失效时同时清除标记，后续访问重新走命中查询。</p></li></ul>
+  <p class="figure-evidence">原图 3、4A、4B、5；说明书归档段 0006、0022、0023、0061、0066、0071、0072、0073、0074；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>缓存管理逻辑</dt><dd>127</dd></div><div><dt>为条目设置待失效状态</dt><dd>148</dd></div><div><dt>检测关联同步事件</dt><dd>152</dd></div><div><dt>使已标记条目失效</dt><dd>156</dd></div></dl></details>
+</figure></section><section id="dsb-dependency" class="article-section reading-chapter" aria-labelledby="dsb-dependency-title"><h2 id="dsb-dependency-title">一串 TLBI 延迟的可能是另一个核心</h2><p>原图 3 中，guest 的一个 CPU 核心发出一串 TLBI，另一个 guest 核心收到它们。运行 host 的 CPU 核心另外发出 DSB，也需要目标核心响应。若目标端被持续的失效处理占用，host 迟迟收不到响应，其 DSB 就不能完成。</p><p>图 5 只画三方互相影响的消息。延期方案把符合条件的 TLBI 先变成待失效状态，再在关联同步时处理。这给目标核心保留处理进度。关注的延迟是 host 发出 DSB 到获得目标响应的时间，和图 4 中本地条目能否命中分别观测。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">TLBI 流量怎样拖延另一个 CPU 核心的 DSB</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630771B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">同一个目标核心要服务来自 guest 的 TLBI 与 host 的 DSB。后者等到目标端完成其相关工作后才收到响应。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="TLBI 流量怎样拖延另一个 CPU 核心的 DSB" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 574" role="img" aria-labelledby="us11630771b2-fig-5-svg-title us11630771b2-fig-5-svg-desc">
 <title id="us11630771b2-fig-5-svg-title">TLBI 流量怎样拖延另一个 CPU 核心的 DSB</title>
 <desc id="us11630771b2-fig-5-svg-desc">同一个目标核心要服务来自 guest 的 TLBI 与 host 的 DSB。后者等到目标端完成其相关工作后才收到响应。</desc>
@@ -142,12 +224,14 @@
 <text x="30" y="53" class="signal-title" text-anchor="start">远端 TLBI 如何拖延另一个核心的 DSB</text>
 <text x="30" y="550" class="legend" text-anchor="start">按原图 3 的三核示例展示消息与等待关系。原图另示共享 LLC。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11630771b2-fig-5-stream">guest 发出的翻译维护</a> 原图 3 的 guest 核心向其他核心发送连续 TLBI。</li><li><a href="#us11630771b2-fig-5-dsb">host 发出的独立屏障</a> host 核心需要目标核心处理 DSB。延误可能传递到这个核心。</li><li><a href="#us11630771b2-fig-5-sync">关联事件触发维护</a> 满足延期条件时，目标核心先保存标记。关联事件到达后才使标记的条目失效。</li></ul>
-  <p class="figure-evidence">原图 3、5；说明书归档段 0021、0024、0060、0061、0062、0063、0069、0072、0073、0074；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US11630771B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>发起 TLBI 的 guest 核心</dt><dd>130B</dd></div><div><dt>同时接收 TLBI 和 DSB 的目标核心</dt><dd>130A</dd></div><div><dt>发起 DSB 的 host 核心</dt><dd>130C</dd></div><div><dt>共享 LLC</dt><dd>134</dd></div><div><dt>目标核心的缓存管理逻辑</dt><dd>127</dd></div><div><dt>同步事件检测与执行失效</dt><dd>152/156</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630771b2-fig-5-stream" data-reading-target="us11630771b2-fig-5-stream">guest 发出的翻译维护</a><p>原图 3 的 guest 核心向其他核心发送连续 TLBI。</p></li><li><a href="#us11630771b2-fig-5-dsb" data-reading-target="us11630771b2-fig-5-dsb">host 发出的独立屏障</a><p>host 核心需要目标核心处理 DSB。延误可能传递到这个核心。</p></li><li><a href="#us11630771b2-fig-5-sync" data-reading-target="us11630771b2-fig-5-sync">关联事件触发维护</a><p>满足延期条件时，目标核心先保存标记。关联事件到达后才使标记的条目失效。</p></li></ul>
+  <p class="figure-evidence">原图 3、5；说明书归档段 0021、0024、0060、0061、0062、0063、0069、0072、0073、0074；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>发起 TLBI 的 guest 核心</dt><dd>130B</dd></div><div><dt>同时接收 TLBI 和 DSB 的目标核心</dt><dd>130A</dd></div><div><dt>发起 DSB 的 host 核心</dt><dd>130C</dd></div><div><dt>共享 LLC</dt><dd>134</dd></div><div><dt>目标核心的缓存管理逻辑</dt><dd>127</dd></div><div><dt>同步事件检测与执行失效</dt><dd>152/156</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、14 项；全文核对覆盖 122 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -170,6 +254,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置含多个各带缓存的处理器。目标处理器接收远端维护，失效命令作用域和当前状态导出的范围匹配时可先标记，随后按关联同步真正失效。见原图 2、5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>缓存存储器限定为保存地址翻译条目的 TLB。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>用于 TLB 失效的同步事件为数据同步屏障 DSB。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>缓存存储器限定为保存程序指令的 ICache。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>用于 ICache 失效的同步事件为指令同步屏障 ISB。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>从 ICache 外部成功取指时触发实际失效。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>在实际失效前，已标记待失效的条目若命中读请求，仍可返回该条目。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>通过设置各条目的相应状态指示登记待失效。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>将条目移入缓存专门保留的待失效区域。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>通过延迟实际失效防止连续失效命令使处理器停顿。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>允许命令与条目自身作用域不匹配时仍延期，保留父项的执行状态作用域条件。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-1">1</a></td><td>将上下文切换作为能够触发实际失效的同步事件。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>在当前处理器的指令流检测到关联同步屏障时，直接使已标记条目失效。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>方法把在目标处理器缓存执行的接收、作用域比较、标记及关联同步后的实际失效写为操作。见原图 5。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>缓存为保存地址翻译的 TLB，同步事件为 DSB。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>缓存为 ICache，同步事件为 ISB 或从 ICache 外部成功取指。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>通过设置相关条目对应的状态指示登记待失效。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>将待失效条目搬到缓存中为此保留的区域。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>实际失效由上下文切换触发。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11630771B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>指令流检测到关联同步屏障后直接使已标记条目失效。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11630771B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11630771B2#knowledge">在关系图谱中定位 US11630771B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11586551B2</code>
+  </div>
+  <h3><a href="US11586551B2.html">CPU 核心从空闲恢复前，如何处理积累的阵列失效</a></h3>
+  <p class="related-edge-label">谁触发实际失效</p>
+  <p class="related-edge-summary">两件都能推迟维护，但判断条件不同。US11630771B2 在作用域匹配当前执行状态时记录待失效标记，等待对应同步事件。US11586551B2 在目标核空闲时拦截并缓冲失效，恢复前执行，切换到断电时可丢弃记录。前者关心同步语义，后者关心电源状态转换。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US11586551B2.html#claim-1">对照篇权项 1</a><a href="US11586551B2.html#fig-3">对照篇图表 3</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12625810B2</code>
+  </div>
+  <h3><a href="US12625810B2.html">操作数缓存何时可以取消向下一层发失效</a></h3>
+  <p class="related-edge-label">待失效位的终止条件</p>
+  <p class="related-edge-summary">US12625810B2 用上级缓存的待失效位区分两条路径，覆盖写先到时清位，上级逐出先到时才失效下级的对应条目。US11630771B2 接收其他处理器的失效命令，作用域匹配时延迟实际失效，直到关联同步事件到达。两种方案都记录待失效状态，状态终止事件分别是缓存行操作和处理器同步。</p>
+<p class="related-evidence"><a href="US12625810B2.html#claim-1">对照篇权项 1</a><a href="US12625810B2.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#scope">先判断哪种远端失效可以延后</a></li><li><a href="#tracking">一批命令怎样汇到实际失效时刻</a></li><li><a href="#triggers">同步事件按目标与命令定义</a></li><li><a href="#access">等待同步期间的命中和边界之后的访问</a></li><li><a href="#dsb-dependency">一串 TLBI 延迟的可能是另一个核心</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2023-04-18</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-07-13</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-07-13</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/373,814</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/1027、G06F12/0802、G06F12/0815 <details class="inline-more"><summary>其余 8 项</summary><span>G06F12/0811、G06F12/084、G06F12/0891、G06F2212/1008、G06F2212/1024、G06F2212/681、G06F2212/682、G06F2212/683</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>John D Pape、Mahesh K Reddy、Prasanna Utchani Varadharajan、Pruthivi Vuyyuru</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11630771B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11630771B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

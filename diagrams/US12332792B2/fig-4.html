@@ -4,36 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>独立 snoop 缓冲用满时，等待怎样绕回原请求</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
-main{max-width:960px;margin:auto;min-width:0}
-h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
-p{margin:.6rem 0}
-figure{margin:1.25rem 0}
-.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
-svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1024px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:960px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
 .node-name{font-weight:600;font-size:17px}
-.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
 .signal-title{font-weight:600;font-size:16px}
-ol{padding-inline-start:1.45rem}
-li+li{margin-top:.45rem}
-a{color:#2e5aa8;text-underline-offset:.19em}
-.component-index dt{font-weight:600}
-.component-index dd{margin:0 0 .45rem}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
 svg :target{scroll-margin:1rem}
-svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
-@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
 </style>
 </head>
 <body><main>
 <h1>独立 snoop 缓冲用满时，等待怎样绕回原请求</h1>
-<p>当其它完成应答仍依赖 snoop VC，独立挂起项用满可把等待变为循环。把同址 snoop 放入既有项可减少这类backpressure。</p>
+<p>当其它完成应答仍依赖 snoop VC，独立挂起项用满可把等待变为循环。把同址 snoop 放入既有项可减少这类 backpressure。</p>
 <figure>
 <div class="diagram-container" tabindex="0" role="region" aria-label="独立 snoop 缓冲用满时，等待怎样绕回原请求"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 536" role="img" aria-labelledby="us12332792b2-fig-4-svg-title us12332792b2-fig-4-svg-desc">
 <title id="us12332792b2-fig-4-svg-title">独立 snoop 缓冲用满时，等待怎样绕回原请求</title>
-<desc id="us12332792b2-fig-4-svg-desc">当其它完成应答仍依赖 snoop VC，独立挂起项用满可把等待变为循环。把同址 snoop 放入既有项可减少这类backpressure。</desc>
+<desc id="us12332792b2-fig-4-svg-desc">当其它完成应答仍依赖 snoop VC，独立挂起项用满可把等待变为循环。把同址 snoop 放入既有项可减少这类 backpressure。</desc>
 <defs><marker id="us12332792b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12332792b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12332792b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12332792b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
 <rect width="100%" height="100%" fill="#f5f5f5"/>
 <path id="us12332792b2-fig-4-pressure" d="M 295 154 L 668 154" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332792b2-fig-4-arrow-control)"/>
@@ -55,7 +62,7 @@ svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[
 </svg></div>
 <figcaption>依据 US12332792B2 原图 8、9、10、说明书 0064、0066、0067、0068、0069、0071、权利要求 4、6、7、13、15、16</figcaption>
 </figure>
-<ol aria-label="图中机制"><li><a href="#us12332792b2-fig-4-pressure">backpressure传回 snoop VC</a> 只在独立位置耗尽、停止接纳 snoop 且应答仍依赖进展时，才出现这里示出的循环。</li><li><a href="#us12332792b2-fig-4-absorb">向已有项吸收</a> 同址 snoop 沿此选择进入原请求条目，避免再占一项独立 snoop 缓冲。</li></ol>
-<details class="component-index"><summary>原图标号对照</summary><dl><div><dt>在途请求缓冲区</dt><dd>62</dd></div><div><dt>匹配块地址的在途请求判定</dt><dd>140</dd></div><div><dt>把 snoop 元数据写入原请求项</dt><dd>142</dd></div><div><dt>另分配 snoop 缓冲位置</dt><dd>144</dd></div></dl></details>
+<ol aria-label="图中机制"><li><a href="#us12332792b2-fig-4-pressure">backpressure传回 snoop VC</a><span>只在独立位置耗尽、停止接纳 snoop 且应答仍依赖进展时，才出现这里示出的循环。</span></li><li><a href="#us12332792b2-fig-4-absorb">向已有项吸收</a><span>同址 snoop 沿此选择进入原请求条目，避免再占一项独立 snoop 缓冲。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>在途请求缓冲区</dt><dd>62</dd></div><div><dt>匹配块地址的在途请求判定</dt><dd>140</dd></div><div><dt>把 snoop 元数据写入原请求项</dt><dd>142</dd></div><div><dt>另分配 snoop 缓冲位置</dt><dd>144</dd></div></dl></details>
 </main></body>
 </html>

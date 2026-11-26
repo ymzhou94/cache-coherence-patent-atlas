@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>子队列如何利用数据总线忙时的命令周期 · US12079144B1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12079144B1</code> · <a href="https://patents.google.com/patent/US12079144B1/en">专利全文</a></p>
-<h1>子队列如何利用数据总线忙时的命令周期</h1><p class="reading-question">写请求还有数据未发完。命令总线此时空闲时，为什么另一个请求可以先发，什么情况下还是被挡住？</p>
-<p class="reading-answer">队列管理器按地址把请求分散到多个 FIFO。仲裁器从各队首检查下一周期是否能承载请求。数据总线忙时，无需发出数据操作数的合资格队首仍可使用命令总线。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-09-03</dd></div><div><dt>申请号</dt><dd>US18/054,280</dd></div><div><dt>最早优先权</dt><dd>2022-09-21</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sebastian Werner、Amir Kleen、Jeonghee Shin、Peter A. Lisherness</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#buses">地址分队与总线发出是两个决定</a></li><li><a href="#overlap">W0 的尾段怎样与 C 的命令同时传输</a></li><li><a href="#hol">命令 C 和 W1 被散列到同一 FIFO 时仍会阻塞</a></li><li><a href="#arbitration">资格通过之后才比较 credit 或最近授权</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="buses"><h2>地址分队与总线发出是两个决定</h2><p>图 1 中每个请求源都有队列管理器，按地址范围或散列结果选子队列。申请同一个存储系统的请求可先在多个 FIFO 中等待。总线仲裁器看到各队首，同时检查命令总线与数据总线的用量。</p><p>这里的「只带命令」指在这个出站方向没有要随请求发送的数据操作数。读请求仍会有返回数据。数据总线忙且命令总线可用时，它可以发出不含出站数据操作数的命令。这条规则依赖分开的命令总线和数据总线。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　请求由地址映射到子队列，队首竞争分离的命令和数据总线</h3>
-    <p id="fig-1-basis">从两个请求源沿地址分队看到各 FIFO 队首，再看仲裁器占用哪条总线。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12079144B1 子队列如何利用数据总线忙时的命令周期 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-slc" href="../index.html?topic=slc#catalog">SLC 与内存控制器</a>
+  </nav>
+  <p class="document-id">
+    <code>US12079144B1</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-09-03">2024-09-03</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US12079144B1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>子队列如何利用数据总线忙时的命令周期</h1>
+  <p class="english-title" lang="en">Arbitration sub-queues for a memory circuit</p>
+  <p class="document-question">写请求还有数据未发完。命令总线此时空闲时，为什么另一个请求可以先发，什么情况下还是被挡住？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#buses">地址分队与总线发出是两个决定</a></li><li><a href="#overlap">W0 的尾段怎样与 C 的命令同时传输</a></li><li><a href="#hol">命令 C 和 W1 被散列到同一 FIFO 时仍会阻塞</a></li><li><a href="#arbitration">资格通过之后才比较 credit 或最近授权</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">队列管理器按地址把请求分散到多个 FIFO。仲裁器从各队首检查下一周期是否能承载请求。数据总线忙时，无需发出数据操作数的合资格队首仍可使用命令总线。</p>
+  </section>
+  <div id="mechanism"><section id="buses" class="article-section reading-chapter" aria-labelledby="buses-title"><h2 id="buses-title">地址分队与总线发出是两个决定</h2><p>图 1 中每个请求源都有队列管理器，按地址范围或散列结果选子队列。申请同一个存储系统的请求可先在多个 FIFO 中等待。总线仲裁器看到各队首，同时检查命令总线与数据总线的用量。</p><p>这里的「只带命令」指在这个出站方向没有要随请求发送的数据操作数。读请求仍会有返回数据。数据总线忙且命令总线可用时，它可以发出不含出站数据操作数的命令。这条规则依赖分开的命令总线和数据总线。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">请求由地址映射到子队列，队首竞争分离的命令和数据总线</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12079144B1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">从两个请求源沿地址分队看到各 FIFO 队首，再看仲裁器占用哪条总线。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="请求由地址映射到子队列，队首竞争分离的命令和数据总线" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 574" role="img" aria-labelledby="us12079144b1-fig-1-svg-title us12079144b1-fig-1-svg-desc">
 <title id="us12079144b1-fig-1-svg-title">请求由地址映射到子队列，队首竞争分离的命令和数据总线</title>
 <desc id="us12079144b1-fig-1-svg-desc">从两个请求源沿地址分队看到各 FIFO 队首，再看仲裁器占用哪条总线。</desc>
@@ -45,12 +91,21 @@
 <text x="42" y="59" class="signal-title" text-anchor="start">各请求源按地址分队，仲裁器看子队列队首及下一周期总线状态</text>
 <text x="42" y="516" class="legend" text-anchor="start">地址选队与数据总线可用性的判断发生在两个部件。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12079144b1-fig-1-assign0">按地址选子队列</a> 本例按地址范围或散列值选择 FIFO，不以有无出站数据作为分队的唯一条件。</li><li><a href="#us12079144b1-fig-1-heads1">B 的各个队首</a> 仲裁器从每个队列看队首。同一地址的请求如何排在原队列仍由队列管理规则决定。</li><li><a href="#us12079144b1-fig-1-assess">总线仲裁器</a> 包含数据的请求还需下一周期数据总线可传至少一段。没有出站数据的请求可在数据忙时发命令。</li><li><a href="#us12079144b1-fig-1-com">命令总线与数据总线分开</a> 命令携带地址。写数据可独自继续占用数据总线多个周期。</li></ul>
-  <p class="figure-evidence">原图 1、2；说明书归档段 0025、0032、0033、0034、0035、0036、0037、0038、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12079144B1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求源的队列管理器</dt><dd>205a–205b</dd></div><div><dt>两个请求源</dt><dd>220a–220b</dd></div><div><dt>按地址分配的请求子队列</dt><dd>210a–210d</dd></div><div><dt>地址散列逻辑</dt><dd>280a</dd></div><div><dt>散列输出</dt><dd>285a</dd></div><div><dt>总线仲裁器</dt><dd>240</dd></div><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>目标存储电路</dt><dd>270</dd></div></dl></details>
-</figure></section><section id="overlap"><h2>W0 的尾段怎样与 C 的命令同时传输</h2><p>图 2 从原图 2 抽出三笔请求。W0 首个周期发送地址和第一段数据，周期 1 继续发送尾段。W1 虽处在另一队首，但需要发出数据，暂时无法使用总线。C 只发命令，便可填这一周期的命令位置。</p><p>下一周期数据总线释放后，从更新的队首集合中选择请求。例中 W1 当时发出命令和第一段数据。它的剩余数据继续占用后续周期。表 3 列出这三笔访问的资格条件。原图中的请求组合和其它仲裁规则可能改变排程。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　数据总线传 W0 尾段时，命令总线发 C</h3>
-    <p id="fig-2-basis">原图 2 的三个代表性请求说明哪里能重叠，以及 W1 为什么还要等待。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12079144b1-fig-1-assign0" data-reading-target="us12079144b1-fig-1-assign0">按地址选子队列</a><p>本例按地址范围或散列值选择 FIFO，不以有无出站数据作为分队的唯一条件。</p></li><li><a href="#us12079144b1-fig-1-heads1" data-reading-target="us12079144b1-fig-1-heads1">B 的各个队首</a><p>仲裁器从每个队列看队首。同一地址的请求如何排在原队列仍由队列管理规则决定。</p></li><li><a href="#us12079144b1-fig-1-assess" data-reading-target="us12079144b1-fig-1-assess">总线仲裁器</a><p>包含数据的请求还需下一周期数据总线可传至少一段。没有出站数据的请求可在数据忙时发命令。</p></li><li><a href="#us12079144b1-fig-1-com" data-reading-target="us12079144b1-fig-1-com">命令总线与数据总线分开</a><p>命令携带地址。写数据可独自继续占用数据总线多个周期。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0025、0032、0033、0034、0035、0036、0037、0038、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">9 项</span></summary><dl><div><dt>请求源的队列管理器</dt><dd>205a–205b</dd></div><div><dt>两个请求源</dt><dd>220a–220b</dd></div><div><dt>按地址分配的请求子队列</dt><dd>210a–210d</dd></div><div><dt>地址散列逻辑</dt><dd>280a</dd></div><div><dt>散列输出</dt><dd>285a</dd></div><div><dt>总线仲裁器</dt><dd>240</dd></div><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>目标存储电路</dt><dd>270</dd></div></dl></details>
+</figure></section><section id="overlap" class="article-section reading-chapter" aria-labelledby="overlap-title"><h2 id="overlap-title">W0 的尾段怎样与 C 的命令同时传输</h2><p>图 2 从原图 2 抽出三笔请求。W0 首个周期发送地址和第一段数据，周期 1 继续发送尾段。W1 虽处在另一队首，但需要发出数据，暂时无法使用总线。C 只发命令，便可填这一周期的命令位置。</p><p>下一周期数据总线释放后，从更新的队首集合中选择请求。例中 W1 当时发出命令和第一段数据。它的剩余数据继续占用后续周期。表 3 列出这三笔访问的资格条件。原图中的请求组合和其它仲裁规则可能改变排程。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 同轴时序</p>
+        <h3 id="fig-2-title">数据总线传 W0 尾段时，命令总线发 C</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12079144B1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">原图 2 的三个代表性请求说明哪里能重叠，以及 W1 为什么还要等待。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="数据总线传 W0 尾段时，命令总线发 C" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us12079144b1-fig-2-svg-title us12079144b1-fig-2-svg-desc">
 <title id="us12079144b1-fig-2-svg-title">数据总线传 W0 尾段时，命令总线发 C</title>
 <desc id="us12079144b1-fig-2-svg-desc">原图 2 的三个代表性请求说明哪里能重叠，以及 W1 为什么还要等待。</desc>
@@ -102,19 +157,37 @@
 <text x="451.2" y="355" class="arrow-label" text-anchor="end">下一可用周期</text></g>
 <text x="24" y="420" class="legend" text-anchor="start">压缩原图 2 的三笔代表请求以隔离因果，省略其它队首竞争。每条轨道的分格是总线周期。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12079144b1-fig-2-command">命令总线</a> 周期 0 发 W0，周期 1 发不含出站数据的 C，周期 2 发 W1。</li><li><a href="#us12079144b1-fig-2-data">数据总线</a> W0 跨周期 0 和 1。C 在周期 1 只用命令，无需和 W0 争数据总线。</li><li><a href="#us12079144b1-fig-2-w">W1 仍在队首</a> 该请求当前周期不合资格并不改变在 FIFO 中的位置。下一次可用时仍能参与仲裁。</li></ul>
-  <p class="figure-evidence">原图 2、4、5；说明书归档段 0037、0038、0039、0058、0059、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12079144B1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>前笔数据继续传输的周期</dt><dd>236</dd></div><div><dt>先发的数据请求 W0</dt><dd>250a</dd></div><div><dt>待发的数据请求 W1</dt><dd>260a</dd></div><div><dt>只带命令的请求 C</dt><dd>260c</dd></div><div><dt>W0 的两段写数据</dt><dd>254aa–254ab</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　各类队首何时有资格发出</h3>
-    <p id="fig-3-basis">根据图 2 的数据总线状态与请求类型核对发出资格，再执行后续仲裁。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">当前队首</th><th scope="col">下一周期数据总线</th><th scope="col">是否是候选</th><th scope="col">继续处理</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">W1 含数据操作数</th><td>忙</td><td>否</td><td>留在原队首</td></tr><tr id="fig-3-table-row-2"><th scope="row">C 不含数据操作数</th><td>忙</td><td>可</td><td>在剩余候选中仲裁</td></tr><tr id="fig-3-table-row-3"><th scope="row">W1 含数据操作数</th><td>可用</td><td>可</td><td>按规则参与仲裁</td></tr><tr id="fig-3-table-row-4"><th scope="row">C 在 W1 后面</th><td>忙或可用</td><td>否</td><td>等成为队首</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-basis">资格条件</a> 表内假定命令总线可用且其它系统约束满足。仲裁只比较有资格的请求。</li></ul>
-  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0037、0038、0039、0043、0046、0062、0063、0064、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>总线仲裁器</dt><dd>240</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>每请求源的可用 credit</dt><dd>324a–324b</dd></div><div><dt>每子队列的仲裁计数</dt><dd>325a–325f</dd></div></dl></details>
-</figure></section><section id="hol"><h2>命令 C 和 W1 被散列到同一 FIFO 时仍会阻塞</h2><p>图 4 对照同样的输入。若 C 排在 W1 后面，数据总线仍忙的周期 1 无法把 W1 从队首发出，C 又未成为候选。另一种布局中 C 属于独立 FIFO，能单独通过资格判定。这个对照说明地址分布如何影响队首阻塞。</p><p>以 W0 两段数据、W1 三段数据、C 不带数据的每周期模型核对，分队时 C 在周期 1 发出，合队时周期 3 才发出。两种布局里的 W1 都在周期 2 发出，整批数据尾段都在周期 4。该例可以缩短 C 的等待和命令总线空闲时间，整批写入结束时刻仍受数据尾段限制。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　C 在队首时能发，排在 W1 后面时仍会阻塞</h3>
-    <p id="fig-4-basis">只改 C 和 W1 的 FIFO 位置，观察同一个忙周期的空闲命令槽能否被使用。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12079144b1-fig-2-command" data-reading-target="us12079144b1-fig-2-command">命令总线</a><p>周期 0 发 W0，周期 1 发不含出站数据的 C，周期 2 发 W1。</p></li><li><a href="#us12079144b1-fig-2-data" data-reading-target="us12079144b1-fig-2-data">数据总线</a><p>W0 跨周期 0 和 1。C 在周期 1 只用命令，无需和 W0 争数据总线。</p></li><li><a href="#us12079144b1-fig-2-w" data-reading-target="us12079144b1-fig-2-w">W1 仍在队首</a><p>该请求当前周期不合资格并不改变在 FIFO 中的位置。下一次可用时仍能参与仲裁。</p></li></ul>
+  <p class="figure-evidence">原图 2、4、5；说明书归档段 0037、0038、0039、0058、0059、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">7 项</span></summary><dl><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>前笔数据继续传输的周期</dt><dd>236</dd></div><div><dt>先发的数据请求 W0</dt><dd>250a</dd></div><div><dt>待发的数据请求 W1</dt><dd>260a</dd></div><div><dt>只带命令的请求 C</dt><dd>260c</dd></div><div><dt>W0 的两段写数据</dt><dd>254aa–254ab</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">各类队首何时有资格发出</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">根据图 2 的数据总线状态与请求类型核对发出资格，再执行后续仲裁。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="各类队首何时有资格发出"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">当前队首</th><th scope="col">下一周期数据总线</th><th scope="col">是否是候选</th><th scope="col">继续处理</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">W1 含数据操作数</th><td>忙</td><td>否</td><td>留在原队首</td></tr><tr id="fig-3-table-row-2"><th scope="row">C 不含数据操作数</th><td>忙</td><td>可</td><td>在剩余候选中仲裁</td></tr><tr id="fig-3-table-row-3"><th scope="row">W1 含数据操作数</th><td>可用</td><td>可</td><td>按规则参与仲裁</td></tr><tr id="fig-3-table-row-4"><th scope="row">C 在 W1 后面</th><td>忙或可用</td><td>否</td><td>等成为队首</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-basis" data-reading-target="fig-3-basis">资格条件</a><p>表内假定命令总线可用且其它系统约束满足。仲裁只比较有资格的请求。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0037、0038、0039、0043、0046、0062、0063、0064、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>总线仲裁器</dt><dd>240</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>每请求源的可用 credit</dt><dd>324a–324b</dd></div><div><dt>每子队列的仲裁计数</dt><dd>325a–325f</dd></div></dl></details>
+</figure></section><section id="hol" class="article-section reading-chapter" aria-labelledby="hol-title"><h2 id="hol-title">命令 C 和 W1 被散列到同一 FIFO 时仍会阻塞</h2><p>图 4 对照同样的输入。若 C 排在 W1 后面，数据总线仍忙的周期 1 无法把 W1 从队首发出，C 又未成为候选。另一种布局中 C 属于独立 FIFO，能单独通过资格判定。这个对照说明地址分布如何影响队首阻塞。</p><p>以 W0 两段数据、W1 三段数据、C 不带数据的每周期模型核对，分队时 C 在周期 1 发出，合队时周期 3 才发出。两种布局里的 W1 都在周期 2 发出，整批数据尾段都在周期 4。该例可以缩短 C 的等待和命令总线空闲时间，整批写入结束时刻仍受数据尾段限制。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">C 在队首时能发，排在 W1 后面时仍会阻塞</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12079144B1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">只改 C 和 W1 的 FIFO 位置，观察同一个忙周期的空闲命令槽能否被使用。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="C 在队首时能发，排在 W1 后面时仍会阻塞" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 809" role="img" aria-labelledby="us12079144b1-fig-4-svg-title us12079144b1-fig-4-svg-desc">
 <title id="us12079144b1-fig-4-svg-title">C 在队首时能发，排在 W1 后面时仍会阻塞</title>
 <desc id="us12079144b1-fig-4-svg-desc">只改 C 和 W1 的 FIFO 位置，观察同一个忙周期的空闲命令槽能否被使用。</desc>
@@ -143,12 +216,21 @@
 <text x="56" y="67" class="signal-title" text-anchor="start">同样三笔请求，C 是否被挡在 W1 后面取决于分队</text>
 <text x="57" y="438" class="legend" text-anchor="start">两种布局都假定 W0 在周期 0 发出，数据第二段占用周期 1。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12079144b1-fig-4-cback">C 在同一 FIFO 的后项</a> 当前周期资格判定只看 W1，C 即使不需要数据也不能越过。</li><li><a href="#us12079144b1-fig-4-idle">命令周期空闲</a> 如果没有其他合资格队首，数据继续传、命令总线空一拍。</li><li><a href="#us12079144b1-fig-4-c">C 位于另一 FIFO 队首</a> C 独立参与资格选择。</li><li><a href="#us12079144b1-fig-4-filled">在同一周期发 C</a> 命令总线发送 C，数据总线仍传 W0 的尾段。</li></ul>
-  <p class="figure-evidence">原图 2、5；说明书归档段 0035、0036、0037、0038、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12079144B1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>按地址分配的请求子队列</dt><dd>210a–210d</dd></div><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>先发的数据请求 W0</dt><dd>250a</dd></div><div><dt>待发的数据请求 W1</dt><dd>260a</dd></div><div><dt>只带命令的请求 C</dt><dd>260c</dd></div></dl></details>
-</figure></section><section id="arbitration"><h2>资格通过之后才比较 credit 或最近授权</h2><p>图 5 把两次选择分开。先从各队首排除当前不能发的请求，并根据实现检查请求源的 credit。之后可从合资格队列里选最久没有拿到总线的一个。胜出队列的计数重置，其他队列计数更新以供下一轮比较。</p><p>专利还描述按队首 credit 提高请求源优先级、计数器集中或分布等选项。即使等待很久，只要 W1 所需的数据总线在下一周期不可用，它仍留在原 FIFO。性能测量需要看队首阻塞比例、命令／数据总线利用率和各类请求调度等待。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　等待最久的队列也要先满足数据总线和 credit 条件</h3>
-    <p id="fig-5-basis">从左边的资格筛选沿控制路径看仲裁计数何时参与，以及发出后哪些状态更新。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12079144b1-fig-4-cback" data-reading-target="us12079144b1-fig-4-cback">C 在同一 FIFO 的后项</a><p>当前周期资格判定只看 W1，C 即使不需要数据也不能越过。</p></li><li><a href="#us12079144b1-fig-4-idle" data-reading-target="us12079144b1-fig-4-idle">命令周期空闲</a><p>如果没有其他合资格队首，数据继续传、命令总线空一拍。</p></li><li><a href="#us12079144b1-fig-4-c" data-reading-target="us12079144b1-fig-4-c">C 位于另一 FIFO 队首</a><p>C 独立参与资格选择。</p></li><li><a href="#us12079144b1-fig-4-filled" data-reading-target="us12079144b1-fig-4-filled">在同一周期发 C</a><p>命令总线发送 C，数据总线仍传 W0 的尾段。</p></li></ul>
+  <p class="figure-evidence">原图 2、5；说明书归档段 0035、0036、0037、0038、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>按地址分配的请求子队列</dt><dd>210a–210d</dd></div><div><dt>命令总线</dt><dd>232</dd></div><div><dt>数据总线</dt><dd>234</dd></div><div><dt>先发的数据请求 W0</dt><dd>250a</dd></div><div><dt>待发的数据请求 W1</dt><dd>260a</dd></div><div><dt>只带命令的请求 C</dt><dd>260c</dd></div></dl></details>
+</figure></section><section id="arbitration" class="article-section reading-chapter" aria-labelledby="arbitration-title"><h2 id="arbitration-title">资格通过之后才比较 credit 或最近授权</h2><p>图 5 把两次选择分开。先从各队首排除当前不能发的请求，并根据实现检查请求源的 credit。之后可从合资格队列里选最久没有拿到总线的一个。胜出队列的计数重置，其他队列计数更新以供下一轮比较。</p><p>专利还描述按队首 credit 提高请求源优先级、计数器集中或分布等选项。即使等待很久，只要 W1 所需的数据总线在下一周期不可用，它仍留在原 FIFO。性能测量需要看队首阻塞比例、命令／数据总线利用率和各类请求调度等待。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">等待最久的队列也要先满足数据总线和 credit 条件</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12079144B1/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">从左边的资格筛选沿控制路径看仲裁计数何时参与，以及发出后哪些状态更新。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="等待最久的队列也要先满足数据总线和 credit 条件" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 529" role="img" aria-labelledby="us12079144b1-fig-5-svg-title us12079144b1-fig-5-svg-desc">
 <title id="us12079144b1-fig-5-svg-title">等待最久的队列也要先满足数据总线和 credit 条件</title>
 <desc id="us12079144b1-fig-5-svg-desc">从左边的资格筛选沿控制路径看仲裁计数何时参与，以及发出后哪些状态更新。</desc>
@@ -175,12 +257,14 @@
 <text x="47" y="58" class="signal-title" text-anchor="start">总线资格先筛选，最近一次授权用于排序</text>
 <text x="47" y="486" class="legend" text-anchor="start">计数器可分布在队列管理器，也可由仲裁器集中维护。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12079144b1-fig-5-credit">credit 检查</a> 该实施例可要求请求源有足够 credit。credit 与队列等待周期分别跟踪。</li><li><a href="#us12079144b1-fig-5-age">最近一次授权计数</a> 在一种实现中按未获选的总线周期递增。初始化和调整方式可变化。</li><li><a href="#us12079144b1-fig-5-win">胜出请求</a> 可在合资格队列中选择最久未获授权的一条。</li><li><a href="#us12079144b1-fig-5-reset">发出后更新</a> 初始化胜出队列计数并更新其它队列的计数。credit 实现会扣除对应额度。</li></ul>
-  <p class="figure-evidence">原图 3、5、6；说明书归档段 0042、0043、0044、0045、0046、0047、0066、0067、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12079144B1/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>每请求源的可用 credit</dt><dd>324a–324b</dd></div><div><dt>按队首调整优先级的 credit</dt><dd>326a–326b</dd></div><div><dt>每子队列的仲裁计数</dt><dd>325a–325f</dd></div><div><dt>请求源的队列管理器</dt><dd>205a–205b</dd></div><div><dt>集中维护计数及 credit 的仲裁器</dt><dd>340</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12079144b1-fig-5-credit" data-reading-target="us12079144b1-fig-5-credit">credit 检查</a><p>该实施例可要求请求源有足够 credit。credit 与队列等待周期分别跟踪。</p></li><li><a href="#us12079144b1-fig-5-age" data-reading-target="us12079144b1-fig-5-age">最近一次授权计数</a><p>在一种实现中按未获选的总线周期递增。初始化和调整方式可变化。</p></li><li><a href="#us12079144b1-fig-5-win" data-reading-target="us12079144b1-fig-5-win">胜出请求</a><p>可在合资格队列中选择最久未获授权的一条。</p></li><li><a href="#us12079144b1-fig-5-reset" data-reading-target="us12079144b1-fig-5-reset">发出后更新</a><p>初始化胜出队列计数并更新其它队列的计数。credit 实现会扣除对应额度。</p></li></ul>
+  <p class="figure-evidence">原图 3、5、6；说明书归档段 0042、0043、0044、0045、0046、0047、0066、0067、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>每请求源的可用 credit</dt><dd>324a–324b</dd></div><div><dt>按队首调整优先级的 credit</dt><dd>326a–326b</dd></div><div><dt>每子队列的仲裁计数</dt><dd>325a–325f</dd></div><div><dt>请求源的队列管理器</dt><dd>205a–205b</dd></div><div><dt>集中维护计数及 credit 的仲裁器</dt><dd>340</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项；全文核对覆盖 110 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -210,6 +294,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置具有独立命令和数据总线。按地址分配两类请求，数据总线忙时选无需发送操作数的请求。见原图 1–2、5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>第一笔请求的地址经过散列，散列值用于选择对应总线队列。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>候选限定为各子队列队首、且当前可以使用通信总线的请求。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>带数据操作数的队首仅在下一拍能发送至少一部分操作数时具资格。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>分配来源信用，并检查队列管理器有足够信用才确认资格。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>选中队列的计数初始化，其余一个或多个队列的计数更新。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>另设队列管理器和队列组；选择后也调整另一组的部分计数。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>依据计数选择另一组的队列，并检查其操作数能在下个总线周期至少发出一部分。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法将两笔请求按地址放到不同队列，数据总线可用时同时发送第一笔地址及至少部分数据，不可用时选择第二笔。见原图 2、4–5。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>再次规定用第二请求地址选择另一队列；该动作已在父项出现。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>用请求地址生成哈希，并依哈希值选择队列。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>从各队队首建立候选，数据总线忙时剔除带操作数项的当轮资格。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>选中队列的计数初始化，其余一个或多个队列的计数更新。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>计数更新后，依据计数从其他队列选择请求。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统含多个队列管理器，由共同仲裁器针对数据总线状态选择可发送的下一笔请求。见原图 2、5。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第一请求按写目的地址选队，第二请求按读源地址选队。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>其他队列管理器亦设队列，仲裁器跟踪各队的计数。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>初始化选中队列计数、调整未选队列，并按更新计数选后续请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>数据总线下一拍不可用时，从队首候选集合排除需要操作数的请求。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12079144B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>后续总线周期重新收集队首；数据总线可用时选带操作数的候选。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12079144B1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12079144B1#knowledge">在关系图谱中定位 US12079144B1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12730763B2</code>
+  </div>
+  <h3><a href="US12730763B2.html">关键读到达时，内存控制器何时提前结束写轮次</a></h3>
+  <p class="related-edge-label">等数据线或换方向</p>
+  <p class="related-edge-summary">命令和数据分线时，US12079144B1 在数据线不可用时仍可从另一地址队列选不需携带数据的合格请求。US12730763B2 遇到关键读时可提前结束整段写轮次，前提之一是写队列有足够空位。前者利用仍可用的命令链路，后者改变读写服务方向。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12730763B2.html#claim-1">对照篇权项 1</a><a href="US12730763B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US20240202146A1</code>
+  </div>
+  <h3><a href="US20240202146A1.html">提前发送 SYNC，保留 DRAM 数据时钟的启动点</a></h3>
+  <p class="related-edge-label">命令发出与数据总线时序</p>
+  <p class="related-edge-summary">US20240202146A1 允许 DRAM 在命令总线上提前接收 SYNC，并由器件延迟启动数据时钟。US12079144B1 在数据总线不可用时优先考虑无需发送数据操作数的请求。判断命令带宽是否得到利用时，要分别计量命令发出、数据时钟启动和数据实际传输。</p>
+<p class="related-evidence"><a href="US20240202146A1.html#claim-9">对照篇权项 9</a><a href="US20240202146A1.html#fig-2">对照篇图表 2</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#buses">地址分队与总线发出是两个决定</a></li><li><a href="#overlap">W0 的尾段怎样与 C 的命令同时传输</a></li><li><a href="#hol">命令 C 和 W1 被散列到同一 FIFO 时仍会阻塞</a></li><li><a href="#arbitration">资格通过之后才比较 credit 或最近授权</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-09-03</dd></div>
+      <div><dt>最早优先权</dt><dd>2022-09-21</dd></div>
+      <div><dt>美国申请日</dt><dd>2022-11-10</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/054,280</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F13/1642、G06F13/1673、G06F13/161 <details class="inline-more"><summary>其余 3 项</summary><span>G06F13/1668、G06F13/1689、G06F13/374</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Sebastian Werner、Amir Kleen、Jeonghee Shin、Peter A. Lisherness</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US12079144B1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12079144B1#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

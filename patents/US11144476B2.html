@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>多端口缓存怎样合并同组 LRU 更新 · US11144476B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11144476B2</code> · <a href="https://patents.google.com/patent/US11144476B2/en">专利全文</a></p>
-<h1>多端口缓存怎样合并同组 LRU 更新</h1><p class="reading-question">两个端口在同一访问周期命中同一缓存组的不同路。控制器如果这一轮只能提升一路，怎样避免下一次缺失逐出刚刚命中的缓存行？</p>
-<p class="reading-answer">控制器保留每组的路名次，并用阈值划出接近 LRU 的区域。同组多命中时，先提升更容易被逐出的命中路，未处理的易逐出路可以留待后续周期。两个端口的缓存命中都能照常处理。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2021-10-12</dd></div><div><dt>申请号</dt><dd>US16/733,187</dd></div><div><dt>最早优先权</dt><dd>2020-01-02</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Chance C. Coats、Haldun Umur Darbaz</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#ports-and-sets">判断两笔命中是否共用一份替换元数据</a></li><li><a href="#rank-update">同组先处理更接近 LRU 的命中</a></li><li><a href="#defer-rank">两路都容易被逐出时，反馈记录未处理的一路</a></li><li><a href="#victim-selection">同周期出现缺失时，逐出选择依赖哪份名次</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="ports-and-sets"><h2>判断两笔命中是否共用一份替换元数据</h2><p>沿图 1 的两个请求端口先走到标签查找。两个请求各自得到命中与否；每次命中还提供缓存组和路号。缓存控制器只在组号相同时用阈值化解名次更新冲突。这个选择不阻挡两个端口读取已经命中的数据。</p><p>组号不同时，每组有自己的名次记录。原图 7 的独立更新例中，组 A 和组 B 同时把各自命中的路提升为 MRU，即使其中一路不符合本组的易逐出阈值。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　同周期双命中只在同一缓存组内竞争 LRU 更新</h3>
-    <p id="fig-1-basis">两个端口都可以命中并返回数据。需要取舍的是同一个缓存组的两个名次更新。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11144476B2 多端口缓存怎样合并同组 LRU 更新 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US11144476B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2021-10-12">2021-10-12</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11144476B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>多端口缓存怎样合并同组 LRU 更新</h1>
+  <p class="english-title" lang="en">Least recently used ranking in a multi-port cache</p>
+  <p class="document-question">两个端口在同一访问周期命中同一缓存组的不同路。控制器如果这一轮只能提升一路，怎样避免下一次缺失逐出刚刚命中的缓存行？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#ports-and-sets">判断两笔命中是否共用一份替换元数据</a></li><li><a href="#rank-update">同组先处理更接近 LRU 的命中</a></li><li><a href="#defer-rank">两路都容易被逐出时，反馈记录未处理的一路</a></li><li><a href="#victim-selection">同周期出现缺失时，逐出选择依赖哪份名次</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">控制器保留每组的路名次，并用阈值划出接近 LRU 的区域。同组多命中时，先提升更容易被逐出的命中路，未处理的易逐出路可以留待后续周期。两个端口的缓存命中都能照常处理。</p>
+  </section>
+  <div id="mechanism"><section id="ports-and-sets" class="article-section reading-chapter" aria-labelledby="ports-and-sets-title"><h2 id="ports-and-sets-title">判断两笔命中是否共用一份替换元数据</h2><p>沿图 1 的两个请求端口先走到标签查找。两个请求各自得到命中与否；每次命中还提供缓存组和路号。缓存控制器只在组号相同时用阈值化解名次更新冲突。这个选择不阻挡两个端口读取已经命中的数据。</p><p>组号不同时，每组有自己的名次记录。原图 7 的独立更新例中，组 A 和组 B 同时把各自命中的路提升为 MRU，即使其中一路不符合本组的易逐出阈值。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">同周期双命中只在同一缓存组内竞争 LRU 更新</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11144476B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">两个端口都可以命中并返回数据。需要取舍的是同一个缓存组的两个名次更新。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同周期双命中只在同一缓存组内竞争 LRU 更新" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 680" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">同周期双命中只在同一缓存组内竞争 LRU 更新</title>
 <desc id="fig-1-svg-desc">两个端口都可以命中并返回数据。需要取舍的是同一个缓存组的两个名次更新。</desc>
@@ -45,12 +91,21 @@
 <text x="45" y="43" class="signal-title" text-anchor="start">数据端口与组内替换更新</text>
 <text x="45" y="652" class="signal-title" text-anchor="start">路号表示物理路，LRU 名次表示该组的替换次序。两者单独记录。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-tags">查找给出组号和路号</a> 地址先定位缓存组，再在组内的候选路上确认命中。把命中元组的组号和路号沿下方路径交给控制器。</li><li><a href="#fig-1-same">同组进入阈值仲裁</a> 两个端口同时命中同一组的不同路。同一份 LRU 次序需要合并这两笔更新。</li><li><a href="#fig-1-sets">不同组独立推进</a> 对照原图 7，两个组各自把命中路放到 MRU，组 A 的路 f 即使未达本组阈值也会上移。</li></ul>
-  <p class="figure-evidence">原图 1、2、7；说明书归档段 0026、0029、0031、0032、0038、0039、0040、0066、0067、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11144476B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>可向缓存发请求的两路请求电路</dt><dd>120a、120b</dd></div><div><dt>负责匹配与组内名次更新的缓存控制器</dt><dd>201</dd></div><div><dt>分别维护替换次序的缓存组</dt><dd>216a、216b</dd></div><div><dt>逐组名次记录与阈值</dt><dd>240a、240b；245a、245b</dd></div></dl></details>
-</figure></section><section id="rank-update"><h2>同组先处理更接近 LRU 的命中</h2><p>图 2 采用说明书原图 3 的第 1–8 名记法。第 1 名为最近使用（MRU），第 8 名为最近最少使用（LRU），阈值放在第 4、5 名之间。两次命中都根据进入访问周期时的次序比较。文中所说“提升 rank”指向 MRU 移动，数值名次会从 6 变为 1。</p><p>本轮命中 c 和 f，只有 f 的第 6 名进入易逐出区间。f 移到队首，原来在它前面的 a 到 e 各后移一位。c 刚刚命中，名次仍由第 3 变成第 4。这个例子给出了精确 LRU 与该策略会产生不同替换次序的条件。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　双命中 c 和 f 时，只提升接近 LRU 的 f</h3>
-    <p id="fig-2-basis">用原图 3 的 8 路状态。阈值在第 4／5 名之间，只移动 f 及原来排在 f 前面的路。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-tags" data-reading-target="fig-1-tags">查找给出组号和路号</a><p>地址先定位缓存组，再在组内的候选路上确认命中。把命中元组的组号和路号沿下方路径交给控制器。</p></li><li><a href="#fig-1-same" data-reading-target="fig-1-same">同组进入阈值仲裁</a><p>两个端口同时命中同一组的不同路。同一份 LRU 次序需要合并这两笔更新。</p></li><li><a href="#fig-1-sets" data-reading-target="fig-1-sets">不同组独立推进</a><p>对照原图 7，两个组各自把命中路放到 MRU，组 A 的路 f 即使未达本组阈值也会上移。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、7；说明书归档段 0026、0029、0031、0032、0038、0039、0040、0066、0067、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>可向缓存发请求的两路请求电路</dt><dd>120a、120b</dd></div><div><dt>负责匹配与组内名次更新的缓存控制器</dt><dd>201</dd></div><div><dt>分别维护替换次序的缓存组</dt><dd>216a、216b</dd></div><div><dt>逐组名次记录与阈值</dt><dd>240a、240b；245a、245b</dd></div></dl></details>
+</figure></section><section id="rank-update" class="article-section reading-chapter" aria-labelledby="rank-update-title"><h2 id="rank-update-title">同组先处理更接近 LRU 的命中</h2><p>图 2 采用说明书原图 3 的第 1–8 名记法。第 1 名为最近使用（MRU），第 8 名为最近最少使用（LRU），阈值放在第 4、5 名之间。两次命中都根据进入访问周期时的次序比较。文中所说“提升 rank”指向 MRU 移动，数值名次会从 6 变为 1。</p><p>本轮命中 c 和 f，只有 f 的第 6 名进入易逐出区间。f 移到队首，原来在它前面的 a 到 e 各后移一位。c 刚刚命中，名次仍由第 3 变成第 4。这个例子给出了精确 LRU 与该策略会产生不同替换次序的条件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">双命中 c 和 f 时，只提升接近 LRU 的 f</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11144476B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">用原图 3 的 8 路状态。阈值在第 4／5 名之间，只移动 f 及原来排在 f 前面的路。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="双命中 c 和 f 时，只提升接近 LRU 的 f" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 750" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">双命中 c 和 f 时，只提升接近 LRU 的 f</title>
 <desc id="fig-2-svg-desc">用原图 3 的 8 路状态。阈值在第 4／5 名之间，只移动 f 及原来排在 f 前面的路。</desc>
@@ -103,12 +158,21 @@
 <text x="207" y="232" class="signal-title" text-anchor="start">第 1–4 名较近使用</text>
 <text x="862" y="232" class="signal-title" text-anchor="start">第 5–8 名接近 LRU</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-snapshot">先读同一份基准次序</a> 两次阈值比较使用更新前的名次。c 是第 3 名，f 是第 6 名。</li><li><a href="#fig-2-select">只有 f 达到阈值</a> c 被本周期访问，也会随 a–e 这一段整体后移。这正是数据命中和名次更新分别处理的结果。</li><li><a href="#fig-2-update">区间移位后仍是一份完整次序</a> 原第 1–5 名后移一位，f 移到第 1 名，原第 7–8 名留在原位。</li></ul>
-  <p class="figure-evidence">原图 3、8；说明书归档段 0048、0049、0050、0051、0052、0075、0076；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11144476B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>八路共同的名次快照</dt><dd>140</dd></div><div><dt>区分最近使用区间和接近 LRU 区间的阈值</dt><dd>145</dd></div><div><dt>分别命中 c 和 f 的请求</dt><dd>330a、330b</dd></div></dl></details>
-</figure></section><section id="defer-rank"><h2>两路都容易被逐出时，反馈记录未处理的一路</h2><p>图 3 从上一轮的结果继续走。t3 同时命中 e 和 g。g 更接近 LRU，控制器先提升 g；带反馈的实现保存 e 的路号。到 t4，两个新命中 a、g 都没有达到阈值，控制器可以用本轮的名次更新位置把 e 移到 MRU。</p><p>t4 如果命中的是更接近 LRU 的 h，说明书的另一条路径允许先提升 h 并继续保存 e。反馈处理依赖后续请求模式。说明书也有两次命中都在安全区便不改名次的实施例，因此名次记录只近似实际访问顺序。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　两个命中都近 LRU，未选中的路可等下一次空档</h3>
-    <p id="fig-3-basis">沿原图 4 的 t3 和 t4 跟踪反馈记录。判断空档看有没有命中易逐出区间，缓存端口仍可能有命中。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-snapshot" data-reading-target="fig-2-snapshot">先读同一份基准次序</a><p>两次阈值比较使用更新前的名次。c 是第 3 名，f 是第 6 名。</p></li><li><a href="#fig-2-select" data-reading-target="fig-2-select">只有 f 达到阈值</a><p>c 被本周期访问，也会随 a–e 这一段整体后移。这正是数据命中和名次更新分别处理的结果。</p></li><li><a href="#fig-2-update" data-reading-target="fig-2-update">区间移位后仍是一份完整次序</a><p>原第 1–5 名后移一位，f 移到第 1 名，原第 7–8 名留在原位。</p></li></ul>
+  <p class="figure-evidence">原图 3、8；说明书归档段 0048、0049、0050、0051、0052、0075、0076；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>八路共同的名次快照</dt><dd>140</dd></div><div><dt>区分最近使用区间和接近 LRU 区间的阈值</dt><dd>145</dd></div><div><dt>分别命中 c 和 f 的请求</dt><dd>330a、330b</dd></div></dl></details>
+</figure></section><section id="defer-rank" class="article-section reading-chapter" aria-labelledby="defer-rank-title"><h2 id="defer-rank-title">两路都容易被逐出时，反馈记录未处理的一路</h2><p>图 3 从上一轮的结果继续走。t3 同时命中 e 和 g。g 更接近 LRU，控制器先提升 g；带反馈的实现保存 e 的路号。到 t4，两个新命中 a、g 都没有达到阈值，控制器可以用本轮的名次更新位置把 e 移到 MRU。</p><p>t4 如果命中的是更接近 LRU 的 h，说明书的另一条路径允许先提升 h 并继续保存 e。反馈处理依赖后续请求模式。说明书也有两次命中都在安全区便不改名次的实施例，因此名次记录只近似实际访问顺序。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">两个命中都近 LRU，未选中的路可等下一次空档</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11144476B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">沿原图 4 的 t3 和 t4 跟踪反馈记录。判断空档看有没有命中易逐出区间，缓存端口仍可能有命中。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="两个命中都近 LRU，未选中的路可等下一次空档" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 700" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">两个命中都近 LRU，未选中的路可等下一次空档</title>
 <desc id="fig-3-svg-desc">沿原图 4 的 t3 和 t4 跟踪反馈记录。判断空档看有没有命中易逐出区间，缓存端口仍可能有命中。</desc>
@@ -133,12 +197,21 @@
 <text x="45" y="43" class="signal-title" text-anchor="start">时序从 t3 的同组双命中推进到后续 t4</text>
 <text x="45" y="672" class="signal-title" text-anchor="start">反馈能否及时处理取决于后续访问。原文也给出多项反馈和不暂存的变体。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-first">t3 先处理更接近 LRU 的 g</a> e 是第 6 名、g 是第 7 名。g 升到 MRU 后，e 后移到第 7 名，反馈保存路 e 的标识。</li><li><a href="#fig-3-feedback">反馈记录路标识</a> 到下个周期重新按当前次序和本轮命中判断，反馈中无须保留旧名次。</li><li><a href="#fig-3-second">t4 可用更新位置</a> 本轮命中 a、g 都在前四名，空出来的更新位置可以把 e 提升。有替代例在本轮命中更接近 LRU 的 h 时仍先处理 h。</li></ul>
-  <p class="figure-evidence">原图 2、4、6、8；说明书归档段 0043、0044、0054、0055、0056、0057、0058、0059、0063、0064、0065、0077；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11144476B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>暂存未提升的路 e 的反馈记录</dt><dd>450</dd></div><div><dt>t3 命中 e 和 g</dt><dd>430c、430d</dd></div><div><dt>t4 主线中命中 a 和 g</dt><dd>430e、430f</dd></div></dl></details>
-</figure></section><section id="victim-selection"><h2>同周期出现缺失时，逐出选择依赖哪份名次</h2><p>图 4 把两路操作放在同一张图上：一个端口命中当前 LRU 路 h，另一个端口缺失。先把 h 提升后，d 才成为新的 LRU。缺失回填使用 d，回填完成后再把 d 提升为 MRU。使用旧名次选择逐出位置会选到刚命中的 h。</p><p>用原图 3–6 的快照建模，可以复算 t3 保存 e，t4 提升 e，t5 将逐出对象从 h 改为 d，t6 回填后 d 到 MRU。只枚举两路命中与 8 路名次变化。访问周期内的组合逻辑面积、端口数和时钟周期都由实际实现决定。</p><p>权利要求 1 写明基准名次与阈值的比较，权利要求 4–6 再加待提升路标识与后续处理的条件。权利要求 18 单独列出命中、缺失、逐出及回填的组合，权利要求 20 列出不同组的两路提升。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　命中与缺失并发时，逐出选择读取更新后的 LRU</h3>
-    <p id="fig-4-basis">图中沿用原图 5：h 命中时，另一端口缺失。先让 h 离开 LRU，再为缺失覆盖 d 的条目。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-first" data-reading-target="fig-3-first">t3 先处理更接近 LRU 的 g</a><p>e 是第 6 名、g 是第 7 名。g 升到 MRU 后，e 后移到第 7 名，反馈保存路 e 的标识。</p></li><li><a href="#fig-3-feedback" data-reading-target="fig-3-feedback">反馈记录路标识</a><p>到下个周期重新按当前次序和本轮命中判断，反馈中无须保留旧名次。</p></li><li><a href="#fig-3-second" data-reading-target="fig-3-second">t4 可用更新位置</a><p>本轮命中 a、g 都在前四名，空出来的更新位置可以把 e 提升。有替代例在本轮命中更接近 LRU 的 h 时仍先处理 h。</p></li></ul>
+  <p class="figure-evidence">原图 2、4、6、8；说明书归档段 0043、0044、0054、0055、0056、0057、0058、0059、0063、0064、0065、0077；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>暂存未提升的路 e 的反馈记录</dt><dd>450</dd></div><div><dt>t3 命中 e 和 g</dt><dd>430c、430d</dd></div><div><dt>t4 主线中命中 a 和 g</dt><dd>430e、430f</dd></div></dl></details>
+</figure></section><section id="victim-selection" class="article-section reading-chapter" aria-labelledby="victim-selection-title"><h2 id="victim-selection-title">同周期出现缺失时，逐出选择依赖哪份名次</h2><p>图 4 把两路操作放在同一张图上：一个端口命中当前 LRU 路 h，另一个端口缺失。先把 h 提升后，d 才成为新的 LRU。缺失回填使用 d，回填完成后再把 d 提升为 MRU。使用旧名次选择逐出位置会选到刚命中的 h。</p><p>用原图 3–6 的快照建模，可以复算 t3 保存 e，t4 提升 e，t5 将逐出对象从 h 改为 d，t6 回填后 d 到 MRU。只枚举两路命中与 8 路名次变化。访问周期内的组合逻辑面积、端口数和时钟周期都由实际实现决定。</p><p>权利要求 1 写明基准名次与阈值的比较，权利要求 4–6 再加待提升路标识与后续处理的条件。权利要求 18 单独列出命中、缺失、逐出及回填的组合，权利要求 20 列出不同组的两路提升。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">命中与缺失并发时，逐出选择读取更新后的 LRU</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11144476B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">图中沿用原图 5：h 命中时，另一端口缺失。先让 h 离开 LRU，再为缺失覆盖 d 的条目。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="命中与缺失并发时，逐出选择读取更新后的 LRU" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 675" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">命中与缺失并发时，逐出选择读取更新后的 LRU</title>
 <desc id="fig-4-svg-desc">图中沿用原图 5：h 命中时，另一端口缺失。先让 h 离开 LRU，再为缺失覆盖 d 的条目。</desc>
@@ -165,12 +238,14 @@
 <text x="45" y="43" class="signal-title" text-anchor="start">t5 先处理命中与逐出决策，t6 表示数据回填后的状态</text>
 <text x="45" y="647" class="signal-title" text-anchor="start">若本组已有可用条目，缓存控制器先用可用位置。本图聚焦需要逐出的路径。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-hit">h 离开逐出位置</a> 旧 LRU 是 h。它刚刚被读命中，故在选 victim 前先随名次更新进入 MRU。</li><li><a href="#fig-4-victim">选择更新后的组尾路 d</a> 缺失端读取的新 LRU 为 d。图中标出逐出决定依赖名次更新，以及它何时接上数据回填。</li><li><a href="#fig-4-fill">数据回填与第二次提升</a> 数据返回后填到路 d，d 再上移为 MRU。此图中的先后顺序来自说明书实施例。</li></ul>
-  <p class="figure-evidence">原图 1、5；说明书归档段 0029、0030、0060、0061、0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11144476B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>同访问周期命中旧 LRU h 的请求</dt><dd>530g</dd></div><div><dt>需要从上一层取数的缺失请求</dt><dd>530h</dd></div><div><dt>实际被逐出并回填的路 d</dt><dd>112d</dd></div><div><dt>在逐出前移到 MRU 的命中路 h</dt><dd>112h</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-hit" data-reading-target="fig-4-hit">h 离开逐出位置</a><p>旧 LRU 是 h。它刚刚被读命中，故在选 victim 前先随名次更新进入 MRU。</p></li><li><a href="#fig-4-victim" data-reading-target="fig-4-victim">选择更新后的组尾路 d</a><p>缺失端读取的新 LRU 为 d。图中标出逐出决定依赖名次更新，以及它何时接上数据回填。</p></li><li><a href="#fig-4-fill" data-reading-target="fig-4-fill">数据回填与第二次提升</a><p>数据返回后填到路 d，d 再上移为 MRU。此图中的先后顺序来自说明书实施例。</p></li></ul>
+  <p class="figure-evidence">原图 1、5；说明书归档段 0029、0030、0060、0061、0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>同访问周期命中旧 LRU h 的请求</dt><dd>530g</dd></div><div><dt>需要从上一层取数的缺失请求</dt><dd>530h</dd></div><div><dt>实际被逐出并回填的路 d</dt><dd>112d</dd></div><div><dt>在逐出前移到 MRU 的命中路 h</dt><dd>112h</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项；全文核对覆盖 96 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -200,6 +275,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>权利要求 1。原图 1–2 给出两个请求流及阈值比较电路，原图 4 给出两个命中均达阈值时的选择实例。用于选逐出路的相对近用顺序。排名更新改变替换元数据，无需移动缓存行的数据。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>选中的路达到阈值时，提升它的LRU 替换排名。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>另一条未选中的路若未达阈值，可降低其排名。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>若未选中路也满足阈值，保存其路标识，供后续补做提升。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>在后续访问周期提升此前未选中的路。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>后续周期须没有命中任何达到阈值的路。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两路都达到阈值时，根据两路排名的比较选择提升对象。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>按原排名和阈值排序同拍命中各路，提升其中符合阈值的一路。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>另一条路未达阈值时降低其排名。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>另一条路也满足阈值时提升其排名。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-8">8</a></td><td>另一条路也满足阈值时保存其标识。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>在没有达阈值的新命中时，补做另一条路的提升。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>后续命中新路的原排名较反馈路更低时，提升该新路。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>同拍比较的各路均达阈值时，选原排名最低的一路。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>在一个缓存组维护排名和阈值。同拍访问两路时比较原排名，第一路达阈值就提升。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>如果第二路的原排名未达阈值，降低其排名。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>第二路达阈值且原排名高于第一路时，保存第二路标识。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>另一拍同组既命中又缺失时，提升达阈值的命中路，逐出最低排名路，回填并提升。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>另一拍同组两路均高于阈值时，保持各自排名。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11144476B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>另一拍两路访问落在不同组时，均提升各自排名。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11144476B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11144476B2#knowledge">在关系图谱中定位 US11144476B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12222875B1</code>
+  </div>
+  <h3><a href="US12222875B1.html">用插入与提升向量更新缓存替换顺序</a></h3>
+  <p class="related-edge-label">选更新对象与选新排名</p>
+  <p class="related-edge-summary">多端口缓存同拍命中同组两路时，先比较两路旧排名与阈值，让控制器决定本次更新哪一路。IPV 方案针对已经确定的访问行，按该行关键性选向量，再由旧排名查新排名。一个解决同拍写替换状态的争用，另一个定义这次更新的幅度。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US12222875B1.html#claim-2">对照篇权项 2</a><a href="US12222875B1.html#fig-1">对照篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#ports-and-sets">判断两笔命中是否共用一份替换元数据</a></li><li><a href="#rank-update">同组先处理更接近 LRU 的命中</a></li><li><a href="#defer-rank">两路都容易被逐出时，反馈记录未处理的一路</a></li><li><a href="#victim-selection">同周期出现缺失时，逐出选择依赖哪份名次</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2021-10-12</dd></div>
+      <div><dt>最早优先权</dt><dd>2020-01-02</dd></div>
+      <div><dt>美国申请日</dt><dd>2020-01-02</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US16/733,187</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/123、G06F12/0246、G06F12/0811 <details class="inline-more"><summary>其余 4 项</summary><span>G06F12/0895、G06F12/122、G06F12/128、G06F9/30047</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Chance C. Coats、Haldun Umur Darbaz</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11144476B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11144476B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

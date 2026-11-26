@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>何时停止优先保留已经不再关键的缓存行 · US11921640B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11921640B2</code> · <a href="https://patents.google.com/patent/US11921640B2/en">专利全文</a></p>
-<h1>何时停止优先保留已经不再关键的缓存行</h1><p class="reading-question">一个工作集退出或迁移后，曾经关键的缓存行还可能占着 LLC。硬件怎样判断继续保护是否仍有价值，关闭保护又会改变哪一步？</p>
-<p class="reading-answer">LLC 可以观察替换尾部的关键行命中率，以及 snoop 转发和协处理器请求。达到相关条件时，后续逐出选择和排名更新可以忽略关键性。若只有下层可用容量不足，则可合并多个关键等级。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-03-05</dd></div><div><dt>申请号</dt><dd>US17/727,031</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler J. Huberty、Vivek Venkatraman、Sandeep Gupta、Eric J. Furbish、Srinivasa Rangan Sridharan、Stephan G. Meier</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#at-tail">为什么观测靠近 LRU 的关键行</a></li><li><a href="#effect-time">切换策略以后，实际逐出在哪一次发生</a></li><li><a href="#three-modes">忽略整个关键性和只合并关键等级的边界</a></li><li><a href="#same-set">保持相同的替换顺序，只比较是否启用保护</a></li><li><a href="#coherence-observation">为什么转发给其他代理的 snoop 能成为反馈</a></li><li><a href="#scope">授权权利要求聚焦解除关键性保护</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="at-tail"><h2>为什么观测靠近 LRU 的关键行</h2><p>线程运行时由页表遍历、队首 load 等信号产生的关键行，之后可能不再复用。它们会逐渐进入替换顺序尾部。图 1 先读缓存行的有效位与关键性，再读本组相对排名。原图 10 的一个实施例只观测最靠近 LRU 的若干关键行，例示范围约占相联路数的四分之一。</p><p>命中变少只是策略线索。说明书没有固定计数窗口、聚合范围的时钟周期数或命中率分母。观察范围由本地缓存控制，要和普通命中仍可供给数据这一行为区分开。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　监测替换序列尾部，识别仍在使用的关键行</h3>
-    <p id="fig-1-basis">近 LRU 的关键行更可能是先前留下的工作集。监测电路以有效、关键性和替换位置筛选观测范围，再更新保护策略。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11921640B2 何时停止优先保留已经不再关键的缓存行 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US11921640B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-03-05">2024-03-05</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11921640B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>何时停止优先保留已经不再关键的缓存行</h1>
+  <p class="english-title" lang="en">Mitigating retention of previously-critical cache lines</p>
+  <p class="document-question">一个工作集退出或迁移后，曾经关键的缓存行还可能占着 LLC。硬件怎样判断继续保护是否仍有价值，关闭保护又会改变哪一步？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#at-tail">为什么观测靠近 LRU 的关键行</a></li><li><a href="#effect-time">切换策略以后，实际逐出在哪一次发生</a></li><li><a href="#three-modes">忽略整个关键性和只合并关键等级的边界</a></li><li><a href="#same-set">保持相同的替换顺序，只比较是否启用保护</a></li><li><a href="#coherence-observation">为什么转发给其他代理的 snoop 能成为反馈</a></li><li><a href="#scope">授权权利要求聚焦解除关键性保护</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">LLC 可以观察替换尾部的关键行命中率，以及 snoop 转发和协处理器请求。达到相关条件时，后续逐出选择和排名更新可以忽略关键性。若只有下层可用容量不足，则可合并多个关键等级。</p>
+  </section>
+  <div id="mechanism"><section id="at-tail" class="article-section reading-chapter" aria-labelledby="at-tail-title"><h2 id="at-tail-title">为什么观测靠近 LRU 的关键行</h2><p>线程运行时由页表遍历、队首 load 等信号产生的关键行，之后可能不再复用。它们会逐渐进入替换顺序尾部。图 1 先读缓存行的有效位与关键性，再读本组相对排名。原图 10 的一个实施例只观测最靠近 LRU 的若干关键行，例示范围约占相联路数的四分之一。</p><p>命中变少只是策略线索。说明书没有固定计数窗口、聚合范围的时钟周期数或命中率分母。观察范围由本地缓存控制，要和普通命中仍可供给数据这一行为区分开。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">监测替换序列尾部，识别仍在使用的关键行</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11921640B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">近 LRU 的关键行更可能是先前留下的工作集。监测电路以有效、关键性和替换位置筛选观测范围，再更新保护策略。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="监测替换序列尾部，识别仍在使用的关键行" style="--figure-width:1450px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 660" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">监测替换序列尾部，识别仍在使用的关键行</title>
 <desc id="fig-1-svg-desc">近 LRU 的关键行更可能是先前留下的工作集。监测电路以有效、关键性和替换位置筛选观测范围，再更新保护策略。</desc>
@@ -42,12 +88,21 @@
 <text x="45" y="46" class="signal-title" text-anchor="start">先选观测范围，再读命中反馈</text>
 <text x="47" y="635" class="signal-title" text-anchor="start">关闭保护改变选择规则。标签与数据仍按各自的缓存路径更新。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-tags">有效位与关键性</a> 标签中的关键性是缓存行元数据。是否使用这项元数据由当前替换策略控制。</li><li><a href="#fig-1-ranks">同组内靠近 LRU 的位置</a> 按组内替换记录找最容易被逐出的若干行。原文举例可取约四分之一路数。</li><li><a href="#fig-1-filter">只纳入观测范围内的关键行</a> 标签命中及当前排名共同决定该事件是否属于监测对象。说明书未固定观测窗口或命中率的分母。</li><li><a href="#fig-1-outside">位于 MRU 一侧的行</a> 这些行的命中照常提供数据。本实施例不把它们纳入尾部关键行命中观察。</li></ul>
-  <p class="figure-evidence">原图 1、10；说明书归档段 0028、0029、0065、0066、0067、0068、0069、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11921640B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>LLC 与关键性控制电路</dt><dd>14 / 34</dd></div><div><dt>近 LRU 关键行的命中测量</dt><dd>190</dd></div><div><dt>比较命中率</dt><dd>196</dd></div><div><dt>忽略关键性条件下更新替换策略</dt><dd>198</dd></div></dl></details>
-</figure></section><section id="effect-time"><h2>切换策略以后，实际逐出在哪一次发生</h2><p>图 2 从监测反馈开始。采用普通替换策略后，控制器在后续选择或排名更新时不再把关键等级作为偏向条件。切换本身可以不触发任何数据移动。图中随后出现一笔同组缺失，才发生由候选选择和回填引起的数据变化。</p><p>图里把取得回填数据画在写入之前。实际缓存可提前选择位置或为回填预留条目，这些实现时序由缓存控制器决定。权利要求 1 要求停止优先保留后仍依据缓存维护的独立替换数据选逐出项。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　收到低命中信号后，下一次替换才选实际逐出对象</h3>
-    <p id="fig-2-basis">示例把政策更新、随后一次回填和标签状态变化分开。关闭保护只改变后续选择，不立即发起一次逐出。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-tags" data-reading-target="fig-1-tags">有效位与关键性</a><p>标签中的关键性是缓存行元数据。是否使用这项元数据由当前替换策略控制。</p></li><li><a href="#fig-1-ranks" data-reading-target="fig-1-ranks">同组内靠近 LRU 的位置</a><p>按组内替换记录找最容易被逐出的若干行。原文举例可取约四分之一路数。</p></li><li><a href="#fig-1-filter" data-reading-target="fig-1-filter">只纳入观测范围内的关键行</a><p>标签命中及当前排名共同决定该事件是否属于监测对象。说明书未固定观测窗口或命中率的分母。</p></li><li><a href="#fig-1-outside" data-reading-target="fig-1-outside">位于 MRU 一侧的行</a><p>这些行的命中照常提供数据。本实施例不把它们纳入尾部关键行命中观察。</p></li></ul>
+  <p class="figure-evidence">原图 1、10；说明书归档段 0028、0029、0065、0066、0067、0068、0069、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>LLC 与关键性控制电路</dt><dd>14 / 34</dd></div><div><dt>近 LRU 关键行的命中测量</dt><dd>190</dd></div><div><dt>比较命中率</dt><dd>196</dd></div><div><dt>忽略关键性条件下更新替换策略</dt><dd>198</dd></div></dl></details>
+</figure></section><section id="effect-time" class="article-section reading-chapter" aria-labelledby="effect-time-title"><h2 id="effect-time-title">切换策略以后，实际逐出在哪一次发生</h2><p>图 2 从监测反馈开始。采用普通替换策略后，控制器在后续选择或排名更新时不再把关键等级作为偏向条件。切换本身可以不触发任何数据移动。图中随后出现一笔同组缺失，才发生由候选选择和回填引起的数据变化。</p><p>图里把取得回填数据画在写入之前。实际缓存可提前选择位置或为回填预留条目，这些实现时序由缓存控制器决定。权利要求 1 要求停止优先保留后仍依据缓存维护的独立替换数据选逐出项。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">收到低命中信号后，下一次替换才选实际逐出对象</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11921640B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">示例把政策更新、随后一次回填和标签状态变化分开。关闭保护只改变后续选择，不立即发起一次逐出。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="收到低命中信号后，下一次替换才选实际逐出对象" style="--figure-width:965px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 965 626" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">收到低命中信号后，下一次替换才选实际逐出对象</title>
 <desc id="fig-2-svg-desc">示例把政策更新、随后一次回填和标签状态变化分开。关闭保护只改变后续选择，不立即发起一次逐出。</desc>
@@ -70,12 +125,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">回填数据来源</text>
 <text x="28" y="484" class="legend" text-anchor="start">一种允许的事件先后。具体何时分配替换条目，由缓存流水线实现决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-changed">更新替换模式</a> 监测得到触发信号后，控制器可停止在候选筛选和排名更新中偏向关键行。</li><li><a href="#fig-2-request">随后出现缺失</a> 新请求命中时仍走命中更新。这里选择后续缺失来说明真正发生替换的时刻。</li><li><a href="#fig-2-select">按普通替换状态选择</a> 需腾位置时，仍用缓存的独立替换状态。图 4 对照同一组在不同模式下选的行。</li><li><a href="#fig-2-write">处理被逐出的行并填新行</a> 实际逐出数据走原有路径。是否要写回取决于缓存行修改状态和层次的接收规则。</li></ul>
-  <p class="figure-evidence">原图 4、8、10；说明书归档段 0048、0049、0050、0062、0065、0066、0068、0069、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US11921640B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>触发门槛与策略改变</dt><dd>196 / 198</dd></div><div><dt>在允许的替换集合中选择</dt><dd>72 / 142</dd></div><div><dt>LLC 的缓存阵列</dt><dd>32</dd></div></dl></details>
-</figure></section><section id="three-modes"><h2>忽略整个关键性和只合并关键等级的边界</h2><p>沿图 3 上半看，低命中、高 snoop 转发或推断协处理器活动上升，可触发在选择逐出行、插入和提升时忽略关键性。协处理器的附加请求是否直接观测，或由带协处理器标记的预取推断，由实现选择。</p><p>前三项都未触发时，可再看 MCache 向 CPU 提供的可用容量。若低于门槛，例示政策把多个关键等级按最低关键级处理。此时还可以区分关键与非关键。表 6 用同一组门槛演示两种策略输出如何分开。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　关闭关键性保护与合并关键等级是两种动作</h3>
-    <p id="fig-3-basis">命中低、snoop 转发高和协处理器流量上升可以触发忽略关键性。只在这些条件都未触发时，再看容量并决定是否合并关键等级。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-changed" data-reading-target="fig-2-changed">更新替换模式</a><p>监测得到触发信号后，控制器可停止在候选筛选和排名更新中偏向关键行。</p></li><li><a href="#fig-2-request" data-reading-target="fig-2-request">随后出现缺失</a><p>新请求命中时仍走命中更新。这里选择后续缺失来说明真正发生替换的时刻。</p></li><li><a href="#fig-2-select" data-reading-target="fig-2-select">按普通替换状态选择</a><p>需腾位置时，仍用缓存的独立替换状态。图 4 对照同一组在不同模式下选的行。</p></li><li><a href="#fig-2-write" data-reading-target="fig-2-write">处理被逐出的行并填新行</a><p>实际逐出数据走原有路径。是否要写回取决于缓存行修改状态和层次的接收规则。</p></li></ul>
+  <p class="figure-evidence">原图 4、8、10；说明书归档段 0048、0049、0050、0062、0065、0066、0068、0069、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>触发门槛与策略改变</dt><dd>196 / 198</dd></div><div><dt>在允许的替换集合中选择</dt><dd>72 / 142</dd></div><div><dt>LLC 的缓存阵列</dt><dd>32</dd></div></dl></details>
+</figure></section><section id="three-modes" class="article-section reading-chapter" aria-labelledby="three-modes-title"><h2 id="three-modes-title">忽略整个关键性和只合并关键等级的边界</h2><p>沿图 3 上半看，低命中、高 snoop 转发或推断协处理器活动上升，可触发在选择逐出行、插入和提升时忽略关键性。协处理器的附加请求是否直接观测，或由带协处理器标记的预取推断，由实现选择。</p><p>前三项都未触发时，可再看 MCache 向 CPU 提供的可用容量。若低于门槛，例示政策把多个关键等级按最低关键级处理。此时还可以区分关键与非关键。表 6 用同一组门槛演示两种策略输出如何分开。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">关闭关键性保护与合并关键等级是两种动作</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11921640B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">命中低、snoop 转发高和协处理器流量上升可以触发忽略关键性。只在这些条件都未触发时，再看容量并决定是否合并关键等级。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="关闭关键性保护与合并关键等级是两种动作" style="--figure-width:1470px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1470 700" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">关闭关键性保护与合并关键等级是两种动作</title>
 <desc id="fig-3-svg-desc">命中低、snoop 转发高和协处理器流量上升可以触发忽略关键性。只在这些条件都未触发时，再看容量并决定是否合并关键等级。</desc>
@@ -103,12 +167,21 @@
 <text x="47" y="48" class="signal-title" text-anchor="start">按原图 10 的判断顺序绘制</text>
 <text x="49" y="642" class="signal-title" text-anchor="start">三种输出指定如何使用已有信息，各自保留替换状态的更新接口。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-fallback">三路工作集变化信号</a> 分别看尾部关键行命中、snoop 触发的数据转发，以及协处理器请求或带归属标记的相关预取。三路可触发同一策略动作。</li><li><a href="#fig-3-ignore">完全忽略关键性</a> 在选择逐出行、插入和命中提升时可按普通替换状态处理。这些操作仍分别在各自的访存事件发生时执行。</li><li><a href="#fig-3-capacity">CPU 可用容量减少</a> 前面的条件未触发时，可比较更下层 MCache 允许 CPU 使用的容量。低于门槛时合并关键等级。</li><li><a href="#fig-3-merge">最低关键级仍和非关键区分</a> 合并是在当前选择方法中把高等级视为最低关键级。仍可保留对关键与非关键的区分。</li></ul>
-  <p class="figure-evidence">原图 1、10；说明书归档段 0033、0035、0065、0066、0067、0068、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11921640B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>命中、snoop 转发与协处理器请求观测</dt><dd>190 / 192 / 194</dd></div><div><dt>停止使用关键性</dt><dd>198</dd></div><div><dt>CPU 容量监测与门槛</dt><dd>42 / 204</dd></div><div><dt>合并关键等级或维持策略</dt><dd>206 / 208</dd></div></dl></details>
-</figure></section><section id="same-set"><h2>保持相同的替换顺序，只比较是否启用保护</h2><p>图 4 固定一个两路缓存组。关键行 K 是最久未用的一行，普通行 R 更新得更近。若这次选择启用关键行保护，控制器掩蔽 K，R 是唯一剩下的可替换行。政策忽略关键性时，候选里同时有 K 和 R，普通 LRU 选择 K。</p><p>这里的关闭保护只让 K 重新具备被选择的资格。它的 rank、标签中保存的关键等级及是否需要写回仍由普通状态更新和相应的数据路径决定。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　同一缓存组，是否掩蔽关键行会改变逐出结果</h3>
-    <p id="fig-4-basis">本例两路均有效，关键行 K 在 LRU 端。保护启用时掩蔽 K。关保护后，K 原有的 LRU 位置仍参与普通排序。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-fallback" data-reading-target="fig-3-fallback">三路工作集变化信号</a><p>分别看尾部关键行命中、snoop 触发的数据转发，以及协处理器请求或带归属标记的相关预取。三路可触发同一策略动作。</p></li><li><a href="#fig-3-ignore" data-reading-target="fig-3-ignore">完全忽略关键性</a><p>在选择逐出行、插入和命中提升时可按普通替换状态处理。这些操作仍分别在各自的访存事件发生时执行。</p></li><li><a href="#fig-3-capacity" data-reading-target="fig-3-capacity">CPU 可用容量减少</a><p>前面的条件未触发时，可比较更下层 MCache 允许 CPU 使用的容量。低于门槛时合并关键等级。</p></li><li><a href="#fig-3-merge" data-reading-target="fig-3-merge">最低关键级仍和非关键区分</a><p>合并是在当前选择方法中把高等级视为最低关键级。仍可保留对关键与非关键的区分。</p></li></ul>
+  <p class="figure-evidence">原图 1、10；说明书归档段 0033、0035、0065、0066、0067、0068、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>命中、snoop 转发与协处理器请求观测</dt><dd>190 / 192 / 194</dd></div><div><dt>停止使用关键性</dt><dd>198</dd></div><div><dt>CPU 容量监测与门槛</dt><dd>42 / 204</dd></div><div><dt>合并关键等级或维持策略</dt><dd>206 / 208</dd></div></dl></details>
+</figure></section><section id="same-set" class="article-section reading-chapter" aria-labelledby="same-set-title"><h2 id="same-set-title">保持相同的替换顺序，只比较是否启用保护</h2><p>图 4 固定一个两路缓存组。关键行 K 是最久未用的一行，普通行 R 更新得更近。若这次选择启用关键行保护，控制器掩蔽 K，R 是唯一剩下的可替换行。政策忽略关键性时，候选里同时有 K 和 R，普通 LRU 选择 K。</p><p>这里的关闭保护只让 K 重新具备被选择的资格。它的 rank、标签中保存的关键等级及是否需要写回仍由普通状态更新和相应的数据路径决定。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">同一缓存组，是否掩蔽关键行会改变逐出结果</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11921640B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">本例两路均有效，关键行 K 在 LRU 端。保护启用时掩蔽 K。关保护后，K 原有的 LRU 位置仍参与普通排序。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同一缓存组，是否掩蔽关键行会改变逐出结果" style="--figure-width:1470px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1470 645" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">同一缓存组，是否掩蔽关键行会改变逐出结果</title>
 <desc id="fig-4-svg-desc">本例两路均有效，关键行 K 在 LRU 端。保护启用时掩蔽 K。关保护后，K 原有的 LRU 位置仍参与普通排序。</desc>
@@ -135,12 +208,21 @@
 <text x="48" y="43" class="signal-title" text-anchor="start">两个模式用同一份替换顺序</text>
 <text x="46" y="588" class="signal-title" text-anchor="start">本图实例为一次替换。低命中反馈本身不会发出新的缓存请求。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-group">同一组的替换快照</a> 只改变关键性是否用于选择。两项有效、同一组，K 的替换位置在 R 之后。</li><li><a href="#fig-4-masked">保护模式排除 K</a> 本次选择触发保护时，关键行不在候选集合里。剩余普通行 R 可被逐出，即使 K 更靠近 LRU。</li><li><a href="#fig-4-eligible">普通模式让 K 重新可选</a> 取消保护后，K 和 R 都进入候选。排名最靠近 LRU 的 K 成为逐出对象。</li><li><a href="#fig-4-new">继续同样的回填</a> 不论最终移除谁，之后仍可以将新行分配到原缺失所在组。</li></ul>
-  <p class="figure-evidence">原图 4、8、10；说明书归档段 0049、0050、0061、0062、0065、0066、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US11921640B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>同组候选检查及关键性保护</dt><dd>70 / 74 / 76</dd></div><div><dt>切换为忽略关键性</dt><dd>198</dd></div><div><dt>保留原有的 LRU 顺序信息</dt><dd>替换数据</dd></div></dl></details>
-</figure></section><section id="coherence-observation"><h2>为什么转发给其他代理的 snoop 能成为反馈</h2><p>图 5 给出两个 CPU cluster 的例子。另一个 cluster 发起请求，一致性互连向旧 LLC 发送 snoop。旧 LLC 命中并能供数据时，控制器可记录一次转发。计数对象是向另一代理供数这一事件。逐出时向内存控制器写回走不同的路径。</p><p>原文把线程迁移列为转发增加的一种可能来源。监测器接收的是缓存事件，无需知道哪个线程迁移。对本篇机制的观察应明确统计的是哪些 snoop、何时命中和是否返回数据，避免把所有探测请求当作同一反馈。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　snoop 转发可能暴露数据消费位置已变化</h3>
-    <p id="fig-5-basis">LLC 统计的是 snoop 命中后向其他代理转发数据。原文把线程迁移到另一 cluster 作为转发升高的一种解释。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-group" data-reading-target="fig-4-group">同一组的替换快照</a><p>只改变关键性是否用于选择。两项有效、同一组，K 的替换位置在 R 之后。</p></li><li><a href="#fig-4-masked" data-reading-target="fig-4-masked">保护模式排除 K</a><p>本次选择触发保护时，关键行不在候选集合里。剩余普通行 R 可被逐出，即使 K 更靠近 LRU。</p></li><li><a href="#fig-4-eligible" data-reading-target="fig-4-eligible">普通模式让 K 重新可选</a><p>取消保护后，K 和 R 都进入候选。排名最靠近 LRU 的 K 成为逐出对象。</p></li><li><a href="#fig-4-new" data-reading-target="fig-4-new">继续同样的回填</a><p>不论最终移除谁，之后仍可以将新行分配到原缺失所在组。</p></li></ul>
+  <p class="figure-evidence">原图 4、8、10；说明书归档段 0049、0050、0061、0062、0065、0066、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>同组候选检查及关键性保护</dt><dd>70 / 74 / 76</dd></div><div><dt>切换为忽略关键性</dt><dd>198</dd></div><div><dt>保留原有的 LRU 顺序信息</dt><dd>替换数据</dd></div></dl></details>
+</figure></section><section id="coherence-observation" class="article-section reading-chapter" aria-labelledby="coherence-observation-title"><h2 id="coherence-observation-title">为什么转发给其他代理的 snoop 能成为反馈</h2><p>图 5 给出两个 CPU cluster 的例子。另一个 cluster 发起请求，一致性互连向旧 LLC 发送 snoop。旧 LLC 命中并能供数据时，控制器可记录一次转发。计数对象是向另一代理供数这一事件。逐出时向内存控制器写回走不同的路径。</p><p>原文把线程迁移列为转发增加的一种可能来源。监测器接收的是缓存事件，无需知道哪个线程迁移。对本篇机制的观察应明确统计的是哪些 snoop、何时命中和是否返回数据，避免把所有探测请求当作同一反馈。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">snoop 转发可能暴露数据消费位置已变化</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11921640B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">LLC 统计的是 snoop 命中后向其他代理转发数据。原文把线程迁移到另一 cluster 作为转发升高的一种解释。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="snoop 转发可能暴露数据消费位置已变化" style="--figure-width:1450px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 672" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
 <title id="fig-5-svg-title">snoop 转发可能暴露数据消费位置已变化</title>
 <desc id="fig-5-svg-desc">LLC 统计的是 snoop 命中后向其他代理转发数据。原文把线程迁移到另一 cluster 作为转发升高的一种解释。</desc>
@@ -167,19 +249,30 @@
 <text x="48" y="47" class="signal-title" text-anchor="start">以跨 cluster 的一笔请求说明信号从何来</text>
 <text x="48" y="596" class="signal-title" text-anchor="start">高转发率可能提示旧数据被别处使用。该观测没有识别具体线程。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-5-new-core">另一 cluster 的访问</a> 迁移后的访问可能从其他代理发起。硬件只能看到缓存请求与转发，不能仅凭这项计数确定是线程迁移。</li><li><a href="#fig-5-snoop">旧 LLC 接收一致性请求</a> 图中例示旧 LLC 仍有对应行。它收到来自互连的 snoop 后，命中并提供需要的数据。</li><li><a href="#fig-5-send">数据转发到其他代理</a> 反馈发在这个转发事件上。它与逐出时写回下层内存走不同的目标和控制条件。</li><li><a href="#fig-5-counter">作策略输入的计数</a> 实施例可选只数关键行，或者计入全部相关转发。比例门槛与观测窗口由实现设定。</li></ul>
-  <p class="figure-evidence">原图 1、10；说明书归档段 0025、0031、0065、0067、0068、0069、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11921640B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>接收 snoop 并可能供数据的 LLC</dt><dd>14</dd></div><div><dt>统计触发转发的 snoop</dt><dd>192</dd></div><div><dt>作为对照的下层内存缓存</dt><dd>40</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">表 6　相同的容量下降，在转发已触发时会得到不同策略</h3>
-    <p id="fig-6-basis">教学例把尾部关键行样本命中率、snoop 转发率和可用路数设为输入。门槛分别为低于 25%、高于 20%、少于 4 路。协处理器活动维持原状。依照原图 10 的条件次序比较。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">观测输入</th><th scope="col">尾部样本命中率</th><th scope="col">snoop 转发率</th><th scope="col">CPU 可用路数</th><th scope="col">下一次的策略</th></tr></thead><tbody><tr id="fig-6-keep"><th scope="row">当前稳定</th><td>12/32</td><td>2/32</td><td>6</td><td>保持分级保护</td></tr><tr id="fig-6-low-hit"><th scope="row">尾部关键行变冷</th><td>3/32</td><td>1/32</td><td>6</td><td>忽略关键性</td></tr><tr id="fig-6-snoop"><th scope="row">高转发且容量下降</th><td>8/32</td><td>8/32</td><td>3</td><td>忽略关键性</td></tr><tr id="fig-6-capacity"><th scope="row">仅容量下降</th><td>8/32</td><td>1/32</td><td>3</td><td>把关键等级合为最低级</td></tr><tr id="fig-6-boundary"><th scope="row">各自恰好等于门槛</th><td>8/32</td><td>6/30</td><td>4</td><td>保持分级保护</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-6-snoop">高转发率先改变策略</a> 虽然只有 3 路可用，转发率已经超过门槛，先选择忽略关键性。</li><li><a href="#fig-6-capacity">只有容量门槛触发时合并等级</a> 当前尾部命中和转发都未触发，3 路容量才决定把高关键级视作最低关键级。</li><li><a href="#fig-6-boundary">刚好等于门槛的例子</a> 按本表明确的严格比较条件，等于 25%、20% 和 4 路都不会触发。</li></ul>
-  <p class="figure-evidence">原图 10；说明书归档段 0068、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
-  
-</figure></section><section id="scope"><h2>授权权利要求聚焦解除关键性保护</h2><p>独立权利要求 1、8、15 覆盖对关键行命中等信号的观察，以及据此停止优先保留或加速替换。权利要求 2、16 缩小到替换序列最靠近 LRU 的位置。snoop 转发、协处理器相关请求以及容量不足时合并关键等级分别有自己的从属限定。</p></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-new-core" data-reading-target="fig-5-new-core">另一 cluster 的访问</a><p>迁移后的访问可能从其他代理发起。硬件只能看到缓存请求与转发，不能仅凭这项计数确定是线程迁移。</p></li><li><a href="#fig-5-snoop" data-reading-target="fig-5-snoop">旧 LLC 接收一致性请求</a><p>图中例示旧 LLC 仍有对应行。它收到来自互连的 snoop 后，命中并提供需要的数据。</p></li><li><a href="#fig-5-send" data-reading-target="fig-5-send">数据转发到其他代理</a><p>反馈发在这个转发事件上。它与逐出时写回下层内存走不同的目标和控制条件。</p></li><li><a href="#fig-5-counter" data-reading-target="fig-5-counter">作策略输入的计数</a><p>实施例可选只数关键行，或者计入全部相关转发。比例门槛与观测窗口由实现设定。</p></li></ul>
+  <p class="figure-evidence">原图 1、10；说明书归档段 0025、0031、0065、0067、0068、0069、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>接收 snoop 并可能供数据的 LLC</dt><dd>14</dd></div><div><dt>统计触发转发的 snoop</dt><dd>192</dd></div><div><dt>作为对照的下层内存缓存</dt><dd>40</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 6 · 参数与边界对照</p>
+        <h3 id="fig-6-title">相同的容量下降，在转发已触发时会得到不同策略</h3>
+      </div>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">教学例把尾部关键行样本命中率、snoop 转发率和可用路数设为输入。门槛分别为低于 25%、高于 20%、少于 4 路。协处理器活动维持原状。依照原图 10 的条件次序比较。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="相同的容量下降，在转发已触发时会得到不同策略"><table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">观测输入</th><th scope="col">尾部样本命中率</th><th scope="col">snoop 转发率</th><th scope="col">CPU 可用路数</th><th scope="col">下一次的策略</th></tr></thead><tbody><tr id="fig-6-keep"><th scope="row">当前稳定</th><td>12/32</td><td>2/32</td><td>6</td><td>保持分级保护</td></tr><tr id="fig-6-low-hit"><th scope="row">尾部关键行变冷</th><td>3/32</td><td>1/32</td><td>6</td><td>忽略关键性</td></tr><tr id="fig-6-snoop"><th scope="row">高转发且容量下降</th><td>8/32</td><td>8/32</td><td>3</td><td>忽略关键性</td></tr><tr id="fig-6-capacity"><th scope="row">仅容量下降</th><td>8/32</td><td>1/32</td><td>3</td><td>把关键等级合为最低级</td></tr><tr id="fig-6-boundary"><th scope="row">各自恰好等于门槛</th><td>8/32</td><td>6/30</td><td>4</td><td>保持分级保护</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-6-snoop" data-reading-target="fig-6-snoop">高转发率先改变策略</a><p>虽然只有 3 路可用，转发率已经超过门槛，先选择忽略关键性。</p></li><li><a href="#fig-6-capacity" data-reading-target="fig-6-capacity">只有容量门槛触发时合并等级</a><p>当前尾部命中和转发都未触发，3 路容量才决定把高关键级视作最低关键级。</p></li><li><a href="#fig-6-boundary" data-reading-target="fig-6-boundary">刚好等于门槛的例子</a><p>按本表明确的严格比较条件，等于 25%、20% 和 4 路都不会触发。</p></li></ul>
+  <p class="figure-evidence">原图 10；说明书归档段 0068、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">授权权利要求聚焦解除关键性保护</h2><p>独立权利要求 1、8、15 覆盖对关键行命中等信号的观察，以及据此停止优先保留或加速替换。权利要求 2、16 缩小到替换序列最靠近 LRU 的位置。snoop 转发、协处理器相关请求以及容量不足时合并关键等级分别有自己的从属限定。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、8、15 项；全文核对覆盖 121 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -209,6 +302,67 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 10。低关键缓存行命中率是退出信号之一，停止优先保留后仍使用独立替换数据。受关键性类别与当前控制策略共同影响的逐出优先级。关闭保护会改变替换选择，缓存行数据依原路径保留或逐出。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>可只观测替换顺序中靠近逐出端的多个关键行。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>还可把导致数据转发的 snoop 命中率超过阈值作为退出信号。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>允许由共享缓存接收的协处理器请求作为退出线索。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>可以从处理器标注的协处理器预取推断协处理器请求。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>第二缓存容量低于阈值时，将各关键等级合并到最低档。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>退出后的逐出选择和替换状态更新忽略关键性。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>跟踪关键缓存行命中，在低命中等条件下加快替换。系统还设有预取电路。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>只测替换次序上靠近 LRU 的关键缓存行命中率。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>把造成转发的 snoop 命中率超阈值作为加快逐出的线索。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-8">8</a></td><td>把协处理器向缓存发出的内存请求纳入退出线索。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>根据带协处理器标记的预取推断其请求。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>第二缓存给出可分配容量，较低时合并到最低关键档。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>通过在逐出和状态更新中忽略关键性来加快替换。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>原图 10 的块 190、196、198。方法项要求先统计命中、检测信号，然后在逐出和状态更新时忽略关键性。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>监测范围限在多个最靠近 LRU 的关键缓存行位置。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>统计导致转发的 snoop 命中率，超阈值时作为线索。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>把协处理器给缓存的内存请求作为线索。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>根据处理器发出的带标记协处理器预取推断对应请求。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11921640B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>用第二缓存的可分配容量信号，在容量低时合并关键等级。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11921640B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11921640B2#knowledge">在关系图谱中定位 US11921640B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12222875B1</code>
+  </div>
+  <h3><a href="US12222875B1.html">用插入与提升向量更新缓存替换顺序</a></h3>
+  <p class="related-edge-label">用关键性更新排名与退出保护</p>
+  <p class="related-edge-summary">US12222875B1 先按缓存行的关键性选 IPV，再用旧排名查新位置。旧排名相同的行也可能因关键性不同而获得不同的新排名。US11921640B2 另用关键行命中率等信号决定何时停止优先保留。退出后继续使用独立的替换数据。</p>
+<p class="related-evidence"><a href="US12222875B1.html#claim-2">对照篇权项 2</a><a href="US12222875B1.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-family">申请关系</span>
+    <code>US11822480B2</code>
+  </div>
+  <h3><a href="US11822480B2.html">按缓存行关键性选择插入位置与逐出候选</a></h3>
+  <p class="related-edge-label">共享临时申请</p>
+  <p class="related-edge-summary">两件文献的说明书均主张 US63/239,258 的优先权。对比两者可区分逐次逐出的概率保护，与观察关键行命中表现后停止保护。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US11822480B2.html#claim-1">对照篇权项 1</a><a href="US11822480B2.html#fig-2">对照篇图表 2</a><a href="https://patents.google.com/patent/US11921640B2/en#description">查看原文的申请关系</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-family">申请关系</span>
+    <code>US20250307167A1</code>
+  </div>
+  <h3><a href="US20250307167A1.html">缓存行关键性如何影响 LLC 和内存缓存的替换</a></h3>
+  <p class="related-edge-label">同一申请链扩展到下一级</p>
+  <p class="related-edge-summary">说明书首段列出 US18/422,584 与 US17/727,031 的连续申请关系。US11921640B2 依据关键行命中表现决定是否继续保留，后续公开 US20250307167A1 权 21、35 进一步描述用第一级关键性初始化第二级保留优先级。</p>
+<p class="related-evidence"><a href="https://eureka.patsnap.com/patent/US20250307167A1#desc">查看申请链原文</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#at-tail">为什么观测靠近 LRU 的关键行</a></li><li><a href="#effect-time">切换策略以后，实际逐出在哪一次发生</a></li><li><a href="#three-modes">忽略整个关键性和只合并关键等级的边界</a></li><li><a href="#same-set">保持相同的替换顺序，只比较是否启用保护</a></li><li><a href="#coherence-observation">为什么转发给其他代理的 snoop 能成为反馈</a></li><li><a href="#scope">授权权利要求聚焦解除关键性保护</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-03-05</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2022-04-22</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/727,031</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0891、G06F12/0871、G06F12/0292 <details class="inline-more"><summary>其余 12 项</summary><span>G06F12/0833、G06F12/0862、G06F12/123、G06F12/126、G06F12/127、G06F12/128、G06F9/3877、G06F12/0831、G06F2201/885、G06F2212/1021、G06F2212/1024、G06F2212/502</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Tyler J. Huberty、Vivek Venkatraman、Sandeep Gupta、Eric J. Furbish <details class="inline-more"><summary>其余 2 位</summary><span>Srinivasa Rangan Sridharan、Stephan G. Meier</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11921640B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11921640B2#knowledge">关系图谱定位</a></div>
+  </section>
+<section class="sidebar-family"><h2>同族对照</h2><ul class="sidebar-family-list"><li><a href="US11822480B2.html"><code>US11822480B2</code><span>按缓存行关键性选择插入位置与逐出候选</span></a></li><li><a href="US20250307167A1.html"><code>US20250307167A1</code><span>缓存行关键性如何影响 LLC 和内存缓存的替换</span></a></li></ul></section>
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

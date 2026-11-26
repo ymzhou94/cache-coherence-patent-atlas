@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>跨裸片同步电源状态转换 · US11467655B1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11467655B1</code> · <a href="https://patents.google.com/patent/US11467655B1/en">专利全文</a></p>
-<h1>跨裸片同步电源状态转换</h1><p class="reading-question">多个裸片共享访存路径时，一侧要休眠或唤醒，怎样让其他裸片同步转换电源状态？</p>
-<p class="reading-answer">一个主电源管理器负责发出目标状态转换请求，各裸片的从电源管理器执行本地转换并确认。配置了中间同步点时，主端收到达到门槛数量的确认后，再放行下一阶段。裸片可使用 GPIO 启动唤醒，等片间互连可用后再切换到 D2D 协议。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2022-10-11</dd></div><div><dt>申请号</dt><dd>US17/340,940</dd></div><div><dt>最早优先权</dt><dd>2021-06-07</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Inder M. Sodhi、Achmed R. Zahir、Lior Zimet、Liran FISHEL、Omri Flint、Ami Schwartzman</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#domains">主端协调，从端驱动本地电源状态机</a></li><li><a href="#barrier">从端到达同步点后为什么需要等主端放行</a></li><li><a href="#boundaries">电源状态、性能状态和内存事件的确认条件</a></li><li><a href="#handoff">恢复链路前后如何切换通信协议</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="domains"><h2>主端协调，从端驱动本地电源状态机</h2><p>同一封装中的多个裸片可以分别控制本地电源域。原图 2 将各裸片划分为常供电区（always-on，AON）和可关电的 SoC 区。AON 主电源管理器可在 SoC 区断电时继续接收唤醒请求；只要裸片仍有外部供电，AON 区就可以保持工作。</p><p>图 1 中，发起唤醒请求的是某个从电源管理器；确定转换并下发请求的是主电源管理器；各从端运行本地状态机，达到目标后回送确认。主端所在裸片也可以配本地从端。若目标未写入请求或寄存器，本地状态机可按当前状态唯一允许的后继状态确定目标。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　一个主电源管理器协调本地和远端裸片</h3>
-    <p id="fig-1-basis">主端决定目标，从端执行。唤醒请求、转换请求与完成确认是不同方向的信号。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11467655B1 跨裸片同步电源状态转换 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-power" href="../index.html?topic=power#catalog">功耗与热控制</a>
+  </nav>
+  <p class="document-id">
+    <code>US11467655B1</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2022-10-11">2022-10-11</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11467655B1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>跨裸片同步电源状态转换</h1>
+  <p class="english-title" lang="en">Multi-die power synchronization</p>
+  <p class="document-question">多个裸片共享访存路径时，一侧要休眠或唤醒，怎样让其他裸片同步转换电源状态？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#domains">主端协调，从端驱动本地电源状态机</a></li><li><a href="#barrier">从端到达同步点后为什么需要等主端放行</a></li><li><a href="#boundaries">电源状态、性能状态和内存事件的确认条件</a></li><li><a href="#handoff">恢复链路前后如何切换通信协议</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">一个主电源管理器负责发出目标状态转换请求，各裸片的从电源管理器执行本地转换并确认。配置了中间同步点时，主端收到达到门槛数量的确认后，再放行下一阶段。裸片可使用 GPIO 启动唤醒，等片间互连可用后再切换到 D2D 协议。</p>
+  </section>
+  <div id="mechanism"><section id="domains" class="article-section reading-chapter" aria-labelledby="domains-title"><h2 id="domains-title">主端协调，从端驱动本地电源状态机</h2><p>同一封装中的多个裸片可以分别控制本地电源域。原图 2 将各裸片划分为常供电区（always-on，AON）和可关电的 SoC 区。AON 主电源管理器可在 SoC 区断电时继续接收唤醒请求；只要裸片仍有外部供电，AON 区就可以保持工作。</p><p>图 1 中，发起唤醒请求的是某个从电源管理器；确定转换并下发请求的是主电源管理器；各从端运行本地状态机，达到目标后回送确认。主端所在裸片也可以配本地从端。若目标未写入请求或寄存器，本地状态机可按当前状态唯一允许的后继状态确定目标。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">一个主电源管理器协调本地和远端裸片</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11467655B1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">主端决定目标，从端执行。唤醒请求、转换请求与完成确认是不同方向的信号。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="一个主电源管理器协调本地和远端裸片" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="us11467655b1-fig-1-svg-title us11467655b1-fig-1-svg-desc">
 <title id="us11467655b1-fig-1-svg-title">一个主电源管理器协调本地和远端裸片</title>
 <desc id="us11467655b1-fig-1-svg-desc">主端决定目标，从端执行。唤醒请求、转换请求与完成确认是不同方向的信号。</desc>
@@ -40,12 +86,21 @@
 <text x="700" y="46" class="legend" text-anchor="start">裸片 B｜远端</text>
 <text x="44" y="478" class="legend" text-anchor="start">实线  转换与本地执行    虚线  确认返回</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11467655b1-fig-1-primary">AON 主电源管理器</a> 一个 AON 主电源管理器负责协调跨裸片电源状态；本实施例主裸片还包含本地从端。</li><li><a href="#us11467655b1-fig-1-wake">唤醒请求</a> 任一相关从端发现唤醒条件后可向主端提议转换。主端收到唤醒请求，再发出状态转换请求。</li><li><a href="#us11467655b1-fig-1-remote_req">电源状态转换请求</a> 转换请求由主端向下发。在指定了目标的实现中，请求字段或寄存器可表示下一目标。</li><li><a href="#us11467655b1-fig-1-remote_state">远端电源状态机</a> 远端从端按本地脚本调整供电、时钟或其它部件，以达到目标电源状态。</li><li><a href="#us11467655b1-fig-1-remote_ack">目标状态完成确认</a> 达到目标状态后才回报转换完成。第 1 项要求这一确认，与阶段确认或外围缓冲区就绪确认的含义不同。</li></ul>
-  <p class="figure-evidence">原图 1、2、3A、6；说明书归档段 0013、0014、0016、0017、0018、0019、0020、0021、0022、0023、0026、0027、0028、0029、0030、0031、0032、0033、0048、0049、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11467655B1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>裸片 A／裸片 B</dt><dd>110A/110B</dd></div><div><dt>主电源管理器</dt><dd>120</dd></div><div><dt>电源状态转换请求</dt><dd>125</dd></div><div><dt>本地从端／远端从端</dt><dd>130A/130B</dd></div><div><dt>目标状态完成确认</dt><dd>135</dd></div><div><dt>常供电区（AON）</dt><dd>210</dd></div><div><dt>SoC 区</dt><dd>220</dd></div><div><dt>AON 主电源管理器</dt><dd>230</dd></div><div><dt>AON 从电源管理器</dt><dd>235</dd></div><div><dt>唤醒请求</dt><dd>237</dd></div><div><dt>SoC 主电源管理器</dt><dd>240</dd></div><div><dt>SoC 从电源管理器</dt><dd>245</dd></div></dl></details>
-</figure></section><section id="barrier"><h2>从端到达同步点后为什么需要等主端放行</h2><p>原图 3B 将一次电源状态转换分成若干中间同步点，可对应配置寄存器、调整部件供电或初始化片间互连等操作。图 2 显示先到裸片暂停本地脚本并回报，后到裸片仍可执行当前阶段。</p><p>收到规定数量的确认后，主端可写入下一同步点并发送继续请求。原图 3B 的实施例等待全部从端；第 5、12 项采用达到门槛数量这一条件。只有真正达到最终电源状态后，才发回第 1、11 项所述的转换完成确认。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　先到的从端暂停，主端汇总确认后放行</h3>
-    <p id="fig-2-basis">同一个阶段先由各裸片各自推进，主端收到足够数量的到达确认后，再广播继续。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11467655b1-fig-1-primary" data-reading-target="us11467655b1-fig-1-primary">AON 主电源管理器</a><p>一个 AON 主电源管理器负责协调跨裸片电源状态；本实施例主裸片还包含本地从端。</p></li><li><a href="#us11467655b1-fig-1-wake" data-reading-target="us11467655b1-fig-1-wake">唤醒请求</a><p>任一相关从端发现唤醒条件后可向主端提议转换。主端收到唤醒请求，再发出状态转换请求。</p></li><li><a href="#us11467655b1-fig-1-remote_req" data-reading-target="us11467655b1-fig-1-remote_req">电源状态转换请求</a><p>转换请求由主端向下发。在指定了目标的实现中，请求字段或寄存器可表示下一目标。</p></li><li><a href="#us11467655b1-fig-1-remote_state" data-reading-target="us11467655b1-fig-1-remote_state">远端电源状态机</a><p>远端从端按本地脚本调整供电、时钟或其它部件，以达到目标电源状态。</p></li><li><a href="#us11467655b1-fig-1-remote_ack" data-reading-target="us11467655b1-fig-1-remote_ack">目标状态完成确认</a><p>达到目标状态后才回报转换完成。第 1 项要求这一确认，与阶段确认或外围缓冲区就绪确认的含义不同。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3A、6；说明书归档段 0013、0014、0016、0017、0018、0019、0020、0021、0022、0023、0026、0027、0028、0029、0030、0031、0032、0033、0048、0049、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">12 项</span></summary><dl><div><dt>裸片 A／裸片 B</dt><dd>110A/110B</dd></div><div><dt>主电源管理器</dt><dd>120</dd></div><div><dt>电源状态转换请求</dt><dd>125</dd></div><div><dt>本地从端／远端从端</dt><dd>130A/130B</dd></div><div><dt>目标状态完成确认</dt><dd>135</dd></div><div><dt>常供电区（AON）</dt><dd>210</dd></div><div><dt>SoC 区</dt><dd>220</dd></div><div><dt>AON 主电源管理器</dt><dd>230</dd></div><div><dt>AON 从电源管理器</dt><dd>235</dd></div><div><dt>唤醒请求</dt><dd>237</dd></div><div><dt>SoC 主电源管理器</dt><dd>240</dd></div><div><dt>SoC 从电源管理器</dt><dd>245</dd></div></dl></details>
+</figure></section><section id="barrier" class="article-section reading-chapter" aria-labelledby="barrier-title"><h2 id="barrier-title">从端到达同步点后为什么需要等主端放行</h2><p>原图 3B 将一次电源状态转换分成若干中间同步点，可对应配置寄存器、调整部件供电或初始化片间互连等操作。图 2 显示先到裸片暂停本地脚本并回报，后到裸片仍可执行当前阶段。</p><p>收到规定数量的确认后，主端可写入下一同步点并发送继续请求。原图 3B 的实施例等待全部从端；第 5、12 项采用达到门槛数量这一条件。只有真正达到最终电源状态后，才发回第 1、11 项所述的转换完成确认。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">先到的从端暂停，主端汇总确认后放行</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11467655B1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">同一个阶段先由各裸片各自推进，主端收到足够数量的到达确认后，再广播继续。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="先到的从端暂停，主端汇总确认后放行" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us11467655b1-fig-2-svg-title us11467655b1-fig-2-svg-desc">
 <title id="us11467655b1-fig-2-svg-title">先到的从端暂停，主端汇总确认后放行</title>
 <desc id="us11467655b1-fig-2-svg-desc">同一个阶段先由各裸片各自推进，主端收到足够数量的到达确认后，再广播继续。</desc>
@@ -67,12 +122,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">从端二</text>
 <text x="28" y="532" class="legend" text-anchor="start">示意两个从端、门槛为二的实例，两条继续请求表示同一放行阶段。未规定先后或时长。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11467655b1-fig-2-issueA">请求到达第一同步点</a> 图示代表一轮中间同步。从端运行本地脚本，直到第一同步点。</li><li><a href="#us11467655b1-fig-2-first">已到达，暂停脚本</a> 从端一较早到达并回报，然后等待主端继续。图中的早晚只用于展示异步到达。</li><li><a href="#us11467655b1-fig-2-quorum">确认满足放行门槛</a> 主端根据到达确认判断是否满足门槛。原图 3B 的实例等全部；第 5、12 项覆盖规定的门槛数量。</li><li><a href="#us11467655b1-fig-2-resumeB">继续到下一同步点</a> 继续请求可携带下一同步点。到达新的同步点可能开始下一轮等待，最终状态另有完成确认。</li></ul>
-  <p class="figure-evidence">原图 3B、6；说明书归档段 0014、0020、0034、0035、0036、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a> <a href="../diagrams/US11467655B1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>第一同步点</dt><dd>350A</dd></div><div><dt>下一同步点</dt><dd>350B</dd></div><div><dt>后续同步点</dt><dd>350C</dd></div><div><dt>确定转换目标</dt><dd>610</dd></div><div><dt>发送转换请求</dt><dd>620</dd></div><div><dt>接收目标状态完成确认</dt><dd>630</dd></div></dl></details>
-</figure></section><section id="boundaries"><h2>电源状态、性能状态和内存事件的确认条件</h2><p>图 5 把电源状态按可用资源展开。暂停态下 DRAM 自刷新，AON 区仍在工作而 SoC 区断电。恢复到内存态后，AON 部件可访问 DRAM。还需恢复处理器等部件运行时，可继续进入唤醒态。关机态的集成电路和 DRAM 均不供电，经单独的上电路径恢复。</p><p>SoC 区的电源管理器可协调性能状态转换及内存事件。若事件暂时阻断访存，读侧可先增加缓冲区中的数据，写侧可预留空间。各裸片分别聚合最短读容忍时长和最短写容忍时长，主端等待相关外围部件准备好。表 3 按请求类型列出各确认的完成条件。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　裸片恢复访问 DRAM 和恢复执行是两个状态变化</h3>
-    <p id="fig-5-basis">从暂停态可以先回到内存态，常供电区恢复 DRAM 访问。若还需恢复其它组件，再从内存态进入唤醒态。关机态和唤醒态之间有单独的上电和关机路径。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11467655b1-fig-2-issueA" data-reading-target="us11467655b1-fig-2-issueA">请求到达第一同步点</a><p>图示代表一轮中间同步。从端运行本地脚本，直到第一同步点。</p></li><li><a href="#us11467655b1-fig-2-first" data-reading-target="us11467655b1-fig-2-first">已到达，暂停脚本</a><p>从端一较早到达并回报，然后等待主端继续。图中的早晚只用于展示异步到达。</p></li><li><a href="#us11467655b1-fig-2-quorum" data-reading-target="us11467655b1-fig-2-quorum">确认满足放行门槛</a><p>主端根据到达确认判断是否满足门槛。原图 3B 的实例等全部；第 5、12 项覆盖规定的门槛数量。</p></li><li><a href="#us11467655b1-fig-2-resumeB" data-reading-target="us11467655b1-fig-2-resumeB">继续到下一同步点</a><p>继续请求可携带下一同步点。到达新的同步点可能开始下一轮等待，最终状态另有完成确认。</p></li></ul>
+  <p class="figure-evidence">原图 3B、6；说明书归档段 0014、0020、0034、0035、0036、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>第一同步点</dt><dd>350A</dd></div><div><dt>下一同步点</dt><dd>350B</dd></div><div><dt>后续同步点</dt><dd>350C</dd></div><div><dt>确定转换目标</dt><dd>610</dd></div><div><dt>发送转换请求</dt><dd>620</dd></div><div><dt>接收目标状态完成确认</dt><dd>630</dd></div></dl></details>
+</figure></section><section id="boundaries" class="article-section reading-chapter" aria-labelledby="boundaries-title"><h2 id="boundaries-title">电源状态、性能状态和内存事件的确认条件</h2><p>图 5 把电源状态按可用资源展开。暂停态下 DRAM 自刷新，AON 区仍在工作而 SoC 区断电。恢复到内存态后，AON 部件可访问 DRAM。还需恢复处理器等部件运行时，可继续进入唤醒态。关机态的集成电路和 DRAM 均不供电，经单独的上电路径恢复。</p><p>SoC 区的电源管理器可协调性能状态转换及内存事件。若事件暂时阻断访存，读侧可先增加缓冲区中的数据，写侧可预留空间。各裸片分别聚合最短读容忍时长和最短写容忍时长，主端等待相关外围部件准备好。表 3 按请求类型列出各确认的完成条件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">裸片恢复访问 DRAM 和恢复执行是两个状态变化</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11467655B1/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">从暂停态可以先回到内存态，常供电区恢复 DRAM 访问。若还需恢复其它组件，再从内存态进入唤醒态。关机态和唤醒态之间有单独的上电和关机路径。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="裸片恢复访问 DRAM 和恢复执行是两个状态变化" style="--figure-width:1180px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 455" role="img" aria-labelledby="us11467655b1-fig-5-svg-title us11467655b1-fig-5-svg-desc">
 <title id="us11467655b1-fig-5-svg-title">裸片恢复访问 DRAM 和恢复执行是两个状态变化</title>
 <desc id="us11467655b1-fig-5-svg-desc">从暂停态可以先回到内存态，常供电区恢复 DRAM 访问。若还需恢复其它组件，再从内存态进入唤醒态。关机态和唤醒态之间有单独的上电和关机路径。</desc>
@@ -98,19 +162,37 @@
 <text x="32" y="359" class="node-detail" text-anchor="start">暂停 → 内存：恢复常供电区的 DRAM 访问。内存 → 唤醒：继续恢复正常运行。</text>
 <text x="32" y="415" class="legend" text-anchor="start">中间同步点位于状态转换途中，图 2 和图 4 分别展开放行和 D2D 交接。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11467655b1-fig-5-suspend">暂停态保留常供电区</a> SoC 区断电，DRAM 自刷新；当远端常供电区需要访问 DRAM，可由 GPIO 发起唤醒请求。</li><li><a href="#us11467655b1-fig-5-resume-mem">暂停态先恢复内存态</a> 恢复 I/O 电压和访存路径后，常供电区即可访问 DRAM。若目标是全系统唤醒，内存态是中间状态。</li><li><a href="#us11467655b1-fig-5-resume-awake">从内存态继续到唤醒态</a> 符合唤醒条件后由主电源管理器协调继续转换，处理器等组件恢复正常供电和时钟。</li><li><a href="#us11467655b1-fig-5-off">关机态是另一条路径</a> 原图 3A 的关机态由唤醒态进入，该状态下集成电路组件和 DRAM 均无供电。</li></ul>
-  <p class="figure-evidence">原图 3A、3B、4；说明书归档段 0028、0029、0030、0031、0032、0033、0034、0035、0036、0040、0041、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11467655B1/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>电源状态机</dt><dd>300</dd></div><div><dt>唤醒态</dt><dd>310</dd></div><div><dt>关机态</dt><dd>320</dd></div><div><dt>内存态</dt><dd>330</dd></div><div><dt>暂停态</dt><dd>340</dd></div><div><dt>常供电区</dt><dd>210</dd></div><div><dt>SoC 区</dt><dd>220</dd></div><div><dt>AON 主电源管理器</dt><dd>230</dd></div><div><dt>AON 从电源管理器</dt><dd>235</dd></div><div><dt>从端唤醒请求</dt><dd>237</dd></div><div><dt>D2D 接口</dt><dd>420</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　不同请求的确认分别证明什么</h3>
-    <p id="fig-3-basis">同步点确认、目标电源状态确认与内存事件许可必须按各自的条件使用。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">握手对象</th><th scope="col">主端动作</th><th scope="col">从端回报所表达的条件</th></tr></thead><tbody><tr id="fig-3-wake"><th scope="row">唤醒请求</th><td>接收从端请求后决定是否转换</td><td>从端发起请求，尚未证明达到目标</td></tr><tr id="fig-3-stage"><th scope="row">中间同步点</th><td>等待规定数量的到达确认，再放行</td><td>本地脚本达到对应同步点并等待</td></tr><tr id="fig-3-power"><th scope="row">目标电源状态</th><td>向各从端下发转换请求</td><td>裸片已转换到指定目标电源状态</td></tr><tr id="fig-3-perf"><th scope="row">目标性能状态</th><td>向各从端下发性能状态转换请求</td><td>相应裸片达到目标性能状态</td></tr><tr id="fig-3-event"><th scope="row">内存延迟事件</th><td>发送事件要求的读／写容忍时长并阻塞事件</td><td>相关外围部件的读／写缓冲区能承受该不可用窗口</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-stage">中间同步点</a> 表示本地脚本抵达某个中间同步点，可以等待继续。它保留尚未完成的后续操作。</li><li><a href="#fig-3-power">目标电源状态</a> 用于证明本裸片已处于目标电源状态，例如暂停态转换到内存态，原有 AON 访问恢复。</li><li><a href="#fig-3-event">内存延迟事件</a> 表示相关外围部件可以跨过计划中的访存不可用窗口。读容忍时长是缓冲区耗尽前的时间，写容忍时长是缓冲区写满前的时间。</li></ul>
-  <p class="figure-evidence">原图 2、3A、3B、5、6；说明书归档段 0019、0020、0026、0027、0030、0031、0032、0033、0034、0035、0036、0043、0044、0045、0046、0047、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>唤醒态</dt><dd>310</dd></div><div><dt>关机态</dt><dd>320</dd></div><div><dt>内存态</dt><dd>330</dd></div><div><dt>暂停态</dt><dd>340</dd></div><div><dt>各部件读／写容忍时长</dt><dd>510</dd></div><div><dt>各裸片最短读／写容忍时长</dt><dd>520</dd></div><div><dt>内存延迟事件</dt><dd>525</dd></div><div><dt>事件要求的读／写容忍时长</dt><dd>530</dd></div></dl></details>
-</figure></section><section id="handoff"><h2>恢复链路前后如何切换通信协议</h2><p>暂停态下 D2D 接口可能掉电，远端 AON 从电源管理器通过 GPIO 请求恢复内存访问。图 4 中的中间同步点对应 D2D 接口已上电且可用的阶段。远端先通过 GPIO 报到，随后主端和相关从端分别撤销 GPIO 同步信号，再切换本地协议配置。</p><p>完成切换后，后续同步请求和到达确认改走 D2D。若继续由内存态转入唤醒态，跨裸片处理器唤醒请求也可使用 D2D。返回暂停态时，原文允许先切回 GPIO，再进入 D2D 不可用的阶段。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　暂停态唤醒怎样从 GPIO 交接到 D2D</h3>
-    <p id="fig-4-basis">GPIO 先承载同步，D2D 在中间同步点恢复可用。撤销 GPIO 同步信号并切换协议后，才使用 D2D 继续转换。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11467655b1-fig-5-suspend" data-reading-target="us11467655b1-fig-5-suspend">暂停态保留常供电区</a><p>SoC 区断电，DRAM 自刷新；当远端常供电区需要访问 DRAM，可由 GPIO 发起唤醒请求。</p></li><li><a href="#us11467655b1-fig-5-resume-mem" data-reading-target="us11467655b1-fig-5-resume-mem">暂停态先恢复内存态</a><p>恢复 I/O 电压和访存路径后，常供电区即可访问 DRAM。若目标是全系统唤醒，内存态是中间状态。</p></li><li><a href="#us11467655b1-fig-5-resume-awake" data-reading-target="us11467655b1-fig-5-resume-awake">从内存态继续到唤醒态</a><p>符合唤醒条件后由主电源管理器协调继续转换，处理器等组件恢复正常供电和时钟。</p></li><li><a href="#us11467655b1-fig-5-off" data-reading-target="us11467655b1-fig-5-off">关机态是另一条路径</a><p>原图 3A 的关机态由唤醒态进入，该状态下集成电路组件和 DRAM 均无供电。</p></li></ul>
+  <p class="figure-evidence">原图 3A、3B、4；说明书归档段 0028、0029、0030、0031、0032、0033、0034、0035、0036、0040、0041、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">11 项</span></summary><dl><div><dt>电源状态机</dt><dd>300</dd></div><div><dt>唤醒态</dt><dd>310</dd></div><div><dt>关机态</dt><dd>320</dd></div><div><dt>内存态</dt><dd>330</dd></div><div><dt>暂停态</dt><dd>340</dd></div><div><dt>常供电区</dt><dd>210</dd></div><div><dt>SoC 区</dt><dd>220</dd></div><div><dt>AON 主电源管理器</dt><dd>230</dd></div><div><dt>AON 从电源管理器</dt><dd>235</dd></div><div><dt>从端唤醒请求</dt><dd>237</dd></div><div><dt>D2D 接口</dt><dd>420</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">不同请求的确认分别证明什么</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">同步点确认、目标电源状态确认与内存事件许可必须按各自的条件使用。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="不同请求的确认分别证明什么"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">握手对象</th><th scope="col">主端动作</th><th scope="col">从端回报所表达的条件</th></tr></thead><tbody><tr id="fig-3-wake"><th scope="row">唤醒请求</th><td>接收从端请求后决定是否转换</td><td>从端发起请求，尚未证明达到目标</td></tr><tr id="fig-3-stage"><th scope="row">中间同步点</th><td>等待规定数量的到达确认，再放行</td><td>本地脚本达到对应同步点并等待</td></tr><tr id="fig-3-power"><th scope="row">目标电源状态</th><td>向各从端下发转换请求</td><td>裸片已转换到指定目标电源状态</td></tr><tr id="fig-3-perf"><th scope="row">目标性能状态</th><td>向各从端下发性能状态转换请求</td><td>相应裸片达到目标性能状态</td></tr><tr id="fig-3-event"><th scope="row">内存延迟事件</th><td>发送事件要求的读／写容忍时长并阻塞事件</td><td>相关外围部件的读／写缓冲区能承受该不可用窗口</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-stage" data-reading-target="fig-3-stage">中间同步点</a><p>表示本地脚本抵达某个中间同步点，可以等待继续。它保留尚未完成的后续操作。</p></li><li><a href="#fig-3-power" data-reading-target="fig-3-power">目标电源状态</a><p>用于证明本裸片已处于目标电源状态，例如暂停态转换到内存态，原有 AON 访问恢复。</p></li><li><a href="#fig-3-event" data-reading-target="fig-3-event">内存延迟事件</a><p>表示相关外围部件可以跨过计划中的访存不可用窗口。读容忍时长是缓冲区耗尽前的时间，写容忍时长是缓冲区写满前的时间。</p></li></ul>
+  <p class="figure-evidence">原图 2、3A、3B、5、6；说明书归档段 0019、0020、0026、0027、0030、0031、0032、0033、0034、0035、0036、0043、0044、0045、0046、0047、0050、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">8 项</span></summary><dl><div><dt>唤醒态</dt><dd>310</dd></div><div><dt>关机态</dt><dd>320</dd></div><div><dt>内存态</dt><dd>330</dd></div><div><dt>暂停态</dt><dd>340</dd></div><div><dt>各部件读／写容忍时长</dt><dd>510</dd></div><div><dt>各裸片最短读／写容忍时长</dt><dd>520</dd></div><div><dt>内存延迟事件</dt><dd>525</dd></div><div><dt>事件要求的读／写容忍时长</dt><dd>530</dd></div></dl></details>
+</figure></section><section id="handoff" class="article-section reading-chapter" aria-labelledby="handoff-title"><h2 id="handoff-title">恢复链路前后如何切换通信协议</h2><p>暂停态下 D2D 接口可能掉电，远端 AON 从电源管理器通过 GPIO 请求恢复内存访问。图 4 中的中间同步点对应 D2D 接口已上电且可用的阶段。远端先通过 GPIO 报到，随后主端和相关从端分别撤销 GPIO 同步信号，再切换本地协议配置。</p><p>完成切换后，后续同步请求和到达确认改走 D2D。若继续由内存态转入唤醒态，跨裸片处理器唤醒请求也可使用 D2D。返回暂停态时，原文允许先切回 GPIO，再进入 D2D 不可用的阶段。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 事务时序</p>
+        <h3 id="fig-4-title">暂停态唤醒怎样从 GPIO 交接到 D2D</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11467655B1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">GPIO 先承载同步，D2D 在中间同步点恢复可用。撤销 GPIO 同步信号并切换协议后，才使用 D2D 继续转换。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="暂停态唤醒怎样从 GPIO 交接到 D2D" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 704" role="img" aria-labelledby="us11467655b1-fig-4-svg-title us11467655b1-fig-4-svg-desc">
 <title id="us11467655b1-fig-4-svg-title">暂停态唤醒怎样从 GPIO 交接到 D2D</title>
 <desc id="us11467655b1-fig-4-svg-desc">GPIO 先承载同步，D2D 在中间同步点恢复可用。撤销 GPIO 同步信号并切换协议后，才使用 D2D 继续转换。</desc>
@@ -135,12 +217,14 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">远端电源状态机</text>
 <text x="28" y="676" class="legend" text-anchor="start">先撤销 GPIO 信号，再分别切换本地配置。图示为暂停态到内存态的逻辑次序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11467655b1-fig-4-wake">GPIO 内存唤醒请求</a> 暂停态下 DRAM 可以维持自刷新，D2D 接口可能无电。AON 从端收到访问 DRAM 的需求，经 GPIO 发起内存唤醒。</li><li><a href="#us11467655b1-fig-4-gpio_req">GPIO 同步请求</a> 主端经 GPIO 回送同步请求，启动从端本地脚本。</li><li><a href="#us11467655b1-fig-4-link_ready">到达 D2D 可用同步点</a> 在这个同步点，D2D 接口已经上电。此刻到达确认仍经 GPIO 送回。</li><li><a href="#us11467655b1-fig-4-gpio_ack">GPIO 到达确认</a> 确认到达同步点后，主端撤销请求信号，各从端撤销其 GPIO 信号。</li><li><a href="#us11467655b1-fig-4-switch">切换本端协议配置</a> 主从端可以用本地配置位切换协议。从这一动作之后，新的同步握手可经 D2D 传输。</li><li><a href="#us11467655b1-fig-4-d2d_req">D2D 同步请求</a> 图示后续同步使用 D2D。D2D 可同样承载从端提出的处理器唤醒请求。</li></ul>
-  <p class="figure-evidence">原图 3A、3B、4；说明书归档段 0030、0032、0033、0034、0035、0036、0037、0038、0039、0040、0041、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11467655B1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>GPIO 接口</dt><dd>410</dd></div><div><dt>GPIO 内存唤醒请求</dt><dd>412</dd></div><div><dt>GPIO 同步请求</dt><dd>414</dd></div><div><dt>GPIO 到达确认</dt><dd>416</dd></div><div><dt>D2D 接口</dt><dd>420</dd></div><div><dt>D2D 处理器唤醒请求</dt><dd>422</dd></div><div><dt>D2D 同步请求</dt><dd>424</dd></div><div><dt>D2D 到达确认</dt><dd>426</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11467655b1-fig-4-wake" data-reading-target="us11467655b1-fig-4-wake">GPIO 内存唤醒请求</a><p>暂停态下 DRAM 可以维持自刷新，D2D 接口可能无电。AON 从端收到访问 DRAM 的需求，经 GPIO 发起内存唤醒。</p></li><li><a href="#us11467655b1-fig-4-gpio_req" data-reading-target="us11467655b1-fig-4-gpio_req">GPIO 同步请求</a><p>主端经 GPIO 回送同步请求，启动从端本地脚本。</p></li><li><a href="#us11467655b1-fig-4-link_ready" data-reading-target="us11467655b1-fig-4-link_ready">到达 D2D 可用同步点</a><p>在这个同步点，D2D 接口已经上电。此刻到达确认仍经 GPIO 送回。</p></li><li><a href="#us11467655b1-fig-4-gpio_ack" data-reading-target="us11467655b1-fig-4-gpio_ack">GPIO 到达确认</a><p>确认到达同步点后，主端撤销请求信号，各从端撤销其 GPIO 信号。</p></li><li><a href="#us11467655b1-fig-4-switch" data-reading-target="us11467655b1-fig-4-switch">切换本端协议配置</a><p>主从端可以用本地配置位切换协议。从这一动作之后，新的同步握手可经 D2D 传输。</p></li><li><a href="#us11467655b1-fig-4-d2d_req" data-reading-target="us11467655b1-fig-4-d2d_req">D2D 同步请求</a><p>图示后续同步使用 D2D。D2D 可同样承载从端提出的处理器唤醒请求。</p></li></ul>
+  <p class="figure-evidence">原图 3A、3B、4；说明书归档段 0030、0032、0033、0034、0035、0036、0037、0038、0039、0040、0041、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">8 项</span></summary><dl><div><dt>GPIO 接口</dt><dd>410</dd></div><div><dt>GPIO 内存唤醒请求</dt><dd>412</dd></div><div><dt>GPIO 同步请求</dt><dd>414</dd></div><div><dt>GPIO 到达确认</dt><dd>416</dd></div><div><dt>D2D 接口</dt><dd>420</dd></div><div><dt>D2D 处理器唤醒请求</dt><dd>422</dd></div><div><dt>D2D 同步请求</dt><dd>424</dd></div><div><dt>D2D 到达确认</dt><dd>426</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、11 项；全文核对覆盖 86 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -163,6 +247,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>主端请求其余裸片改变电源状态，每个从端完成本地转换后回确认。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>从端发唤醒请求后，主端组织从睡眠进入唤醒状态。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>从端在本裸片到达第二状态前切换协议，到位后的消息使用第二协议。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>转换经中间同步点，到点确认后等待继续请求。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>主端在收到达到门槛数量的同步确认后，才发下一同步请求。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>从端求外围电路的读写容忍时间，并上报主端。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>主端汇总各从端读写容忍值，再分发整机容忍值。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>主端可另外请求性能状态切换，并收集完成确认。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>只要裸片收到电力，主从管理器所在部分在其他部分断电时仍保持供电。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>主裸片自身也含从管理器，负责本地状态转换。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>第一裸片的主电源管理器决定目标转换，向各从端发请求并收取完成确认。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>主端按阈值数量的同步确认放行下一个同步点。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>主端计算内存事件的读写延迟容限，等待关联外设可容忍的确认再处理事件。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>主端可依据待发生的内存访问决定状态切换。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>明确定义第一状态不可跨裸片访问连接在第一裸片的内存，第二状态可访问。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>多个裸片在软件看来表现为单个系统。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-11">11</a></td><td>主端因从端唤醒请求决定从睡眠转为唤醒。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-11">11</a></td><td>主端另发性能状态请求并等待对应完成确认。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-11">11</a></td><td>其他区域断电时，主从管理器所在区域保持供电。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11467655B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-11">11</a></td><td>主端切换到第二通信协议，其他裸片到达第二状态时后续消息走该协议。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11467655B1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11467655B1#knowledge">在关系图谱中定位 US11467655B1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12332723B2</code>
+  </div>
+  <h3><a href="US12332723B2.html">内存暂停前，用读写缓冲余量做跨裸片确认</a></h3>
+  <p class="related-edge-label">跨裸片确认的条件</p>
+  <p class="related-edge-summary">US11467655B1 的从电源管理器在达到同步点后返回确认，收到主端继续请求才执行下一阶段。US12332723B2 的远端裸片确认其代理电路能承受具体的读写停顿，主端才放行会影响内存可用性的事件。两份文献的差别在于确认内容，分别对应电源状态机已经到达指定阶段和负载拥有足够的暂存能力。</p>
+<p class="related-evidence"><a href="#claim-4">本篇权项 4</a><a href="#fig-2">本篇图表 2</a><a href="US12332723B2.html#claim-1">对照篇权项 1</a><a href="US12332723B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US20260095184A1</code>
+  </div>
+  <h3><a href="US20260095184A1.html">源域控制怎样抑制目标域上电时的电平转换毛刺</a></h3>
+  <p class="related-edge-label">上电信号抑制与状态同步</p>
+  <p class="related-edge-summary">US20260095184A1 在目的电源域的供电电压上升期间按控制信号把电平转换输出维持为逻辑低，避免上电期间出现错误跃迁。US11467655B1 则用同步点确认和主端继续请求推进多裸片电源状态。前者在斜坡期间抑制指定输出的毛刺，后者规定状态机在何时允许推进。</p>
+<p class="related-evidence"><a href="US20260095184A1.html#claim-5">对照篇权项 5</a><a href="US20260095184A1.html#fig-2">对照篇图表 2</a><a href="#claim-4">本篇权项 4</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#domains">主端协调，从端驱动本地电源状态机</a></li><li><a href="#barrier">从端到达同步点后为什么需要等主端放行</a></li><li><a href="#boundaries">电源状态、性能状态和内存事件的确认条件</a></li><li><a href="#handoff">恢复链路前后如何切换通信协议</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2022-10-11</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-06-07</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-06-07</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/340,940</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F1/3296、G06F1/28、G06F1/3206 <details class="inline-more"><summary>其余 3 项</summary><span>G06F1/3225、G06F1/3275、Y02D10/00</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Inder M. Sodhi、Achmed R. Zahir、Lior Zimet、Liran FISHEL <details class="inline-more"><summary>其余 2 位</summary><span>Omri Flint、Ami Schwartzman</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11467655B1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11467655B1#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

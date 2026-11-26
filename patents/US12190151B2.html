@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>执行流水线的背压如何参与 SIMD 组进通道的仲裁 · US12190151B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12190151B2</code> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></p>
-<h1>执行流水线的背压如何参与 SIMD 组进通道的仲裁</h1><p class="reading-question">多个 SIMD 组争用着色器通道与执行流水线时，已检测到的执行拥塞可以在哪个时刻改变调度？</p>
-<p class="reading-answer">第一级根据线程优先级分配硬件通道，第二级在译码和冒险检查后把操作发给相容且可用的执行流水线。执行侧的拥塞状态返回第一级，调整后续分配通道的线程优先级。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-01-07</dd></div><div><dt>申请号</dt><dd>US18/054,376</dd></div><div><dt>最早优先权</dt><dd>2022-09-19</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Benjiman L. Goodman、Anjana Rajendran、Sheenam Jayaswal、Terence M. Potter、Yoong Chert Foo</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#stages">一次为线程组分通道，一次为操作分执行流水线</a></li><li><a href="#pressure">下一次通道仲裁前，可以知道哪些流水线拥塞</a></li><li><a href="#bounds">拥塞权重、同拍端口资格与通道抢占的区别</a></li><li><a href="#when">背压反馈生效的时间边界</a></li><li><a href="#fences">同一 load 依赖遇到命中和缺失，通道如何处理</a></li><li><a href="#units">多个通道同时请求同一类流水线时怎样发射</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="stages"><h2>一次为线程组分通道，一次为操作分执行流水线</h2><p>原图 2 的硬件通道含独立的译码和冒险检查。SIMD 组由第一级选入通道，留在这个通道内推进多条指令。只有适合进入第二级仲裁的已译码操作才竞争多条共享执行流水线。原图 3 把这两级具体落到 SIMD 组调度器、通道管理器和指令发射仲裁器。</p><p>图 1 画两个通道输出汇合的地方。着色器可以为整数、浮点、访存设置各自的执行流水线。指令发射仲裁器检查实际操作类型及流水线可用性，执行侧的反馈则绕过译码和冒险检查，返回 SIMD 组调度器。执行结果写回属于更下游的动作。</p><p>授权第 1、12、18 项分别用装置、方法和系统表述这个组合。线程是硬件调度对象，授权第 4 项具体到 SIMD 组。说明书允许移用于其他处理器，绘出的执行实例对应其着色器。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　着色器通道与共享执行流水线的两次仲裁</h3>
-    <p id="fig-1-basis">第一级授予 SIMD 组进入通道的资格，第二级在译码后授予单条操作执行流水线。反馈从执行侧返回第一级。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12190151B2 执行流水线的背压如何参与 SIMD 组进通道的仲裁 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-clpc" href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a>
+  </nav>
+  <p class="document-id">
+    <code>US12190151B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2025-01-07">2025-01-07</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12190151B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>执行流水线的背压如何参与 SIMD 组进通道的仲裁</h1>
+  <p class="english-title" lang="en">Multi-stage thread scheduling</p>
+  <p class="document-question">多个 SIMD 组争用着色器通道与执行流水线时，已检测到的执行拥塞可以在哪个时刻改变调度？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#stages">一次为线程组分通道，一次为操作分执行流水线</a></li><li><a href="#pressure">下一次通道仲裁前，可以知道哪些流水线拥塞</a></li><li><a href="#bounds">拥塞权重、同拍端口资格与通道抢占的区别</a></li><li><a href="#when">背压反馈生效的时间边界</a></li><li><a href="#fences">同一 load 依赖遇到命中和缺失，通道如何处理</a></li><li><a href="#units">多个通道同时请求同一类流水线时怎样发射</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">第一级根据线程优先级分配硬件通道，第二级在译码和冒险检查后把操作发给相容且可用的执行流水线。执行侧的拥塞状态返回第一级，调整后续分配通道的线程优先级。</p>
+  </section>
+  <div id="mechanism"><section id="stages" class="article-section reading-chapter" aria-labelledby="stages-title"><h2 id="stages-title">一次为线程组分通道，一次为操作分执行流水线</h2><p>原图 2 的硬件通道含独立的译码和冒险检查。SIMD 组由第一级选入通道，留在这个通道内推进多条指令。只有适合进入第二级仲裁的已译码操作才竞争多条共享执行流水线。原图 3 把这两级具体落到 SIMD 组调度器、通道管理器和指令发射仲裁器。</p><p>图 1 画两个通道输出汇合的地方。着色器可以为整数、浮点、访存设置各自的执行流水线。指令发射仲裁器检查实际操作类型及流水线可用性，执行侧的反馈则绕过译码和冒险检查，返回 SIMD 组调度器。执行结果写回属于更下游的动作。</p><p>授权第 1、12、18 项分别用装置、方法和系统表述这个组合。线程是硬件调度对象，授权第 4 项具体到 SIMD 组。说明书允许移用于其他处理器，绘出的执行实例对应其着色器。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">着色器通道与共享执行流水线的两次仲裁</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12190151B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">第一级授予 SIMD 组进入通道的资格，第二级在译码后授予单条操作执行流水线。反馈从执行侧返回第一级。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="着色器通道与共享执行流水线的两次仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 626" role="img" aria-labelledby="us12190151b2-fig-1-svg-title us12190151b2-fig-1-svg-desc">
 <title id="us12190151b2-fig-1-svg-title">着色器通道与共享执行流水线的两次仲裁</title>
 <desc id="us12190151b2-fig-1-svg-desc">第一级授予 SIMD 组进入通道的资格，第二级在译码后授予单条操作执行流水线。反馈从执行侧返回第一级。</desc>
@@ -40,12 +86,21 @@
 <g id="us12190151b2-fig-1-exec"><rect x="735" y="409" width="197" height="77" rx="6" fill="#f5f5f5"/><rect x="735" y="409" width="197" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="833.5" y="435" class="node-name" text-anchor="middle">共享执行流水线</text><text x="833.5" y="457" class="node-detail" text-anchor="middle">整数／浮点／访存</text></g>
 <text x="37" y="579" class="legend" text-anchor="start">第二级接收已译码的操作。跨越两级的是状态反馈，指令仍沿所在通道推进。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12190151b2-fig-1-s1">SIMD 组调度器</a> 已经就绪的 SIMD 组按线程优先级竞争硬件通道，也可考虑等待重新分配通道的组。</li><li><a href="#us12190151b2-fig-1-a">通道 A</a> 通道 A 自己译码并检查指令间冒险。发射候选保留操作类型。</li><li><a href="#us12190151b2-fig-1-m">通道 M</a> 其他通道并行保持各自的状态。多个通道的可发射操作汇入第二级。</li><li><a href="#us12190151b2-fig-1-s2">指令发射仲裁器</a> 当同类操作请求数大于可用执行流水线数时，第二级按优先级和可用性择一或择数个发出。</li><li><a href="#us12190151b2-fig-1-exec">共享执行流水线</a> 说明书列举了整数、浮点、访存等执行流水线类型。类型以及端口可用性影响能否本次发射。</li><li><a href="#us12190151b2-fig-1-pressure">执行背压返回第一级</a> 反馈表示执行拥塞状态，例如流水线停顿或缓冲的指令数量，用来更新待分配线程的优先级。</li></ul>
-  <p class="figure-evidence">原图 2、3、4；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0060、0061、0065、0066、0067、0068、0069、0070；权利要求 1、4、7、8、12、17、18 <a href="../diagrams/US12190151B2/fig-1.html">打开独立图稿</a></p>
-  
-</figure></section><section id="pressure"><h2>下一次通道仲裁前，可以知道哪些流水线拥塞</h2><p>执行流水线可报告停顿、缓冲指令数或一段时间内的执行状态。原图 4 给出两类独立输入：执行状态来自硬件，编译器提示表明候选线程预计使用哪类流水线。提示可按每种流水线设一位，或用多位字段表达指令分布。提示所预测的资源类型，通常在这个候选线程译码之前就能用于分配决策。</p><p>图 2 追踪状态与提示如何汇合。第一级可把命中低背压条件的候选线程优先级调高，从而让下次获准使用的通道更可能产生可以发射的操作。第二级仍按本次实际译码结果和可用性分配，预测偏离实际时，这次发射决策依赖实际条件。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　执行状态与编译器提示如何影响下一次通道分配</h3>
-    <p id="fig-2-basis">执行拥塞与候选线程的预计资源类型用于第一级优先级。第二级发射使用实际译码结果。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12190151b2-fig-1-s1" data-reading-target="us12190151b2-fig-1-s1">SIMD 组调度器</a><p>已经就绪的 SIMD 组按线程优先级竞争硬件通道，也可考虑等待重新分配通道的组。</p></li><li><a href="#us12190151b2-fig-1-a" data-reading-target="us12190151b2-fig-1-a">通道 A</a><p>通道 A 自己译码并检查指令间冒险。发射候选保留操作类型。</p></li><li><a href="#us12190151b2-fig-1-m" data-reading-target="us12190151b2-fig-1-m">通道 M</a><p>其他通道并行保持各自的状态。多个通道的可发射操作汇入第二级。</p></li><li><a href="#us12190151b2-fig-1-s2" data-reading-target="us12190151b2-fig-1-s2">指令发射仲裁器</a><p>当同类操作请求数大于可用执行流水线数时，第二级按优先级和可用性择一或择数个发出。</p></li><li><a href="#us12190151b2-fig-1-exec" data-reading-target="us12190151b2-fig-1-exec">共享执行流水线</a><p>说明书列举了整数、浮点、访存等执行流水线类型。类型以及端口可用性影响能否本次发射。</p></li><li><a href="#us12190151b2-fig-1-pressure" data-reading-target="us12190151b2-fig-1-pressure">执行背压返回第一级</a><p>反馈表示执行拥塞状态，例如流水线停顿或缓冲的指令数量，用来更新待分配线程的优先级。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0060、0061、0065、0066、0067、0068、0069、0070；权利要求 1、4、7、8、12、17、18</p>
+
+</figure></section><section id="pressure" class="article-section reading-chapter" aria-labelledby="pressure-title"><h2 id="pressure-title">下一次通道仲裁前，可以知道哪些流水线拥塞</h2><p>执行流水线可报告停顿、缓冲指令数或一段时间内的执行状态。原图 4 给出两类独立输入：执行状态来自硬件，编译器提示表明候选线程预计使用哪类流水线。提示可按每种流水线设一位，或用多位字段表达指令分布。提示所预测的资源类型，通常在这个候选线程译码之前就能用于分配决策。</p><p>图 2 追踪状态与提示如何汇合。第一级可把命中低背压条件的候选线程优先级调高，从而让下次获准使用的通道更可能产生可以发射的操作。第二级仍按本次实际译码结果和可用性分配，预测偏离实际时，这次发射决策依赖实际条件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">执行状态与编译器提示如何影响下一次通道分配</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12190151B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">执行拥塞与候选线程的预计资源类型用于第一级优先级。第二级发射使用实际译码结果。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="执行状态与编译器提示如何影响下一次通道分配" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us12190151b2-fig-2-svg-title us12190151b2-fig-2-svg-desc">
 <title id="us12190151b2-fig-2-svg-title">执行状态与编译器提示如何影响下一次通道分配</title>
 <desc id="us12190151b2-fig-2-svg-desc">执行拥塞与候选线程的预计资源类型用于第一级优先级。第二级发射使用实际译码结果。</desc>
@@ -69,19 +124,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">执行流水线</text>
 <text x="28" y="436" class="legend" text-anchor="start">时间向下。图中以待分配通道的 SIMD 组为例。两级硬件仲裁各自读取当次可用状态。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12190151b2-fig-2-feedback">返回各类流水线的背压</a> 采用独立权项的返回路径。滞留、缓冲指令数等是可选的拥塞指标。</li><li><a href="#us12190151b2-fig-2-hint">候选组优先用哪类执行单元</a> 编译器在着色器代码提供候选组的执行流水线类型提示；图中用整数和浮点举例。</li><li><a href="#us12190151b2-fig-2-rank">按状态调整候选优先级</a> 示例中浮点一侧的背压低，在适用的优先级规则中可以提升候选组。等待年龄仍可参与。</li><li><a href="#us12190151b2-fig-2-decode">提交已译码操作</a> 通道读入新分配的组，并在译码和冒险检查后交出真实操作类型。</li><li><a href="#us12190151b2-fig-2-real">选择可用相容流水线</a> 第二级查执行流水线的实际可用性，发出已译码且满足相容性等条件的操作。</li></ul>
-  <p class="figure-evidence">原图 3、4、14；说明书归档段 0055、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131、0132、0133；权利要求 1、2、3、6、8、12、13、14、16、17、18、19 <a href="../diagrams/US12190151B2/fig-2.html">打开独立图稿</a></p>
-  
-</figure></section><section id="bounds"><h2>拥塞权重、同拍端口资格与通道抢占的区别</h2><p>表 3 区分哪个部件作决定、输入状态在哪里观察、影响的是哪一个资源。线程年龄可以参与第一级的初始优先级；通道优先级可在第二级参与同类操作竞争。原文未给固定权重或使用率门槛。</p><p>第 5、15、20 项另描述更高优先级线程可提前接管已占用通道。重新加权参与仲裁与提前接管通道是两个动作。实现可在通道允许替换时保存原线程状态，再让新线程进通道。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　两级硬件调度与提前接管通道的判定字段</h3>
-    <p id="fig-3-basis">线程组进入通道、操作获准发射、通道提前接管分别检查不同的状态。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">决策</th><th scope="col">读取状态</th><th scope="col">更新对象</th></tr></thead><tbody><tr id="fig-3-entry"><th scope="row">第一级分配通道</th><td>线程优先级、执行侧背压</td><td>硬件通道的线程归属</td></tr><tr id="fig-3-issue"><th scope="row">第二级发射操作</th><td>译码类型、相容流水线可用性</td><td>当前发射批次</td></tr><tr id="fig-3-replace"><th scope="row">提前接管通道</th><td>更高优先级、允许替换条件</td><td>旧线程退出，通道给新线程</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-entry">第一级分配通道</a> 第一级关注当前线程可以进入哪个通道，执行侧反馈可以更改其排序。</li><li><a href="#fig-3-issue">第二级发射操作</a> 第二级发射要求已译码操作有相容且可用的执行流水线。</li><li><a href="#fig-3-replace">提前接管通道</a> 高优先级线程可以提前接管通道是从属权项限定的能力；此动作与是否使用编译器提示无直接依赖。</li></ul>
-  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0128、0129、0130、0131；权利要求 1、2、3、5、6、8、12、15、16、17、18、20 </p>
-  
-</figure></section><section id="when"><h2>背压反馈生效的时间边界</h2><p>图 4 用模型时钟说明控制窗口。第 1 拍开始处理已进入通道的 SIMD 组 A。执行流水线第 3 拍进入拥塞，第 4 拍状态可被第一级读取。第 5 拍有可用通道时，SIMD 组 B 与 C 的优先级才可能按状态重排；已分配给 A 的那次通道仲裁发生在反馈到达前。</p><p>该模型隔离反馈延迟，能回答一次拥塞变化影响哪一次通道分配。实际实现需要观察执行状态的采样点、反馈可见时刻、下一次空通道仲裁及所选组在第二级的发射率。反馈能否改善占用率还取决于候选组是否提供不同类型的操作。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　已有通道分配早于背压返回时，哪次决策会变化</h3>
-    <p id="fig-4-basis">第一级的下一次仲裁读到执行反馈。之前入通道的组仍须用第二级按实际可用性争取发射。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12190151b2-fig-2-feedback" data-reading-target="us12190151b2-fig-2-feedback">返回各类流水线的背压</a><p>采用独立权项的返回路径。滞留、缓冲指令数等是可选的拥塞指标。</p></li><li><a href="#us12190151b2-fig-2-hint" data-reading-target="us12190151b2-fig-2-hint">候选组优先用哪类执行单元</a><p>编译器在着色器代码提供候选组的执行流水线类型提示；图中用整数和浮点举例。</p></li><li><a href="#us12190151b2-fig-2-rank" data-reading-target="us12190151b2-fig-2-rank">按状态调整候选优先级</a><p>示例中浮点一侧的背压低，在适用的优先级规则中可以提升候选组。等待年龄仍可参与。</p></li><li><a href="#us12190151b2-fig-2-decode" data-reading-target="us12190151b2-fig-2-decode">提交已译码操作</a><p>通道读入新分配的组，并在译码和冒险检查后交出真实操作类型。</p></li><li><a href="#us12190151b2-fig-2-real" data-reading-target="us12190151b2-fig-2-real">选择可用相容流水线</a><p>第二级查执行流水线的实际可用性，发出已译码且满足相容性等条件的操作。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、14；说明书归档段 0055、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131、0132、0133；权利要求 1、2、3、6、8、12、13、14、16、17、18、19</p>
+
+</figure></section><section id="bounds" class="article-section reading-chapter" aria-labelledby="bounds-title"><h2 id="bounds-title">拥塞权重、同拍端口资格与通道抢占的区别</h2><p>表 3 区分哪个部件作决定、输入状态在哪里观察、影响的是哪一个资源。线程年龄可以参与第一级的初始优先级；通道优先级可在第二级参与同类操作竞争。原文未给固定权重或使用率门槛。</p><p>第 5、15、20 项另描述更高优先级线程可提前接管已占用通道。重新加权参与仲裁与提前接管通道是两个动作。实现可在通道允许替换时保存原线程状态，再让新线程进通道。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">两级硬件调度与提前接管通道的判定字段</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">线程组进入通道、操作获准发射、通道提前接管分别检查不同的状态。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="两级硬件调度与提前接管通道的判定字段"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">决策</th><th scope="col">读取状态</th><th scope="col">更新对象</th></tr></thead><tbody><tr id="fig-3-entry"><th scope="row">第一级分配通道</th><td>线程优先级、执行侧背压</td><td>硬件通道的线程归属</td></tr><tr id="fig-3-issue"><th scope="row">第二级发射操作</th><td>译码类型、相容流水线可用性</td><td>当前发射批次</td></tr><tr id="fig-3-replace"><th scope="row">提前接管通道</th><td>更高优先级、允许替换条件</td><td>旧线程退出，通道给新线程</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-entry" data-reading-target="fig-3-entry">第一级分配通道</a><p>第一级关注当前线程可以进入哪个通道，执行侧反馈可以更改其排序。</p></li><li><a href="#fig-3-issue" data-reading-target="fig-3-issue">第二级发射操作</a><p>第二级发射要求已译码操作有相容且可用的执行流水线。</p></li><li><a href="#fig-3-replace" data-reading-target="fig-3-replace">提前接管通道</a><p>高优先级线程可以提前接管通道是从属权项限定的能力；此动作与是否使用编译器提示无直接依赖。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0128、0129、0130、0131；权利要求 1、2、3、5、6、8、12、15、16、17、18、20</p>
+
+</figure></section><section id="when" class="article-section reading-chapter" aria-labelledby="when-title"><h2 id="when-title">背压反馈生效的时间边界</h2><p>图 4 用模型时钟说明控制窗口。第 1 拍开始处理已进入通道的 SIMD 组 A。执行流水线第 3 拍进入拥塞，第 4 拍状态可被第一级读取。第 5 拍有可用通道时，SIMD 组 B 与 C 的优先级才可能按状态重排；已分配给 A 的那次通道仲裁发生在反馈到达前。</p><p>该模型隔离反馈延迟，能回答一次拥塞变化影响哪一次通道分配。实际实现需要观察执行状态的采样点、反馈可见时刻、下一次空通道仲裁及所选组在第二级的发射率。反馈能否改善占用率还取决于候选组是否提供不同类型的操作。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 同轴时序</p>
+        <h3 id="fig-4-title">已有通道分配早于背压返回时，哪次决策会变化</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12190151B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">第一级的下一次仲裁读到执行反馈。之前入通道的组仍须用第二级按实际可用性争取发射。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="已有通道分配早于背压返回时，哪次决策会变化" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12190151b2-fig-4-svg-title us12190151b2-fig-4-svg-desc">
 <title id="us12190151b2-fig-4-svg-title">已有通道分配早于背压返回时，哪次决策会变化</title>
 <desc id="us12190151b2-fig-4-svg-desc">第一级的下一次仲裁读到执行反馈。之前入通道的组仍须用第二级按实际可用性争取发射。</desc>
@@ -136,12 +209,21 @@
 <text x="759" y="447" class="arrow-label" text-anchor="end">送出</text></g>
 <text x="24" y="512" class="legend" text-anchor="start">时钟及反馈延迟为分析模型。原图仅规定反馈方向及两个仲裁阶段。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12190151b2-fig-4-current">SIMD 组 A</a> 第 1 拍 A 得到通道，随后在该通道译码。第 4 拍的反馈不属于第 1 拍仲裁的输入。</li><li><a href="#us12190151b2-fig-4-int">执行反馈</a> 示例从第 3 拍观察整数流水线拥塞，第 4 拍在第一级可见。</li><li><a href="#us12190151b2-fig-4-admit">下一次通道仲裁</a> 在第 5 拍有另一个可用通道时，尚待分配的 B 和 C 读取同一反馈；该例挑选预计较少使用拥塞管线的 C。</li><li><a href="#us12190151b2-fig-4-real">C 发射</a> 第 7 拍看到 C 的实际译码类型时，第二级依可用流水线完成当次发射。</li></ul>
-  <p class="figure-evidence">原图 2、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131；权利要求 1、2、3、8、12、14、17、18 <a href="../diagrams/US12190151B2/fig-4.html">打开独立图稿</a></p>
-  
-</figure></section><section id="fences"><h2>同一 load 依赖遇到命中和缺失，通道如何处理</h2><p>原图 5–7B 用编译器插入的 fence 连接较早的 load i0 和较晚的 copy i1。i0 设置 F2，i1 等待 F2。第一级已经为它们所在的 SIMD 组分配通道，早于这一轮数据缓存访问。执行流水线把 i0 状态送给 fence 管理器，通道队列跟踪尚未收到缓存判定的操作。</p><p>图 5 并列画等待与退出。fence 检查结合活动计数、预计由命中引起的计数递减，和已有命中或缺失状态判断。如果 i0 在数据缓存命中，i1 可保留在通道等待所需结果并继续；缺失时可以让 SIMD 组退出通道，由通道管理器保存必要状态。重新具备条件后可再次参加第一级仲裁。</p><p>第 9 项覆盖根据较早操作的状态决定停顿当前依赖操作或停用其所在通道的线程，第 10、11 项限定由编译器 fence 确认依赖以及活动计数。原图 11–13 另披露取指缓存缺失的可丢弃请求机制；这一图只追踪数据侧操作状态。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　fence 管理器按较早 load 的缓存状态决定是否退出通道</h3>
-    <p id="fig-5-basis">copy 持有依赖。数据缓存命中时可以继续短等；缺失时可保存组状态、交还通道。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12190151b2-fig-4-current" data-reading-target="us12190151b2-fig-4-current">SIMD 组 A</a><p>第 1 拍 A 得到通道，随后在该通道译码。第 4 拍的反馈不属于第 1 拍仲裁的输入。</p></li><li><a href="#us12190151b2-fig-4-int" data-reading-target="us12190151b2-fig-4-int">执行反馈</a><p>示例从第 3 拍观察整数流水线拥塞，第 4 拍在第一级可见。</p></li><li><a href="#us12190151b2-fig-4-admit" data-reading-target="us12190151b2-fig-4-admit">下一次通道仲裁</a><p>在第 5 拍有另一个可用通道时，尚待分配的 B 和 C 读取同一反馈；该例挑选预计较少使用拥塞管线的 C。</p></li><li><a href="#us12190151b2-fig-4-real" data-reading-target="us12190151b2-fig-4-real">C 发射</a><p>第 7 拍看到 C 的实际译码类型时，第二级依可用流水线完成当次发射。</p></li></ul>
+  <p class="figure-evidence">原图 2、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131；权利要求 1、2、3、8、12、14、17、18</p>
+
+</figure></section><section id="fences" class="article-section reading-chapter" aria-labelledby="fences-title"><h2 id="fences-title">同一 load 依赖遇到命中和缺失，通道如何处理</h2><p>原图 5–7B 用编译器插入的 fence 连接较早的 load i0 和较晚的 copy i1。i0 设置 F2，i1 等待 F2。第一级已经为它们所在的 SIMD 组分配通道，早于这一轮数据缓存访问。执行流水线把 i0 状态送给 fence 管理器，通道队列跟踪尚未收到缓存判定的操作。</p><p>图 5 并列画等待与退出。fence 检查结合活动计数、预计由命中引起的计数递减，和已有命中或缺失状态判断。如果 i0 在数据缓存命中，i1 可保留在通道等待所需结果并继续；缺失时可以让 SIMD 组退出通道，由通道管理器保存必要状态。重新具备条件后可再次参加第一级仲裁。</p><p>第 9 项覆盖根据较早操作的状态决定停顿当前依赖操作或停用其所在通道的线程，第 10、11 项限定由编译器 fence 确认依赖以及活动计数。原图 11–13 另披露取指缓存缺失的可丢弃请求机制；这一图只追踪数据侧操作状态。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">fence 管理器按较早 load 的缓存状态决定是否退出通道</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12190151B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">copy 持有依赖。数据缓存命中时可以继续短等；缺失时可保存组状态、交还通道。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="fence 管理器按较早 load 的缓存状态决定是否退出通道" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 656" role="img" aria-labelledby="us12190151b2-fig-5-svg-title us12190151b2-fig-5-svg-desc">
 <title id="us12190151b2-fig-5-svg-title">fence 管理器按较早 load 的缓存状态决定是否退出通道</title>
 <desc id="us12190151b2-fig-5-svg-desc">copy 持有依赖。数据缓存命中时可以继续短等；缺失时可保存组状态、交还通道。</desc>
@@ -168,12 +250,21 @@
 <g id="us12190151b2-fig-5-again"><rect x="365" y="489" width="223" height="77" rx="6" fill="#f5f5f5"/><rect x="365" y="489" width="223" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476.5" y="515" class="node-name" text-anchor="middle">返回第一级候选</text><text x="476.5" y="537" class="node-detail" text-anchor="middle">组就绪后重新竞争</text></g>
 <text x="39" y="609" class="legend" text-anchor="start">F2 为例中的编译器 fence。两条出口取决于较早操作的状态，后续继续均须满足数据依赖。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12190151b2-fig-5-set">load i0 设置 F2</a> 较早的 load i0 设置 F2，发射后继续经过操作数读取、地址生成和数据缓存查询。</li><li><a href="#us12190151b2-fig-5-copy">copy i1 等待 F2</a> 较晚的 copy i1 需要 i0 写出的 r0 数据，检查同一 fence 以确保顺序。</li><li><a href="#us12190151b2-fig-5-check">fence 管理器</a> 原图 6 同时检查活动 fence 计数、命中或缺失数组和流水线观察。预计能由缓存命中解除的依赖可以较短时间保留原通道。</li><li><a href="#us12190151b2-fig-5-hit">保留通道</a> 原图 7A 等到 i0 的数据缓存命中并满足 fence 后，i1 才送指令发射仲裁。</li><li><a href="#us12190151b2-fig-5-miss">停用 SIMD 组</a> 原图 7B 看到缺失，返回通道退出信号。保存必要线程状态后，通道可给其他组。</li><li><a href="#us12190151b2-fig-5-again">返回第一级候选</a> 退出的组可回第一级候选等待，后续按可运行状态及优先级重新分配。</li></ul>
-  <p class="figure-evidence">原图 3、5、6、7A、7B、15；说明书归档段 0057、0058、0060、0061、0072、0073、0074、0075、0076、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086、0087、0088、0089、0090、0135、0136、0137、0138、0139、0140、0141、0142；权利要求 9、10、11 <a href="../diagrams/US12190151B2/fig-5.html">打开独立图稿</a></p>
-  
-</figure></section><section id="units"><h2>多个通道同时请求同一类流水线时怎样发射</h2><p>图 6 把过量请求的条件拆成相容性与可用性两个判断。两个通道请求同一个可用整数执行流水线，另一个通道请求空闲浮点执行流水线。示例允许这两个类型分别仲裁；哪一条整数操作胜出由所设优先级决定。第 1、8、12、17、18 项覆盖数量不足时的选择与可用性约束。</p><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">图 6　同一类操作超出当拍可用流水线数量时怎样发射</h3>
-    <p id="fig-6-basis">两个整数请求共用一个当前可用整数端口。浮点路径仍可独立择优发射。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12190151b2-fig-5-set" data-reading-target="us12190151b2-fig-5-set">load i0 设置 F2</a><p>较早的 load i0 设置 F2，发射后继续经过操作数读取、地址生成和数据缓存查询。</p></li><li><a href="#us12190151b2-fig-5-copy" data-reading-target="us12190151b2-fig-5-copy">copy i1 等待 F2</a><p>较晚的 copy i1 需要 i0 写出的 r0 数据，检查同一 fence 以确保顺序。</p></li><li><a href="#us12190151b2-fig-5-check" data-reading-target="us12190151b2-fig-5-check">fence 管理器</a><p>原图 6 同时检查活动 fence 计数、命中或缺失数组和流水线观察。预计能由缓存命中解除的依赖可以较短时间保留原通道。</p></li><li><a href="#us12190151b2-fig-5-hit" data-reading-target="us12190151b2-fig-5-hit">保留通道</a><p>原图 7A 等到 i0 的数据缓存命中并满足 fence 后，i1 才送指令发射仲裁。</p></li><li><a href="#us12190151b2-fig-5-miss" data-reading-target="us12190151b2-fig-5-miss">停用 SIMD 组</a><p>原图 7B 看到缺失，返回通道退出信号。保存必要线程状态后，通道可给其他组。</p></li><li><a href="#us12190151b2-fig-5-again" data-reading-target="us12190151b2-fig-5-again">返回第一级候选</a><p>退出的组可回第一级候选等待，后续按可运行状态及优先级重新分配。</p></li></ul>
+  <p class="figure-evidence">原图 3、5、6、7A、7B、15；说明书归档段 0057、0058、0060、0061、0072、0073、0074、0075、0076、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086、0087、0088、0089、0090、0135、0136、0137、0138、0139、0140、0141、0142；权利要求 9、10、11</p>
+
+</figure></section><section id="units" class="article-section reading-chapter" aria-labelledby="units-title"><h2 id="units-title">多个通道同时请求同一类流水线时怎样发射</h2><p>图 6 把过量请求的条件拆成相容性与可用性两个判断。两个通道请求同一个可用整数执行流水线，另一个通道请求空闲浮点执行流水线。示例允许这两个类型分别仲裁；哪一条整数操作胜出由所设优先级决定。第 1、8、12、17、18 项覆盖数量不足时的选择与可用性约束。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 6 · 微架构与信号</p>
+        <h3 id="fig-6-title">同一类操作超出当拍可用流水线数量时怎样发射</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12190151B2/fig-6.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">两个整数请求共用一个当前可用整数端口。浮点路径仍可独立择优发射。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同一类操作超出当拍可用流水线数量时怎样发射" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 605" role="img" aria-labelledby="us12190151b2-fig-6-svg-title us12190151b2-fig-6-svg-desc">
 <title id="us12190151b2-fig-6-svg-title">同一类操作超出当拍可用流水线数量时怎样发射</title>
 <desc id="us12190151b2-fig-6-svg-desc">两个整数请求共用一个当前可用整数端口。浮点路径仍可独立择优发射。</desc>
@@ -197,12 +288,14 @@
 <g id="us12190151b2-fig-6-fp"><rect x="684" y="371" width="238" height="73" rx="6" fill="#f5f5f5"/><rect x="684" y="371" width="238" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="397" class="node-name" text-anchor="middle">浮点执行流水线</text><text x="803" y="419" class="node-detail" text-anchor="middle">1 条当前可用</text></g>
 <text x="38" y="531" class="legend" text-anchor="start">图中资源数、通道号和优先级是分析假设。硬件端口资格与候选调度优先级在第二级求交。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12190151b2-fig-6-ch0">通道 0</a> 已译码并通过本通道冒险检查的整数操作请求发射。示例设它的通道优先级较高。</li><li><a href="#us12190151b2-fig-6-ch1">通道 1</a> 同一拍的第二个整数请求面对同一个相容且可用的执行流水线，留待后续仲裁。</li><li><a href="#us12190151b2-fig-6-ch2">通道 2</a> 浮点操作请求与整数操作类型不同。处理该请求需要另有浮点执行流水线可用。</li><li><a href="#us12190151b2-fig-6-arb">指令发射仲裁器</a> 给定一条可用整数流水线和一条可用浮点流水线，第二级分别处理两类请求。原文保留不同硬件可用性和优先级实现。</li><li><a href="#us12190151b2-fig-6-int">整数执行流水线</a> 在图示例条件下，发出来自通道 0 的整数操作。</li><li><a href="#us12190151b2-fig-6-fp">浮点执行流水线</a> 发出来自通道 2 的浮点操作，与整数操作的发射可同拍。</li></ul>
-  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0058、0059、0065、0066、0067、0068、0069、0070、0127、0128、0129、0130；权利要求 1、7、8、12、17、18 <a href="../diagrams/US12190151B2/fig-6.html">打开独立图稿</a></p>
-  
-</figure></section></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12190151b2-fig-6-ch0" data-reading-target="us12190151b2-fig-6-ch0">通道 0</a><p>已译码并通过本通道冒险检查的整数操作请求发射。示例设它的通道优先级较高。</p></li><li><a href="#us12190151b2-fig-6-ch1" data-reading-target="us12190151b2-fig-6-ch1">通道 1</a><p>同一拍的第二个整数请求面对同一个相容且可用的执行流水线，留待后续仲裁。</p></li><li><a href="#us12190151b2-fig-6-ch2" data-reading-target="us12190151b2-fig-6-ch2">通道 2</a><p>浮点操作请求与整数操作类型不同。处理该请求需要另有浮点执行流水线可用。</p></li><li><a href="#us12190151b2-fig-6-arb" data-reading-target="us12190151b2-fig-6-arb">指令发射仲裁器</a><p>给定一条可用整数流水线和一条可用浮点流水线，第二级分别处理两类请求。原文保留不同硬件可用性和优先级实现。</p></li><li><a href="#us12190151b2-fig-6-int" data-reading-target="us12190151b2-fig-6-int">整数执行流水线</a><p>在图示例条件下，发出来自通道 0 的整数操作。</p></li><li><a href="#us12190151b2-fig-6-fp" data-reading-target="us12190151b2-fig-6-fp">浮点执行流水线</a><p>发出来自通道 2 的浮点操作，与整数操作的发射可同拍。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0058、0059、0065、0066、0067、0068、0069、0070、0127、0128、0129、0130；权利要求 1、7、8、12、17、18</p>
 
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+</figure></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、12、18 项；全文核对覆盖 207 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -232,6 +325,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>装置在译码前把线程分到通道，译码后选共享执行流水线。执行状态反压返回第一阶段。见原图 2、4。第一阶段为线程或 SIMD 组配置译码前通道，第二阶段为已译码指令仲裁共享执行流水线。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第一阶段根据编译器提供的目标执行流水线类型提示调整线程优先级。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>提高面向反压低于阈值的流水线的候选线程优先级。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>第一阶段以单指令多数据（SIMD）组为单位分配通道。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>高优先级线程进入时，可在当前线程完成前撤销其通道占用并将通道交给高优先级线程。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>按线程等待时间确定初始优先级，再按反压调整。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>指定整数、浮点和加载流水线。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>第二阶段同时使用通道优先级、请求资源和可用资源作为仲裁输入。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>依赖电路按先前操作的执行状态选择停顿当前操作或撤销其线程在通道内的占用。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>固定功能电路控制执行流水线执行图形着色器或机器学习程序。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-1">1</a></td><td>计算设备还包含显示器、中央处理器和网络接口。</td></tr><tr id="claim-12"><th scope="row">12</th><td>独立项</td><td>方法先对线程分配通道，再对译码后操作仲裁。执行状态反压调整之后候选线程的优先级。见原图 14。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>调优先级时进一步使用编译器给出的目标流水线类型提示。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>提高目标流水线反压低于阈值的线程优先级。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-12">12</a></td><td>当前线程完成前可将其撤出通道，并让更高优先级线程使用该通道。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-12">12</a></td><td>引入按等待时间的仲裁，并修正线程的初始等待优先级。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-12">12</a></td><td>第二阶段按通道优先级及请求、可用硬件资源仲裁。</td></tr><tr id="claim-18"><th scope="row">18</th><td>独立项</td><td>介质保存两级硬件调度和执行端反压的电路设计。见原图 2、4。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括按编译器流水线类型提示调节线程优先级的逻辑。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括通道抢占逻辑，可在原线程完成前改分给更高优先级线程。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12190151B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12190151B2#knowledge">在关系图谱中定位 US12190151B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12175300B2</code>
+  </div>
+  <h3><a href="US12175300B2.html">GPU 按优先级保留分布式硬件槽，并在检查状态后分配</a></h3>
+  <p class="related-edge-label">工作映射与指令发出</p>
+  <p class="related-edge-summary">US12175300B2 在 GPU 工作映射阶段检查优先级门槛和硬件槽。US12190151B2 在译码前选择线程，在译码后根据目标流水线选择操作，并把执行流水线的背压反馈给第一级。两件使用的队列和控制量不同，验证时分别记录工作提交到槽映射、线程选择到操作发出的时延。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US12175300B2.html#claim-1">对照篇权项 1</a><a href="US12175300B2.html#fig-2">对照篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#stages">一次为线程组分通道，一次为操作分执行流水线</a></li><li><a href="#pressure">下一次通道仲裁前，可以知道哪些流水线拥塞</a></li><li><a href="#bounds">拥塞权重、同拍端口资格与通道抢占的区别</a></li><li><a href="#when">背压反馈生效的时间边界</a></li><li><a href="#fences">同一 load 依赖遇到命中和缺失，通道如何处理</a></li><li><a href="#units">多个通道同时请求同一类流水线时怎样发射</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2025-01-07</dd></div>
+      <div><dt>最早优先权</dt><dd>2022-09-19</dd></div>
+      <div><dt>美国申请日</dt><dd>2022-11-10</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/054,376</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/4881、G06F9/30079、G06F9/3822 <details class="inline-more"><summary>其余 5 项</summary><span>G06F9/3838、G06F9/3851、G06F9/3887、G06F9/3888、G06F9/485</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Benjiman L. Goodman、Anjana Rajendran、Sheenam Jayaswal、Terence M. Potter <details class="inline-more"><summary>其余 1 位</summary><span>Yoong Chert Foo</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12190151B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12190151B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

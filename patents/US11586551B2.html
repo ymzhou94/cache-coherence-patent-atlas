@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CPU 核心从空闲恢复前，如何处理积累的阵列失效 · US11586551B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11586551B2</code> · <a href="https://patents.google.com/patent/US11586551B2/en">专利全文</a></p>
-<h1>CPU 核心从空闲恢复前，如何处理积累的阵列失效</h1><p class="reading-question">目标 CPU 核心进入 idle 后，谁接收它的 ICache 和 TLB 失效请求，哪些条目需要在恢复前失效？</p>
-<p class="reading-answer">电源管理电路请求缓存侧拦截发给空闲核心的失效，并保存目标地址。直接恢复时按记录维护匹配项。记录容量用完时，整个对应阵列失效。从 idle 转为断电时，权项要求丢弃空闲期的第一批信息。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-02-21</dd></div><div><dt>申请号</dt><dd>US17/008,491</dd></div><div><dt>最早优先权</dt><dd>2020-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sreevathsa Ramachandra、Christopher L. Colletti、David E. Kroesche</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#capture">在哪一侧拦截请求和记录地址</a></li><li><a href="#resume">恢复请求到达后，先维护再取指</a></li><li><a href="#power-off">断电路径要看阵列是否仍供电</a></li><li><a href="#capacity">溢出影响对应阵列的维护粒度</a></li><li><a href="#shared-buffer">共用地址缓冲怎样区分 ICache 与 TLB</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="capture"><h2>在哪一侧拦截请求和记录地址</h2><p>CPU 核心为断电做准备时，可以先进入 idle。它停止执行指令，保持供电。原图 3 中，电源管理电路在 WFI 阶段重置失效计数器，清空地址缓冲，并与 L2 缓存管理器握手。收到发给空闲核心的失效后，缓存管理器转送通知。</p><p>图 1 展开的两套记录各含计数器与地址缓冲。ICache 通知与 TLB 通知分别登记。原图 2 的共用缓冲变体需要在每项内保存所属阵列。说明书也允许发起端不经 L2 直接通知电源管理电路。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　失效通知在目标核心外记录</h3>
-    <p id="fig-1-basis">缓存管理器拦截发给空闲核心的失效。电源管理电路按 ICache 和 TLB 分开记录，再在恢复前应用。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11586551B2 CPU 核心从空闲恢复前，如何处理积累的阵列失效 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-snoop" href="../index.html?topic=snoop#catalog">Snoop 与一致性</a>
+  </nav>
+  <p class="document-id">
+    <code>US11586551B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2023-02-21">2023-02-21</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11586551B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>CPU 核心从空闲恢复前，如何处理积累的阵列失效</h1>
+  <p class="english-title" lang="en">Storage array invalidation maintenance</p>
+  <p class="document-question">目标 CPU 核心进入 idle 后，谁接收它的 ICache 和 TLB 失效请求，哪些条目需要在恢复前失效？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#capture">在哪一侧拦截请求和记录地址</a></li><li><a href="#resume">恢复请求到达后，先维护再取指</a></li><li><a href="#power-off">断电路径要看阵列是否仍供电</a></li><li><a href="#capacity">溢出影响对应阵列的维护粒度</a></li><li><a href="#shared-buffer">共用地址缓冲怎样区分 ICache 与 TLB</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">电源管理电路请求缓存侧拦截发给空闲核心的失效，并保存目标地址。直接恢复时按记录维护匹配项。记录容量用完时，整个对应阵列失效。从 idle 转为断电时，权项要求丢弃空闲期的第一批信息。</p>
+  </section>
+  <div id="mechanism"><section id="capture" class="article-section reading-chapter" aria-labelledby="capture-title"><h2 id="capture-title">在哪一侧拦截请求和记录地址</h2><p>CPU 核心为断电做准备时，可以先进入 idle。它停止执行指令，保持供电。原图 3 中，电源管理电路在 WFI 阶段重置失效计数器，清空地址缓冲，并与 L2 缓存管理器握手。收到发给空闲核心的失效后，缓存管理器转送通知。</p><p>图 1 展开的两套记录各含计数器与地址缓冲。ICache 通知与 TLB 通知分别登记。原图 2 的共用缓冲变体需要在每项内保存所属阵列。说明书也允许发起端不经 L2 直接通知电源管理电路。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">失效通知在目标核心外记录</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11586551B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">缓存管理器拦截发给空闲核心的失效。电源管理电路按 ICache 和 TLB 分开记录，再在恢复前应用。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="失效通知在目标核心外记录" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 488" role="img" aria-labelledby="us11586551b2-fig-1-svg-title us11586551b2-fig-1-svg-desc">
 <title id="us11586551b2-fig-1-svg-title">失效通知在目标核心外记录</title>
 <desc id="us11586551b2-fig-1-svg-desc">缓存管理器拦截发给空闲核心的失效。电源管理电路按 ICache 和 TLB 分开记录，再在恢复前应用。</desc>
@@ -37,12 +83,21 @@
 <text x="28" y="53" class="signal-title" text-anchor="start">空闲时保存失效目标地址，恢复时执行维护</text>
 <text x="28" y="469" class="legend" text-anchor="start">原图 2 分开两套记录。共用缓冲的实现需要另存条目所属的阵列。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11586551b2-fig-1-notify">通知发往电源管理电路</a> 目标核心处于 idle 时，缓存侧截住原来的失效请求，改向电源管理电路通知。</li><li><a href="#us11586551b2-fig-1-icache-log">按阵列保存地址</a> 保存目标地址，计数用于判断记录能否表示本次空闲期的所有通知。</li><li><a href="#us11586551b2-fig-1-apply">放行运行前应用记录</a> 电源管理电路协助目标核心使匹配的条目失效。</li></ul>
-  <p class="figure-evidence">原图 1、2；说明书归档段 0017、0021、0022、0026、0028、0029、0031、0032、0038；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US11586551B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>目标 CPU 核心</dt><dd>110A</dd></div><div><dt>其他 CPU 核心</dt><dd>110B</dd></div><div><dt>ICache</dt><dd>114</dd></div><div><dt>TLB</dt><dd>116</dd></div><div><dt>失效请求</dt><dd>115</dd></div><div><dt>电源管理电路</dt><dd>120</dd></div><div><dt>ICache 和 TLB 失效记录</dt><dd>140/150</dd></div><div><dt>两类失效计数器</dt><dd>210A/210B</dd></div><div><dt>两类地址缓冲</dt><dd>220A/220B</dd></div></dl></details>
-</figure></section><section id="resume"><h2>恢复请求到达后，先维护再取指</h2><p>图 2 跟踪 ICache 地址 X。记录保存后，电源管理电路等到收到退出 idle 的请求，再查找目标阵列。只有地址匹配的条目需要失效。维护完成后，核心进入 run，可取指和执行。</p><p>测试可把恢复请求、维护完成、首次取指和首次执行作为独立时间点。减少全阵列失效主要影响恢复后的缓存和 TLB 命中。单次恢复收益仍随实际保存的条目数、阵列访问和维护成本变化。权利要求 6 提到第二套 TLB 维护，权利要求 16 要求维护后切回 run。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　地址 X 的通知何时变成实际失效</h3>
-    <p id="fig-2-basis">空闲时只记录 X。恢复请求到达后，核心完成失效才获准取指。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11586551b2-fig-1-notify" data-reading-target="us11586551b2-fig-1-notify">通知发往电源管理电路</a><p>目标核心处于 idle 时，缓存侧截住原来的失效请求，改向电源管理电路通知。</p></li><li><a href="#us11586551b2-fig-1-icache-log" data-reading-target="us11586551b2-fig-1-icache-log">按阵列保存地址</a><p>保存目标地址，计数用于判断记录能否表示本次空闲期的所有通知。</p></li><li><a href="#us11586551b2-fig-1-apply" data-reading-target="us11586551b2-fig-1-apply">放行运行前应用记录</a><p>电源管理电路协助目标核心使匹配的条目失效。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0017、0021、0022、0026、0028、0029、0031、0032、0038；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">9 项</span></summary><dl><div><dt>目标 CPU 核心</dt><dd>110A</dd></div><div><dt>其他 CPU 核心</dt><dd>110B</dd></div><div><dt>ICache</dt><dd>114</dd></div><div><dt>TLB</dt><dd>116</dd></div><div><dt>失效请求</dt><dd>115</dd></div><div><dt>电源管理电路</dt><dd>120</dd></div><div><dt>ICache 和 TLB 失效记录</dt><dd>140/150</dd></div><div><dt>两类失效计数器</dt><dd>210A/210B</dd></div><div><dt>两类地址缓冲</dt><dd>220A/220B</dd></div></dl></details>
+</figure></section><section id="resume" class="article-section reading-chapter" aria-labelledby="resume-title"><h2 id="resume-title">恢复请求到达后，先维护再取指</h2><p>图 2 跟踪 ICache 地址 X。记录保存后，电源管理电路等到收到退出 idle 的请求，再查找目标阵列。只有地址匹配的条目需要失效。维护完成后，核心进入 run，可取指和执行。</p><p>测试可把恢复请求、维护完成、首次取指和首次执行作为独立时间点。减少全阵列失效主要影响恢复后的缓存和 TLB 命中。单次恢复收益仍随实际保存的条目数、阵列访问和维护成本变化。权利要求 6 提到第二套 TLB 维护，权利要求 16 要求维护后切回 run。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">地址 X 的通知何时变成实际失效</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11586551B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">空闲时只记录 X。恢复请求到达后，核心完成失效才获准取指。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="地址 X 的通知何时变成实际失效" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us11586551b2-fig-2-svg-title us11586551b2-fig-2-svg-desc">
 <title id="us11586551b2-fig-2-svg-title">地址 X 的通知何时变成实际失效</title>
 <desc id="us11586551b2-fig-2-svg-desc">空闲时只记录 X。恢复请求到达后，核心完成失效才获准取指。</desc>
@@ -66,12 +121,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">失效发起端</text>
 <text x="28" y="532" class="legend" text-anchor="start">纵向按事件先后排列。失效完成是开始取指与执行的前提。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11586551b2-fig-2-arm">缓存侧改走通知路径</a> 缓存管理器配合电源管理电路截住发给空闲核心的失效。</li><li><a href="#us11586551b2-fig-2-log">保存地址 X</a> 恢复时只需定位对应地址的条目。</li><li><a href="#us11586551b2-fig-2-apply">先完成失效</a> 匹配项失效后，电源管理电路才允许进入 run。</li></ul>
-  <p class="figure-evidence">原图 3、5；说明书归档段 0027、0030、0037、0038、0039、0040、0044、0045、0046、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11586551B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>WFI 状态</dt><dd>340</dd></div><div><dt>idle 状态</dt><dd>350</dd></div><div><dt>恢复前失效阶段</dt><dd>360</dd></div><div><dt>run 状态</dt><dd>330</dd></div><div><dt>接收和保存信息</dt><dd>510/520</dd></div><div><dt>检测恢复请求并执行失效</dt><dd>530/540</dd></div></dl></details>
-</figure></section><section id="power-off"><h2>断电路径要看阵列是否仍供电</h2><p>从 idle 转断电时，独立权利要求 1、10、18 丢弃第一批记录。原图 3 的普通断电例中，缺少 retention 的阵列在断电状态复位。恢复时按复位后的状态进入初始化，再回到 run。</p><p>原图 4 中，CPU 核心断电而 ICache 与 TLB 可继续留电。电源管理电路可继续接受断电期间发给该核心的失效通知。恢复时还要处理这些阵列，说明书允许交换维护与初始化的顺序。图 3 分开权项规定丢弃的第一批记录与实施例可继续收集的新通知。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　普通断电、留电阵列与直接恢复</h3>
-    <p id="fig-3-basis">普通断电后阵列复位。直接恢复或 retention 保留阵列时，恢复前按相应记录维护。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11586551b2-fig-2-arm" data-reading-target="us11586551b2-fig-2-arm">缓存侧改走通知路径</a><p>缓存管理器配合电源管理电路截住发给空闲核心的失效。</p></li><li><a href="#us11586551b2-fig-2-log" data-reading-target="us11586551b2-fig-2-log">保存地址 X</a><p>恢复时只需定位对应地址的条目。</p></li><li><a href="#us11586551b2-fig-2-apply" data-reading-target="us11586551b2-fig-2-apply">先完成失效</a><p>匹配项失效后，电源管理电路才允许进入 run。</p></li></ul>
+  <p class="figure-evidence">原图 3、5；说明书归档段 0027、0030、0037、0038、0039、0040、0044、0045、0046、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>WFI 状态</dt><dd>340</dd></div><div><dt>idle 状态</dt><dd>350</dd></div><div><dt>恢复前失效阶段</dt><dd>360</dd></div><div><dt>run 状态</dt><dd>330</dd></div><div><dt>接收和保存信息</dt><dd>510/520</dd></div><div><dt>检测恢复请求并执行失效</dt><dd>530/540</dd></div></dl></details>
+</figure></section><section id="power-off" class="article-section reading-chapter" aria-labelledby="power-off-title"><h2 id="power-off-title">断电路径要看阵列是否仍供电</h2><p>从 idle 转断电时，独立权利要求 1、10、18 丢弃第一批记录。原图 3 的普通断电例中，缺少 retention 的阵列在断电状态复位。恢复时按复位后的状态进入初始化，再回到 run。</p><p>原图 4 中，CPU 核心断电而 ICache 与 TLB 可继续留电。电源管理电路可继续接受断电期间发给该核心的失效通知。恢复时还要处理这些阵列，说明书允许交换维护与初始化的顺序。图 3 分开权项规定丢弃的第一批记录与实施例可继续收集的新通知。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 条件判定与分支</p>
+        <h3 id="fig-3-title">普通断电、留电阵列与直接恢复</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11586551B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">普通断电后阵列复位。直接恢复或 retention 保留阵列时，恢复前按相应记录维护。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="普通断电、留电阵列与直接恢复" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 670" role="img" aria-labelledby="us11586551b2-fig-3-svg-title us11586551b2-fig-3-svg-desc">
 <title id="us11586551b2-fig-3-svg-title">普通断电、留电阵列与直接恢复</title>
 <desc id="us11586551b2-fig-3-svg-desc">普通断电后阵列复位。直接恢复或 retention 保留阵列时，恢复前按相应记录维护。</desc>
@@ -103,19 +167,37 @@
 <text x="34" y="53" class="signal-title" text-anchor="start">空闲期直接恢复与两种断电路径</text>
 <text x="34" y="652" class="legend" text-anchor="start">retention 方案的失效与初始化可以交换顺序，见说明书 0041。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11586551b2-fig-3-normal-off">普通断电</a> 从 idle 转入断电时，独立权项要求丢弃第一批记录。普通断电例中未保留的阵列可复位。</li><li><a href="#us11586551b2-fig-3-resume">直接恢复</a> 仍使用本轮 idle 的记录。</li><li><a href="#us11586551b2-fig-3-retention">阵列留电</a> 原图 4 所示分支可以收集断电期间的新通知。</li></ul>
-  <p class="figure-evidence">原图 3、4；说明书归档段 0034、0035、0036、0039、0040、0041、0042、0049；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11586551B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>idle 状态</dt><dd>350</dd></div><div><dt>断电状态</dt><dd>310</dd></div><div><dt>初始化状态</dt><dd>320</dd></div><div><dt>失效维护状态</dt><dd>360</dd></div><div><dt>run 状态</dt><dd>330</dd></div></dl></details>
-</figure></section><section id="capacity"><h2>溢出影响对应阵列的维护粒度</h2><p>说明书 0031 让 TLB 地址缓冲容纳八条记录。第九条通知超过容量，可以置溢出标志。表 4 缩小成两条 ICache 地址的算例。只有 ICache 溢出时，整个 ICache 失效，TLB 仍按自己的记录。</p><p>说明书 0033 还允许每个阵列只记录是否曾收到通知。被标记的阵列在恢复前全失效。权利要求 17 的调试覆盖也可触发整阵列失效。权利要求 10 覆盖供制造使用的设计信息，权利要求 18 覆盖运行时的操作方法。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">表 4　容量用完后扩大全阵列维护范围</h3>
-    <p id="fig-4-basis">独立记录时，ICache 溢出可以与 TLB 未溢出同时发生。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">idle 期的 ICache 通知</th><th scope="col">ICache 恢复前维护</th><th scope="col">TLB 恢复前维护</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">只收到 X、Y</th><td>只检查 X、Y 的匹配条目</td><td>按 TLB 独立记录</td></tr><tr id="fig-4-table-row-2"><th scope="row">继续收到 Z，超过容量</th><td>整个 ICache 失效</td><td>TLB 自身溢出时才整阵列失效</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-4-table-row-1">未超出容量</a> 只检查保留的地址。</li><li><a href="#fig-4-table-row-2">ICache 地址缓冲溢出</a> 记录不能覆盖全部请求，恢复前整个 ICache 失效。</li></ul>
-  <p class="figure-evidence">原图 2、5、6；说明书归档段 0028、0029、0031、0033、0047、0053、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>独立失效计数器</dt><dd>210A/210B</dd></div><div><dt>独立地址缓冲</dt><dd>220A/220B</dd></div></dl></details>
-</figure></section><section id="shared-buffer"><h2>共用地址缓冲怎样区分 ICache 与 TLB</h2><p>原图 2 画出两个独立的地址缓冲。段 0032 与 0054 也允许二者共用同一个缓冲。图 5 把这一实现的条目拆成两部分。地址负责找到匹配项，阵列标记决定将地址交给 ICache 还是 TLB。</p><p>权利要求 12 约束两个独立缓冲。权利要求 13 则约束同一个缓冲内保存地址到阵列的关联指示。共享实现的阈值和仲裁仍由具体硬件决定。表 4 的单独溢出结论对应的是独立记录的示例。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　共用失效缓冲如何把地址送到对应阵列</h3>
-    <p id="fig-5-basis">把两个阵列的通知写入同一物理缓冲时，条目仍须保存阵列标记。恢复前用它把失效地址送回正确的部件。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11586551b2-fig-3-normal-off" data-reading-target="us11586551b2-fig-3-normal-off">普通断电</a><p>从 idle 转入断电时，独立权项要求丢弃第一批记录。普通断电例中未保留的阵列可复位。</p></li><li><a href="#us11586551b2-fig-3-resume" data-reading-target="us11586551b2-fig-3-resume">直接恢复</a><p>仍使用本轮 idle 的记录。</p></li><li><a href="#us11586551b2-fig-3-retention" data-reading-target="us11586551b2-fig-3-retention">阵列留电</a><p>原图 4 所示分支可以收集断电期间的新通知。</p></li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0034、0035、0036、0039、0040、0041、0042、0049；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>idle 状态</dt><dd>350</dd></div><div><dt>断电状态</dt><dd>310</dd></div><div><dt>初始化状态</dt><dd>320</dd></div><div><dt>失效维护状态</dt><dd>360</dd></div><div><dt>run 状态</dt><dd>330</dd></div></dl></details>
+</figure></section><section id="capacity" class="article-section reading-chapter" aria-labelledby="capacity-title"><h2 id="capacity-title">溢出影响对应阵列的维护粒度</h2><p>说明书 0031 让 TLB 地址缓冲容纳八条记录。第九条通知超过容量，可以置溢出标志。表 4 缩小成两条 ICache 地址的算例。只有 ICache 溢出时，整个 ICache 失效，TLB 仍按自己的记录。</p><p>说明书 0033 还允许每个阵列只记录是否曾收到通知。被标记的阵列在恢复前全失效。权利要求 17 的调试覆盖也可触发整阵列失效。权利要求 10 覆盖供制造使用的设计信息，权利要求 18 覆盖运行时的操作方法。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 4 · 参数与边界对照</p>
+        <h3 id="fig-4-title">容量用完后扩大全阵列维护范围</h3>
+      </div>
+
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">独立记录时，ICache 溢出可以与 TLB 未溢出同时发生。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="容量用完后扩大全阵列维护范围"><table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">idle 期的 ICache 通知</th><th scope="col">ICache 恢复前维护</th><th scope="col">TLB 恢复前维护</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">只收到 X、Y</th><td>只检查 X、Y 的匹配条目</td><td>按 TLB 独立记录</td></tr><tr id="fig-4-table-row-2"><th scope="row">继续收到 Z，超过容量</th><td>整个 ICache 失效</td><td>TLB 自身溢出时才整阵列失效</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-table-row-1" data-reading-target="fig-4-table-row-1">未超出容量</a><p>只检查保留的地址。</p></li><li><a href="#fig-4-table-row-2" data-reading-target="fig-4-table-row-2">ICache 地址缓冲溢出</a><p>记录不能覆盖全部请求，恢复前整个 ICache 失效。</p></li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0028、0029、0031、0033、0047、0053、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>独立失效计数器</dt><dd>210A/210B</dd></div><div><dt>独立地址缓冲</dt><dd>220A/220B</dd></div></dl></details>
+</figure></section><section id="shared-buffer" class="article-section reading-chapter" aria-labelledby="shared-buffer-title"><h2 id="shared-buffer-title">共用地址缓冲怎样区分 ICache 与 TLB</h2><p>原图 2 画出两个独立的地址缓冲。段 0032 与 0054 也允许二者共用同一个缓冲。图 5 把这一实现的条目拆成两部分。地址负责找到匹配项，阵列标记决定将地址交给 ICache 还是 TLB。</p><p>权利要求 12 约束两个独立缓冲。权利要求 13 则约束同一个缓冲内保存地址到阵列的关联指示。共享实现的阈值和仲裁仍由具体硬件决定。表 4 的单独溢出结论对应的是独立记录的示例。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">共用失效缓冲如何把地址送到对应阵列</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11586551B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">把两个阵列的通知写入同一物理缓冲时，条目仍须保存阵列标记。恢复前用它把失效地址送回正确的部件。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="共用失效缓冲如何把地址送到对应阵列" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 562" role="img" aria-labelledby="us11586551b2-fig-5-svg-title us11586551b2-fig-5-svg-desc">
 <title id="us11586551b2-fig-5-svg-title">共用失效缓冲如何把地址送到对应阵列</title>
 <desc id="us11586551b2-fig-5-svg-desc">把两个阵列的通知写入同一物理缓冲时，条目仍须保存阵列标记。恢复前用它把失效地址送回正确的部件。</desc>
@@ -140,12 +222,14 @@
 <text x="30" y="55" class="signal-title" text-anchor="start">共用缓冲时，记录仍须区分失效目标</text>
 <text x="30" y="541" class="legend" text-anchor="start">X、Y 是示意地址。图中只展开恢复前已能取得对应地址记录的路径。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11586551b2-fig-5-shared-log">真实条目字段</a> 说明书的共用实现需要保存地址和阵列标记。图中的两个例子使用同一个地址缓冲。</li><li><a href="#us11586551b2-fig-5-dispatch">按阵列派发维护</a> 恢复维护时根据阵列标记选择目标。地址用于检查相应阵列是否存在匹配条目。</li><li><a href="#us11586551b2-fig-5-ic-out">指令缓存维护</a> 地址 X 写在 ICache 类别，只用于检查指令缓存的条目。</li></ul>
-  <p class="figure-evidence">原图 2、5、6；说明书归档段 0028、0032、0045、0048、0052、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11586551B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原图 2 的独立地址缓冲</dt><dd>220A/220B</dd></div><div><dt>ICache 和 TLB 失效记录</dt><dd>140/150</dd></div><div><dt>ICache 和 TLB</dt><dd>114/116</dd></div><div><dt>保存失效信息</dt><dd>520/630</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11586551b2-fig-5-shared-log" data-reading-target="us11586551b2-fig-5-shared-log">真实条目字段</a><p>说明书的共用实现需要保存地址和阵列标记。图中的两个例子使用同一个地址缓冲。</p></li><li><a href="#us11586551b2-fig-5-dispatch" data-reading-target="us11586551b2-fig-5-dispatch">按阵列派发维护</a><p>恢复维护时根据阵列标记选择目标。地址用于检查相应阵列是否存在匹配条目。</p></li><li><a href="#us11586551b2-fig-5-ic-out" data-reading-target="us11586551b2-fig-5-ic-out">指令缓存维护</a><p>地址 X 写在 ICache 类别，只用于检查指令缓存的条目。</p></li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0028、0032、0045、0048、0052、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>原图 2 的独立地址缓冲</dt><dd>220A/220B</dd></div><div><dt>ICache 和 TLB 失效记录</dt><dd>140/150</dd></div><div><dt>ICache 和 TLB</dt><dd>114/116</dd></div><div><dt>保存失效信息</dt><dd>520/630</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、18 项；全文核对覆盖 96 个说明书归档段与 19 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -175,6 +259,76 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>idle 状态的 CPU 核心仍保留供电。PMU 请求缓存拦截目标阵列失效、保存通知；直接恢复时按记录失效，转断电则丢弃。见原图 1–3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>收到一条定向失效通知时，电源管理电路递增失效计数器。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>计数器溢出时，核心恢复运行前失效目标阵列全部条目。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>检测到将进空闲时重置失效计数器。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>以记录的地址集合定位要失效的阵列条目。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>另行记录 TLB 失效通知，并在核心恢复运行前应用到该 TLB。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>目标阵列限定为存放处理器可取指令的指令缓存。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>加入把核从运行切入空闲的电源状态机。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>丢弃记录通过计数器复位并失效记录相关地址的缓冲条目实现。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>介质保存制造系统识别的电路设计信息，所形成电源管理电路实现核心空闲、通知转存、恢复失效和断电丢弃。见原图 1–3、6。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>另收处理器缓存的失效通知，保存第二组信息并在恢复前使对应条目失效。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>为第二批失效信息配置单独缓冲。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>第一、第二组地址同放第一缓冲，并用指示区分所属阵列。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>通知数满足阈值条件时恢复前全阵列失效。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>第二核修改自己的 TLB 条目后定向请求失效第一核的对应 TLB 条目。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>完成目标阵列失效后才让第一核恢复运行。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-10">10</a></td><td>设置调试值时，覆盖正常路径，使目标阵列恢复前全失效。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>方法把切入空闲、拦截和记录失效、恢复运行前失效及改走断电分支时丢弃信息落实到电源管理电路。见原图 3、5。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586551B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>空闲期间另接收并记录 TLB 失效通知，恢复前失效 TLB 相应条目。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11586551B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11586551B2#knowledge">在关系图谱中定位 US11586551B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11544193B2</code>
+  </div>
+  <h3><a href="US11544193B2.html">用预期缓存状态处理早到的 snoop</a></h3>
+  <p class="related-edge-label">暂停处理失效的恢复条件</p>
+  <p class="related-edge-summary">US11586551B2 由电源管理逻辑记录空闲核收到的失效，恢复执行前再清理对应阵列。US11544193B2 让代理对照探测中的预期状态，在本地状态未匹配时等待先前事务推进。前者的等待边界由核心电源状态决定，后者的等待边界由缓存块一致性状态决定。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US11544193B2.html#claim-1">对照篇权项 1</a><a href="US11544193B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11630771B2</code>
+  </div>
+  <h3><a href="US11630771B2.html">远端缓存失效如何延到同步边界</a></h3>
+  <p class="related-edge-label">谁触发实际失效</p>
+  <p class="related-edge-summary">两件都能推迟维护，但判断条件不同。US11630771B2 在作用域匹配当前执行状态时记录待失效标记，等待对应同步事件。US11586551B2 在目标核空闲时拦截并缓冲失效，恢复前执行，切换到断电时可丢弃记录。前者关心同步语义，后者关心电源状态转换。</p>
+<p class="related-evidence"><a href="US11630771B2.html#claim-1">对照篇权项 1</a><a href="US11630771B2.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-3">本篇图表 3</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US10909035B2</code>
+  </div>
+  <h3><a href="US10909035B2.html">L2 容量为零时，控制器仍负责回填与 snoop</a></h3>
+  <p class="related-edge-label">阵列停用与失效维护</p>
+  <p class="related-edge-summary">两件专利都把数据阵列和一致性操作分开。零容量中间层继续转发 snoop，取指缺失时仍可查上层数据缓存寻找最新值。空闲核方案面对的是仍保存条目的阵列，由 PMU 记下失效，恢复执行前处理。取数依赖 snoop 响应，空闲阵列的失效则可推迟到唤醒边界。</p>
+<p class="related-evidence"><a href="US10909035B2.html#claim-1">对照篇权项 1</a><a href="US10909035B2.html#fig-4">对照篇图表 4</a><a href="#claim-1">本篇权项 1</a><a href="#fig-3">本篇图表 3</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11275697B2</code>
+  </div>
+  <h3><a href="US11275697B2.html">TLB 已在电源状态转换中清除时，去掉被覆盖的失效请求</a></h3>
+  <p class="related-edge-label">电源状态改变后的失效</p>
+  <p class="related-edge-summary">US11275697B2 权 7 规定进入非活动状态时清 TLB；权 1 在确认该状态转换后丢弃已合并的清除请求。US11586551B2 权 18 面对仍保留阵列的空闲核，在其恢复执行前按缓冲记录使对应条目失效。两端的处置不同，判断时应检查进入低功耗状态是否已清除目标状态。</p>
+<p class="related-evidence"><a href="US11275697B2.html#claim-7">对照篇权项 7</a><a href="US11275697B2.html#fig-2">对照篇图表 2</a><a href="#claim-18">本篇权项 18</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#capture">在哪一侧拦截请求和记录地址</a></li><li><a href="#resume">恢复请求到达后，先维护再取指</a></li><li><a href="#power-off">断电路径要看阵列是否仍供电</a></li><li><a href="#capacity">溢出影响对应阵列的维护粒度</a></li><li><a href="#shared-buffer">共用地址缓冲怎样区分 ICache 与 TLB</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2023-02-21</dd></div>
+      <div><dt>最早优先权</dt><dd>2020-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2020-08-31</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/008,491</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0891、G06F12/1027、G06F12/0875 <details class="inline-more"><summary>其余 4 项</summary><span>G06F2212/1044、G06F2212/452、G06F2212/683、Y02D10/00</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Sreevathsa Ramachandra、Christopher L. Colletti、David E. Kroesche</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11586551B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11586551B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

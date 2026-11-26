@@ -4,27 +4,34 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>性能推荐与热控限制分别抵达调度器和电源管理器</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
-main{max-width:960px;margin:auto;min-width:0}
-h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
-p{margin:.6rem 0}
-figure{margin:1.25rem 0}
-.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
-svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1024px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:960px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
 .node-name{font-weight:600;font-size:17px}
-.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
 .signal-title{font-weight:600;font-size:16px}
-ol{padding-inline-start:1.45rem}
-li+li{margin-top:.45rem}
-a{color:#2e5aa8;text-underline-offset:.19em}
-.component-index dt{font-weight:600}
-.component-index dd{margin:0 0 .45rem}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
 svg :target{scroll-margin:1rem}
-svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
-@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
 </style>
 </head>
 <body><main>
@@ -64,7 +71,7 @@ svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[
 </svg></div>
 <figcaption>依据 US11579934B2 原图 2、3、4A、4B、说明书 0059、0066、0068、0070、0073、0074、0091、0093、0095、0096、0101、0104、0105、0106、0111、权利要求 1、6、7、9、11、19、29</figcaption>
 </figure>
-<ol aria-label="图中机制"><li><a href="#us11579934b2-fig-1-metrics">线程组观测</a> 线程组观测模块按线程组标识汇总样本。WIO 或 IPC 改变归属后，按新归属统计。</li><li><a href="#us11579934b2-fig-1-recommend">核型建议</a> 核型建议用于选择目标运行队列。推荐运行点从 CLPC 的另一条路径送往控制量限制器。</li><li><a href="#us11579934b2-fig-1-cap">控制量限制器</a> 快速裸片温度回路按核型提供上限，其他控制回路给出整套处理器复合体的限制。功率映射把控制量上限转换成各 cluster 允许的 DVFS 运行点。</li><li><a href="#us11579934b2-fig-1-core-mask">可调度核掩码</a> 可调度核掩码变化约束新的线程派发。清位后，正执行的线程仍可运行到后续调度事件。</li><li><a href="#us11579934b2-fig-1-set-point">各 cluster DVFS 运行点</a> 原图 3 将送给电源管理器的值标为 E-core 与 P-core DVFS states。电源管理器按各 CPU cluster 执行设置。</li><li><a href="#us11579934b2-fig-1-issue-throttle">硬件指令发射节流</a> 为抑制稳压器至处理器复合体供电网络的 droop，硬件检测到电流超限后可阻止部分指令或微操作发射。</li><li><a href="#us11579934b2-fig-1-throttle-rate">发射节流率控制器</a> 按采样窗内的阻塞发射槽位数除以处理器复合体周期数。控制器依据目标节流率生成控制量上限，通过功率映射压低允许的 DVFS 运行点。</li></ol>
-<details class="component-index"><summary>原图标号对照</summary><dl><div><dt>线程组观测模块</dt><dd>212</dd></div><div><dt>闭环性能控制器</dt><dd>300</dd></div><div><dt>核型建议</dt><dd>237</dd></div><div><dt>OS 调度器</dt><dd>210</dd></div><div><dt>E 核运行队列与 P 核运行队列</dt><dd>215／220</dd></div><div><dt>快速裸片温度回路</dt><dd>401</dd></div><div><dt>控制量限制器</dt><dd>400</dd></div><div><dt>可调度核掩码</dt><dd>374</dd></div><div><dt>E-core cluster 和 P-core cluster 的 DVFS 运行点</dt><dd>371／372</dd></div><div><dt>电源管理器</dt><dd>240</dd></div><div><dt>峰值功耗保护的发射节流率</dt><dd>407</dd></div><div><dt>发射节流率控制器</dt><dd>420</dd></div><div><dt>原图中性能映射给线程组的 P-core／E-core 候选运行点信号</dt><dd>P DVFM／E DVFM</dd></div></dl></details>
+<ol aria-label="图中机制"><li><a href="#us11579934b2-fig-1-metrics">线程组观测</a><span>线程组观测模块按线程组标识汇总样本。WIO 或 IPC 改变归属后，按新归属统计。</span></li><li><a href="#us11579934b2-fig-1-recommend">核型建议</a><span>核型建议用于选择目标运行队列。推荐运行点从 CLPC 的另一条路径送往控制量限制器。</span></li><li><a href="#us11579934b2-fig-1-cap">控制量限制器</a><span>快速裸片温度回路按核型提供上限，其他控制回路约束整个处理器复合体；功率映射再将控制量上限转换为各 cluster 允许的 DVFS 运行点。</span></li><li><a href="#us11579934b2-fig-1-core-mask">可调度核掩码</a><span>可调度核掩码变化约束新的线程派发。清位后，正执行的线程仍可运行到后续调度事件。</span></li><li><a href="#us11579934b2-fig-1-set-point">各 cluster DVFS 运行点</a><span>原图 3 将送给电源管理器的结果标为 E-core 与 P-core DVFS states，由电源管理器按各 CPU cluster 实际落地设置。</span></li><li><a href="#us11579934b2-fig-1-issue-throttle">硬件指令发射节流</a><span>为抑制稳压器至处理器复合体供电网络的 droop，硬件检测到电流超限后可阻止部分指令或微操作发射。</span></li><li><a href="#us11579934b2-fig-1-throttle-rate">发射节流率控制器</a><span>按采样窗内的阻塞发射槽位数除以处理器复合体周期数。控制器依据目标节流率生成控制量上限，通过功率映射压低允许的 DVFS 运行点。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">13 项</span></summary><dl><div><dt>线程组观测模块</dt><dd>212</dd></div><div><dt>闭环性能控制器</dt><dd>300</dd></div><div><dt>核型建议</dt><dd>237</dd></div><div><dt>OS 调度器</dt><dd>210</dd></div><div><dt>E 核运行队列与 P 核运行队列</dt><dd>215／220</dd></div><div><dt>快速裸片温度回路</dt><dd>401</dd></div><div><dt>控制量限制器</dt><dd>400</dd></div><div><dt>可调度核掩码</dt><dd>374</dd></div><div><dt>E-core cluster 和 P-core cluster 的 DVFS 运行点</dt><dd>371／372</dd></div><div><dt>电源管理器</dt><dd>240</dd></div><div><dt>峰值功耗保护的发射节流率</dt><dd>407</dd></div><div><dt>发射节流率控制器</dt><dd>420</dd></div><div><dt>原图中性能映射给线程组的 P-core／E-core 候选运行点信号</dt><dd>P DVFM／E DVFM</dd></div></dl></details>
 </main></body>
 </html>

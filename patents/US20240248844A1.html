@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>宽 load 逐元素检查转发，跨缓存行另查访存顺序 · US20240248844A1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US20240248844A1</code> · <a href="https://patents.google.com/patent/US20240248844A1/en">专利全文</a></p>
-<h1>宽 load 逐元素检查转发，跨缓存行另查访存顺序</h1><p class="reading-question">一条宽 load 读出的数据来自不同 store 或缓存行时，哪些数据可以组装，哪些情况需要重试或清除重取？</p>
-<p class="reading-answer">LSU 逐个核对原子元素的字节来源。同一元素的所有字节必须来自同一合格来源，不同元素可以来自不同来源。对于跨缓存行的 load，还要核对各元素的可观察顺序。微码分解的 load 若因顺序违规被清除且已靠近重排序缓冲区队首，重译码时可附加顺序执行标记。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-07-25</dd></div><div><dt>申请号</dt><dd>US18/587,289</dd></div><div><dt>最早优先权</dt><dd>2020-06-22</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Francesco Spadini、Gideon Levinsky、Mridul Agarwal</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#elements">同一条 load 有操作宽度，也有原子性粒度</a></li><li><a href="#retry">store 只覆盖半个元素时，为什么有数据也不能完成</a></li><li><a href="#table">字节来自几种介质，和来自几个来源实例有什么区别</a></li><li><a href="#pair">LDP 的两个元素何时能分别从两条数据路径取值</a></li><li><a href="#line">跨行时两个元素都完整，为什么还可能被清除</a></li><li><a href="#rob">什么时候让重取的子 load 按顺序发射</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="elements"><h2>同一条 load 有操作宽度，也有原子性粒度</h2><p>操作宽度是一个 load 微操作访问的总字节数。原子性粒度是实施的内存排序模型要求作为单个单位观察的字节数。原图 2 的寄存器对 load（LDP）可以访问 16 B，其中各 8 B 分别对应两个目的寄存器。向量 load 的原子性粒度可以是单个向量元素，也可包含相邻的多个元素，取决于实现。</p><p>LSU 先产生访问地址，再从 store 队列匹配同地址中在程序顺序上更老的 store，也访问数据缓存。图 1 将标定元素边界和核对来源分开。核对某个元素时，整组字节必须由一条 store 队列项或单个其他合格数据来源覆盖。不同元素可以分别由不同来源覆盖。若 load 的操作宽度恰好只含一个原子元素，原图 3 要求其所有字节均来自同一来源。</p><p>公开第 1、10 项明确规定操作宽度大于原子性粒度的逐元素检查。第 4、5、12–15 项分别限定寄存器、向量元素及相邻向量元素组合等粒度。说明书讨论 TSO 及可配置的排序模式，具体实现决定何时启用这些检查。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　LSU 在选择转发源后逐个核对原子元素</h3>
-    <p id="fig-1-basis">译码与实现规则给出元素边界。每个元素的所有字节必须来自一个来源，再开放 load 完成路径。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US20240248844A1 宽 load 逐元素检查转发，跨缓存行另查访存顺序 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US20240248844A1</code>
+    <span class="doc-kind">美国公开申请</span>
+    <time datetime="2024-07-25">2024-07-25</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US20240248844A1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>宽 load 逐元素检查转发，跨缓存行另查访存顺序</h1>
+  <p class="english-title" lang="en">Decoupling Atomicity from Operation Size</p>
+  <p class="document-question">一条宽 load 读出的数据来自不同 store 或缓存行时，哪些数据可以组装，哪些情况需要重试或清除重取？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#elements">同一条 load 有操作宽度，也有原子性粒度</a></li><li><a href="#retry">store 只覆盖半个元素时，为什么有数据也不能完成</a></li><li><a href="#table">字节来自几种介质，和来自几个来源实例有什么区别</a></li><li><a href="#pair">LDP 的两个元素何时能分别从两条数据路径取值</a></li><li><a href="#line">跨行时两个元素都完整，为什么还可能被清除</a></li><li><a href="#rob">什么时候让重取的子 load 按顺序发射</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">LSU 逐个核对原子元素的字节来源。同一元素的所有字节必须来自同一合格来源，不同元素可以来自不同来源。对于跨缓存行的 load，还要核对各元素的可观察顺序。微码分解的 load 若因顺序违规被清除且已靠近重排序缓冲区队首，重译码时可附加顺序执行标记。</p>
+  </section>
+  <div id="mechanism"><section id="elements" class="article-section reading-chapter" aria-labelledby="elements-title"><h2 id="elements-title">同一条 load 有操作宽度，也有原子性粒度</h2><p>操作宽度是一个 load 微操作访问的总字节数。原子性粒度是实施的内存排序模型要求作为单个单位观察的字节数。原图 2 的寄存器对 load（LDP）可以访问 16 B，其中各 8 B 分别对应两个目的寄存器。向量 load 的原子性粒度可以是单个向量元素，也可包含相邻的多个元素，取决于实现。</p><p>LSU 先产生访问地址，再从 store 队列匹配同地址中在程序顺序上更老的 store，也访问数据缓存。图 1 将标定元素边界和核对来源分开。核对某个元素时，整组字节必须由一条 store 队列项或单个其他合格数据来源覆盖。不同元素可以分别由不同来源覆盖。若 load 的操作宽度恰好只含一个原子元素，原图 3 要求其所有字节均来自同一来源。</p><p>公开第 1、10 项明确规定操作宽度大于原子性粒度的逐元素检查。第 4、5、12–15 项分别限定寄存器、向量元素及相邻向量元素组合等粒度。说明书讨论 TSO 及可配置的排序模式，具体实现决定何时启用这些检查。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">LSU 在选择转发源后逐个核对原子元素</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US20240248844A1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">译码与实现规则给出元素边界。每个元素的所有字节必须来自一个来源，再开放 load 完成路径。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="LSU 在选择转发源后逐个核对原子元素" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 673" role="img" aria-labelledby="us20240248844a1-fig-1-svg-title us20240248844a1-fig-1-svg-desc">
 <title id="us20240248844a1-fig-1-svg-title">LSU 在选择转发源后逐个核对原子元素</title>
 <desc id="us20240248844a1-fig-1-svg-desc">译码与实现规则给出元素边界。每个元素的所有字节必须来自一个来源，再开放 load 完成路径。</desc>
@@ -40,12 +86,21 @@
 <text x="35" y="615" class="legend" text-anchor="start">操作宽度等于原子性粒度时，整个 load 微操作只核对一个来源。</text>
 <text x="35" y="641" class="legend" text-anchor="start">图示为来源验证。若访问跨行，LSU 还核对可观察的访存顺序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us20240248844a1-fig-1-decode">译码后的 load</a> 译码给出 load 微操作及其访问宽度。图中注明的元素边界来自该指令及实现规则。</li><li><a href="#us20240248844a1-fig-1-bounds">原子元素边界</a> 寄存器对的两个目的寄存器可对应两个元素；向量 load 的粒度可选一个或多个相邻向量元素。</li><li><a href="#us20240248844a1-fig-1-sq">store 队列</a> 按字节检查较老且地址重叠的 store 队列项，优先满足程序顺序上的数据依赖。</li><li><a href="#us20240248844a1-fig-1-cache">数据缓存／回填</a> 未由 SQ 项覆盖的字节可由数据缓存供给。缺失时也可由下级回填数据供给。</li><li><a href="#us20240248844a1-fig-1-check">按元素检查来源</a> 对每个元素比较所有字节的来源实例。来自两条不同 SQ 项的字节属于两个实例。</li><li><a href="#us20240248844a1-fig-1-accept">来源条件通过</a> 图中只表示来源检查通过。跨行的顺序检查若需要，仍要完成。</li><li><a href="#us20240248844a1-fig-1-hold">阻止完成并重试</a> 任一元素需要拆开到多个来源时，来源检查不通过。图 2 说明重新发射的一个实施例。</li></ul>
-  <p class="figure-evidence">原图 1、2、3；说明书归档段 0026、0028、0030、0032、0033、0036、0039、0040、0041、0042、0050、0051、0052、0053、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US20240248844A1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>译码映射单元／LSU</dt><dd>22/42</dd></div><div><dt>store 队列／数据缓存／LSU 执行电路</dt><dd>32/16/34</dd></div><div><dt>操作宽度与粒度比较／各元素同源／整次操作同源</dt><dd>70/72/78</dd></div><div><dt>允许完成／阻止完成</dt><dd>74/76</dd></div></dl></details>
-</figure></section><section id="retry"><h2>store 只覆盖半个元素时，为什么有数据也不能完成</h2><p>图 2 用一个元素横跨 store 队列覆盖与数据缓存覆盖的例子。不论两路数据是否已经返回，来源条件仍不满足。LSU 阻止这次 load 完成，并保留可重试状态。原图 3 把禁止完成与正常转发分开；在这里尚未向依赖微操作正式提供结果。</p><p>说明书允许等匹配的较老 store 排出队列，也允许等更广的排空条件或周期重发。第 3 项写的是一个或多个目标 store 排出，第 11 项写的是 store 队列清空。排出之后需重新读和核对数据，普通缓存缺失及下级供给时间仍是原有访存路径的一部分。</p><p>若 load 已给出结果，随后侦测到跨缓存行顺序问题，则可清除该 load 及依赖操作。这属于图 5 的另一条恢复路径，图 2 描述的是完成之前的重试。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　一个元素的 store 转发只覆盖一半时如何重试</h3>
-    <p id="fig-2-basis">已有数据仍可能来源不合格。LSU 先阻止完成，等待相关 store 排出后重新发射并核对。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us20240248844a1-fig-1-decode" data-reading-target="us20240248844a1-fig-1-decode">译码后的 load</a><p>译码给出 load 微操作及其访问宽度。图中注明的元素边界来自该指令及实现规则。</p></li><li><a href="#us20240248844a1-fig-1-bounds" data-reading-target="us20240248844a1-fig-1-bounds">原子元素边界</a><p>寄存器对的两个目的寄存器可对应两个元素；向量 load 的粒度可选一个或多个相邻向量元素。</p></li><li><a href="#us20240248844a1-fig-1-sq" data-reading-target="us20240248844a1-fig-1-sq">store 队列</a><p>按字节检查较老且地址重叠的 store 队列项，优先满足程序顺序上的数据依赖。</p></li><li><a href="#us20240248844a1-fig-1-cache" data-reading-target="us20240248844a1-fig-1-cache">数据缓存／回填</a><p>未由 SQ 项覆盖的字节可由数据缓存供给。缺失时也可由下级回填数据供给。</p></li><li><a href="#us20240248844a1-fig-1-check" data-reading-target="us20240248844a1-fig-1-check">按元素检查来源</a><p>对每个元素比较所有字节的来源实例。来自两条不同 SQ 项的字节属于两个实例。</p></li><li><a href="#us20240248844a1-fig-1-accept" data-reading-target="us20240248844a1-fig-1-accept">来源条件通过</a><p>图中只表示来源检查通过。跨行的顺序检查若需要，仍要完成。</p></li><li><a href="#us20240248844a1-fig-1-hold" data-reading-target="us20240248844a1-fig-1-hold">阻止完成并重试</a><p>任一元素需要拆开到多个来源时，来源检查不通过。图 2 说明重新发射的一个实施例。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0026、0028、0030、0032、0033、0036、0039、0040、0041、0042、0050、0051、0052、0053、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>译码映射单元／LSU</dt><dd>22/42</dd></div><div><dt>store 队列／数据缓存／LSU 执行电路</dt><dd>32/16/34</dd></div><div><dt>操作宽度与粒度比较／各元素同源／整次操作同源</dt><dd>70/72/78</dd></div><div><dt>允许完成／阻止完成</dt><dd>74/76</dd></div></dl></details>
+</figure></section><section id="retry" class="article-section reading-chapter" aria-labelledby="retry-title"><h2 id="retry-title">store 只覆盖半个元素时，为什么有数据也不能完成</h2><p>图 2 用一个元素横跨 store 队列覆盖与数据缓存覆盖的例子。不论两路数据是否已经返回，来源条件仍不满足。LSU 阻止这次 load 完成，并保留可重试状态。原图 3 把禁止完成与正常转发分开；在这里尚未向依赖微操作正式提供结果。</p><p>说明书允许等匹配的较老 store 排出队列，也允许等更广的排空条件或周期重发。第 3 项写的是一个或多个目标 store 排出，第 11 项写的是 store 队列清空。排出之后需重新读和核对数据，普通缓存缺失及下级供给时间仍是原有访存路径的一部分。</p><p>若 load 已给出结果，随后侦测到跨缓存行顺序问题，则可清除该 load 及依赖操作。这属于图 5 的另一条恢复路径，图 2 描述的是完成之前的重试。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">一个元素的 store 转发只覆盖一半时如何重试</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US20240248844A1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">已有数据仍可能来源不合格。LSU 先阻止完成，等待相关 store 排出后重新发射并核对。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="一个元素的 store 转发只覆盖一半时如何重试" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 656" role="img" aria-labelledby="us20240248844a1-fig-2-svg-title us20240248844a1-fig-2-svg-desc">
 <title id="us20240248844a1-fig-2-svg-title">一个元素的 store 转发只覆盖一半时如何重试</title>
 <desc id="us20240248844a1-fig-2-svg-desc">已有数据仍可能来源不合格。LSU 先阻止完成，等待相关 store 排出后重新发射并核对。</desc>
@@ -75,19 +130,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">结果接收端</text>
 <text x="28" y="628" class="legend" text-anchor="start">时间向下。队列唤醒与读数据先后随实现而变。图示重试在相关 store 排出后发生。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us20240248844a1-fig-2-probe">探测较老 store</a> load 执行时对 store 队列和数据缓存的请求可重叠。先由 LSU 确定可用来源。</li><li><a href="#us20240248844a1-fig-2-partial">覆盖元素 A 的一半</a> 示例的较老 store 队列项只覆盖元素 A 的一半。即使缓存提供剩余字节，也不能直接发布 A。</li><li><a href="#us20240248844a1-fig-2-hold">禁止完成，等待重试</a> LSU 记住这次操作未完成，实施例可在 load 队列等待产生重叠的 store 排出。</li><li><a href="#us20240248844a1-fig-2-drain">较老 store 排出</a> 匹配 store 排出后可解除相关依赖。另一实施例要求清空整个 store 队列。</li><li><a href="#us20240248844a1-fig-2-issue">重新发射</a> 按重试条件重新发射。图中省略再次读取各级缓存的既有流程。</li><li><a href="#us20240248844a1-fig-2-full">一次提供完整元素</a> 示例假设新一次读能从单一缓存来源取得完整元素。此时才允许完成，并向依赖操作转发。</li></ul>
-  <p class="figure-evidence">原图 1、3；说明书归档段 0028、0032、0033、0040、0041、0042、0052、0053、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US20240248844A1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>load 队列／store 队列／LSU 执行电路</dt><dd>30/32/34</dd></div><div><dt>禁止完成后重试</dt><dd>76</dd></div></dl></details>
-</figure></section><section id="table"><h2>字节来自几种介质，和来自几个来源实例有什么区别</h2><p>表 3 的来源列记录具体 store 队列项或缓存数据来源。两条 store 属于同一个队列，它们仍是两个来源。一个元素的字节分属两个不同的缓存行时，也需核实是否能按该粒度满足单源要求。较老 store 地址已匹配但数据未就绪属于数据依赖等待。</p><p>合格的原子元素并不要求操作级只有一个来源。允许逐元素独立供给，可以在某些多寄存器 load 中减少等待 store 排出或重试。若跨行或多微操作存在顺序约束，还须通过相应检查。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　按实际来源实例核对两个元素</h3>
-    <p id="fig-3-basis">每个元素须完整来自一个来源。两个元素的来源可以相同或不同。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">元素 A 的来源</th><th scope="col">元素 B 的来源</th><th scope="col">来源核对或等待</th></tr></thead><tbody><tr id="fig-3-ok"><th scope="row">完整来自 SQ 项 S0</th><td>完整来自缓存</td><td>来源条件通过</td></tr><tr id="fig-3-two"><th scope="row">完整来自 SQ 项 S0</th><td>完整来自不同 SQ 项 S1</td><td>来源条件通过</td></tr><tr id="fig-3-mix"><th scope="row">两半来自 SQ 项 S0、S1</th><td>完整来自缓存</td><td>阻止完成，待重试</td></tr><tr id="fig-3-nodata"><th scope="row">SQ 项地址匹配，数据未就绪</th><td>数据已返回</td><td>等待较老 store 的数据</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-ok">完整来自 SQ 项 S0</a> A 完全来自一个 SQ 项，B 完全来自缓存。混合发生在元素之间。</li><li><a href="#fig-3-two">完整来自 SQ 项 S0</a> 只要两个元素各自单源，来源条件也允许两个独立的 SQ 项分别供给。</li><li><a href="#fig-3-mix">两半来自 SQ 项 S0、S1</a> 即使条目都在 SQ，A 的两半落在不同 store 项时仍有两个来源。</li><li><a href="#fig-3-nodata">SQ 项地址匹配，数据未就绪</a> 地址匹配但数据未就绪，属于普通 store-to-load 数据依赖等待。</li></ul>
-  <p class="figure-evidence">原图 2、3、4；说明书归档段 0028、0029、0032、0033、0040、0041、0050、0051、0052、0053、0054、0055、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00016" aria-label="原文权利要求 16">16</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>两个寄存器的原子元素</dt><dd>54A/54B</dd></div><div><dt>逐向量元素／相邻向量元素组</dt><dd>60A–60n/62A–62m</dd></div></dl></details>
-</figure></section><section id="pair"><h2>LDP 的两个元素何时能分别从两条数据路径取值</h2><p>图 4 的上半部比较两条覆盖路径。较老 store 只写第一个 8 B，恰好覆盖元素 A。数据缓存完整提供第二个 8 B。对于来源检查，A 和 B 各自完整，所以可以向两个目的寄存器交付。</p><p>下半部中，较老 store 只覆盖元素 A 的前 4 B。即使缓存已经含 A 的余下 4 B 和完整的 B，A 仍不能作为一个原子元素完成。两组示例都设在同一缓存行内，故一次只考察元素来源，跨行观察顺序留给图 5。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　两个覆盖边界让同一条 LDP 走不同的完成路径</h3>
-    <p id="fig-4-basis">完整覆盖第一个元素时，SQ 与缓存可各供一个元素。只覆盖半个第一个元素时，同一元素会混用两条来源。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us20240248844a1-fig-2-probe" data-reading-target="us20240248844a1-fig-2-probe">探测较老 store</a><p>load 执行时对 store 队列和数据缓存的请求可重叠。先由 LSU 确定可用来源。</p></li><li><a href="#us20240248844a1-fig-2-partial" data-reading-target="us20240248844a1-fig-2-partial">覆盖元素 A 的一半</a><p>示例的较老 store 队列项只覆盖元素 A 的一半。即使缓存提供剩余字节，也不能直接发布 A。</p></li><li><a href="#us20240248844a1-fig-2-hold" data-reading-target="us20240248844a1-fig-2-hold">禁止完成，等待重试</a><p>LSU 记住这次操作未完成，实施例可在 load 队列等待产生重叠的 store 排出。</p></li><li><a href="#us20240248844a1-fig-2-drain" data-reading-target="us20240248844a1-fig-2-drain">较老 store 排出</a><p>匹配 store 排出后可解除相关依赖。另一实施例要求清空整个 store 队列。</p></li><li><a href="#us20240248844a1-fig-2-issue" data-reading-target="us20240248844a1-fig-2-issue">重新发射</a><p>按重试条件重新发射。图中省略再次读取各级缓存的既有流程。</p></li><li><a href="#us20240248844a1-fig-2-full" data-reading-target="us20240248844a1-fig-2-full">一次提供完整元素</a><p>示例假设新一次读能从单一缓存来源取得完整元素。此时才允许完成，并向依赖操作转发。</p></li></ul>
+  <p class="figure-evidence">原图 1、3；说明书归档段 0028、0032、0033、0040、0041、0042、0052、0053、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>load 队列／store 队列／LSU 执行电路</dt><dd>30/32/34</dd></div><div><dt>禁止完成后重试</dt><dd>76</dd></div></dl></details>
+</figure></section><section id="table" class="article-section reading-chapter" aria-labelledby="table-title"><h2 id="table-title">字节来自几种介质，和来自几个来源实例有什么区别</h2><p>表 3 的来源列记录具体 store 队列项或缓存数据来源。两条 store 属于同一个队列，它们仍是两个来源。一个元素的字节分属两个不同的缓存行时，也需核实是否能按该粒度满足单源要求。较老 store 地址已匹配但数据未就绪属于数据依赖等待。</p><p>合格的原子元素并不要求操作级只有一个来源。允许逐元素独立供给，可以在某些多寄存器 load 中减少等待 store 排出或重试。若跨行或多微操作存在顺序约束，还须通过相应检查。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">按实际来源实例核对两个元素</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">每个元素须完整来自一个来源。两个元素的来源可以相同或不同。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="按实际来源实例核对两个元素"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">元素 A 的来源</th><th scope="col">元素 B 的来源</th><th scope="col">来源核对或等待</th></tr></thead><tbody><tr id="fig-3-ok"><th scope="row">完整来自 SQ 项 S0</th><td>完整来自缓存</td><td>来源条件通过</td></tr><tr id="fig-3-two"><th scope="row">完整来自 SQ 项 S0</th><td>完整来自不同 SQ 项 S1</td><td>来源条件通过</td></tr><tr id="fig-3-mix"><th scope="row">两半来自 SQ 项 S0、S1</th><td>完整来自缓存</td><td>阻止完成，待重试</td></tr><tr id="fig-3-nodata"><th scope="row">SQ 项地址匹配，数据未就绪</th><td>数据已返回</td><td>等待较老 store 的数据</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-ok" data-reading-target="fig-3-ok">完整来自 SQ 项 S0</a><p>A 完全来自一个 SQ 项，B 完全来自缓存。混合发生在元素之间。</p></li><li><a href="#fig-3-two" data-reading-target="fig-3-two">完整来自 SQ 项 S0</a><p>只要两个元素各自单源，来源条件也允许两个独立的 SQ 项分别供给。</p></li><li><a href="#fig-3-mix" data-reading-target="fig-3-mix">两半来自 SQ 项 S0、S1</a><p>即使条目都在 SQ，A 的两半落在不同 store 项时仍有两个来源。</p></li><li><a href="#fig-3-nodata" data-reading-target="fig-3-nodata">SQ 项地址匹配，数据未就绪</a><p>地址匹配但数据未就绪，属于普通 store-to-load 数据依赖等待。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0028、0029、0032、0033、0040、0041、0050、0051、0052、0053、0054、0055、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>两个寄存器的原子元素</dt><dd>54A/54B</dd></div><div><dt>逐向量元素／相邻向量元素组</dt><dd>60A–60n/62A–62m</dd></div></dl></details>
+</figure></section><section id="pair" class="article-section reading-chapter" aria-labelledby="pair-title"><h2 id="pair-title">LDP 的两个元素何时能分别从两条数据路径取值</h2><p>图 4 的上半部比较两条覆盖路径。较老 store 只写第一个 8 B，恰好覆盖元素 A。数据缓存完整提供第二个 8 B。对于来源检查，A 和 B 各自完整，所以可以向两个目的寄存器交付。</p><p>下半部中，较老 store 只覆盖元素 A 的前 4 B。即使缓存已经含 A 的余下 4 B 和完整的 B，A 仍不能作为一个原子元素完成。两组示例都设在同一缓存行内，故一次只考察元素来源，跨行观察顺序留给图 5。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">两个覆盖边界让同一条 LDP 走不同的完成路径</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US20240248844A1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">完整覆盖第一个元素时，SQ 与缓存可各供一个元素。只覆盖半个第一个元素时，同一元素会混用两条来源。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="两个覆盖边界让同一条 LDP 走不同的完成路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 774" role="img" aria-labelledby="us20240248844a1-fig-4-svg-title us20240248844a1-fig-4-svg-desc">
 <title id="us20240248844a1-fig-4-svg-title">两个覆盖边界让同一条 LDP 走不同的完成路径</title>
 <desc id="us20240248844a1-fig-4-svg-desc">完整覆盖第一个元素时，SQ 与缓存可各供一个元素。只覆盖半个第一个元素时，同一元素会混用两条来源。</desc>
@@ -125,12 +198,21 @@
 <text x="35" y="375" class="legend" text-anchor="start">只覆盖元素 A 的一半。应等相关 store 排出或满足其他重试条件。</text>
 <text x="35" y="718" class="legend" text-anchor="start">两个例子均假设 16 B 位于同一行，排除跨行顺序检查的影响。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us20240248844a1-fig-4-fullstore">SQ 项 S0</a> 测试上半部令 SQ 的 S0 写入字节偏移 0–7。这里 0 是当前 load 起始字节，8 B 恰好是一个元素。</li><li><a href="#us20240248844a1-fig-4-fullcache">同一数据缓存行</a> 对完整覆盖的情形，缓存提供 8–15，不补入元素 A。</li><li><a href="#us20240248844a1-fig-4-firstok">元素 A（8 B）</a> 整个元素 A 来自 SQ 的 S0，原子元素宽度为 8 B。</li><li><a href="#us20240248844a1-fig-4-secondok">元素 B（8 B）</a> 整个元素 B 来自一个缓存行。两个元素来源不同，仍可满足逐元素单源。</li><li><a href="#us20240248844a1-fig-4-halfstore">SQ 项 S0</a> 测试下半部令 S0 只写字节偏移 0–3，落在第一个元素内部。</li><li><a href="#us20240248844a1-fig-4-halfcache">同一数据缓存行</a> 缓存提供 4–15。元素 A 收到的缓存字节是 4–7。</li><li><a href="#us20240248844a1-fig-4-firstfail">元素 A（8 B）</a> 元素 A 需要拼接 S0 和缓存，触发禁止完成。</li><li><a href="#us20240248844a1-fig-4-reject">禁止此次完成</a> 即使 B 全部由缓存提供，也不能弥补 A 的来源不完整。</li></ul>
-  <p class="figure-evidence">原图 2、3、4；说明书归档段 0028、0032、0040、0041、0050、0052、0053、0055、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US20240248844A1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>LDP／操作宽度／第一个原子元素／第二个原子元素</dt><dd>50/52/54A/54B</dd></div></dl></details>
-</figure></section><section id="line"><h2>跨行时两个元素都完整，为什么还可能被清除</h2><p>原图 4 将第一个目的寄存器的元素置于缓存行 A，第二个置于下一缓存行。对于该实施例的排序模型，第一个元素应表现为与第二个同时读出，或在第二个之前。若先读的缓存行在整个 load 完成前被一致性失效，而第二个元素仍保有原缓存行数据，顺序可能无法继续保证。</p><p>图 5 将两次行数据返回、第一行发生失效、LSU 核对顺序与向重排序缓冲区（ROB）请求清除放在同一动态序列中。清除后可重新取指和执行。公开第 8、18 项对应跨缓存行的顺序检查。相同缓存行中的两个元素则可在此例作为同一次行访问提供。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　跨缓存行的两个读取怎样触发顺序清除</h3>
-    <p id="fig-5-basis">第一元素已读出的缓存行在 load 完成前失效，第二行保持有效。LSU 发现不再满足约定顺序时，请求清除。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us20240248844a1-fig-4-fullstore" data-reading-target="us20240248844a1-fig-4-fullstore">SQ 项 S0</a><p>测试上半部令 SQ 的 S0 写入字节偏移 0–7。这里 0 是当前 load 起始字节，8 B 恰好是一个元素。</p></li><li><a href="#us20240248844a1-fig-4-fullcache" data-reading-target="us20240248844a1-fig-4-fullcache">同一数据缓存行</a><p>对完整覆盖的情形，缓存提供 8–15，不补入元素 A。</p></li><li><a href="#us20240248844a1-fig-4-firstok" data-reading-target="us20240248844a1-fig-4-firstok">元素 A（8 B）</a><p>整个元素 A 来自 SQ 的 S0，原子元素宽度为 8 B。</p></li><li><a href="#us20240248844a1-fig-4-secondok" data-reading-target="us20240248844a1-fig-4-secondok">元素 B（8 B）</a><p>整个元素 B 来自一个缓存行。两个元素来源不同，仍可满足逐元素单源。</p></li><li><a href="#us20240248844a1-fig-4-halfstore" data-reading-target="us20240248844a1-fig-4-halfstore">SQ 项 S0</a><p>测试下半部令 S0 只写字节偏移 0–3，落在第一个元素内部。</p></li><li><a href="#us20240248844a1-fig-4-halfcache" data-reading-target="us20240248844a1-fig-4-halfcache">同一数据缓存行</a><p>缓存提供 4–15。元素 A 收到的缓存字节是 4–7。</p></li><li><a href="#us20240248844a1-fig-4-firstfail" data-reading-target="us20240248844a1-fig-4-firstfail">元素 A（8 B）</a><p>元素 A 需要拼接 S0 和缓存，触发禁止完成。</p></li><li><a href="#us20240248844a1-fig-4-reject" data-reading-target="us20240248844a1-fig-4-reject">禁止此次完成</a><p>即使 B 全部由缓存提供，也不能弥补 A 的来源不完整。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0028、0032、0040、0041、0050、0052、0053、0055、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">1 项</span></summary><dl><div><dt>LDP／操作宽度／第一个原子元素／第二个原子元素</dt><dd>50/52/54A/54B</dd></div></dl></details>
+</figure></section><section id="line" class="article-section reading-chapter" aria-labelledby="line-title"><h2 id="line-title">跨行时两个元素都完整，为什么还可能被清除</h2><p>原图 4 将第一个目的寄存器的元素置于缓存行 A，第二个置于下一缓存行。对于该实施例的排序模型，第一个元素应表现为与第二个同时读出，或在第二个之前。若先读的缓存行在整个 load 完成前被一致性失效，而第二个元素仍保有原缓存行数据，顺序可能无法继续保证。</p><p>图 5 将两次行数据返回、第一行发生失效、LSU 核对顺序与向重排序缓冲区（ROB）请求清除放在同一动态序列中。清除后可重新取指和执行。公开第 8、18 项对应跨缓存行的顺序检查。相同缓存行中的两个元素则可在此例作为同一次行访问提供。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 事务时序</p>
+        <h3 id="fig-5-title">跨缓存行的两个读取怎样触发顺序清除</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US20240248844A1/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">第一元素已读出的缓存行在 load 完成前失效，第二行保持有效。LSU 发现不再满足约定顺序时，请求清除。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="跨缓存行的两个读取怎样触发顺序清除" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="us20240248844a1-fig-5-svg-title us20240248844a1-fig-5-svg-desc">
 <title id="us20240248844a1-fig-5-svg-title">跨缓存行的两个读取怎样触发顺序清除</title>
 <desc id="us20240248844a1-fig-5-svg-desc">第一元素已读出的缓存行在 load 完成前失效，第二行保持有效。LSU 发现不再满足约定顺序时，请求清除。</desc>
@@ -153,12 +235,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">重排序缓冲区</text>
 <text x="28" y="388" class="legend" text-anchor="start">时间向下。每个元素的单源检查可先通过。失效在跨行顺序校验完成前发生。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us20240248844a1-fig-5-first">元素 A 返回</a> 原图 4 的元素 A 来自含起始地址的缓存行。示例表示这行先被读出。</li><li><a href="#us20240248844a1-fig-5-second">元素 B 返回</a> 元素 B 来自下一行，当 B 返回时，A 与 B 此前分别满足元素内单源。</li><li><a href="#us20240248844a1-fig-5-invalidate">首行发生失效</a> 其他一致性代理写入时可使 A 所在行失效。B 所在行仍保持有效，已读取的前后顺序可能无法继续保证。</li><li><a href="#us20240248844a1-fig-5-verify">检测到首行已失效</a> LSU 观察两行有效状态，验证 A 能否表现为早于或同时于 B。图示是检查的失败分支。</li><li><a href="#us20240248844a1-fig-5-flush">请求清除并报告 ROB 标签</a> LSU 发出需清除的 load 的 ROB 标签。该 load 及依赖操作可在恢复后重取执行。</li></ul>
-  <p class="figure-evidence">原图 4、5、6；说明书归档段 0026、0027、0040、0042、0048、0050、0054、0055、0056、0057、0060；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US20240248844A1/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>同一缓存行／跨相邻缓存行</dt><dd>80/82</dd></div><div><dt>判定是否跨行／监控次序／确认次序／清除／允许退休</dt><dd>84/86/88/90/92</dd></div><div><dt>需清除 load 的 ROB 标签</dt><dd>100</dd></div></dl></details>
-</figure></section><section id="rob"><h2>什么时候让重取的子 load 按顺序发射</h2><p>复杂 load 可以由译码／微码生成多个 load 微操作，每个微操作内部仍可有自己的原子元素。原图 6、7 允许这些微操作先乱序执行。侦测到顺序违规时，LSU 将需清除的 load 的 ROB 标签交给 ROB，ROB 清除此 load 与更年轻的微操作并恢复推测状态。</p><p>清除当时若指定 load 距队首不超过实现选定的 N 项，ROB 指示重取的同一条 load 按顺序执行。译码为这条指令生成的多个 load 微操作附上顺序执行标记。说明书举例，保留站只在操作成为站内最老时允许其发射。距队首较远仍会清除和重取，重取后不由此条件强制顺序。</p><p>第 9、17 项给出此恢复策略，第 19 项规定给微操作贴顺序执行标记，第 20 项允许编程门槛。ROB 队首邻近性是触发顺序重发的启发式，它与原子元素的宽度或缓存命中延迟采用不同的观测位置。</p><figure class="exhibit" id="fig-6">
-  <figcaption><h3 id="fig-6-title">图 6　ROB 在清除时怎样决定给重取指令加顺序标记</h3>
-    <p id="fig-6-basis">LSU 交出 ROB 标签并触发清除。距队首满足门槛时，重译码给同一指令生成的子 load 加顺序发射约束。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us20240248844a1-fig-5-first" data-reading-target="us20240248844a1-fig-5-first">元素 A 返回</a><p>原图 4 的元素 A 来自含起始地址的缓存行。示例表示这行先被读出。</p></li><li><a href="#us20240248844a1-fig-5-second" data-reading-target="us20240248844a1-fig-5-second">元素 B 返回</a><p>元素 B 来自下一行，当 B 返回时，A 与 B 此前分别满足元素内单源。</p></li><li><a href="#us20240248844a1-fig-5-invalidate" data-reading-target="us20240248844a1-fig-5-invalidate">首行发生失效</a><p>其他一致性代理写入时可使 A 所在行失效。B 所在行仍保持有效，已读取的前后顺序可能无法继续保证。</p></li><li><a href="#us20240248844a1-fig-5-verify" data-reading-target="us20240248844a1-fig-5-verify">检测到首行已失效</a><p>LSU 观察两行有效状态，验证 A 能否表现为早于或同时于 B。图示是检查的失败分支。</p></li><li><a href="#us20240248844a1-fig-5-flush" data-reading-target="us20240248844a1-fig-5-flush">请求清除并报告 ROB 标签</a><p>LSU 发出需清除的 load 的 ROB 标签。该 load 及依赖操作可在恢复后重取执行。</p></li></ul>
+  <p class="figure-evidence">原图 4、5、6；说明书归档段 0026、0027、0040、0042、0048、0050、0054、0055、0056、0057、0060；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>同一缓存行／跨相邻缓存行</dt><dd>80/82</dd></div><div><dt>判定是否跨行／监控次序／确认次序／清除／允许退休</dt><dd>84/86/88/90/92</dd></div><div><dt>需清除 load 的 ROB 标签</dt><dd>100</dd></div></dl></details>
+</figure></section><section id="rob" class="article-section reading-chapter" aria-labelledby="rob-title"><h2 id="rob-title">什么时候让重取的子 load 按顺序发射</h2><p>复杂 load 可以由译码／微码生成多个 load 微操作，每个微操作内部仍可有自己的原子元素。原图 6、7 允许这些微操作先乱序执行。侦测到顺序违规时，LSU 将需清除的 load 的 ROB 标签交给 ROB，ROB 清除此 load 与更年轻的微操作并恢复推测状态。</p><p>清除当时若指定 load 距队首不超过实现选定的 N 项，ROB 指示重取的同一条 load 按顺序执行。译码为这条指令生成的多个 load 微操作附上顺序执行标记。说明书举例，保留站只在操作成为站内最老时允许其发射。距队首较远仍会清除和重取，重取后不由此条件强制顺序。</p><p>第 9、17 项给出此恢复策略，第 19 项规定给微操作贴顺序执行标记，第 20 项允许编程门槛。ROB 队首邻近性是触发顺序重发的启发式，它与原子元素的宽度或缓存命中延迟采用不同的观测位置。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-6" aria-labelledby="fig-6-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 6 · 微架构与信号</p>
+        <h3 id="fig-6-title">ROB 在清除时怎样决定给重取指令加顺序标记</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US20240248844A1/fig-6.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-6-basis" class="exhibit-takeaway">LSU 交出 ROB 标签并触发清除。距队首满足门槛时，重译码给同一指令生成的子 load 加顺序发射约束。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="ROB 在清除时怎样决定给重取指令加顺序标记" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" role="img" aria-labelledby="us20240248844a1-fig-6-svg-title us20240248844a1-fig-6-svg-desc">
 <title id="us20240248844a1-fig-6-svg-title">ROB 在清除时怎样决定给重取指令加顺序标记</title>
 <desc id="us20240248844a1-fig-6-svg-desc">LSU 交出 ROB 标签并触发清除。距队首满足门槛时，重译码给同一指令生成的子 load 加顺序发射约束。</desc>
@@ -188,12 +279,14 @@
 <text x="36" y="611" class="legend" text-anchor="start">清除和重取始终发生。依据队首距离选择是否顺序发射，旨在避免同一组子 load 反复清除。</text>
 <text x="36" y="641" class="legend" text-anchor="start">该约束作用在发射与执行，退休仍由 ROB 管理。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us20240248844a1-fig-6-flush">LSU 顺序违规</a> LSU 发现顺序违规，向重排序缓冲区（ROB）提交要清除的 load 的标签。</li><li><a href="#us20240248844a1-fig-6-rob">重排序缓冲区</a> ROB 清除指定 load 与后续微操作，回滚对应的推测状态。</li><li><a href="#us20240248844a1-fig-6-refetch">取指与重译码</a> 取指端重新取回该指令。重译码后可能得到多个 load 微操作。</li><li><a href="#us20240248844a1-fig-6-distance">距 ROB 队首的距离</a> 用发生清除时 load 与 ROB 队首的距离判定是否加顺序约束。N 可固定或可编程。</li><li><a href="#us20240248844a1-fig-6-ordered">附加顺序执行标记</a> 满足门槛时，重译码后给属于同一指令的子 load 加顺序执行标记。</li><li><a href="#us20240248844a1-fig-6-normal">按普通规则发射</a> 即使距队首较远，仍发生清除和重取，只是不通过该条件加顺序标记。</li><li><a href="#us20240248844a1-fig-6-rs">LSU 保留站</a> 保留站识别标记。说明书举例在标记的操作变成站内最老之后才允许发射。</li></ul>
-  <p class="figure-evidence">原图 1、6、7；说明书归档段 0026、0027、0036、0037、0038、0042、0057、0058、0059、0060、0061、0062、0063、0064、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20240248844A1/fig-6.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>重排序缓冲区／LSU</dt><dd>20/42</dd></div><div><dt>清除 load 的 ROB 标签／顺序执行标记</dt><dd>100/102</dd></div><div><dt>是否清除 load／是否靠近 ROB 队首／标记顺序执行／按普通规则发射</dt><dd>104/106/108/110</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us20240248844a1-fig-6-flush" data-reading-target="us20240248844a1-fig-6-flush">LSU 顺序违规</a><p>LSU 发现顺序违规，向重排序缓冲区（ROB）提交要清除的 load 的标签。</p></li><li><a href="#us20240248844a1-fig-6-rob" data-reading-target="us20240248844a1-fig-6-rob">重排序缓冲区</a><p>ROB 清除指定 load 与后续微操作，回滚对应的推测状态。</p></li><li><a href="#us20240248844a1-fig-6-refetch" data-reading-target="us20240248844a1-fig-6-refetch">取指与重译码</a><p>取指端重新取回该指令。重译码后可能得到多个 load 微操作。</p></li><li><a href="#us20240248844a1-fig-6-distance" data-reading-target="us20240248844a1-fig-6-distance">距 ROB 队首的距离</a><p>用发生清除时 load 与 ROB 队首的距离判定是否加顺序约束。N 可固定或可编程。</p></li><li><a href="#us20240248844a1-fig-6-ordered" data-reading-target="us20240248844a1-fig-6-ordered">附加顺序执行标记</a><p>满足门槛时，重译码后给属于同一指令的子 load 加顺序执行标记。</p></li><li><a href="#us20240248844a1-fig-6-normal" data-reading-target="us20240248844a1-fig-6-normal">按普通规则发射</a><p>即使距队首较远，仍发生清除和重取，只是不通过该条件加顺序标记。</p></li><li><a href="#us20240248844a1-fig-6-rs" data-reading-target="us20240248844a1-fig-6-rs">LSU 保留站</a><p>保留站识别标记。说明书举例在标记的操作变成站内最老之后才允许发射。</p></li></ul>
+  <p class="figure-evidence">原图 1、6、7；说明书归档段 0026、0027、0036、0037、0038、0042、0057、0058、0059、0060、0061、0062、0063、0064、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>重排序缓冲区／LSU</dt><dd>20/42</dd></div><div><dt>清除 load 的 ROB 标签／顺序执行标记</dt><dd>100/102</dd></div><div><dt>是否清除 load／是否靠近 ROB 队首／标记顺序执行／按普通规则发射</dt><dd>104/106/108/110</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、17 项；全文核对覆盖 74 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -223,6 +316,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–3。宽 load 按较小的原子尺寸验证每个元素，通过后允许转发。内存定序模型要求作为不可拆分数据单元的宽度。宽 load 可由多个原子性元素组成。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>若部分元素来自 store 队列且另一元素无法完整由一个来源覆盖，阻止 load 完成。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>等待被该 load 命中的一笔或多笔 store 排出队列后才允许完成。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>原子元素大小等于目标寄存器大小，分别覆盖每个寄存器。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>向量 load 的原子大小等于向量元素大小。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>至少一个原子元素完整由 store 队列供给，另一元素完整由其他来源供给。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>将其他数据源具体限定为数据缓存。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>如果 load 从多条缓存行接收字节，另确保各原子元素的顺序。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>检测违例发冲刷；冲刷时接近 ROB 队首则强制同一指令拆出的 load 按序执行。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>访存单元以完整原子元素验证宽 load，验证通过才允许 store 队列转发。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>发现任一元素来源不完整时，停住宽 load 直至 store 队列排空。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>目标有多个寄存器时，以单个寄存器大小作为原子性尺寸。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>向量 load 的原子性尺寸取决于向量元素大小。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>把原子元素限定为单个向量元素。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>一个原子元素由多个相邻向量元素组成。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>宽访问尺寸是原子元素尺寸的整数倍。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>原图 4–7。某指令的多个 load 检出违例后冲刷；在 ROB 队首附近，重取后强制按序。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>跨缓存行时，多个元素收到跨行字节的顺序不符即检测到违例。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>为同一原始指令拆出的各 load 设置必须按序执行的标记。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240248844A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>接近重排序缓冲区队首的条目阈值可以编程。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US20240248844A1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US20240248844A1#knowledge">在关系图谱中定位 US20240248844A1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12775463B2</code>
+  </div>
+  <h3><a href="US12775463B2.html">分层 store 队列的预解析与数据转发</a></h3>
+  <p class="related-edge-label">宽加载的数据来源与队列搜索</p>
+  <p class="related-edge-summary">US20240248844A1 逐个验证宽加载中的原子元素是否完全来自同一笔存储操作或另一来源，验证通过才允许存储队列前递。US12775463B2 的原图 5B 展示一种次队列实现：首遍搜索记住匹配位置，加载重放时再读取该条目。两件分别约束前递的数据来源和读取队列数据的步骤。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12775463B2.html#claim-5">对照篇权项 5</a><a href="US12775463B2.html#fig-4">对照篇图表 4</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#elements">同一条 load 有操作宽度，也有原子性粒度</a></li><li><a href="#retry">store 只覆盖半个元素时，为什么有数据也不能完成</a></li><li><a href="#table">字节来自几种介质，和来自几个来源实例有什么区别</a></li><li><a href="#pair">LDP 的两个元素何时能分别从两条数据路径取值</a></li><li><a href="#line">跨行时两个元素都完整，为什么还可能被清除</a></li><li><a href="#rob">什么时候让重取的子 load 按顺序发射</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-07-25</dd></div>
+      <div><dt>最早优先权</dt><dd>2020-06-22</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-02-26</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/587,289</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0804、G06F9/30043、G06F9/3826 <details class="inline-more"><summary>其余 4 项</summary><span>G06F9/3856、G06F9/3861、G06F2212/601、G06F9/3834</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Francesco Spadini、Gideon Levinsky、Mridul Agarwal</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US20240248844A1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US20240248844A1#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

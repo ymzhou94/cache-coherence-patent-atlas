@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>I/O agent 提前取权限，按外设顺序完成 · US12632384B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12632384B2</code> · <a href="https://patents.google.com/patent/US12632384B2/en">专利全文</a></p>
-<h1>I/O agent 提前取权限，按外设顺序完成</h1><p class="reading-question">两个外设读请求必须按 A、B 完成。如果 B 的独占读访问权先到，I/O agent 如何利用这个返回顺序缩短后续等待？</p>
-<p class="reading-answer">I/O agent 代无缓存外设请求并暂存缓存行。它允许后到事务先得到权限与数据，等先到事务完成后再从本地服务后到事务。如果等待时收到 snoop 并放弃权限，原先取回的数据便不能继续用于完成请求。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-05-19</dd></div><div><dt>申请号</dt><dd>US18/151,834</dd></div><div><dt>最早优先权</dt><dd>2021-04-05</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Gaurav Garg、Sagi Lahav、Lital Levy-Rubin、Gerard Williams, III、Samer Nassar、Per H. Hammarlund、Harshavardhan Kaushikkar、Srinivasa Rangan Sridharan、Jeff Gonion、James Vash</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#ownership">哪些硬件持有外设可用的数据副本</a></li><li><a href="#in-order">B 的权限先到，外设为什么先收到 A</a></li><li><a href="#write">部分写输入如何与取回的原行合并</a></li><li><a href="#recover">预取行被 snoop 后，什么时候重新向互连请求</a></li><li><a href="#scope">授权权项中的发出、取得和完成顺序</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="ownership"><h2>哪些硬件持有外设可用的数据副本</h2><p>图 1 从外设请求开始。外设通过 I/O agent 访问一致性互连。I/O agent 能向管理目标地址的内存控制器请求独占读访问权（exclusive read ownership），并把取回数据留在自己的已取回数据缓存。专利所称独占读访问权要求缓存行的数据在内存和该 I/O agent 之外没有有效缓存副本。</p><p>图中控制器的目录指示其他缓存代理是否持有有效副本。命中时，一致性控制器发送所需 snoop 并处理响应。图 1 采用由缓存代理返回控制器的 snoop back。说明书也给出数据由持有者直接发到请求方的 snoop forward。两种路径中的响应、数据和权限消息要分别读。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　外设的独占读访问由 I/O agent 和内存控制器协作</h3>
-    <p id="fig-1-basis">外设收发自己的事务，I/O agent 与内存控制器通过一致性消息决定谁可以缓存该行。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12632384B2 I/O agent 提前取权限，按外设顺序完成 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-snoop" href="../index.html?topic=snoop#catalog">Snoop 与一致性</a>
+  </nav>
+  <p class="document-id">
+    <code>US12632384B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2026-05-19">2026-05-19</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US12632384B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>I/O agent 提前取权限，按外设顺序完成</h1>
+  <p class="english-title" lang="en">I/O agent</p>
+  <p class="document-question">两个外设读请求必须按 A、B 完成。如果 B 的独占读访问权先到，I/O agent 如何利用这个返回顺序缩短后续等待？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#ownership">哪些硬件持有外设可用的数据副本</a></li><li><a href="#in-order">B 的权限先到，外设为什么先收到 A</a></li><li><a href="#write">部分写输入如何与取回的原行合并</a></li><li><a href="#recover">预取行被 snoop 后，什么时候重新向互连请求</a></li><li><a href="#scope">授权权项中的发出、取得和完成顺序</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">I/O agent 代无缓存外设请求并暂存缓存行。它允许后到事务先得到权限与数据，等先到事务完成后再从本地服务后到事务。如果等待时收到 snoop 并放弃权限，原先取回的数据便不能继续用于完成请求。</p>
+  </section>
+  <div id="mechanism"><section id="ownership" class="article-section reading-chapter" aria-labelledby="ownership-title"><h2 id="ownership-title">哪些硬件持有外设可用的数据副本</h2><p>图 1 从外设请求开始。外设通过 I/O agent 访问一致性互连。I/O agent 能向管理目标地址的内存控制器请求独占读访问权（exclusive read ownership），并把取回数据留在自己的已取回数据缓存。专利所称独占读访问权要求缓存行的数据在内存和该 I/O agent 之外没有有效缓存副本。</p><p>图中控制器的目录指示其他缓存代理是否持有有效副本。命中时，一致性控制器发送所需 snoop 并处理响应。图 1 采用由缓存代理返回控制器的 snoop back。说明书也给出数据由持有者直接发到请求方的 snoop forward。两种路径中的响应、数据和权限消息要分别读。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">外设的独占读访问由 I/O agent 和内存控制器协作</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12632384B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">外设收发自己的事务，I/O agent 与内存控制器通过一致性消息决定谁可以缓存该行。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="外设的独占读访问由 I/O agent 和内存控制器协作" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 565" role="img" aria-labelledby="us12632384b2-fig-1-svg-title us12632384b2-fig-1-svg-desc">
 <title id="us12632384b2-fig-1-svg-title">外设的独占读访问由 I/O agent 和内存控制器协作</title>
 <desc id="us12632384b2-fig-1-svg-desc">外设收发自己的事务，I/O agent 与内存控制器通过一致性消息决定谁可以缓存该行。</desc>
@@ -42,12 +88,21 @@
 <text x="40" y="57" class="signal-title" text-anchor="start">I/O agent 持有缓存行和权限，外设继续按设备规则收取响应</text>
 <text x="40" y="533" class="legend" text-anchor="start">这一图采用 snoop back，所需数据先返回控制器。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12632384b2-fig-1-owner-req">独占读访问权请求</a> I/O agent 将目标地址的权限请求发给管理本行的内存控制器。</li><li><a href="#us12632384b2-fig-1-snoop">目录命中时发 snoop</a> 控制器用目录匹配仍持有有效副本的缓存代理并发出请求。</li><li><a href="#us12632384b2-fig-1-snoopresp">响应与数据</a> 本例采用 snoop back，必要的数据由被 snoop 方返回内存控制器。</li><li><a href="#us12632384b2-fig-1-retmem">内存返回数据</a> 若相关缓存没有所需数据，内存控制器可从所管辖的内存取得该行。</li><li><a href="#us12632384b2-fig-1-dev-ack">外设看到的完成响应</a> 设备只收到 I/O agent 发出的事务完成，不参与一致性协议。</li></ul>
-  <p class="figure-evidence">原图 1、2；说明书归档段 0017、0018、0022、0024、0026、0028、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> <a href="../diagrams/US12632384B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>无缓存外设</dt><dd>144</dd></div><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>一致性互连</dt><dd>105</dd></div><div><dt>内存控制器</dt><dd>120</dd></div><div><dt>内存控制器的一致性控制器</dt><dd>210</dd></div><div><dt>目录</dt><dd>220</dd></div><div><dt>缓存代理</dt><dd>110</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div><div><dt>外设事务请求</dt><dd>205</dd></div><div><dt>外设事务响应</dt><dd>207</dd></div></dl></details>
-</figure></section><section id="in-order"><h2>B 的权限先到，外设为什么先收到 A</h2><p>图 2 采用原图 4 的请求 A、B。A 的目标行在另一缓存代理里，A 所属控制器需要 snoop。B 的目录未命中，B 所属控制器可在不等该类 snoop 的情形下返回许可和数据。表 3 比较本例两个目录结果产生的额外路径。</p><p>I/O agent 先保存 B 的许可和数据。A 完成后，若 B 的许可和缓存行仍有效，就能直接在 I/O agent 内完成 B。省去的是在 A 完成之后重新启动 B 取权限的等待。外设看到的完成仍然先 A 后 B。该顺序由外设的事务约束和依赖决定，与 CPU 的内存序模型分开。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　B 先取得权限，I/O agent 仍先完成 A</h3>
-    <p id="fig-2-basis">在左端观察 A、B 的设备顺序，在中间观察 B 的许可如何越过 A，再回到左端看完成顺序。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12632384b2-fig-1-owner-req" data-reading-target="us12632384b2-fig-1-owner-req">独占读访问权请求</a><p>I/O agent 将目标地址的权限请求发给管理本行的内存控制器。</p></li><li><a href="#us12632384b2-fig-1-snoop" data-reading-target="us12632384b2-fig-1-snoop">目录命中时发 snoop</a><p>控制器用目录匹配仍持有有效副本的缓存代理并发出请求。</p></li><li><a href="#us12632384b2-fig-1-snoopresp" data-reading-target="us12632384b2-fig-1-snoopresp">响应与数据</a><p>本例采用 snoop back，必要的数据由被 snoop 方返回内存控制器。</p></li><li><a href="#us12632384b2-fig-1-retmem" data-reading-target="us12632384b2-fig-1-retmem">内存返回数据</a><p>若相关缓存没有所需数据，内存控制器可从所管辖的内存取得该行。</p></li><li><a href="#us12632384b2-fig-1-dev-ack" data-reading-target="us12632384b2-fig-1-dev-ack">外设看到的完成响应</a><p>设备只收到 I/O agent 发出的事务完成，不参与一致性协议。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0017、0018、0022、0024、0026、0028、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">13 项</span></summary><dl><div><dt>无缓存外设</dt><dd>144</dd></div><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>一致性互连</dt><dd>105</dd></div><div><dt>内存控制器</dt><dd>120</dd></div><div><dt>内存控制器的一致性控制器</dt><dd>210</dd></div><div><dt>目录</dt><dd>220</dd></div><div><dt>缓存代理</dt><dd>110</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div><div><dt>外设事务请求</dt><dd>205</dd></div><div><dt>外设事务响应</dt><dd>207</dd></div></dl></details>
+</figure></section><section id="in-order" class="article-section reading-chapter" aria-labelledby="in-order-title"><h2 id="in-order-title">B 的权限先到，外设为什么先收到 A</h2><p>图 2 采用原图 4 的请求 A、B。A 的目标行在另一缓存代理里，A 所属控制器需要 snoop。B 的目录未命中，B 所属控制器可在不等该类 snoop 的情形下返回许可和数据。表 3 比较本例两个目录结果产生的额外路径。</p><p>I/O agent 先保存 B 的许可和数据。A 完成后，若 B 的许可和缓存行仍有效，就能直接在 I/O agent 内完成 B。省去的是在 A 完成之后重新启动 B 取权限的等待。外设看到的完成仍然先 A 后 B。该顺序由外设的事务约束和依赖决定，与 CPU 的内存序模型分开。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">B 先取得权限，I/O agent 仍先完成 A</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12632384B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">在左端观察 A、B 的设备顺序，在中间观察 B 的许可如何越过 A，再回到左端看完成顺序。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="B 先取得权限，I/O agent 仍先完成 A" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 647" role="img" aria-labelledby="us12632384b2-fig-2-svg-title us12632384b2-fig-2-svg-desc">
 <title id="us12632384b2-fig-2-svg-title">B 先取得权限，I/O agent 仍先完成 A</title>
 <desc id="us12632384b2-fig-2-svg-desc">在左端观察 A、B 的设备顺序，在中间观察 B 的许可如何越过 A，再回到左端看完成顺序。</desc>
@@ -75,19 +130,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">持有 A 的缓存代理</text>
 <text x="28" y="628" class="legend" text-anchor="start">图示为 FIG. 4 的一例，B 的预取数据持续有效。外设可见完成顺序仍为 A、B。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12632384b2-fig-2-b-grant">B 的独占读访问权先到</a> B 的目录未命中，原图没有 B 的 snoop 交换。先返回本地可用数据。</li><li><a href="#us12632384b2-fig-2-a-snoop">A 需要 snoop</a> A 的目录命中，额外路径需要相关缓存代理更新状态并返回响应。</li><li><a href="#us12632384b2-fig-2-a-done">A 先完成</a> 外设的读请求须按事务顺序完成。I/O agent 等到 A 的权限和数据返回。</li><li><a href="#us12632384b2-fig-2-b-done">再从本地完成 B</a> B 的副本与权限仍有效时，I/O agent 可直接访问此前暂存的数据。</li></ul>
-  <p class="figure-evidence">原图 4；说明书归档段 0014、0033、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US12632384B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>无缓存外设</dt><dd>144</dd></div><div><dt>A 所属内存控制器</dt><dd>120B</dd></div><div><dt>B 所属内存控制器</dt><dd>120A</dd></div><div><dt>缓存代理</dt><dd>110</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　目录结果在本例引入哪些等待</h3>
-    <p id="fig-3-basis">表中对照第一次目录查询到独占读访问权可用的两个路径。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">本例事务</th><th scope="col">目录结果</th><th scope="col">权限响应之前的额外动作</th><th scope="col">对 I/O agent 的影响</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">读请求 A</th><td>命中有效副本</td><td>发 snoop 并等响应，必要时带数据</td><td>必须等 A 才能依次完成</td></tr><tr id="fig-3-table-row-2"><th scope="row">读请求 B</th><td>未见其他有效副本</td><td>无上述 snoop，按需取行数据</td><td>许可先到时暂存，不能先于 A 完成</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-basis">目录结果与等待</a> 两条路径都是读取，但是否有需更新的其他缓存副本会改变取得许可的等待。</li></ul>
-  <p class="figure-evidence">原图 4；说明书归档段 0029、0032、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>目录</dt><dd>220</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div></dl></details>
-</figure></section><section id="write"><h2>部分写输入如何与取回的原行合并</h2><p>图 4 返回到 I/O agent 内部。取得独占写访问权时返回的原行进已取回数据缓存，外设带来的新字节先进新写入数据缓存。两个来源分开保存时，合并前的 snoop 可读取当时有效的旧数据而没有混入尚未生效的外设写。</p><p>事务排到最早且权限仍然有效时，控制器才合并本次写入字节与未覆盖的旧字节，结果进合并数据缓存。说明书中的整行写可以有不同的数据返回条件。授权权利要求 7、19 明确描述保留部分未覆盖数据的情形。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　I/O agent 何时把部分写与未覆盖旧数据合并</h3>
-    <p id="fig-4-basis">分开看原来缓存行、新写字节与合并后数据。合并之前仍可响应针对原行的 snoop。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12632384b2-fig-2-b-grant" data-reading-target="us12632384b2-fig-2-b-grant">B 的独占读访问权先到</a><p>B 的目录未命中，原图没有 B 的 snoop 交换。先返回本地可用数据。</p></li><li><a href="#us12632384b2-fig-2-a-snoop" data-reading-target="us12632384b2-fig-2-a-snoop">A 需要 snoop</a><p>A 的目录命中，额外路径需要相关缓存代理更新状态并返回响应。</p></li><li><a href="#us12632384b2-fig-2-a-done" data-reading-target="us12632384b2-fig-2-a-done">A 先完成</a><p>外设的读请求须按事务顺序完成。I/O agent 等到 A 的权限和数据返回。</p></li><li><a href="#us12632384b2-fig-2-b-done" data-reading-target="us12632384b2-fig-2-b-done">再从本地完成 B</a><p>B 的副本与权限仍有效时，I/O agent 可直接访问此前暂存的数据。</p></li></ul>
+  <p class="figure-evidence">原图 4；说明书归档段 0014、0033、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">9 项</span></summary><dl><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>无缓存外设</dt><dd>144</dd></div><div><dt>A 所属内存控制器</dt><dd>120B</dd></div><div><dt>B 所属内存控制器</dt><dd>120A</dd></div><div><dt>缓存代理</dt><dd>110</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">目录结果在本例引入哪些等待</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">表中对照第一次目录查询到独占读访问权可用的两个路径。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="目录结果在本例引入哪些等待"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">本例事务</th><th scope="col">目录结果</th><th scope="col">权限响应之前的额外动作</th><th scope="col">对 I/O agent 的影响</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">读请求 A</th><td>命中有效副本</td><td>发 snoop 并等响应，必要时带数据</td><td>必须等 A 才能依次完成</td></tr><tr id="fig-3-table-row-2"><th scope="row">读请求 B</th><td>未见其他有效副本</td><td>无上述 snoop，按需取行数据</td><td>许可先到时暂存，不能先于 A 完成</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-basis" data-reading-target="fig-3-basis">目录结果与等待</a><p>两条路径都是读取，但是否有需更新的其他缓存副本会改变取得许可的等待。</p></li></ul>
+  <p class="figure-evidence">原图 4；说明书归档段 0029、0032、0042、0043、0044；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>目录</dt><dd>220</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div></dl></details>
+</figure></section><section id="write" class="article-section reading-chapter" aria-labelledby="write-title"><h2 id="write-title">部分写输入如何与取回的原行合并</h2><p>图 4 返回到 I/O agent 内部。取得独占写访问权时返回的原行进已取回数据缓存，外设带来的新字节先进新写入数据缓存。两个来源分开保存时，合并前的 snoop 可读取当时有效的旧数据而没有混入尚未生效的外设写。</p><p>事务排到最早且权限仍然有效时，控制器才合并本次写入字节与未覆盖的旧字节，结果进合并数据缓存。说明书中的整行写可以有不同的数据返回条件。授权权利要求 7、19 明确描述保留部分未覆盖数据的情形。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">I/O agent 何时把部分写与未覆盖旧数据合并</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12632384B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">分开看原来缓存行、新写字节与合并后数据。合并之前仍可响应针对原行的 snoop。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="I/O agent 何时把部分写与未覆盖旧数据合并" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 585" role="img" aria-labelledby="us12632384b2-fig-4-svg-title us12632384b2-fig-4-svg-desc">
 <title id="us12632384b2-fig-4-svg-title">I/O agent 何时把部分写与未覆盖旧数据合并</title>
 <desc id="us12632384b2-fig-4-svg-desc">分开看原来缓存行、新写字节与合并后数据。合并之前仍可响应针对原行的 snoop。</desc>
@@ -109,12 +182,21 @@
 <text x="48" y="62" class="signal-title" text-anchor="start">部分写先分开暂存数据，轮到该事务时才合并</text>
 <text x="49" y="538" class="legend" text-anchor="start">旧行也可能在合并前因 snoop 失效，这时要重新判断访问条件。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12632384b2-fig-4-old">已取回数据缓存</a> 独占写访问权请求返回的原行可单独暂存，并保持未修改版本。</li><li><a href="#us12632384b2-fig-4-new">新写入数据缓存</a> 待处理外设写的数据先留在这里，等依赖解析。</li><li><a href="#us12632384b2-fig-4-merge">I/O agent 控制器</a> 写请求排到队首且有效权限可用时，从两个缓存读取相应字节。</li><li><a href="#us12632384b2-fig-4-result">合并数据缓存</a> 本次写只替换覆盖范围，未覆盖部分保留原行字节。</li></ul>
-  <p class="figure-evidence">原图 3A；说明书归档段 0036、0037、0038、0039、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12632384B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>I/O agent 控制器</dt><dd>310</dd></div><div><dt>已取回数据缓存</dt><dd>322</dd></div><div><dt>新写入数据缓存</dt><dd>326</dd></div><div><dt>合并数据缓存</dt><dd>324</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div></dl></details>
-</figure></section><section id="recover"><h2>预取行被 snoop 后，什么时候重新向互连请求</h2><p>图 5 展开说明书的边界条件。I/O agent 在完成先到事务之前，可能收到针对已在本地暂存的缓存行的 snoop。放弃权限后本地行失效，此时已完成的预取不能推进剩余读请求。控制器按同一行的待处理请求数量以及可选的队列位置判断是否重新申请。</p><p>¶0048 的实现达到数量阈值会重取独占读访问权。少于阈值可以处理余下读而不先重取独占权，权利要求 4、5 组合描述该分支。性能取决于取权限与前序执行实际重叠多少、被 snoop 撤销概率、相同缓存行合并数量以及额外竞用。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　放弃独占读访问权后可按剩余同址请求数重取</h3>
-    <p id="fig-5-basis">把 snoop 撤销、失效和重新获取权限间的决策展开，解释提前取行何时仍会在后续阻塞。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12632384b2-fig-4-old" data-reading-target="us12632384b2-fig-4-old">已取回数据缓存</a><p>独占写访问权请求返回的原行可单独暂存，并保持未修改版本。</p></li><li><a href="#us12632384b2-fig-4-new" data-reading-target="us12632384b2-fig-4-new">新写入数据缓存</a><p>待处理外设写的数据先留在这里，等依赖解析。</p></li><li><a href="#us12632384b2-fig-4-merge" data-reading-target="us12632384b2-fig-4-merge">I/O agent 控制器</a><p>写请求排到队首且有效权限可用时，从两个缓存读取相应字节。</p></li><li><a href="#us12632384b2-fig-4-result" data-reading-target="us12632384b2-fig-4-result">合并数据缓存</a><p>本次写只替换覆盖范围，未覆盖部分保留原行字节。</p></li></ul>
+  <p class="figure-evidence">原图 3A；说明书归档段 0036、0037、0038、0039、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>I/O agent 控制器</dt><dd>310</dd></div><div><dt>已取回数据缓存</dt><dd>322</dd></div><div><dt>新写入数据缓存</dt><dd>326</dd></div><div><dt>合并数据缓存</dt><dd>324</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>snoop 响应</dt><dd>227</dd></div></dl></details>
+</figure></section><section id="recover" class="article-section reading-chapter" aria-labelledby="recover-title"><h2 id="recover-title">预取行被 snoop 后，什么时候重新向互连请求</h2><p>图 5 展开说明书的边界条件。I/O agent 在完成先到事务之前，可能收到针对已在本地暂存的缓存行的 snoop。放弃权限后本地行失效，此时已完成的预取不能推进剩余读请求。控制器按同一行的待处理请求数量以及可选的队列位置判断是否重新申请。</p><p>¶0048 的实现达到数量阈值会重取独占读访问权。少于阈值可以处理余下读而不先重取独占权，权利要求 4、5 组合描述该分支。性能取决于取权限与前序执行实际重叠多少、被 snoop 撤销概率、相同缓存行合并数量以及额外竞用。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">放弃独占读访问权后可按剩余同址请求数重取</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12632384B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">把 snoop 撤销、失效和重新获取权限间的决策展开，解释提前取行何时仍会在后续阻塞。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="放弃独占读访问权后可按剩余同址请求数重取" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" role="img" aria-labelledby="us12632384b2-fig-5-svg-title us12632384b2-fig-5-svg-desc">
 <title id="us12632384b2-fig-5-svg-title">放弃独占读访问权后可按剩余同址请求数重取</title>
 <desc id="us12632384b2-fig-5-svg-desc">把 snoop 撤销、失效和重新获取权限间的决策展开，解释提前取行何时仍会在后续阻塞。</desc>
@@ -141,12 +223,14 @@
 <text x="47" y="60" class="signal-title" text-anchor="start">当预先取得的缓存行权限在使用前被 snoop 撤销</text>
 <text x="48" y="519" class="legend" text-anchor="start">说明书允许不同阈值或考虑排队位置。这里画出读请求的一个按数量判定实例。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12632384b2-fig-5-on-snoop">收到针对本行的 snoop</a> I/O agent 放弃权限，失效本地行。目标外设读此时可能尚未完成。</li><li><a href="#us12632384b2-fig-5-count">统计同一行的待处理读</a> 说明书按同一缓存行保留的请求数决定是否值得提前重取。</li><li><a href="#us12632384b2-fig-5-threshold">达到阈值</a> 再次发起独占读访问权请求，收到数据后仍按外设顺序使用。</li><li><a href="#us12632384b2-fig-5-under">少于阈值</a> 权利要求 5 指定不重取独占读访问权而继续处理的情况。</li></ul>
-  <p class="figure-evidence">原图 3B、5；说明书归档段 0015、0035、0041、0047、0048、0049；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US12632384B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>I/O agent 控制器</dt><dd>310</dd></div><div><dt>已取回数据缓存</dt><dd>322</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>接收数据与独占读访问权</dt><dd>530</dd></div></dl></details>
-</figure></section><section id="scope"><h2>授权权项中的发出、取得和完成顺序</h2><p>第 1、10 项明确要求先发第一条读的独占读访问权请求，后发第二条，随后第二条的权限先于第一条取得。第 2 项另写明设备读请求按第一条、第二条的次序完成。第 15 项针对可用于制造的电路设计信息，另要求获得至少一个写请求的独占写访问权。</p><p>说明书以取回缓存行超过 500 个时钟周期举例，计时对象是取行的等待。工程对比可分别测设备读请求到退休、取得权限到实际使用的等待，以及缓存行由于 snoop 被过早释放的比例。文献没有为这三个量给出产品测试结果。</p></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12632384b2-fig-5-on-snoop" data-reading-target="us12632384b2-fig-5-on-snoop">收到针对本行的 snoop</a><p>I/O agent 放弃权限，失效本地行。目标外设读此时可能尚未完成。</p></li><li><a href="#us12632384b2-fig-5-count" data-reading-target="us12632384b2-fig-5-count">统计同一行的待处理读</a><p>说明书按同一缓存行保留的请求数决定是否值得提前重取。</p></li><li><a href="#us12632384b2-fig-5-threshold" data-reading-target="us12632384b2-fig-5-threshold">达到阈值</a><p>再次发起独占读访问权请求，收到数据后仍按外设顺序使用。</p></li><li><a href="#us12632384b2-fig-5-under" data-reading-target="us12632384b2-fig-5-under">少于阈值</a><p>权利要求 5 指定不重取独占读访问权而继续处理的情况。</p></li></ul>
+  <p class="figure-evidence">原图 3B、5；说明书归档段 0015、0035、0041、0047、0048、0049；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>I/O agent 控制器</dt><dd>310</dd></div><div><dt>已取回数据缓存</dt><dd>322</dd></div><div><dt>独占访问权请求</dt><dd>215</dd></div><div><dt>独占访问权响应</dt><dd>217</dd></div><div><dt>snoop 请求</dt><dd>225</dd></div><div><dt>接收数据与独占读访问权</dt><dd>530</dd></div></dl></details>
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">授权权项中的发出、取得和完成顺序</h2><p>第 1、10 项明确要求先发第一条读的独占读访问权请求，后发第二条，随后第二条的权限先于第一条取得。第 2 项另写明设备读请求按第一条、第二条的次序完成。第 15 项针对可用于制造的电路设计信息，另要求获得至少一个写请求的独占写访问权。</p><p>说明书以取回缓存行超过 500 个时钟周期举例，计时对象是取行的等待。工程对比可分别测设备读请求到退休、取得权限到实际使用的等待，以及缓存行由于 snoop 被过早释放的比例。文献没有为这三个量给出产品测试结果。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、10、15 项；全文核对覆盖 85 个说明书归档段与 19 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -176,6 +260,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统包含内存控制器、处理器、互连与外设桥；I/O 代理顺次发出两个独占读请求、反序获得权限，并为无缓存外设代存数据。原图 1–4。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>在分别取得两行权限后，仍先完成外设的第一笔读，再完成第二笔。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>第一笔读完成后，按是否还有同址读决定释放独占读权限。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>第一笔读完成前可响应 snoop，失效本地行并让出独占读所有权。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>待处理同址读少于门槛时，无须重新建立独占读权限。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>为第三行提出独占写申请，排除外部有效副本，收行后写入。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>用两处缓存分别保存部分数据并合并，保留同一行未覆盖部分。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>加入另一 I/O 代理，桥接不同类别的外设。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>把系统内存纳入装置边界。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>方法规定代理桥接、接收外设读写、依次发独占读请求、反序获得权限和代存数据。原图 2、4–5。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>I/O 代理对第一行的数据处理一组读请求。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>第一和第二读请求处于非宽松事务定序，第一笔在前。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>第一行权限请求使其他 I/O 代理收到 snoop 并让出独占读权限。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>第一行独占读权限在未写该行的情况下释放。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>非暂态介质提供可用于制造硬件的设计信息。电路实现反序读权限及至少一笔写的独占写所有权。原图 3A、4、6。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>电路设计进一步要求 I/O 代理为无缓存外设暂存数据。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>对第一行完成多笔读后，释放该行独占读权限。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>为第三行申请独占写并排除外部有效副本，完成写后释放权限。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12632384B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>原行数据和新写数据分存再合并，保持未覆盖的部分不变。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12632384B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12632384B2#knowledge">在关系图谱中定位 US12632384B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12625723B2</code>
+  </div>
+  <h3><a href="US12625723B2.html">I/O agent 用绑定计数器保证跨类型事务顺序</a></h3>
+  <p class="related-edge-label">I/O 事务的发出与完成</p>
+  <p class="related-edge-summary">US12632384B2 权 1 允许先取得较晚发出请求的独占读所有权，权 2 另规定先完成较早的外设读。US12625723B2 权 8 用类型计数器控制较年轻的异类事务何时可发入流水线。对照时分别记录发出、所有权到达及外设端完成。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12625723B2.html#claim-8">对照篇权项 8</a><a href="US12625723B2.html#fig-2">对照篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#ownership">哪些硬件持有外设可用的数据副本</a></li><li><a href="#in-order">B 的权限先到，外设为什么先收到 A</a></li><li><a href="#write">部分写输入如何与取回的原行合并</a></li><li><a href="#recover">预取行被 snoop 后，什么时候重新向互连请求</a></li><li><a href="#scope">授权权项中的发出、取得和完成顺序</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2026-05-19</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-04-05</dd></div>
+      <div><dt>美国申请日</dt><dd>2023-01-09</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/151,834</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0831、G06F12/063、G06F12/0835 <details class="inline-more"><summary>其余 7 项</summary><span>G06F12/0891、G06F13/1668、G06F9/467、G06F2212/1004、G06F2212/1016、G06F2212/1024、G06F2212/621</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Gaurav Garg、Sagi Lahav、Lital Levy-Rubin、Gerard Williams, III <details class="inline-more"><summary>其余 6 位</summary><span>Samer Nassar、Per H. Hammarlund、Harshavardhan Kaushikkar、Srinivasa Rangan Sridharan、Jeff Gonion、James Vash</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US12632384B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12632384B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

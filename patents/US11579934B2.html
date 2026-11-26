@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>线程组的 DVFS 运行点怎样受热与功率限制 · US11579934B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11579934B2</code> · <a href="https://patents.google.com/patent/US11579934B2/en">专利全文</a></p>
-<h1>线程组的 DVFS 运行点怎样受热与功率限制</h1><p class="reading-question">线程组需要更高性能时，谁推荐核型和运行点，谁设置 P-core cluster 与 E-core cluster 最终使用的运行点？</p>
-<p class="reading-answer">闭环性能控制器（CLPC）把线程组执行指标映射为核型建议与动态电压频率调节（DVFS）运行点。调度器依据核型建议及可调度核掩码安排线程，电源管理器设置 CPU cluster 运行点。第 1 项限定了在建议值与控制量上限查表结果不同时使用后者。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-02-14</dd></div><div><dt>申请号</dt><dd>US17/208,928</dd></div><div><dt>最早优先权</dt><dd>2017-06-04</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeremy C. Andrus、John G. Dorsey、James M. Magee、Daniel A. Chimene、Cyril de la Cropte de Chanterac、Bryan R. Hinch、Aditya Venkataraman、Andrei Dorofeev、Nigel R. Gamble、Russell A. Blaine、Constantin Pistol、James S. ISMAIL</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#recommendation">先分清建议核型和设置运行点</a></li><li><a href="#clamp">两种运行点不同时，CPU cluster 采用哪一个</a></li><li><a href="#spillover">外溢调度要等待多久</a></li><li><a href="#average-power">两种时间尺度为何能提前限制平均功率</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="recommendation"><h2>先分清建议核型和设置运行点</h2><p>线程开始运行后，调度器把实际执行产生的指标归到线程组。可运行至上核的等待、CPU cluster 驻留时间、工作间隔完成度分别反映调度竞争、运行位置和进度。工作间隔对象（WIO）可把为同一周期任务协作的线程放在同一归属下，执行指标随归属计算。</p><p>图 1 上半部显示活跃线程组的性能反馈。CLPC 把核型建议发给 OS 调度器，并将各核型汇总的推荐 DVFS 运行点交给控制量限制器。原图 3 中性能映射的 P DVFM 与 E DVFM 是线程组的候选信号。汇总和限制后，电源管理器收到各 CPU cluster 的 DVFS 运行点。快速裸片温度回路按核型给出限制，功率、能效和发射节流率也可参与上限计算。</p><p>第 6、19、29 项写的是硬件发射节流与控制量上限。测得或估计的处理器电流越过上限时，硬件可阻止指令或微操作从保留站发射，以抑制稳压器至处理器复合体供电网络的电压瞬降（droop）。发射节流率按采样窗内被阻塞的槽位数除以周期数计算。控制器随后经功率映射限制 CPU cluster 的 DVFS 运行点。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　性能推荐与热控限制分别抵达调度器和电源管理器</h3>
-    <p id="fig-1-basis">核型建议和可调度核掩码交给 OS 调度器。电源管理器接收各 CPU cluster 的 DVFS 运行点，硬件发射节流读取供电电流。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11579934B2 线程组的 DVFS 运行点怎样受热与功率限制 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-clpc" href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a>
+  </nav>
+  <p class="document-id">
+    <code>US11579934B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2023-02-14">2023-02-14</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11579934B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>线程组的 DVFS 运行点怎样受热与功率限制</h1>
+  <p class="english-title" lang="en">Scheduler for amp architecture with closed loop performance and thermal controller</p>
+  <p class="document-question">线程组需要更高性能时，谁推荐核型和运行点，谁设置 P-core cluster 与 E-core cluster 最终使用的运行点？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#recommendation">先分清建议核型和设置运行点</a></li><li><a href="#clamp">两种运行点不同时，CPU cluster 采用哪一个</a></li><li><a href="#spillover">外溢调度要等待多久</a></li><li><a href="#average-power">两种时间尺度为何能提前限制平均功率</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+<a class="lab-link" href="../lab.html#clpc-frame">在原型中复算 →</a>
+    </div>
+    <p class="reading-answer">闭环性能控制器（CLPC）把线程组执行指标映射为核型建议与动态电压频率调节（DVFS）运行点。调度器依据核型建议及可调度核掩码安排线程，电源管理器设置 CPU cluster 运行点。第 1 项限定了在建议值与控制量上限查表结果不同时使用后者。</p>
+  </section>
+  <div id="mechanism"><section id="recommendation" class="article-section reading-chapter" aria-labelledby="recommendation-title"><h2 id="recommendation-title">先分清建议核型和设置运行点</h2><p>线程开始运行后，调度器把实际执行产生的指标归到线程组。可运行至上核的等待、CPU cluster 驻留时间、工作间隔完成度分别反映调度竞争、运行位置和进度。工作间隔对象（WIO）可把为同一周期任务协作的线程放在同一归属下，执行指标随归属计算。</p><p>图 1 上半部展示活跃线程组的性能反馈。CLPC 把核型建议发给 OS 调度器，并将各核型汇总的推荐 DVFS 运行点交给控制量限制器；原图 3 中性能映射输出的 P DVFM 与 E DVFM 是线程组级候选信号。</p><p>经汇总与上限裁决后，电源管理器收到各 CPU cluster 的最终 DVFS 运行点。快速裸片温度回路按核型给出限制，功率、能效与发射节流率也可共同参与上限计算。</p><p>第 6、19、29 项写的是硬件发射节流与控制量上限。测得或估计的处理器电流越过上限时，硬件可阻止指令或微操作从保留站发射，以抑制稳压器至处理器复合体供电网络的电压瞬降（droop）。发射节流率按采样窗内被阻塞的槽位数除以周期数计算。控制器随后经功率映射限制 CPU cluster 的 DVFS 运行点。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">性能推荐与热控限制分别抵达调度器和电源管理器</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11579934B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">核型建议和可调度核掩码交给 OS 调度器。电源管理器接收各 CPU cluster 的 DVFS 运行点，硬件发射节流读取供电电流。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="性能推荐与热控限制分别抵达调度器和电源管理器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 564" role="img" aria-labelledby="us11579934b2-fig-1-svg-title us11579934b2-fig-1-svg-desc">
 <title id="us11579934b2-fig-1-svg-title">性能推荐与热控限制分别抵达调度器和电源管理器</title>
 <desc id="us11579934b2-fig-1-svg-desc">核型建议和可调度核掩码交给 OS 调度器。电源管理器接收各 CPU cluster 的 DVFS 运行点，硬件发射节流读取供电电流。</desc>
@@ -44,12 +90,21 @@
 <g id="us11579934b2-fig-1-throttle-rate"><rect x="316" y="413" width="200" height="70" rx="6" fill="#f5f5f5"/><rect x="316" y="413" width="200" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="416" y="439" class="node-name" text-anchor="middle">发射节流率控制器</text><text x="416" y="461" class="node-detail" text-anchor="middle">阻塞槽位数 ÷ 采样窗周期数</text></g>
 <text x="44" y="533" class="legend" text-anchor="start">硬件发射节流与 CPU cluster DVFS 运行点限制处于不同控制环。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11579934b2-fig-1-metrics">线程组观测</a> 线程组观测模块按线程组标识汇总样本。WIO 或 IPC 改变归属后，按新归属统计。</li><li><a href="#us11579934b2-fig-1-recommend">核型建议</a> 核型建议用于选择目标运行队列。推荐运行点从 CLPC 的另一条路径送往控制量限制器。</li><li><a href="#us11579934b2-fig-1-cap">控制量限制器</a> 快速裸片温度回路按核型提供上限，其他控制回路给出整套处理器复合体的限制。功率映射把控制量上限转换成各 cluster 允许的 DVFS 运行点。</li><li><a href="#us11579934b2-fig-1-core-mask">可调度核掩码</a> 可调度核掩码变化约束新的线程派发。清位后，正执行的线程仍可运行到后续调度事件。</li><li><a href="#us11579934b2-fig-1-set-point">各 cluster DVFS 运行点</a> 原图 3 将送给电源管理器的值标为 E-core 与 P-core DVFS states。电源管理器按各 CPU cluster 执行设置。</li><li><a href="#us11579934b2-fig-1-issue-throttle">硬件指令发射节流</a> 为抑制稳压器至处理器复合体供电网络的 droop，硬件检测到电流超限后可阻止部分指令或微操作发射。</li><li><a href="#us11579934b2-fig-1-throttle-rate">发射节流率控制器</a> 按采样窗内的阻塞发射槽位数除以处理器复合体周期数。控制器依据目标节流率生成控制量上限，通过功率映射压低允许的 DVFS 运行点。</li></ul>
-  <p class="figure-evidence">原图 2、3、4A、4B；说明书归档段 0059、0066、0068、0070、0073、0074、0091、0093、0095、0096、0101、0104、0105、0106、0111；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00029" aria-label="原文权利要求 29">29</a> <a href="../diagrams/US11579934B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>线程组观测模块</dt><dd>212</dd></div><div><dt>闭环性能控制器</dt><dd>300</dd></div><div><dt>核型建议</dt><dd>237</dd></div><div><dt>OS 调度器</dt><dd>210</dd></div><div><dt>E 核运行队列与 P 核运行队列</dt><dd>215／220</dd></div><div><dt>快速裸片温度回路</dt><dd>401</dd></div><div><dt>控制量限制器</dt><dd>400</dd></div><div><dt>可调度核掩码</dt><dd>374</dd></div><div><dt>E-core cluster 和 P-core cluster 的 DVFS 运行点</dt><dd>371／372</dd></div><div><dt>电源管理器</dt><dd>240</dd></div><div><dt>峰值功耗保护的发射节流率</dt><dd>407</dd></div><div><dt>发射节流率控制器</dt><dd>420</dd></div><div><dt>原图中性能映射给线程组的 P-core／E-core 候选运行点信号</dt><dd>P DVFM／E DVFM</dd></div></dl></details>
-</figure></section><section id="clamp"><h2>两种运行点不同时，CPU cluster 采用哪一个</h2><p>第 1 项权利要求依次写了查表、接收不同的建议和设置三个动作。先用控制量上限索引功率映射，取目标 cluster 的第一运行点。收到线程执行处于不同的第二运行点的建议后，控制路径设置第一运行点。第 14、24 项分别把相近的操作限定到介质和系统。</p><p>实施例提供了进一步的运行时细节。同核型的活跃线程组建议可取最大值，再和周期、异步限值在档位域取最小值。图 2 的冲突时序只画第 1 项所述动作，表 3 另以数值说明同一 cluster 与不同 cluster 各走哪张映射。读第 11 项时再回到图 1 的核型传感器与运行队列。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　从查功率映射到设置同一 cluster</h3>
-    <p id="fig-2-basis">先由限制侧得到第一运行点 A，再接收第二运行点 B。第 1 项要求 A 与 B 不同时设置 A。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11579934b2-fig-1-metrics" data-reading-target="us11579934b2-fig-1-metrics">线程组观测</a><p>线程组观测模块按线程组标识汇总样本。WIO 或 IPC 改变归属后，按新归属统计。</p></li><li><a href="#us11579934b2-fig-1-recommend" data-reading-target="us11579934b2-fig-1-recommend">核型建议</a><p>核型建议用于选择目标运行队列。推荐运行点从 CLPC 的另一条路径送往控制量限制器。</p></li><li><a href="#us11579934b2-fig-1-cap" data-reading-target="us11579934b2-fig-1-cap">控制量限制器</a><p>快速裸片温度回路按核型提供上限，其他控制回路约束整个处理器复合体；功率映射再将控制量上限转换为各 cluster 允许的 DVFS 运行点。</p></li><li><a href="#us11579934b2-fig-1-core-mask" data-reading-target="us11579934b2-fig-1-core-mask">可调度核掩码</a><p>可调度核掩码变化约束新的线程派发。清位后，正执行的线程仍可运行到后续调度事件。</p></li><li><a href="#us11579934b2-fig-1-set-point" data-reading-target="us11579934b2-fig-1-set-point">各 cluster DVFS 运行点</a><p>原图 3 将送给电源管理器的结果标为 E-core 与 P-core DVFS states，由电源管理器按各 CPU cluster 实际落地设置。</p></li><li><a href="#us11579934b2-fig-1-issue-throttle" data-reading-target="us11579934b2-fig-1-issue-throttle">硬件指令发射节流</a><p>为抑制稳压器至处理器复合体供电网络的 droop，硬件检测到电流超限后可阻止部分指令或微操作发射。</p></li><li><a href="#us11579934b2-fig-1-throttle-rate" data-reading-target="us11579934b2-fig-1-throttle-rate">发射节流率控制器</a><p>按采样窗内的阻塞发射槽位数除以处理器复合体周期数。控制器依据目标节流率生成控制量上限，通过功率映射压低允许的 DVFS 运行点。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4A、4B；说明书归档段 0059、0066、0068、0070、0073、0074、0091、0093、0095、0096、0101、0104、0105、0106、0111；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00029" aria-label="原文权利要求 29">29</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">13 项</span></summary><dl><div><dt>线程组观测模块</dt><dd>212</dd></div><div><dt>闭环性能控制器</dt><dd>300</dd></div><div><dt>核型建议</dt><dd>237</dd></div><div><dt>OS 调度器</dt><dd>210</dd></div><div><dt>E 核运行队列与 P 核运行队列</dt><dd>215／220</dd></div><div><dt>快速裸片温度回路</dt><dd>401</dd></div><div><dt>控制量限制器</dt><dd>400</dd></div><div><dt>可调度核掩码</dt><dd>374</dd></div><div><dt>E-core cluster 和 P-core cluster 的 DVFS 运行点</dt><dd>371／372</dd></div><div><dt>电源管理器</dt><dd>240</dd></div><div><dt>峰值功耗保护的发射节流率</dt><dd>407</dd></div><div><dt>发射节流率控制器</dt><dd>420</dd></div><div><dt>原图中性能映射给线程组的 P-core／E-core 候选运行点信号</dt><dd>P DVFM／E DVFM</dd></div></dl></details>
+</figure></section><section id="clamp" class="article-section reading-chapter" aria-labelledby="clamp-title"><h2 id="clamp-title">两种运行点不同时，CPU cluster 采用哪一个</h2><p>第 1 项权利要求依次写了查表、接收不同的建议和设置三个动作。先用控制量上限索引功率映射，取目标 cluster 的第一运行点。收到线程执行处于不同的第二运行点的建议后，控制路径设置第一运行点。第 14、24 项分别把相近的操作限定到介质和系统。</p><p>实施例提供了进一步的运行时细节。同核型的活跃线程组建议可取最大值，再和周期、异步限值在档位域取最小值。图 2 的冲突时序只画第 1 项所述动作，表 3 另以数值说明同一 cluster 与不同 cluster 各走哪张映射。读第 11 项时再回到图 1 的核型传感器与运行队列。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">从查功率映射到设置同一 cluster</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11579934B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">先由限制侧得到第一运行点 A，再接收第二运行点 B。第 1 项要求 A 与 B 不同时设置 A。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="从查功率映射到设置同一 cluster" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="us11579934b2-fig-2-svg-title us11579934b2-fig-2-svg-desc">
 <title id="us11579934b2-fig-2-svg-title">从查功率映射到设置同一 cluster</title>
 <desc id="us11579934b2-fig-2-svg-desc">先由限制侧得到第一运行点 A，再接收第二运行点 B。第 1 项要求 A 与 B 不同时设置 A。</desc>
@@ -70,19 +125,37 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">电源管理器</text>
 <text x="28" y="388" class="legend" text-anchor="start">按权利要求 1 的查表、接收建议、设置次序。未规定各步耗时。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11579934b2-fig-2-lookup">按目标 cluster 映射得 A</a> 第一运行点 A 来自控制量上限索引到该 cluster 的功率映射。</li><li><a href="#us11579934b2-fig-2-recommend">推荐同一 cluster 以 B 运行</a> 第二运行点 B 随待执行线程的建议到来，比较对象仍是同一 cluster。</li><li><a href="#us11579934b2-fig-2-commit">设为 A</a> 权利要求只对所述冲突动作给出约束。周期限值、异步限值与请求取最小值属于说明书实施例。</li></ul>
-  <p class="figure-evidence">原图 5、12B、17；说明书归档段 0074、0091、0104、0105、0109、0111、0167、0168、0169、0211；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00024" aria-label="原文权利要求 24">24</a> <a href="../diagrams/US11579934B2/fig-2.html">打开独立图稿</a></p>
-  
-</figure><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　同一 cluster 的请求先合并，不同 cluster 分别处理</h3>
-    <p id="fig-3-basis">示例数值表示无量纲控制量，档位读自各自功率映射。表中没有假定具体频点或瓦数。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">场景</th><th scope="col">推荐输入</th><th scope="col">查表与选择</th></tr></thead><tbody><tr id="fig-3-same"><th scope="row">A、B 都推荐 P-core cluster</th><td>max(0.8, 0.6) = 0.8</td><td>按 P-core cluster 性能映射形成需求档</td></tr><tr id="fig-3-cap"><th scope="row">P-core cluster 限制控制量为 0.7</th><td>需求控制量 0.8</td><td>分别查出需求档、限制档，实施例取较低档</td></tr><tr id="fig-3-separate"><th scope="row">A 推荐 P，B 推荐 E</th><td>各 cluster 保留各自建议</td><td>P 与 E 分别查映射、应用上限</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-same">A、B 都推荐 P-core cluster</a> 说明书在控制量或档位域分别描述同核型汇总。表中按控制量先求最大并查同核型的对应档位演示。</li><li><a href="#fig-3-cap">P-core cluster 限制控制量为 0.7</a> 形成限制档与需求档后再比较。数字 0.7 与 0.8 在示例中是输入表的索引。</li><li><a href="#fig-3-separate">A 推荐 P，B 推荐 E</a> 两个 cluster 分别查功率映射，并计算各自的运行点上限。</li></ul>
-  <p class="figure-evidence">原图 5、12B；说明书归档段 0074、0091、0104、0109、0111、0167、0169；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> </p>
-  
-</figure></section><section id="spillover"><h2>外溢调度要等待多久</h2><p>当 P-eligible 线程已可运行、P 核不可用且 E 核可用时，实施例允许为 E 核设置延后核间中断（DIPI）。调度器在期限内等到 P 核，就撤销 E 核中断，让该线程在 P 核运行。期限先到，则唤醒 E 核并走外溢路径。</p><p>比较这一策略时，记录线程成为可运行到实际上核的时间，以及中断取消、目标核唤醒与随后的驻留。频率变化用 CPU cluster DVFS 轨迹另行记录。快速 P 核若未在期限内出现，等待本身就会增加 E 核上核的延迟。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　是否在 E 核定时器到期前等到可用 P 核</h3>
-    <p id="fig-4-basis">从外溢条件开始，只跟踪原图 18A–18B 的分支。期限之前能等到 P 核才取消 E 核中断。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11579934b2-fig-2-lookup" data-reading-target="us11579934b2-fig-2-lookup">按目标 cluster 映射得 A</a><p>第一运行点 A 来自控制量上限索引到该 cluster 的功率映射。</p></li><li><a href="#us11579934b2-fig-2-recommend" data-reading-target="us11579934b2-fig-2-recommend">推荐同一 cluster 以 B 运行</a><p>第二运行点 B 随待执行线程的建议到来，比较对象仍是同一 cluster。</p></li><li><a href="#us11579934b2-fig-2-commit" data-reading-target="us11579934b2-fig-2-commit">设为 A</a><p>权利要求只对所述冲突动作给出约束。周期限值、异步限值与请求取最小值属于说明书实施例。</p></li></ul>
+  <p class="figure-evidence">原图 5、12B、17；说明书归档段 0074、0091、0104、0105、0109、0111、0167、0168、0169、0211；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00024" aria-label="原文权利要求 24">24</a></p>
+
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">同一 cluster 的请求先合并，不同 cluster 分别处理</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">示例数值表示无量纲控制量，档位读自各自功率映射。表中没有假定具体频点或瓦数。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="同一 cluster 的请求先合并，不同 cluster 分别处理"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">场景</th><th scope="col">推荐输入</th><th scope="col">查表与选择</th></tr></thead><tbody><tr id="fig-3-same"><th scope="row">A、B 都推荐 P-core cluster</th><td>max(0.8, 0.6) = 0.8</td><td>按 P-core cluster 性能映射形成需求档</td></tr><tr id="fig-3-cap"><th scope="row">P-core cluster 限制控制量为 0.7</th><td>需求控制量 0.8</td><td>分别查出需求档、限制档，实施例取较低档</td></tr><tr id="fig-3-separate"><th scope="row">A 推荐 P，B 推荐 E</th><td>各 cluster 保留各自建议</td><td>P 与 E 分别查映射、应用上限</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-same" data-reading-target="fig-3-same">A、B 都推荐 P-core cluster</a><p>说明书在控制量或档位域分别描述同核型汇总。表中按控制量先求最大并查同核型的对应档位演示。</p></li><li><a href="#fig-3-cap" data-reading-target="fig-3-cap">P-core cluster 限制控制量为 0.7</a><p>形成限制档与需求档后再比较。数字 0.7 与 0.8 在示例中是输入表的索引。</p></li><li><a href="#fig-3-separate" data-reading-target="fig-3-separate">A 推荐 P，B 推荐 E</a><p>两个 cluster 分别查功率映射，并计算各自的运行点上限。</p></li></ul>
+  <p class="figure-evidence">原图 5、12B；说明书归档段 0074、0091、0104、0109、0111、0167、0169；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></p>
+
+</figure></section><section id="spillover" class="article-section reading-chapter" aria-labelledby="spillover-title"><h2 id="spillover-title">外溢调度要等待多久</h2><p>当 P-eligible 线程已可运行、P 核不可用且 E 核可用时，实施例允许为 E 核设置延后核间中断（DIPI）。调度器在期限内等到 P 核，就撤销 E 核中断，让该线程在 P 核运行。期限先到，则唤醒 E 核并走外溢路径。</p><p>比较这一策略时，记录线程成为可运行到实际上核的时间，以及中断取消、目标核唤醒与随后的驻留。频率变化用 CPU cluster DVFS 轨迹另行记录。快速 P 核若未在期限内出现，等待本身就会增加 E 核上核的延迟。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 条件判定与分支</p>
+        <h3 id="fig-4-title">是否在 E 核定时器到期前等到可用 P 核</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11579934B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">从外溢条件开始，只跟踪原图 18A–18B 的分支。期限之前能等到 P 核才取消 E 核中断。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="是否在 E 核定时器到期前等到可用 P 核" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="us11579934b2-fig-4-svg-title us11579934b2-fig-4-svg-desc">
 <title id="us11579934b2-fig-4-svg-title">是否在 E 核定时器到期前等到可用 P 核</title>
 <desc id="us11579934b2-fig-4-svg-desc">从外溢条件开始，只跟踪原图 18A–18B 的分支。期限之前能等到 P 核才取消 E 核中断。</desc>
@@ -105,12 +178,21 @@
 <g id="us11579934b2-fig-4-cancel"><rect x="704" y="280" width="200" height="72" rx="6" fill="#f5f5f5"/><rect x="704" y="280" width="200" height="72" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="804" y="306" class="node-name" text-anchor="middle">取消 E 核中断</text><text x="804" y="328" class="node-detail" text-anchor="middle">在 P 核运行</text></g>
 <text x="44" y="484" class="legend" text-anchor="start">实线  请求、数据或决定    虚线  回送或可选动作</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11579934b2-fig-4-armed">启动 E 核定时器</a> 前置条件是 P-eligible 线程已可运行，当前无可用 P 核并存在可用 E 核。启动 E 核的延后中断定时器。</li><li><a href="#us11579934b2-fig-4-deadline">定时器到期？</a> 先检查期限。如果还没到，才检查 P 核。如果 P 核尚不可用就继续等待。</li><li><a href="#us11579934b2-fig-4-cancel">取消 E 核中断</a> 在期限之前发现 P 核可用，撤销 E 核中断。期限先到则已走 E 核唤醒分支，中断取消的收益随之消失。</li></ul>
-  <p class="figure-evidence">原图 7、13、18A、18B；说明书归档段 0118、0121、0122、0123、0124、0125、0171、0214、0215、0216、0217、0218、0219 <a href="../diagrams/US11579934B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>启动 E 核定时器</dt><dd>1815</dd></div><div><dt>检查定时器是否到期</dt><dd>1820</dd></div><div><dt>检查 P 核是否可用</dt><dd>1830</dd></div><div><dt>唤醒 E 核</dt><dd>1825</dd></div><div><dt>取消 E 核中断</dt><dd>1835</dd></div></dl></details>
-</figure></section><section id="average-power"><h2>两种时间尺度为何能提前限制平均功率</h2><p>原图 4B 的两个功率区（power zone）共享处理器复合体功率测量或估计值，分别用不同时间常数的低通滤波器观察短时间突发和较长时间的功率变化。每条支路用滤波功率和自身的启用边界 T−Δ 比较。越过边界时，支路把自己的功率目标 T 送给最小值选择器。未激活支路在图中等效输入为无穷大。</p><p>热管理器给出的平均功率目标也进入同一个最小值选择器。选择结果再低通平滑，与经过另一滤波器处理的实际复合体功率形成偏差。平均功率控制器据此调整控制量上限，后续再参与图 1 的全局限制。这个路径可在先到的功率信号表明热风险时收紧上限，收益依赖功率滤波与产品壳温响应的匹配。</p><p>第 4 项对减少控制量另写了两时刻条件，第二时刻要求滤波功率超过该区目标 T。第 17、27 项第二时刻采用 T−Δ。图 5 展开的是原图 4B 和说明书的 T−Δ 选择器，读第 4 项时仍需保留授权文本中的 T 条件。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　平均功率控制器怎样从两条功率区支路选择目标</h3>
-    <p id="fig-5-basis">时间常数不同的两条滤波支路可各自启用。激活以 T−Δ 为边界，激活后贡献的是 T。全局平均功率目标根据最严格的有效输入平滑更新。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11579934b2-fig-4-armed" data-reading-target="us11579934b2-fig-4-armed">启动 E 核定时器</a><p>前置条件是 P-eligible 线程已可运行，当前无可用 P 核并存在可用 E 核。启动 E 核的延后中断定时器。</p></li><li><a href="#us11579934b2-fig-4-deadline" data-reading-target="us11579934b2-fig-4-deadline">定时器到期？</a><p>先检查期限。如果还没到，才检查 P 核。如果 P 核尚不可用就继续等待。</p></li><li><a href="#us11579934b2-fig-4-cancel" data-reading-target="us11579934b2-fig-4-cancel">取消 E 核中断</a><p>在期限之前发现 P 核可用，撤销 E 核中断。期限先到则已走 E 核唤醒分支，中断取消的收益随之消失。</p></li></ul>
+  <p class="figure-evidence">原图 7、13、18A、18B；说明书归档段 0118、0121、0122、0123、0124、0125、0171、0214、0215、0216、0217、0218、0219</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>启动 E 核定时器</dt><dd>1815</dd></div><div><dt>检查定时器是否到期</dt><dd>1820</dd></div><div><dt>检查 P 核是否可用</dt><dd>1830</dd></div><div><dt>唤醒 E 核</dt><dd>1825</dd></div><div><dt>取消 E 核中断</dt><dd>1835</dd></div></dl></details>
+</figure></section><section id="average-power" class="article-section reading-chapter" aria-labelledby="average-power-title"><h2 id="average-power-title">两种时间尺度为何能提前限制平均功率</h2><p>原图 4B 的两个功率区（power zone）共享处理器复合体功率测量或估计值，分别用不同时间常数的低通滤波器观察短时间突发和较长时间的功率变化。每条支路用滤波功率和自身的启用边界 T−Δ 比较。越过边界时，支路把自己的功率目标 T 送给最小值选择器。未激活支路在图中等效输入为无穷大。</p><p>热管理器给出的平均功率目标也进入同一个最小值选择器。选择结果再低通平滑，与经过另一滤波器处理的实际复合体功率形成偏差。平均功率控制器据此调整控制量上限，后续再参与图 1 的全局限制。这个路径可在先到的功率信号表明热风险时收紧上限，收益依赖功率滤波与产品壳温响应的匹配。</p><p>第 4 项对减少控制量另写了两时刻条件，第二时刻要求滤波功率超过该区目标 T。第 17、27 项第二时刻采用 T−Δ。图 5 展开的是原图 4B 和说明书的 T−Δ 选择器，读第 4 项时仍需保留授权文本中的 T 条件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">平均功率控制器怎样从两条功率区支路选择目标</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11579934B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">时间常数不同的两条滤波支路可各自启用。激活以 T−Δ 为边界，激活后贡献的是 T。全局平均功率目标根据最严格的有效输入平滑更新。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="平均功率控制器怎样从两条功率区支路选择目标" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 669" role="img" aria-labelledby="us11579934b2-fig-5-svg-title us11579934b2-fig-5-svg-desc">
 <title id="us11579934b2-fig-5-svg-title">平均功率控制器怎样从两条功率区支路选择目标</title>
 <desc id="us11579934b2-fig-5-svg-desc">时间常数不同的两条滤波支路可各自启用。激活以 T−Δ 为边界，激活后贡献的是 T。全局平均功率目标根据最严格的有效输入平滑更新。</desc>
@@ -151,12 +233,14 @@
 <text x="31" y="618" class="legend" text-anchor="start">启用边界使用 T−Δ，进入选择器的有效目标仍为 T。</text>
 <text x="31" y="644" class="legend" text-anchor="start">功率区输出参与原图 4A 的全局限制，反馈控制量本身不以瓦为单位。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11579934b2-fig-5-zfast">中间时间尺度滤波</a> 说明书的第一个功率区有自己的滤波时间常数 τᵢ、功率目标 Tᵢ 和偏移 Δᵢ。原图把该支路的目标标为中间时间尺度目标，未给毫秒数。</li><li><a href="#us11579934b2-fig-5-enablefast">中间功率区启用比较</a> 滤波功率超过 Tᵢ−Δᵢ 时传递 Tᵢ。尚未达到边界的支路由无穷大输入占位，不改变最小值。</li><li><a href="#us11579934b2-fig-5-enableslow">突发功率区启用比较</a> 第二功率区用独立的 τᵦ 观察突发负载，以 Tᵦ−Δᵦ 为门槛。</li><li><a href="#us11579934b2-fig-5-least">平均功率目标选择</a> 从热管理器目标和当前激活的功率区目标中选最小值。即使某支路刚启用，它也仅在其目标比当前限制更低时收紧总参考值。</li><li><a href="#us11579934b2-fig-5-apply">平均功率反馈控制</a> 用平滑目标与平滑实测功率求偏差，再经平均功率反馈控制器生成无量纲控制量上限。控制量经功率映射后才约束 DVFS 运行点。</li></ul>
-  <p class="figure-evidence">原图 4A、4B；说明书归档段 0096、0102、0103、0105、0106；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00027" aria-label="原文权利要求 27">27</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00028" aria-label="原文权利要求 28">28</a> <a href="../diagrams/US11579934B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理器复合体功率</dt><dd>404</dd></div><div><dt>热管理器平均功率目标</dt><dd>406</dd></div><div><dt>两种时间尺度的功率区</dt><dd>421/422</dd></div><div><dt>平均功率目标选择器</dt><dd>423</dd></div><div><dt>功率目标／实测功率滤波</dt><dd>424/425</dd></div><div><dt>平均功率反馈控制器</dt><dd>426</dd></div><div><dt>全局功率映射</dt><dd>450</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11579934b2-fig-5-zfast" data-reading-target="us11579934b2-fig-5-zfast">中间时间尺度滤波</a><p>说明书的第一个功率区有自己的滤波时间常数 τᵢ、功率目标 Tᵢ 和偏移 Δᵢ。原图把该支路的目标标为中间时间尺度目标，未给毫秒数。</p></li><li><a href="#us11579934b2-fig-5-enablefast" data-reading-target="us11579934b2-fig-5-enablefast">中间功率区启用比较</a><p>滤波功率超过 Tᵢ−Δᵢ 时传递 Tᵢ。尚未达到边界的支路由无穷大输入占位，不改变最小值。</p></li><li><a href="#us11579934b2-fig-5-enableslow" data-reading-target="us11579934b2-fig-5-enableslow">突发功率区启用比较</a><p>第二功率区用独立的 τᵦ 观察突发负载，以 Tᵦ−Δᵦ 为门槛。</p></li><li><a href="#us11579934b2-fig-5-least" data-reading-target="us11579934b2-fig-5-least">平均功率目标选择</a><p>从热管理器目标和当前激活的功率区目标中选最小值。即使某支路刚启用，它也仅在其目标比当前限制更低时收紧总参考值。</p></li><li><a href="#us11579934b2-fig-5-apply" data-reading-target="us11579934b2-fig-5-apply">平均功率反馈控制</a><p>用平滑目标与平滑实测功率求偏差，再经平均功率反馈控制器生成无量纲控制量上限。控制量经功率映射后才约束 DVFS 运行点。</p></li></ul>
+  <p class="figure-evidence">原图 4A、4B；说明书归档段 0096、0102、0103、0105、0106；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00027" aria-label="原文权利要求 27">27</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00028" aria-label="原文权利要求 28">28</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">7 项</span></summary><dl><div><dt>处理器复合体功率</dt><dd>404</dd></div><div><dt>热管理器平均功率目标</dt><dd>406</dd></div><div><dt>两种时间尺度的功率区</dt><dd>421/422</dd></div><div><dt>平均功率目标选择器</dt><dd>423</dd></div><div><dt>功率目标／实测功率滤波</dt><dd>424/425</dd></div><div><dt>平均功率反馈控制器</dt><dd>426</dd></div><div><dt>全局功率映射</dt><dd>450</dd></div></dl></details>
 </figure></section></div>
-<p><a class="lab-link" href="../lab.html#clpc-frame">在原型中复算</a></p>
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、11、14、24 项；全文核对覆盖 278 个说明书归档段与 33 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -193,6 +277,94 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>方法查各 CPU cluster 的功率映射。若线程推荐运行点不同，设置为按控制量上限查询得到的运行点。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>额外观测第一窗口内总耗散能量，超过权项所述瞬时功率目标时参与确定控制量上限。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>窗口平均功率或平均每指令能耗分别超过目标时降低上限。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>为多功率区配置低通参数，探测滤波值从低于目标减偏移升至超过目标。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>继续监测越过目标减偏移的功率区，并下调控制量直至跟踪目标。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>若处理器电流持续超限，或硬件阻塞指令发射的数量在规定期间超过节流门槛，则降低控制量上限。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>根据 CPU cluster 的快速裸片温度限值与功率映射，确定该 cluster 的最大控制量。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>已有控制量上限越过温度路径最大值时，将其改为该最大值。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>将部分核屏蔽为不执行线程，并限制屏蔽速率。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>分别将两个 CPU cluster 限定为异构处理器的 P-core cluster 与 E-core cluster。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>装置含每核型温度传感器与运行队列，由线程组性能建议及热控制上限共同约束调度。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将处理系统配置于集成电路内。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>至少一个处理器提供其中一个或两个温度传感器。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>非暂态介质保存可执行指令，使含两类 CPU cluster 的处理系统执行限制运行点和冲突裁决。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>介质方案额外用第一时段总耗散能量参与确定控制量上限。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>平均功率或单位指令平均耗散能量超目标时下调控制量上限。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>滤波功率先低后高越过目标减偏移时降低控制量上限。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>继续跟踪该功率区并减小控制量上限，直到滤波功率跟踪目标。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>若处理器电流持续超限，或硬件阻塞指令发射的数量在规定期间超过节流门槛，则降低控制量上限。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>按每个 CPU cluster 适用的快速裸片温度上限与功率映射确定最大控制量。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>当现有控制量上限超过最大控制量时，用最大控制量替换。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-14">14</a></td><td>屏蔽选定处理器核使其不运行线程，并约束该动作的速率。</td></tr><tr id="claim-23"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00023" aria-label="原文权利要求 23">23</a></th><td><a href="#claim-14">14</a></td><td>将两个 CPU cluster 分别限定为 P-core cluster 和 E-core cluster。</td></tr><tr id="claim-24"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00024" aria-label="原文权利要求 24">24</a></th><td>独立项</td><td>含两个 CPU cluster、处理器及指令存储器，执行按控制量上限查表设置冲突运行点的操作。</td></tr><tr id="claim-25"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00025" aria-label="原文权利要求 25">25</a></th><td><a href="#claim-24">24</a></td><td>处理系统额外使用第一窗口耗散总能量确定控制量上限。</td></tr><tr id="claim-26"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00026" aria-label="原文权利要求 26">26</a></th><td><a href="#claim-24">24</a></td><td>平均功率或平均每指令能耗超过相应目标后调低上限。</td></tr><tr id="claim-27"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00027" aria-label="原文权利要求 27">27</a></th><td><a href="#claim-24">24</a></td><td>功率区滤波结果先低后高越过同一目标减偏移阈值。</td></tr><tr id="claim-28"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00028" aria-label="原文权利要求 28">28</a></th><td><a href="#claim-27">27</a></td><td>持续监测该功率区并降低控制量上限直至跟踪目标。</td></tr><tr id="claim-29"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00029" aria-label="原文权利要求 29">29</a></th><td><a href="#claim-24">24</a></td><td>若处理器电流持续超限，或硬件阻塞指令发射的数量在规定期间超过节流门槛，则降低控制量上限。</td></tr><tr id="claim-30"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00030" aria-label="原文权利要求 30">30</a></th><td><a href="#claim-24">24</a></td><td>根据 CPU cluster 的快速裸片温度与功率映射求最大控制量。</td></tr><tr id="claim-31"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00031" aria-label="原文权利要求 31">31</a></th><td><a href="#claim-30">30</a></td><td>若控制量上限超过新求出的最大值，改用该最大值。</td></tr><tr id="claim-32"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00032" aria-label="原文权利要求 32">32</a></th><td><a href="#claim-24">24</a></td><td>系统对部分处理器核屏蔽线程执行，并限制发生速度。</td></tr><tr id="claim-33"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11579934B2/en#CLM-00033" aria-label="原文权利要求 33">33</a></th><td><a href="#claim-24">24</a></td><td>两个 CPU cluster 分别由 P 核和 E 核组成。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11579934B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11579934B2#knowledge">在关系图谱中定位 US11579934B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-handoff">机制衔接</span>
+    <code>US12681552B2</code>
+  </div>
+  <h3><a href="US12681552B2.html">多电源域的性能状态选择与转换顺序</a></h3>
+  <p class="related-edge-label">目标档到切换路径</p>
+  <p class="related-edge-summary">US11579934B2 根据功率映射和控制量上限决定 CPU cluster 的运行点。US12681552B2 在收到目标性能状态后检查候选中间态，若它与另一电源域当前状态冲突便改用其他路径。若平台串接这两种控制，目标运行点获准之后，执行端仍须确认过渡路径可行。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12681552B2.html#claim-1">对照篇权项 1</a><a href="US12681552B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12306789B2</code>
+  </div>
+  <h3><a href="US12306789B2.html">按线程组需求划分同核型 CPU cluster 的性能岛</a></h3>
+  <p class="related-edge-label">选择核型与同核型内的线程放置</p>
+  <p class="related-edge-summary">两案均按线程组控制量提出运行建议。US11579934B2 围绕核型及运行点给出建议，并在热约束下安排执行。US12306789B2 为同一种核型中的 CPU cluster划分不同控制量范围的性能岛，使不同需求的线程组可以分别放置，同时保留第一组原有的控制量。</p>
+<p class="related-evidence"><a href="#claim-11">本篇权项 11</a><a href="#fig-1">本篇图表 1</a><a href="US12306789B2.html#claim-1">对照篇权项 1</a><a href="US12306789B2.html#fig-1">对照篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12530063B2</code>
+  </div>
+  <h3><a href="US12530063B2.html">热预算固定时，生产端怎样给跟不上的消费端更多功率</a></h3>
+  <p class="related-edge-label">功率预算份额与 CPU cluster 运行点</p>
+  <p class="related-edge-summary">US12530063B2 读取消费者反馈。反馈表明消费者的处理能力跟不上生产者产生工作的速度时，生产者提高相应消费者的系统功率预算份额。US11579934B2 用控制量上限查 CPU cluster 的 DVFS 映射，线程建议的运行点与查表结果不同则设置后者。两案分别决定计算单元的预算和 CPU cluster的运行点。</p>
+<p class="related-evidence"><a href="US12530063B2.html#claim-15">对照篇权项 15</a><a href="US12530063B2.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-handoff">机制衔接</span>
+    <code>US20250086009A1</code>
+  </div>
+  <h3><a href="US20250086009A1.html">用工作完成窗口选择 CPU 性能状态</a></h3>
+  <p class="related-edge-label">性能请求受功率上限约束</p>
+  <p class="related-edge-summary">US20250086009A1 根据剩余工作量和截止时间估计按时完成所需的 CPU 性能状态。US11579934B2 汇总线程组推荐的运行点，再依据 CPU cluster 的功率映射与控制量上限确定可用运行点。若功率上限使实际运行点低于性能请求，仍须检查工作能否在截止时间前完成。</p>
+<p class="related-evidence"><a href="US20250086009A1.html#claim-5">对照篇权项 5</a><a href="US20250086009A1.html#fig-4">对照篇图表 4</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11062673B2</code>
+  </div>
+  <h3><a href="US11062673B2.html">CPU 闭环调频如何使用内存控制器吞吐量</a></h3>
+  <p class="related-edge-label">闭环性能控制的观测输入</p>
+  <p class="related-edge-summary">US11062673B2 在内存控制器采样 I/O 吞吐量，对不同方向的吞吐量误差分别积分。US11579934B2 从线程组的执行指标计算控制量，推荐 CPU cluster 类型及 DVFS 运行点，再应用热与功率约束。对照时先辨认反馈输入，吞吐量和工作间隔执行指标对应不同的瓶颈。</p>
+<p class="related-evidence"><a href="US11062673B2.html#claim-1">对照篇权项 1</a><a href="US11062673B2.html#fig-1">对照篇图表 1</a><a href="#claim-11">本篇权项 11</a><a href="#fig-1">本篇图表 1</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-citation">文献引用</span>
+    <code>US12530063B2</code>
+  </div>
+  <h3><a href="US12530063B2.html">热预算固定时，生产端怎样给跟不上的消费端更多功率</a></h3>
+  <p class="related-edge-label">原文列为参考文献</p>
+  <p class="related-edge-summary">US12530063B2 的专利参考文献列出 US11579934B2。</p>
+<p class="related-evidence"><a href="https://patents.google.com/patent/US12530063B2/en#:~:text=Patent%20Citations">查看参考文献表</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#recommendation">先分清建议核型和设置运行点</a></li><li><a href="#clamp">两种运行点不同时，CPU cluster 采用哪一个</a></li><li><a href="#spillover">外溢调度要等待多久</a></li><li><a href="#average-power">两种时间尺度为何能提前限制平均功率</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2023-02-14</dd></div>
+      <div><dt>最早优先权</dt><dd>2017-06-04</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-03-22</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/208,928</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/4843、G06F9/505、G06F1/206 <details class="inline-more"><summary>其余 20 项</summary><span>G06F1/324、G06F1/3243、G06F1/329、G06F1/3296、G06F9/268、G06F9/3851、G06F9/3891、G06F9/4856、G06F9/4881、G06F9/4893、G06F9/5027、G06F9/5044、G06F9/5094、G06F9/54、G06F1/3206、G06F2209/501、G06F2209/5018、G06F2209/509、G06F9/30145、Y02D10/00</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Jeremy C. Andrus、John G. Dorsey、James M. Magee、Daniel A. Chimene <details class="inline-more"><summary>其余 8 位</summary><span>Cyril de la Cropte de Chanterac、Bryan R. Hinch、Aditya Venkataraman、Andrei Dorofeev、Nigel R. Gamble、Russell A. Blaine、Constantin Pistol、James S. ISMAIL</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11579934B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11579934B2#knowledge">关系图谱定位</a><a class="sidebar-btn sidebar-btn-accent" href="../lab.html#clpc-frame">原型实验室复算</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

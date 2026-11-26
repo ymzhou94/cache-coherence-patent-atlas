@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>分层 store 队列的预解析与数据转发 · US12775463B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12775463B2</code> · <a href="https://eureka.patsnap.com/patent/US12775463B2">专利全文</a></p>
-<h1>分层 store 队列的预解析与数据转发</h1><p class="reading-question">怎样扩大 store 队列容量，又让大部分较老 store 保留快转发路径？</p>
-<p class="reading-answer">主队列容纳较老的 store，负责向缓存提交和并行转发。主队列满时，次级队列暂存较年轻的 store，并可提前解析地址。转入主队列后再执行写入；发生 load 命中时，次级队列也有独立的重放和转发路径。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-10-27</dd></div><div><dt>申请号</dt><dd>US19/175,328</dd></div><div><dt>最早优先权</dt><dd>2023-07-26</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Nikhil Gupta、Gideon N. Levinsky、Kulin N. Kothari、Mridul Agarwal、Pankaj Lnu</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#queues">两个队列按可用槽位和指令年龄分工</a></li><li><a href="#resolve">次级队列在等空位时可以先做地址工作</a></li><li><a href="#bytes">逐字节决定从队列转发还是等待回填</a></li><li><a href="#two-pass">次级命中后先留索引，再重发取数</a></li><li><a href="#pid">为什么次级队首还要等待指定的主队列槽位</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="queues"><h2>两个队列按可用槽位和指令年龄分工</h2><p>原图 1 先给主队列的最后一格放入一个 store，随后请求进入次级队列。主队列向缓存提交并释放槽位后，次级队列最老的 store 可转入主队列。原图 3 展开为主队列的两组存储体与次级队列的一组存储体，队首指针找到最老项，队尾指针指向下一个可用项。部分实现记录将来应进入的主队列条目标识 PID，特定目标槽位尚未释放时可继续等待。</p><p>快转发的成本来自同时为多个 load 搜索 store 地址、字节覆盖和数据。说明书给出典型示例，主队列转发约四个时钟周期，次级约十一个时钟周期。这是该实施例的转发延迟口径；原图 5B 还有一条画到第 16 拍的重放流水示例，图 4 分别标注事件阶段。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　存储队列分层后，哪一层承担写缓存和并行搜索？</h3>
-    <p id="fig-1-basis">主队列有可用槽时直接接收。主队列满时，次级队列接收溢出，主槽释放后接回最老项。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12775463B2 分层 store 队列的预解析与数据转发 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US12775463B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2026-10-27">2026-10-27</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12775463B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>分层 store 队列的预解析与数据转发</h1>
+  <p class="english-title" lang="en">Hierarchical store queue circuit</p>
+  <p class="document-question">怎样扩大 store 队列容量，又让大部分较老 store 保留快转发路径？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#queues">两个队列按可用槽位和指令年龄分工</a></li><li><a href="#resolve">次级队列在等空位时可以先做地址工作</a></li><li><a href="#bytes">逐字节决定从队列转发还是等待回填</a></li><li><a href="#two-pass">次级命中后先留索引，再重发取数</a></li><li><a href="#pid">为什么次级队首还要等待指定的主队列槽位</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">主队列容纳较老的 store，负责向缓存提交和并行转发。主队列满时，次级队列暂存较年轻的 store，并可提前解析地址。转入主队列后再执行写入；发生 load 命中时，次级队列也有独立的重放和转发路径。</p>
+  </section>
+  <div id="mechanism"><section id="queues" class="article-section reading-chapter" aria-labelledby="queues-title"><h2 id="queues-title">两个队列按可用槽位和指令年龄分工</h2><p>原图 1 先给主队列的最后一格放入一个 store，随后请求进入次级队列。主队列向缓存提交并释放槽位后，次级队列最老的 store 可转入主队列。原图 3 展开为主队列的两组存储体与次级队列的一组存储体，队首指针找到最老项，队尾指针指向下一个可用项。部分实现记录将来应进入的主队列条目标识 PID，特定目标槽位尚未释放时可继续等待。</p><p>快转发的成本来自同时为多个 load 搜索 store 地址、字节覆盖和数据。说明书给出典型示例，主队列转发约四个时钟周期，次级约十一个时钟周期。这是该实施例的转发延迟口径；原图 5B 还有一条画到第 16 拍的重放流水示例，图 4 分别标注事件阶段。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">存储队列分层后，哪一层承担写缓存和并行搜索？</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12775463B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">主队列有可用槽时直接接收。主队列满时，次级队列接收溢出，主槽释放后接回最老项。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="存储队列分层后，哪一层承担写缓存和并行搜索？" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 530" role="img" aria-labelledby="us12775463b2-fig-1-svg-title us12775463b2-fig-1-svg-desc">
 <title id="us12775463b2-fig-1-svg-title">存储队列分层后，哪一层承担写缓存和并行搜索？</title>
 <desc id="us12775463b2-fig-1-svg-desc">主队列有可用槽时直接接收。主队列满时，次级队列接收溢出，主槽释放后接回最老项。</desc>
@@ -37,12 +83,21 @@
 <g id="us12775463b2-fig-1-forward"><rect x="720" y="327" width="214" height="76" rx="6" fill="#f5f5f5"/><rect x="720" y="327" width="214" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="827" y="353" class="node-name" text-anchor="middle">load 转发路径</text><text x="827" y="375" class="node-detail" text-anchor="middle">按队列匹配及字节掩码</text></g>
 <text x="36" y="485" class="legend" text-anchor="start">主队列保留低延迟搜索的开销；新增容量由次级队列提供。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12775463b2-fig-1-primary">主 store 队列</a> 主队列的两组存储体可并行访问。其 load 流水能为不同 load 同时寻找对应的较老 store。</li><li><a href="#us12775463b2-fig-1-secondary">次级 store 队列</a> 次级队列只有一组存储体和一条搜索流水的例子。它用较简化的电路承担新增容量。</li><li><a href="#us12775463b2-fig-1-move">转入后可提交</a> 主队列放出空位后，可按次级队首和目标槽位标识决定是否转入。并非只要任意一个位置空了就能转入指定槽。</li><li><a href="#us12775463b2-fig-1-cache">缓存数据阵列</a> 执行向缓存写入的路径出自主队列。两个队列均可以为 load 提供 store 数据。</li></ul>
-  <p class="figure-evidence">原图 1、2、3、6、7；说明书归档段 0017、0018、0019、0022、0023、0024、0025、0026、0029、0030、0031、0032、0033、0034、0038、0039、0040、0043、0045、0046、0047、0085、0086、0087、0088、0095、0096；权利要求 1、3、4、5、6、7、9、10、11、15、16、20 <a href="../diagrams/US12775463B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>主 store 队列／次级 store 队列</dt><dd>110/120</dd></div><div><dt>缓存数据阵列</dt><dd>130</dd></div><div><dt>主队列的并行 load 流水</dt><dd>250a–250c</dd></div><div><dt>次级队列的单条 load 流水</dt><dd>255</dd></div><div><dt>主队列的两组存储体／次级队列的一组存储体</dt><dd>310a/310b/320</dd></div><div><dt>主队列条目标识 PID</dt><dd>323</dd></div><div><dt>队首／队尾指针</dt><dd>330/335</dd></div></dl></details>
-</figure></section><section id="resolve"><h2>次级队列在等空位时可以先做地址工作</h2><p>发射后，直接进入主队列的 store 在主队列地址解析阶段确定物理地址，然后进入非推测写入、完成与退休。进入次级队列的 store 可先把虚拟地址交给次级解析阶段。图 2 的两条迁移分支取决于转移时解析是否已经完成，确定了物理地址就进入主队列写入阶段，否则进入主队列地址解析阶段补完。</p><p>假设 store 进入次级后还要等 t 拍才能取得主队列空位，地址解析需要 r 拍。若解析能立即开始并与等待完全重叠，在这个简化模型中，从入次级到地址和主槽同时可用的等待由 t+r 拍缩短为 max(t,r) 拍，少等 min(t,r) 拍。模型忽略迁移和端口仲裁。说明书没有为原图 4 标固定的阶段时钟数。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　次级队列的地址预解析跨过主队列满载窗口</h3>
-    <p id="fig-2-basis">次级 store 未获得主队列槽位时可先做地址解析。转入时依据解析结果，补完解析或直接开始写入。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12775463b2-fig-1-primary" data-reading-target="us12775463b2-fig-1-primary">主 store 队列</a><p>主队列的两组存储体可并行访问。其 load 流水能为不同 load 同时寻找对应的较老 store。</p></li><li><a href="#us12775463b2-fig-1-secondary" data-reading-target="us12775463b2-fig-1-secondary">次级 store 队列</a><p>次级队列只有一组存储体和一条搜索流水的例子。它用较简化的电路承担新增容量。</p></li><li><a href="#us12775463b2-fig-1-move" data-reading-target="us12775463b2-fig-1-move">转入后可提交</a><p>主队列放出空位后，可按次级队首和目标槽位标识决定是否转入。并非只要任意一个位置空了就能转入指定槽。</p></li><li><a href="#us12775463b2-fig-1-cache" data-reading-target="us12775463b2-fig-1-cache">缓存数据阵列</a><p>执行向缓存写入的路径出自主队列。两个队列均可以为 load 提供 store 数据。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3、6、7；说明书归档段 0017、0018、0019、0022、0023、0024、0025、0026、0029、0030、0031、0032、0033、0034、0038、0039、0040、0043、0045、0046、0047、0085、0086、0087、0088、0095、0096；权利要求 1、3、4、5、6、7、9、10、11、15、16、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">7 项</span></summary><dl><div><dt>主 store 队列／次级 store 队列</dt><dd>110/120</dd></div><div><dt>缓存数据阵列</dt><dd>130</dd></div><div><dt>主队列的并行 load 流水</dt><dd>250a–250c</dd></div><div><dt>次级队列的单条 load 流水</dt><dd>255</dd></div><div><dt>主队列的两组存储体／次级队列的一组存储体</dt><dd>310a/310b/320</dd></div><div><dt>主队列条目标识 PID</dt><dd>323</dd></div><div><dt>队首／队尾指针</dt><dd>330/335</dd></div></dl></details>
+</figure></section><section id="resolve" class="article-section reading-chapter" aria-labelledby="resolve-title"><h2 id="resolve-title">次级队列在等空位时可以先做地址工作</h2><p>发射后，直接进入主队列的 store 在主队列地址解析阶段确定物理地址，然后进入非推测写入、完成与退休。进入次级队列的 store 可先把虚拟地址交给次级解析阶段。图 2 的两条迁移分支取决于转移时解析是否已经完成，确定了物理地址就进入主队列写入阶段，否则进入主队列地址解析阶段补完。</p><p>假设 store 进入次级后还要等 t 拍才能取得主队列空位，地址解析需要 r 拍。若解析能立即开始并与等待完全重叠，在这个简化模型中，从入次级到地址和主槽同时可用的等待由 t+r 拍缩短为 max(t,r) 拍，少等 min(t,r) 拍。模型忽略迁移和端口仲裁。说明书没有为原图 4 标固定的阶段时钟数。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">次级队列的地址预解析跨过主队列满载窗口</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12775463B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">次级 store 未获得主队列槽位时可先做地址解析。转入时依据解析结果，补完解析或直接开始写入。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="次级队列的地址预解析跨过主队列满载窗口" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 475" role="img" aria-labelledby="us12775463b2-fig-2-svg-title us12775463b2-fig-2-svg-desc">
 <title id="us12775463b2-fig-2-svg-title">次级队列的地址预解析跨过主队列满载窗口</title>
 <desc id="us12775463b2-fig-2-svg-desc">次级 store 未获得主队列槽位时可先做地址解析。转入时依据解析结果，补完解析或直接开始写入。</desc>
@@ -65,19 +120,37 @@
 <g id="us12775463b2-fig-2-transfer"><rect x="361" y="302" width="216" height="76" rx="6" fill="#f5f5f5"/><rect x="361" y="302" width="216" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="469" y="328" class="node-name" text-anchor="middle">将 store 转入主队列</text><text x="469" y="350" class="node-detail" text-anchor="middle">重新取得空闲主槽位</text></g>
 <text x="36" y="436" class="legend" text-anchor="start">转入时判定解析进度。原图 4 没有规定每个阶段经历几拍。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12775463b2-fig-2-direct">分配到主队列</a> 当发射时主队列有槽位，store 直接分配在主队列，再进入它的地址解析阶段。</li><li><a href="#us12775463b2-fig-2-pre">次级队列地址预解析</a> 次级队列等旧 store 腾出主槽时，可以先启动地址解析。图中横竖位置区分路径，距离不代表时钟周期。</li><li><a href="#us12775463b2-fig-2-transfer">将 store 转入主队列</a> 目标主槽可用后才转移。解析未完成时改走主队列地址解析，资源仍不足时实施例延迟该动作。</li><li><a href="#us12775463b2-fig-2-exec">主队列执行、完成与退休</a> 来到主队列的 store 才能发出写命令。原图 4 分别列出发写、等待成功与退休阶段。</li></ul>
-  <p class="figure-evidence">原图 4、6；说明书归档段 0049、0050、0051、0052、0053、0054、0055、0056、0084、0085、0086、0087、0088、0090；权利要求 1、2、3、8、9、10、12、13、14、15、16、17、18、19 <a href="../diagrams/US12775463B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>分派／发射</dt><dd>405/410</dd></div><div><dt>分配到主队列／次级队列</dt><dd>415/420</dd></div><div><dt>主队列地址解析／次级队列地址预解析</dt><dd>425a/425b</dd></div><div><dt>将 store 转入主队列</dt><dd>430</dd></div><div><dt>非推测写入、等待完成、退休</dt><dd>440/445/450</dd></div></dl></details>
-</figure></section><section id="bytes"><h2>逐字节决定从队列转发还是等待回填</h2><p>load 请求所需的字节可分散在早于该 load 的不同 store 和缓存中。多来源命中时，先覆盖更新的在途 store 字节，缓存补足其余字节。表 3 按原图 5A 的八种情况把覆盖与动作配对。两级队列合在一起仍缺字节且缓存缺失时，load 等待缓存行回填，通过重放路径重新执行。</p><p>次级队列中有多个匹配 store 时，原图 5A 让单转发通路分多次提取。原图 5B 另有可把一对奇偶条目标识都复制到 SAS 的实施例；何时可同时匹配受源条目布局限制。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">表 3　load 请求的字节覆盖怎样决定转发与重放</h3>
-    <p id="fig-3-basis">从较新的在途 store 取其覆盖的字节，只有仍缺的字节才需要由队列其他项、缓存或回填补足。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">主队列</th><th scope="col">次级队列</th><th scope="col">缓存</th><th scope="col">load 的处理</th></tr></thead><tbody><tr id="fig-3-p-full"><th scope="row">全命中</th><td>无</td><td>不限</td><td>主队列直接转发</td></tr><tr id="fig-3-p-wait"><th scope="row">部分命中</th><td>无</td><td>缺失</td><td>等待回填，在主队列重放路径等待</td></tr><tr id="fig-3-p-part"><th scope="row">部分命中</th><td>无</td><td>命中</td><td>主队列字节覆盖对应的缓存字节</td></tr><tr id="fig-3-s-full"><th scope="row">不限</th><td>单个 store 覆盖全部</td><td>不限</td><td>从次级队列直接转发</td></tr><tr id="fig-3-s-part"><th scope="row">无</th><td>单个 store 部分覆盖</td><td>命中</td><td>次级字节覆盖对应的缓存字节</td></tr><tr id="fig-3-both-wait"><th scope="row">部分或无</th><td>部分；两级合并仍不全</td><td>缺失</td><td>等待回填，在两级队列的重放路径等待</td></tr><tr id="fig-3-both-full"><th scope="row">部分命中</th><td>部分；两级合并覆盖全部</td><td>不限</td><td>合并两级队列各自转发的数据</td></tr><tr id="fig-3-s-multi"><th scope="row">不限</th><td>需要多个 store 才覆盖全部</td><td>不限</td><td>在次级路径多次重放逐项取数</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-3-p-part">部分命中</a> 主队列部分命中且缓存行已存在时，用主队列中较新的字节覆盖缓存结果。</li><li><a href="#fig-3-both-wait">部分或无</a> 两级队列联合仍缺字节且缓存缺失，等待回填后重新发射 load。</li><li><a href="#fig-3-s-multi">不限</a> 次级多项才能盖齐所需字节时，单条 load 流水可多次重放，逐项取数。</li></ul>
-  <p class="figure-evidence">原图 2、5A、7；说明书归档段 0030、0031、0032、0033、0034、0057、0058、0059、0060、0061、0062、0063、0064、0065、0066、0067、0068、0069、0094、0095、0096、0097；权利要求 5、6、7 </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原图 5A 的八个覆盖组合，按表 3 的行序</dt><dd>501–508</dd></div></dl></details>
-</figure></section><section id="two-pass"><h2>次级命中后先留索引，再重发取数</h2><p>原图 5B 的 store 累积辅助缓冲（store-accumulate sidecar，SAS）保存与 load 相关的次级队列条目标识，也可包含数据。图 4 绘的是仅保存标识的版本。第一次遍历在第 7 拍定位命中的 store 并分配 SAS。load 进入重放路径，第 10 拍重新发射，沿记录的标识读取数据。SAS 在第 10 拍释放，第 11 拍已无效；原图随后还有本次重放的流水阶段。</p><p>如果另一条 load 在 SAS 占用期间也命中次级队列，说明书让更老的 load 优先。较年轻的 load 留在重放内容可寻址存储器（replay CAM），也可能被抢占后放回重放队列。这样次级队列无需为每一个并发 load 加一套搜索和取数通路，代价是排队与重放增加延迟。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　识别到次级队列命中后，SAS 有效期到哪里？</h3>
-    <p id="fig-4-basis">第 7 拍分配 SAS，第 10 拍按保存的源条目标识重发 load，第 11 拍时 SAS 可用于后续 load。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12775463b2-fig-2-direct" data-reading-target="us12775463b2-fig-2-direct">分配到主队列</a><p>当发射时主队列有槽位，store 直接分配在主队列，再进入它的地址解析阶段。</p></li><li><a href="#us12775463b2-fig-2-pre" data-reading-target="us12775463b2-fig-2-pre">次级队列地址预解析</a><p>次级队列等旧 store 腾出主槽时，可以先启动地址解析。图中横竖位置区分路径，距离不代表时钟周期。</p></li><li><a href="#us12775463b2-fig-2-transfer" data-reading-target="us12775463b2-fig-2-transfer">将 store 转入主队列</a><p>目标主槽可用后才转移。解析未完成时改走主队列地址解析，资源仍不足时实施例延迟该动作。</p></li><li><a href="#us12775463b2-fig-2-exec" data-reading-target="us12775463b2-fig-2-exec">主队列执行、完成与退休</a><p>来到主队列的 store 才能发出写命令。原图 4 分别列出发写、等待成功与退休阶段。</p></li></ul>
+  <p class="figure-evidence">原图 4、6；说明书归档段 0049、0050、0051、0052、0053、0054、0055、0056、0084、0085、0086、0087、0088、0090；权利要求 1、2、3、8、9、10、12、13、14、15、16、17、18、19</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>分派／发射</dt><dd>405/410</dd></div><div><dt>分配到主队列／次级队列</dt><dd>415/420</dd></div><div><dt>主队列地址解析／次级队列地址预解析</dt><dd>425a/425b</dd></div><div><dt>将 store 转入主队列</dt><dd>430</dd></div><div><dt>非推测写入、等待完成、退休</dt><dd>440/445/450</dd></div></dl></details>
+</figure></section><section id="bytes" class="article-section reading-chapter" aria-labelledby="bytes-title"><h2 id="bytes-title">逐字节决定从队列转发还是等待回填</h2><p>load 请求所需的字节可分散在早于该 load 的不同 store 和缓存中。多来源命中时，先覆盖更新的在途 store 字节，缓存补足其余字节。表 3 按原图 5A 的八种情况把覆盖与动作配对。两级队列合在一起仍缺字节且缓存缺失时，load 等待缓存行回填，通过重放路径重新执行。</p><p>次级队列中有多个匹配 store 时，原图 5A 让单转发通路分多次提取。原图 5B 另有可把一对奇偶条目标识都复制到 SAS 的实施例；何时可同时匹配受源条目布局限制。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 3 · 参数与边界对照</p>
+        <h3 id="fig-3-title">load 请求的字节覆盖怎样决定转发与重放</h3>
+      </div>
+
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">从较新的在途 store 取其覆盖的字节，只有仍缺的字节才需要由队列其他项、缓存或回填补足。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="load 请求的字节覆盖怎样决定转发与重放"><table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">主队列</th><th scope="col">次级队列</th><th scope="col">缓存</th><th scope="col">load 的处理</th></tr></thead><tbody><tr id="fig-3-p-full"><th scope="row">全命中</th><td>无</td><td>不限</td><td>主队列直接转发</td></tr><tr id="fig-3-p-wait"><th scope="row">部分命中</th><td>无</td><td>缺失</td><td>等待回填，在主队列重放路径等待</td></tr><tr id="fig-3-p-part"><th scope="row">部分命中</th><td>无</td><td>命中</td><td>主队列字节覆盖对应的缓存字节</td></tr><tr id="fig-3-s-full"><th scope="row">不限</th><td>单个 store 覆盖全部</td><td>不限</td><td>从次级队列直接转发</td></tr><tr id="fig-3-s-part"><th scope="row">无</th><td>单个 store 部分覆盖</td><td>命中</td><td>次级字节覆盖对应的缓存字节</td></tr><tr id="fig-3-both-wait"><th scope="row">部分或无</th><td>部分；两级合并仍不全</td><td>缺失</td><td>等待回填，在两级队列的重放路径等待</td></tr><tr id="fig-3-both-full"><th scope="row">部分命中</th><td>部分；两级合并覆盖全部</td><td>不限</td><td>合并两级队列各自转发的数据</td></tr><tr id="fig-3-s-multi"><th scope="row">不限</th><td>需要多个 store 才覆盖全部</td><td>不限</td><td>在次级路径多次重放逐项取数</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-p-part" data-reading-target="fig-3-p-part">部分命中</a><p>主队列部分命中且缓存行已存在时，用主队列中较新的字节覆盖缓存结果。</p></li><li><a href="#fig-3-both-wait" data-reading-target="fig-3-both-wait">部分或无</a><p>两级队列联合仍缺字节且缓存缺失，等待回填后重新发射 load。</p></li><li><a href="#fig-3-s-multi" data-reading-target="fig-3-s-multi">不限</a><p>次级多项才能盖齐所需字节时，单条 load 流水可多次重放，逐项取数。</p></li></ul>
+  <p class="figure-evidence">原图 2、5A、7；说明书归档段 0030、0031、0032、0033、0034、0057、0058、0059、0060、0061、0062、0063、0064、0065、0066、0067、0068、0069、0094、0095、0096、0097；权利要求 5、6、7</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">1 项</span></summary><dl><div><dt>原图 5A 的八个覆盖组合，按表 3 的行序</dt><dd>501–508</dd></div></dl></details>
+</figure></section><section id="two-pass" class="article-section reading-chapter" aria-labelledby="two-pass-title"><h2 id="two-pass-title">次级命中后先留索引，再重发取数</h2><p>原图 5B 的 store 累积辅助缓冲（store-accumulate sidecar，SAS）用于保存与 load 匹配的次级队列条目标识，部分实现也可保存数据；图 4 绘出仅保存标识的版本。</p><p>第一次遍历在第 7 拍定位命中 store 并分配 SAS；load 随后进入重放路径，于第 10 拍重新发射并沿记录的标识读取数据。SAS 在第 10 拍释放、第 11 拍失效，原图后段还包含本次重放的其余流水阶段。</p><p>如果另一条 load 在 SAS 占用期间也命中次级队列，说明书让更老的 load 优先。较年轻的 load 留在重放内容可寻址存储器（replay CAM），也可能被抢占后放回重放队列。这样次级队列无需为每一个并发 load 加一套搜索和取数通路，代价是排队与重放增加延迟。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 同轴时序</p>
+        <h3 id="fig-4-title">识别到次级队列命中后，SAS 有效期到哪里？</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12775463B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">第 7 拍分配 SAS，第 10 拍按保存的源条目标识重发 load，第 11 拍时 SAS 可用于后续 load。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="识别到次级队列命中后，SAS 有效期到哪里？" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us12775463b2-fig-4-svg-title us12775463b2-fig-4-svg-desc">
 <title id="us12775463b2-fig-4-svg-title">识别到次级队列命中后，SAS 有效期到哪里？</title>
 <desc id="us12775463b2-fig-4-svg-desc">第 7 拍分配 SAS，第 10 拍按保存的源条目标识重发 load，第 11 拍时 SAS 可用于后续 load。</desc>
@@ -147,12 +220,21 @@
 <text x="637.5" y="355" class="arrow-label" text-anchor="end">第 11 拍：有效位已清除</text></g>
 <text x="24" y="420" class="legend" text-anchor="start">按原图 5B 展开。分配／释放的边界对齐，数据转发的后段继续运行。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12775463b2-fig-4-lookup">第一遍查找</a> 原图 5B 的第 7 拍发现次级队列命中，在 SAS 保存用于重放的标识。这里没有假定 SAS 保存数据。</li><li><a href="#us12775463b2-fig-4-replay">第二遍重放</a> 第 10 拍是 load 再次发射及利用标识访问条目的动作。原图后段还记录第 15、16 拍的转发相关流水标记，不能把 SAS 释放当作消费指令已拿到数据。</li><li><a href="#us12775463b2-fig-4-sas">SAS 状态</a> 进第 7 拍时由未分配变为有效，第 10 拍标记释放，第 11 拍开始无效。若另一条 load 同时命中，可按年龄让老 load 优先。</li></ul>
-  <p class="figure-evidence">原图 2、5B、7；说明书归档段 0029、0033、0034、0070、0071、0072、0073、0074、0075、0076、0077、0095、0096、0097、0098；权利要求 5、6 <a href="../diagrams/US12775463B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>store 累积辅助缓冲 SAS</dt><dd>530</dd></div><div><dt>保存给重放使用的源 store 标识</dt><dd>545f</dd></div><div><dt>次级队列 load 的重放 CAM</dt><dd>265</dd></div></dl></details>
-</figure></section><section id="pid"><h2>为什么次级队首还要等待指定的主队列槽位</h2><p>图 5 以原图 3 的迁移为例。次级队首指向最老 store，其中的主队列条目标识（PID）指明目标是主队列存储体 A 的一个槽位。控制器从两组主队列分别取得队尾位置，检查 PID 所指位置是否为可写槽位。图示时 A 的队尾恰好匹配，完成迁移后该 store 成为主队列中最年轻的一项。</p><p>若主队列有其他空位，而 PID 指定位置没空，说明书允许继续让次级请求等待。这个约束用于维持程序顺序，即使部分 store 的退休或清除顺序出现变化。独立权项只要求主队列有容量且次级非空后可以迁移；PID 匹配属于说明书的实现选择。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　次级队首的 PID 怎样与主队列两组存储体的队尾核对</h3>
-    <p id="fig-5-basis">次级队列给出最老 store 和预定主槽标识。示例中存储体 A 的队尾与 PID 相符，开启对应写入。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12775463b2-fig-4-lookup" data-reading-target="us12775463b2-fig-4-lookup">第一遍查找</a><p>原图 5B 的第 7 拍发现次级队列命中，在 SAS 保存用于重放的标识。这里没有假定 SAS 保存数据。</p></li><li><a href="#us12775463b2-fig-4-replay" data-reading-target="us12775463b2-fig-4-replay">第二遍重放</a><p>第 10 拍对应 load 再次发射并按标识访问次级队列条目；原图在第 15、16 拍另有转发流水标记，不可将 SAS 释放等同于消费指令已取得数据。</p></li><li><a href="#us12775463b2-fig-4-sas" data-reading-target="us12775463b2-fig-4-sas">SAS 状态</a><p>进第 7 拍时由未分配变为有效，第 10 拍标记释放，第 11 拍开始无效。若另一条 load 同时命中，可按年龄让老 load 优先。</p></li></ul>
+  <p class="figure-evidence">原图 2、5B、7；说明书归档段 0029、0033、0034、0070、0071、0072、0073、0074、0075、0076、0077、0095、0096、0097、0098；权利要求 5、6</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>store 累积辅助缓冲 SAS</dt><dd>530</dd></div><div><dt>保存给重放使用的源 store 标识</dt><dd>545f</dd></div><div><dt>次级队列 load 的重放 CAM</dt><dd>265</dd></div></dl></details>
+</figure></section><section id="pid" class="article-section reading-chapter" aria-labelledby="pid-title"><h2 id="pid-title">为什么次级队首还要等待指定的主队列槽位</h2><p>图 5 以原图 3 的迁移为例。次级队首指向最老 store，其中的主队列条目标识（PID）指明目标是主队列存储体 A 的一个槽位。控制器从两组主队列分别取得队尾位置，检查 PID 所指位置是否为可写槽位。图示时 A 的队尾恰好匹配，完成迁移后该 store 成为主队列中最年轻的一项。</p><p>若主队列有其他空位，而 PID 指定位置没空，说明书允许继续让次级请求等待。这个约束用于维持程序顺序，即使部分 store 的退休或清除顺序出现变化。独立权项只要求主队列有容量且次级非空后可以迁移；PID 匹配属于说明书的实现选择。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">次级队首的 PID 怎样与主队列两组存储体的队尾核对</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12775463B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">次级队列给出最老 store 和预定主槽标识。示例中存储体 A 的队尾与 PID 相符，开启对应写入。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="次级队首的 PID 怎样与主队列两组存储体的队尾核对" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 603" role="img" aria-labelledby="us12775463b2-fig-5-svg-title us12775463b2-fig-5-svg-desc">
 <title id="us12775463b2-fig-5-svg-title">次级队首的 PID 怎样与主队列两组存储体的队尾核对</title>
 <desc id="us12775463b2-fig-5-svg-desc">次级队列给出最老 store 和预定主槽标识。示例中存储体 A 的队尾与 PID 相符，开启对应写入。</desc>
@@ -175,12 +257,14 @@
 <g id="us12775463b2-fig-5-move"><rect x="365" y="467" width="223" height="75" rx="6" fill="#f5f5f5"/><rect x="365" y="467" width="223" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476.5" y="493" class="node-name" text-anchor="middle">已匹配的主队列槽</text><text x="476.5" y="515" class="node-detail" text-anchor="middle">变为主队列中最年轻项</text></g>
 <text x="37" y="569" class="legend" text-anchor="start">存储体各维护队首、队尾。图中还原原图 3 的 A 槽位匹配分支。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12775463b2-fig-5-secondary">次级队列最老 store</a> 次级队首选择最老 store。用 PID 保留它在主队列中的预定位置。</li><li><a href="#us12775463b2-fig-5-judge">迁移位置检查</a> 取两个存储体的队尾状态并查对应位置。PID 对应存储体 A 时，B 的空位不能代替。</li><li><a href="#us12775463b2-fig-5-write">匹配 A，写入该槽</a> 源图例的存储体 A 队尾恰好匹配，写入后已转入队列，不等于该 store 已提交到缓存。</li></ul>
-  <p class="figure-evidence">原图 3、6；说明书归档段 0038、0039、0040、0041、0042、0043、0044、0045、0046、0047、0048、0086、0088、0089；权利要求 1、4、7、10、11、16、20 <a href="../diagrams/US12775463B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>主队列存储体 A/B</dt><dd>310a/310b</dd></div><div><dt>次级队列的存储体</dt><dd>320</dd></div><div><dt>次级队首中持有的主队列条目标识 PID</dt><dd>323b</dd></div><div><dt>次级队首</dt><dd>330c</dd></div><div><dt>主队列两组存储体的队尾</dt><dd>335a/335b</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12775463b2-fig-5-secondary" data-reading-target="us12775463b2-fig-5-secondary">次级队列最老 store</a><p>次级队首选择最老 store。用 PID 保留它在主队列中的预定位置。</p></li><li><a href="#us12775463b2-fig-5-judge" data-reading-target="us12775463b2-fig-5-judge">迁移位置检查</a><p>取两个存储体的队尾状态并查对应位置。PID 对应存储体 A 时，B 的空位不能代替。</p></li><li><a href="#us12775463b2-fig-5-write" data-reading-target="us12775463b2-fig-5-write">匹配 A，写入该槽</a><p>源图例的存储体 A 队尾恰好匹配，写入后已转入队列，不等于该 store 已提交到缓存。</p></li></ul>
+  <p class="figure-evidence">原图 3、6；说明书归档段 0038、0039、0040、0041、0042、0043、0044、0045、0046、0047、0048、0086、0088、0089；权利要求 1、4、7、10、11、16、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>主队列存储体 A/B</dt><dd>310a/310b</dd></div><div><dt>次级队列的存储体</dt><dd>320</dd></div><div><dt>次级队首中持有的主队列条目标识 PID</dt><dd>323b</dd></div><div><dt>次级队首</dt><dd>330c</dd></div><div><dt>主队列两组存储体的队尾</dt><dd>335a/335b</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项；全文核对覆盖 139 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -210,6 +294,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1、4、6。按主队列容量分流，次级队列可先开始解析，主槽可用后允许回迁。在主队列没有空位时保存 store 请求。它可在等待期间解析地址，再将请求和相应状态送回主队列。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>转回主队列时转换未完成的，须在执行该 store 前完成转换。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>主队列的请求可提交并释放空间，禁止从次队列直接提交。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>从次级队列选择最老的一项回到主队列。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>收到 load 后检查是否对应当前队列中的 store。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>主队列可同时匹配多笔 load，次队列一次只匹配一笔。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>主队列为可并行访问的多个 bank，次级队列为单一 bank。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>次级队列最老项完成解析后再将其转到主队列。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>原图 4、6。方法分开主、次两种地址解析，在主队列得到目标地址后执行。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>第一笔执行完后清空主槽，再将第二笔由次级队列转入。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>要求回迁对象是次级队列里最老的 store。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-10">10</a></td><td>若地址在回迁前已解析，仍等回迁结束后才执行。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-10">10</a></td><td>若地址在回迁前没解析完，转到主队列后继续解析。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>解析从 store 携带的虚拟地址确定物理地址。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>原图 4。系统项明确第一、第二解析级、执行级和退休级，分列主次级队列送入的解析路径。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>第一笔执行后退休，释放主槽并回迁次级队列中的第二笔。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>第二解析级已完成时，第二笔可直接去执行级。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-16">16</a></td><td>第二解析级未完成时，先转第一解析级，得到物理地址后执行。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>第一解析级暂无资源时保留在第二级，有资源时再转入。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-16">16</a></td><td>第二笔必须是次级队列最老项才能移入所释放的主槽。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12775463B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12775463B2#knowledge">在关系图谱中定位 US12775463B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11829763B2</code>
+  </div>
+  <h3><a href="US11829763B2.html">预测 load 地址后，怎样核对地址、数据和提前量</a></h3>
+  <p class="related-edge-label">在队列中找最新数据</p>
+  <p class="related-edge-summary">US12775463B2 的主存储队列可为多笔 load 同时搜索，次队列按单笔搜索。原图 5A 还给出一次 load 的字节由不同队列或数据缓存提供时的合并例。US11829763B2 在预测地址命中存储队列时取消预测发起的数据缓存查询，改从队列取数。两件分别处理多来源装配和早查缓存何时让位给队列数据。</p>
+<p class="related-evidence"><a href="#claim-6">本篇权项 6</a><a href="#fig-3">本篇图表 3</a><a href="US11829763B2.html#claim-6">对照篇权项 6</a><a href="US11829763B2.html#fig-3">对照篇图表 3</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US20240248844A1</code>
+  </div>
+  <h3><a href="US20240248844A1.html">宽 load 逐元素检查转发，跨缓存行另查访存顺序</a></h3>
+  <p class="related-edge-label">宽加载的数据来源与队列搜索</p>
+  <p class="related-edge-summary">US20240248844A1 逐个验证宽加载中的原子元素是否完全来自同一笔存储操作或另一来源，验证通过才允许存储队列前递。US12775463B2 的原图 5B 展示一种次队列实现：首遍搜索记住匹配位置，加载重放时再读取该条目。两件分别约束前递的数据来源和读取队列数据的步骤。</p>
+<p class="related-evidence"><a href="US20240248844A1.html#claim-1">对照篇权项 1</a><a href="US20240248844A1.html#fig-2">对照篇图表 2</a><a href="#claim-5">本篇权项 5</a><a href="#fig-4">本篇图表 4</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#queues">两个队列按可用槽位和指令年龄分工</a></li><li><a href="#resolve">次级队列在等空位时可以先做地址工作</a></li><li><a href="#bytes">逐字节决定从队列转发还是等待回填</a></li><li><a href="#two-pass">次级命中后先留索引，再重发取数</a></li><li><a href="#pid">为什么次级队首还要等待指定的主队列槽位</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2026-10-27</dd></div>
+      <div><dt>最早优先权</dt><dd>2023-07-26</dd></div>
+      <div><dt>美国申请日</dt><dd>2025-04-10</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US19/175,328</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc.</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/30</dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Nikhil Gupta、Gideon N. Levinsky、Kulin N. Kothari、Mridul Agarwal <details class="inline-more"><summary>其余 1 位</summary><span>Pankaj Lnu</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12775463B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12775463B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

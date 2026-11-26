@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>可变缓存命中延迟如何让近组提前返回 · US11893241B1</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11893241B1</code> · <a href="https://patents.google.com/patent/US11893241B1/en">专利全文</a></p>
-<h1>可变缓存命中延迟如何让近组提前返回</h1><p class="reading-question">同一缓存的数据到输出端距离不同，近组怎样在出口空闲时早返回，又给远组留足返回时间？</p>
-<p class="reading-answer">缓存把数据阵列按距离划组，在每一级优先转发上游数据。同拍遇到本组结果时，先把本组结果暂存在 skid buffer。上游无可转发数据时，选择器先发缓冲中的旧结果，再发本组新结果。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-02-06</dd></div><div><dt>申请号</dt><dd>US17/823,695</dd></div><div><dt>最早优先权</dt><dd>2022-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brian P. Lilly、Sandeep Gupta、Chandan Shantharaj、Krishna C. Potnuru、Sahil Kapoor</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#groups">按阵列组分级返回，最远一组确定延迟上限</a></li><li><a href="#arbitration">上游结果获得本拍，已读出的本组数据可以暂存</a></li><li><a href="#timing">比较同样在第 4 拍就绪的两个近组请求</a></li><li><a href="#claim-scope">权利要求分别覆盖同拍仲裁、缓冲和服务速率</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="groups"><h2>按阵列组分级返回，最远一组确定延迟上限</h2><p>大缓存的同一数据阵列分布在芯片上的不同位置。流水线控制电路向相应索引发读命令，返回结果沿反方向传回。近组、中组、远组是同一阵列中的索引组。原图 4 用 L3 作为可采用该布局的层级示例。</p><p>原图 2 按三组实现。近组索引为 1、2，中组 3–6，远组 7、8。近组只经过最后一级返回路径，中组还要经过近组的返回合流，远组依次经过远组输出寄存级、中组和近组。示例中三组的最短访问延迟分别为 1、2、4 拍。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　命令走向目标阵列组，返回结果按相反方向合流</h3>
-    <p id="fig-1-basis">请求和返回沿两条流水线传播。远组的返回依次通过中组与近组的延迟控制电路，近组结果仅经过最近的一级。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11893241B1 可变缓存命中延迟如何让近组提前返回 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US11893241B1</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-02-06">2024-02-06</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11893241B1/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>可变缓存命中延迟如何让近组提前返回</h1>
+  <p class="english-title" lang="en">Variable hit latency cache</p>
+  <p class="document-question">同一缓存的数据到输出端距离不同，近组怎样在出口空闲时早返回，又给远组留足返回时间？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#groups">按阵列组分级返回，最远一组确定延迟上限</a></li><li><a href="#arbitration">上游结果获得本拍，已读出的本组数据可以暂存</a></li><li><a href="#timing">比较同样在第 4 拍就绪的两个近组请求</a></li><li><a href="#claim-scope">权利要求分别覆盖同拍仲裁、缓冲和服务速率</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+<a class="lab-link" href="../lab.html#hit-arbiter">在原型中复算 →</a>
+    </div>
+    <p class="reading-answer">缓存把数据阵列按距离划组，在每一级优先转发上游数据。同拍遇到本组结果时，先把本组结果暂存在 skid buffer。上游无可转发数据时，选择器先发缓冲中的旧结果，再发本组新结果。</p>
+  </section>
+  <div id="mechanism"><section id="groups" class="article-section reading-chapter" aria-labelledby="groups-title"><h2 id="groups-title">按阵列组分级返回，最远一组确定延迟上限</h2><p>大缓存的同一数据阵列分布在芯片上的不同位置。流水线控制电路向相应索引发读命令，返回结果沿反方向传回。近组、中组、远组是同一阵列中的索引组。原图 4 用 L3 作为可采用该布局的层级示例。</p><p>原图 2 按三组实现。近组索引为 1、2，中组 3–6，远组 7、8。近组只经过最后一级返回路径，中组还要经过近组的返回合流，远组依次经过远组输出寄存级、中组和近组。示例中三组的最短访问延迟分别为 1、2、4 拍。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">命令走向目标阵列组，返回结果按相反方向合流</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893241B1/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">请求和返回沿两条流水线传播。远组的返回依次通过中组与近组的延迟控制电路，近组结果仅经过最近的一级。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="命令走向目标阵列组，返回结果按相反方向合流" style="--figure-width:1240px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 576" role="img" aria-labelledby="us11893241b1-fig-1-svg-title us11893241b1-fig-1-svg-desc">
 <title id="us11893241b1-fig-1-svg-title">命令走向目标阵列组，返回结果按相反方向合流</title>
 <desc id="us11893241b1-fig-1-svg-desc">请求和返回沿两条流水线传播。远组的返回依次通过中组与近组的延迟控制电路，近组结果仅经过最近的一级。</desc>
@@ -53,19 +99,37 @@
 <text x="44" y="527" class="legend" text-anchor="start">橙线为输出流水线；蓝线为各延迟控制电路内的独立输入流水线。</text>
 <text x="44" y="550" class="legend" text-anchor="start">图按原图 2 组织。阵列组和存储级的框间距离仅作阅读示意。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893241b1-fig-1-far-out">远组结果先进入输出寄存级</a> 远组是最上游的返回来源，沿橙色线向右依次进入中组和近组的返回选择器。</li><li><a href="#us11893241b1-fig-1-mid-out">中组和近组的本地返回合流</a> 各组既要转发上一级的数据，也可为本组读取新数据。中组和近组各有 skid buffer，图 4 展开三路选择。</li><li><a href="#us11893241b1-fig-1-cmd">独立的输入流水线</a> 蓝线从流水线控制电路朝阵列组传播，向目标索引分发命令和地址。图中的分行让读命令与读数据的反向传输可分别追踪。</li></ul>
-  <p class="figure-evidence">原图 1、2；说明书归档段 0020、0022、0023、0024、0028、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11893241B1/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>数据阵列</dt><dd>201</dd></div><div><dt>流水线控制电路</dt><dd>205</dd></div><div><dt>近组延迟控制电路</dt><dd>210</dd></div><div><dt>中组延迟控制电路</dt><dd>215</dd></div><div><dt>远组延迟控制电路</dt><dd>220</dd></div><div><dt>时钟存储级</dt><dd>214</dd></div><div><dt>输入流水线</dt><dd>240</dd></div><div><dt>输出流水线</dt><dd>245</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">表 5　三组访问的延迟范围由返回级数和仲裁决定</h3>
-    <p id="fig-5-basis">近组可在 1–4 拍之间交付，中组可在 2–4 拍之间交付，远组使用固定的 4 拍。4 拍属于原图 2 的示例实现。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">数据阵列组</th><th scope="col">索引</th><th scope="col">最短访问（拍）</th><th scope="col">访问上限（拍）</th><th scope="col">skid buffer</th></tr></thead><tbody><tr id="fig-5-near"><th scope="row">近组</th><td>1、2</td><td>1</td><td>4</td><td>比中组更深</td></tr><tr id="fig-5-mid"><th scope="row">中组</th><td>3–6</td><td>2</td><td>4</td><td>浅于近组</td></tr><tr id="fig-5-far"><th scope="row">远组</th><td>7、8</td><td>4</td><td>4</td><td>图示实施例未设置</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-5-basis">实施例边界</a> 数组布局、流水级和端口条件按原图 2。图上的周期不用于推断任何处理器核心的 load-to-use 延迟。</li><li><a href="#fig-5-near">近组缓冲深度</a> 距控制器最近的组具有最大的等待伸缩空间。其 skid buffer 在该例比中组更深。</li></ul>
-  <p class="figure-evidence">原图 2、3、4；说明书归档段 0024、0025、0028、0031、0032、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>数据阵列</dt><dd>201</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div></dl></details>
-</figure></section><section id="arbitration"><h2>上游结果获得本拍，已读出的本组数据可以暂存</h2><p>图 3 展开每拍的检查顺序。先看上游输出寄存级有没有结果，有就转发。上游空闲才看本组 skid buffer，里面较早完成的结果先出。缓冲也空闲时，选择器转发本组索引本拍给出的数据。三路都空时，输出留空。</p><p>图 4 放大中组。组内索引选择器先从多个索引候选中选较早的请求。它的一条输出直接接到中组返回选择器，另一条接到 skid buffer。当上游占用返回端口时，本组仍可把已读结果暂存进去。这个缓冲与输入流水线分开。</p><p>近组的结果最多可从最短 1 拍延到 4 拍，中组从 2 拍延到 4 拍，因此原图 2 给近组配置了更深的 skid buffer。具体条目数取决于实现允许的输入速率、返回级数和组间距离。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　返回选择器每拍依次检查上游、skid buffer 和本地阵列</h3>
-    <p id="fig-3-basis">上游有可转发数据就占用本拍。上游为空才取较早入缓冲的本组结果，最后检查本组新结果。三处都没有数据时，输出流水线本拍不转发。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893241b1-fig-1-far-out" data-reading-target="us11893241b1-fig-1-far-out">远组结果先进入输出寄存级</a><p>远组是最上游的返回来源，沿橙色线向右依次进入中组和近组的返回选择器。</p></li><li><a href="#us11893241b1-fig-1-mid-out" data-reading-target="us11893241b1-fig-1-mid-out">中组和近组的本地返回合流</a><p>各组既要转发上一级的数据，也可为本组读取新数据。中组和近组各有 skid buffer，图 4 展开三路选择。</p></li><li><a href="#us11893241b1-fig-1-cmd" data-reading-target="us11893241b1-fig-1-cmd">独立的输入流水线</a><p>蓝线从流水线控制电路朝阵列组传播，向目标索引分发命令和地址。图中的分行让读命令与读数据的反向传输可分别追踪。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0020、0022、0023、0024、0028、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">10 项</span></summary><dl><div><dt>数据阵列</dt><dd>201</dd></div><div><dt>流水线控制电路</dt><dd>205</dd></div><div><dt>近组延迟控制电路</dt><dd>210</dd></div><div><dt>中组延迟控制电路</dt><dd>215</dd></div><div><dt>远组延迟控制电路</dt><dd>220</dd></div><div><dt>时钟存储级</dt><dd>214</dd></div><div><dt>输入流水线</dt><dd>240</dd></div><div><dt>输出流水线</dt><dd>245</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 5 · 参数与边界对照</p>
+        <h3 id="fig-5-title">三组访问的延迟范围由返回级数和仲裁决定</h3>
+      </div>
+
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">近组可在 1–4 拍之间交付，中组可在 2–4 拍之间交付，远组使用固定的 4 拍。4 拍属于原图 2 的示例实现。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="三组访问的延迟范围由返回级数和仲裁决定"><table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">数据阵列组</th><th scope="col">索引</th><th scope="col">最短访问（拍）</th><th scope="col">访问上限（拍）</th><th scope="col">skid buffer</th></tr></thead><tbody><tr id="fig-5-near"><th scope="row">近组</th><td>1、2</td><td>1</td><td>4</td><td>比中组更深</td></tr><tr id="fig-5-mid"><th scope="row">中组</th><td>3–6</td><td>2</td><td>4</td><td>浅于近组</td></tr><tr id="fig-5-far"><th scope="row">远组</th><td>7、8</td><td>4</td><td>4</td><td>图示实施例未设置</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-basis" data-reading-target="fig-5-basis">实施例边界</a><p>数组布局、流水级和端口条件按原图 2。图上的周期不用于推断任何处理器核心的 load-to-use 延迟。</p></li><li><a href="#fig-5-near" data-reading-target="fig-5-near">近组缓冲深度</a><p>距控制器最近的组具有最大的等待伸缩空间。其 skid buffer 在该例比中组更深。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0024、0025、0028、0031、0032、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>数据阵列</dt><dd>201</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div></dl></details>
+</figure></section><section id="arbitration" class="article-section reading-chapter" aria-labelledby="arbitration-title"><h2 id="arbitration-title">上游结果获得本拍，已读出的本组数据可以暂存</h2><p>图 3 展开每拍的检查顺序。先看上游输出寄存级有没有结果，有就转发。上游空闲才看本组 skid buffer，里面较早完成的结果先出。缓冲也空闲时，选择器转发本组索引本拍给出的数据。三路都空时，输出留空。</p><p>图 4 放大中组。组内索引选择器先从多个索引候选中选较早的请求。它的一条输出直接接到中组返回选择器，另一条接到 skid buffer。当上游占用返回端口时，本组仍可把已读结果暂存进去。这个缓冲与输入流水线分开。</p><p>近组的结果最多可从最短 1 拍延到 4 拍，中组从 2 拍延到 4 拍，因此原图 2 给近组配置了更深的 skid buffer。具体条目数取决于实现允许的输入速率、返回级数和组间距离。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 条件判定与分支</p>
+        <h3 id="fig-3-title">返回选择器每拍依次检查上游、skid buffer 和本地阵列</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893241B1/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">上游有可转发数据就占用本拍。上游为空才取较早入缓冲的本组结果，最后检查本组新结果。三处都没有数据时，输出流水线本拍不转发。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="返回选择器每拍依次检查上游、skid buffer 和本地阵列" style="--figure-width:1080px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 628" role="img" aria-labelledby="us11893241b1-fig-3-svg-title us11893241b1-fig-3-svg-desc">
 <title id="us11893241b1-fig-3-svg-title">返回选择器每拍依次检查上游、skid buffer 和本地阵列</title>
 <desc id="us11893241b1-fig-3-svg-desc">上游有可转发数据就占用本拍。上游为空才取较早入缓冲的本组结果，最后检查本组新结果。三处都没有数据时，输出流水线本拍不转发。</desc>
@@ -99,12 +163,21 @@
 <g id="us11893241b1-fig-3-out"><rect x="876" y="213" width="172" height="86" rx="6" fill="#f5f5f5"/><rect x="876" y="213" width="172" height="86" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="962" y="239" class="node-name" text-anchor="middle">下一级输出寄存器</text><text x="962" y="261" class="node-detail" text-anchor="middle">每拍至多接收一路</text></g>
 <text x="82" y="39" class="signal-title" text-anchor="start">中组和近组的输出流水线采用同一检查顺序</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893241b1-fig-3-upstream">先检查上游寄存级</a> 上游组离控制器更远。这里只检查能在本拍转发的数据，未就绪的请求不会消耗此出口的本拍。</li><li><a href="#us11893241b1-fig-3-skid">检查本组 skid buffer</a> 缓冲中的本组数据已经在此前读出。上游无数据时，它优先于该组新到的结果。</li><li><a href="#us11893241b1-fig-3-empty">三路无数据则留空一拍</a> 下方分支对应原图 6 的下一周期。三路都无就绪结果时，等到下一拍从最高优先级重新检查。</li></ul>
-  <p class="figure-evidence">原图 3、6；说明书归档段 0033、0034、0035、0036、0037、0046、0047、0048；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11893241B1/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>近组返回选择器</dt><dd>216-1</dd></div><div><dt>中组返回选择器</dt><dd>216-2</dd></div><div><dt>判定并转发上游结果</dt><dd>605／607</dd></div><div><dt>判定并转发缓冲结果</dt><dd>610／612</dd></div><div><dt>判定并转发本组新结果</dt><dd>615／617</dd></div><div><dt>进入下一周期</dt><dd>620</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　中组返回选择器的三个数据输入与本地暂存支路</h3>
-    <p id="fig-4-basis">中组的索引选择器输出分成两路，一路可直接送返回选择器，另一路可写入 skid buffer。远组结果从上游输出寄存级另行进入返回选择器。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893241b1-fig-3-upstream" data-reading-target="us11893241b1-fig-3-upstream">先检查上游寄存级</a><p>上游组离控制器更远。这里只检查能在本拍转发的数据，未就绪的请求不会消耗此出口的本拍。</p></li><li><a href="#us11893241b1-fig-3-skid" data-reading-target="us11893241b1-fig-3-skid">检查本组 skid buffer</a><p>缓冲中的本组数据已经在此前读出。上游无数据时，它优先于该组新到的结果。</p></li><li><a href="#us11893241b1-fig-3-empty" data-reading-target="us11893241b1-fig-3-empty">三路无数据则留空一拍</a><p>下方分支对应原图 6 的下一周期。三路都无就绪结果时，等到下一拍从最高优先级重新检查。</p></li></ul>
+  <p class="figure-evidence">原图 3、6；说明书归档段 0033、0034、0035、0036、0037、0046、0047、0048；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">6 项</span></summary><dl><div><dt>近组返回选择器</dt><dd>216-1</dd></div><div><dt>中组返回选择器</dt><dd>216-2</dd></div><div><dt>判定并转发上游结果</dt><dd>605／607</dd></div><div><dt>判定并转发缓冲结果</dt><dd>610／612</dd></div><div><dt>判定并转发本组新结果</dt><dd>615／617</dd></div><div><dt>进入下一周期</dt><dd>620</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">中组返回选择器的三个数据输入与本地暂存支路</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893241B1/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">中组的索引选择器输出分成两路，一路可直接送返回选择器，另一路可写入 skid buffer。远组结果从上游输出寄存级另行进入返回选择器。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="中组返回选择器的三个数据输入与本地暂存支路" style="--figure-width:1100px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 492" role="img" aria-labelledby="us11893241b1-fig-4-svg-title us11893241b1-fig-4-svg-desc">
 <title id="us11893241b1-fig-4-svg-title">中组返回选择器的三个数据输入与本地暂存支路</title>
 <desc id="us11893241b1-fig-4-svg-desc">中组的索引选择器输出分成两路，一路可直接送返回选择器，另一路可写入 skid buffer。远组结果从上游输出寄存级另行进入返回选择器。</desc>
@@ -130,12 +203,21 @@
 <g id="us11893241b1-fig-4-controller"><rect x="671" y="367" width="213" height="90" rx="6" fill="#f5f5f5"/><rect x="671" y="367" width="213" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="777.5" y="393" class="node-name" text-anchor="middle">流水线控制电路</text><text x="777.5" y="415" class="node-detail" text-anchor="middle">向选择器发控制信号</text></g>
 <text x="43" y="41" class="signal-title" text-anchor="start">放大原图 3 的中组返回路径</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893241b1-fig-4-oldest">先选同组中较早的可用结果</a> 原图 3 标注同组内部的年龄次序。它处理同一个阵列组多个索引的候选，后面的三路返回选择器处理不同数据来源。</li><li><a href="#us11893241b1-fig-4-hold">同一个本组候选可走暂存支路</a> 若上游占用本拍，已读出的本组数据可存进 skid buffer，输入端仍能接受下一条命令。它存的是本组读结果。</li><li><a href="#us11893241b1-fig-4-mux">分清选择器引脚号与优先级</a> 原图 3 中上游输入标为 3，缓冲输入标为 1，直达输入标为 2。优先级是上游、缓冲、直达。原图编号见功能索引。</li><li><a href="#us11893241b1-fig-4-out">选中数据写入中组的输出寄存级</a> 中组输出随后成为近组返回选择器的上游输入。这里的中组输出和 CPU 一侧最终看到的 Data_Out 相隔下一级。</li></ul>
-  <p class="figure-evidence">原图 2、3；说明书归档段 0028、0030、0031、0032、0033、0034、0035、0037；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US11893241B1/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>中组延迟控制电路</dt><dd>215</dd></div><div><dt>组内索引选择器</dt><dd>230</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div><div><dt>远组输出寄存级</dt><dd>214-3</dd></div><div><dt>中组返回选择器</dt><dd>216-2</dd></div><div><dt>接中组 skid buffer</dt><dd>216-2 输入 1</dd></div><div><dt>接中组索引选择器的直达路径</dt><dd>216-2 输入 2</dd></div><div><dt>接远组输出寄存级</dt><dd>216-2 输入 3</dd></div><div><dt>流水线控制电路</dt><dd>205</dd></div></dl></details>
-</figure></section><section id="timing"><h2>比较同样在第 4 拍就绪的两个近组请求</h2><p>站内原型只保留远组和近组。每拍可发一条读命令，远组在发出后第 4 拍就绪，近组在第 1 拍就绪。合流出口每拍只能交付一个结果。固定延迟基准将所有请求安排在发出后第 4 拍返回。</p><p>图 2 的两个场景都在 t3 发出近组请求 N，并在 t4 得到阵列结果。只有一笔远组数据在 t4 返回时，N 在 skid buffer 等一拍，t5 返回。连续三笔远组结果占用 t4 到 t6 时，N 要等三拍，在 t7 返回。两种场景的近组端到端访问分别是 2 拍和 4 拍，三笔远组造成的冲突抵消了可变命中延迟在此算例的全部收益。</p><p>近组无争用时，原型得出 1 拍可变延迟和 4 拍固定延迟。比较点是缓存控制电路接收读请求至数据输出。处理器核心发出 load 后的地址生成、TLB、依赖指令唤醒及其他流水线阶段超出此计时范围。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　近组同在 t4 就绪，远组返回的长度决定其等待</h3>
-    <p id="fig-2-basis">近组请求都在 t3 发出。单笔远组只占 t4，近组在 t5 返回。连续三笔远组占用 t4、t5、t6，近组在 t7 返回。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893241b1-fig-4-oldest" data-reading-target="us11893241b1-fig-4-oldest">先选同组中较早的可用结果</a><p>原图 3 标注同组内部的年龄次序。它处理同一个阵列组多个索引的候选，后面的三路返回选择器处理不同数据来源。</p></li><li><a href="#us11893241b1-fig-4-hold" data-reading-target="us11893241b1-fig-4-hold">同一个本组候选可走暂存支路</a><p>若上游占用本拍，已读出的本组数据可存进 skid buffer，输入端仍能接受下一条命令。它存的是本组读结果。</p></li><li><a href="#us11893241b1-fig-4-mux" data-reading-target="us11893241b1-fig-4-mux">分清选择器引脚号与优先级</a><p>原图 3 中上游输入标为 3，缓冲输入标为 1，直达输入标为 2。优先级是上游、缓冲、直达。原图编号见功能索引。</p></li><li><a href="#us11893241b1-fig-4-out" data-reading-target="us11893241b1-fig-4-out">选中数据写入中组的输出寄存级</a><p>中组输出随后成为近组返回选择器的上游输入。这里的中组输出和 CPU 一侧最终看到的 Data_Out 相隔下一级。</p></li></ul>
+  <p class="figure-evidence">原图 2、3；说明书归档段 0028、0030、0031、0032、0033、0034、0035、0037；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">9 项</span></summary><dl><div><dt>中组延迟控制电路</dt><dd>215</dd></div><div><dt>组内索引选择器</dt><dd>230</dd></div><div><dt>中组 skid buffer</dt><dd>212-2</dd></div><div><dt>远组输出寄存级</dt><dd>214-3</dd></div><div><dt>中组返回选择器</dt><dd>216-2</dd></div><div><dt>接中组 skid buffer</dt><dd>216-2 输入 1</dd></div><div><dt>接中组索引选择器的直达路径</dt><dd>216-2 输入 2</dd></div><div><dt>接远组输出寄存级</dt><dd>216-2 输入 3</dd></div><div><dt>流水线控制电路</dt><dd>205</dd></div></dl></details>
+</figure></section><section id="timing" class="article-section reading-chapter" aria-labelledby="timing-title"><h2 id="timing-title">比较同样在第 4 拍就绪的两个近组请求</h2><p>站内原型只保留远组和近组。每拍可发一条读命令，远组在发出后第 4 拍就绪，近组在第 1 拍就绪。合流出口每拍只能交付一个结果。固定延迟基准将所有请求安排在发出后第 4 拍返回。</p><p>图 2 的两个场景都在 t3 发出近组请求 N，并在 t4 得到阵列结果。只有一笔远组数据在 t4 返回时，N 在 skid buffer 等一拍，t5 返回。连续三笔远组结果占用 t4 到 t6 时，N 要等三拍，在 t7 返回。两种场景的近组端到端访问分别是 2 拍和 4 拍，三笔远组造成的冲突抵消了可变命中延迟在此算例的全部收益。</p><p>近组无争用时，原型得出 1 拍可变延迟和 4 拍固定延迟。比较点是缓存控制电路接收读请求至数据输出。处理器核心发出 load 后的地址生成、TLB、依赖指令唤醒及其他流水线阶段超出此计时范围。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 同轴时序</p>
+        <h3 id="fig-2-title">近组同在 t4 就绪，远组返回的长度决定其等待</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11893241B1/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">近组请求都在 t3 发出。单笔远组只占 t4，近组在 t5 返回。连续三笔远组占用 t4、t5、t6，近组在 t7 返回。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="近组同在 t4 就绪，远组返回的长度决定其等待" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 535" role="img" aria-labelledby="us11893241b1-fig-2-svg-title us11893241b1-fig-2-svg-desc">
 <title id="us11893241b1-fig-2-svg-title">近组同在 t4 就绪，远组返回的长度决定其等待</title>
 <desc id="us11893241b1-fig-2-svg-desc">近组请求都在 t3 发出。单笔远组只占 t4，近组在 t5 返回。连续三笔远组占用 t4、t5、t6，近组在 t7 返回。</desc>
@@ -192,12 +274,14 @@
 <text x="759" y="447" class="arrow-label" text-anchor="end">N 返回 t7</text></g>
 <text x="24" y="512" class="legend" text-anchor="start">站内原型将中组省去。远组 4 拍、近组 1 拍就绪，出口每拍交付一个结果。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11893241b1-fig-2-one-far">单笔远组在 t4 先返回</a> 这里的 t4 是输出流水线出口的一拍。发往远组的请求在 t0 进入流水线，近组在 t3 进入并于 t4 就绪。</li><li><a href="#us11893241b1-fig-2-near-one">近组在 t5 返回</a> 近组数据已经可用，端口冲突使其在 skid buffer 中多等一拍，访问延迟为 t5 − t3 = 2 拍。</li><li><a href="#us11893241b1-fig-2-near-three">近组在 t7 返回</a> 三笔远组结果连续占据 t4 至 t6。近组在 t4 就绪后暂存三拍，最终访问延迟为 t7 − t3 = 4 拍。</li></ul>
-  <p class="figure-evidence">原图 2、3、6；说明书归档段 0024、0026、0027、0031、0032、0034、0035、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> <a href="../diagrams/US11893241B1/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>近组延迟控制电路</dt><dd>210</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>近组返回选择器</dt><dd>216-1</dd></div><div><dt>输出流水线</dt><dd>245</dd></div></dl></details>
-</figure></section><section id="claim-scope"><h2>权利要求分别覆盖同拍仲裁、缓冲和服务速率</h2><p>权利要求 1 和 11 要求两路同拍就绪时先发较远组结果，并暂存本组结果。权利要求 17 把全体访问的上限等同于最远组的最短访问延迟。图 2 和表 5 的 4 拍是一个实现取值。</p><p>权利要求 3、13 细化 skid buffer，权利要求 5 列出选择器的三路输入，权利要求 15 给出缓冲优于本组直接输出的规则。权利要求 10 和 20 再限定接收与输出各可达到每拍一笔。</p><p class="subdued"><a href="#fig-3">对照图 3　返回选择器每拍依次检查上游、skid buffer 和本地阵列</a></p><p class="subdued"><a href="#fig-4">对照图 4　中组返回选择器的三个数据输入与本地暂存支路</a></p><p class="subdued"><a href="#fig-5">对照表 5　三组访问的延迟范围由返回级数和仲裁决定</a></p></section></div>
-<p><a class="lab-link" href="../lab.html#hit-arbiter">在原型中复算</a></p>
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11893241b1-fig-2-one-far" data-reading-target="us11893241b1-fig-2-one-far">单笔远组在 t4 先返回</a><p>这里的 t4 是输出流水线出口的一拍。发往远组的请求在 t0 进入流水线，近组在 t3 进入并于 t4 就绪。</p></li><li><a href="#us11893241b1-fig-2-near-one" data-reading-target="us11893241b1-fig-2-near-one">近组在 t5 返回</a><p>近组数据已经可用，端口冲突使其在 skid buffer 中多等一拍，访问延迟为 t5 − t3 = 2 拍。</p></li><li><a href="#us11893241b1-fig-2-near-three" data-reading-target="us11893241b1-fig-2-near-three">近组在 t7 返回</a><p>三笔远组结果连续占据 t4 至 t6。近组在 t4 就绪后暂存三拍，最终访问延迟为 t7 − t3 = 4 拍。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0024、0026、0027、0031、0032、0034、0035、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>近组延迟控制电路</dt><dd>210</dd></div><div><dt>近组 skid buffer</dt><dd>212-1</dd></div><div><dt>近组返回选择器</dt><dd>216-1</dd></div><div><dt>输出流水线</dt><dd>245</dd></div></dl></details>
+</figure></section><section id="claim-scope" class="article-section reading-chapter" aria-labelledby="claim-scope-title"><h2 id="claim-scope-title">权利要求分别覆盖同拍仲裁、缓冲和服务速率</h2><p>权利要求 1 和 11 要求两路同拍就绪时先发较远组结果，并暂存本组结果。权利要求 17 把全体访问的上限等同于最远组的最短访问延迟。图 2 和表 5 的 4 拍是一个实现取值。</p><p>权利要求 3、13 细化 skid buffer，权利要求 5 列出选择器的三路输入，权利要求 15 给出缓冲优于本组直接输出的规则。权利要求 10 和 20 再限定接收与输出各可达到每拍一笔。</p><p class="cross-ref"><a href="#fig-3">对照图 3 · 返回选择器每拍依次检查上游、skid buffer 和本地阵列</a></p><p class="cross-ref"><a href="#fig-4">对照图 4 · 中组返回选择器的三个数据输入与本地暂存支路</a></p><p class="cross-ref"><a href="#fig-5">对照表 5 · 三组访问的延迟范围由返回级数和仲裁决定</a></p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、11、17 项；全文核对覆盖 81 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -227,6 +311,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–3、6。分组数据阵列的最短延迟随距离不同，远组结果在竞争时先转发，近组结果暂存。从流水线控制器发起访问到控制器收到数据。各组的最短延迟可不同，控制电路处理途中结果争用。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>延迟控制电路用存储电路保存所连接阵列组的数据。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>部分延迟控制电路的滑移缓冲至少能保存两拍。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>两个阵列组所用的滑移缓冲具有不同条目数。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>选择器有远组延迟缓冲、本组存储位置和本组滑移缓冲三路输入。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>有待处理结果时，在三路中选择距流水线控制器最远的位置。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>最近阵列组的返回延迟可在最小值与既定上限之间变化。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>另有较远组的请求待处理时，最近组返回延迟高于最小值。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>最远阵列组恰在既定最大延迟到达时返回数据。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>流水线控制器每拍可接收一笔访问，并输出一笔访问的数据。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>原图 5 的步骤 505–525。把发出访问、收到两组数据、优先转发和暂存明确为方法步骤。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>访问延迟上限取最远阵列组的最短访问延迟。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>对应阵列组的延迟控制电路将本地结果写入滑移缓冲。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>选择器优先取最远阵列组的数据，再考虑较近组。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>选择器优先处理本组滑移缓冲中的数据，再取本组阵列直达的数据。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>最远组按上限返回，最近组可达最小值，中间组的最短延迟高于最小值。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>原图 2、4，说明书 0032、0052。处理器核访问分组缓存，结果在最小与最大延迟之间返回，最大值取最远组的最小延迟。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>各延迟控制电路可暂存对应阵列组读出的数据。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>缓冲存至少两笔结果，选择器从缓冲、本组索引及远组存储三路选数据，守住延迟上限。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11893241B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>流水线控制器每拍可接收一笔访问，并输出一笔访问的数据。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11893241B1#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11893241B1#knowledge">在关系图谱中定位 US11893241B1 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US10795818B1</code>
+  </div>
+  <h3><a href="US10795818B1.html">普通 snoop 积压时，控制器如何缩短敏感请求的等待</a></h3>
+  <p class="related-edge-label">延迟上限与排队限额</p>
+  <p class="related-edge-summary">远组和近组的缓存结果同拍就绪时，返回选择器先转发远组结果，并用 skid buffer 暂存近组结果，以维持阵列访问的延迟上限。共享 snoop 通道把两类请求交给缓存控制器，由控制器限制目标敏感 snoop 前可继续服务的普通 snoop 笔数。前者约束返回时间，后者约束排在目标前的请求数。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US10795818B1.html#claim-1">对照篇权项 1</a><a href="US10795818B1.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11416254B2</code>
+  </div>
+  <h3><a href="US11416254B2.html">用同一译码组的 store 源寄存器旁路 load</a></h3>
+  <p class="related-edge-label">返回口仲裁与寄存器旁路</p>
+  <p class="related-edge-summary">US11893241B1 在近、远阵列结果同拍就绪时先转发远组，把近组送入暂存。站内图 2 在下一拍无新竞争的条件下显示近组多等一拍。US11416254B2 在同一解码组内确认 store 与 load 具备旁路资格后，重命名 load 目的并复用已有物理寄存器。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US11416254B2.html#claim-1">对照篇权项 1</a><a href="US11416254B2.html#fig-1">对照篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#groups">按阵列组分级返回，最远一组确定延迟上限</a></li><li><a href="#arbitration">上游结果获得本拍，已读出的本组数据可以暂存</a></li><li><a href="#timing">比较同样在第 4 拍就绪的两个近组请求</a></li><li><a href="#claim-scope">权利要求分别覆盖同拍仲裁、缓冲和服务速率</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-02-06</dd></div>
+      <div><dt>最早优先权</dt><dd>2022-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2022-08-31</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/823,695</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0895、G06F3/0611、G06F12/0857 <details class="inline-more"><summary>其余 7 项</summary><span>G06F12/0877、G06F3/0659、G06F3/0673、G06F12/0811、G06F2212/1008、G06F2212/1024、G06F2212/60</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Brian P. Lilly、Sandeep Gupta、Chandan Shantharaj、Krishna C. Potnuru <details class="inline-more"><summary>其余 1 位</summary><span>Sahil Kapoor</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11893241B1/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11893241B1#knowledge">关系图谱定位</a><a class="sidebar-btn sidebar-btn-accent" href="../lab.html#hit-arbiter">原型实验室复算</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

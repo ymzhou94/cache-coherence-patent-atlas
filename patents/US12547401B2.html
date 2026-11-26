@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>在 LSU 内执行依赖 load 的比较和算术操作 · US12547401B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US12547401B2</code> · <a href="https://eureka.patsnap.com/patent/US12547401B2">专利全文</a></p>
-<h1>在 LSU 内执行依赖 load 的比较和算术操作</h1><p class="reading-question">load 的数据已经进入加载流水线时，哪一部分依赖操作可以就地执行？融合后，分支目标、重定向和写回分别由谁处理？</p>
-<p class="reading-answer">译码先识别受支持的依赖指令对。融合表资源允许时，派发阶段在 load 微操作里携带融合标记和表索引。数据到达后，LSU 可用本地比较器或 ALU 消费该值。条件分支的目标地址与重定向仍由分支执行单元处理，算术融合的转发取决于两个目的地的关系。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-02-10</dd></div><div><dt>申请号</dt><dd>US18/739,070</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>John D. Pape、Skanda K. Srinivasa、Francesco Spadini、Brian T. Mokrzycki</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#admission">译码找出数据依赖，融合表决定是否合并</a></li><li><a href="#branch">比较转到加载流水线，分支执行单元仍负责哪些工作</a></li><li><a href="#alu">融合算术如何保留需要同时观察的两个结果</a></li><li><a href="#latency">把收益的计时区间移到数据已就绪之后</a></li><li><a href="#mask">CBZ 与 TBZ 用什么掩码，目标地址怎样独立生成</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="admission"><h2>译码找出数据依赖，融合表决定是否合并</h2><p>原图 2、3 将取指与译码、映射／派发／重命名（MDR）、保留站与执行端分开。译码扫描一批指令，检查第二条是否读取 load 的目的寄存器，以及操作类型、宽度、程序顺序距离和所在译码组是否符合实现限制。说明书举 CBZ、TBZ、ADD 等例子，也允许把置条件码、多寄存器输入等情形排除在外。</p><p>图 1 的融合准入阶段读取融合表空闲项数。即使指令对符合译码条件，低于门槛仍按原来的微操作分别派发。说明书 [0031]、[0056] 分别举 5 项和 3 项为门槛示例。第 1、20 项要求依据可用项数作融合准入决策，门槛本身由实现设置。</p><p>融合表记录条件分支类型、目标地址所需元数据等，或记录 ALU 操作码与立即数。第 5 项要求将表项索引作为给 LSU 的标识。原图 3 中，融合 load 经 LSU 保留站派发和发射，表索引后续还能送给分支执行单元。派发进入保留站、发射到执行流水线、完成和退休是不同事件。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　同一个指令对在融合准入前后变成什么</h3>
-    <p id="fig-1-basis">译码确定指令对是否符合条件，融合表空闲项数再决定派发合并的 load 或两条独立微操作。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12547401B2 在 LSU 内执行依赖 load 的比较和算术操作 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-cpu" href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a>
+  </nav>
+  <p class="document-id">
+    <code>US12547401B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2026-02-10">2026-02-10</time>
+    <a class="hero-source-link" href="https://eureka.patsnap.com/patent/US12547401B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>在 LSU 内执行依赖 load 的比较和算术操作</h1>
+  <p class="english-title" lang="en">Load instruction fusion</p>
+  <p class="document-question">load 的数据已经进入加载流水线时，哪一部分依赖操作可以就地执行？融合后，分支目标、重定向和写回分别由谁处理？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#admission">译码找出数据依赖，融合表决定是否合并</a></li><li><a href="#branch">比较转到加载流水线，分支执行单元仍负责哪些工作</a></li><li><a href="#alu">融合算术如何保留需要同时观察的两个结果</a></li><li><a href="#latency">把收益的计时区间移到数据已就绪之后</a></li><li><a href="#mask">CBZ 与 TBZ 用什么掩码，目标地址怎样独立生成</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">译码先识别受支持的依赖指令对。融合表资源允许时，派发阶段在 load 微操作里携带融合标记和表索引。数据到达后，LSU 可用本地比较器或 ALU 消费该值。条件分支的目标地址与重定向仍由分支执行单元处理，算术融合的转发取决于两个目的地的关系。</p>
+  </section>
+  <div id="mechanism"><section id="admission" class="article-section reading-chapter" aria-labelledby="admission-title"><h2 id="admission-title">译码找出数据依赖，融合表决定是否合并</h2><p>原图 2、3 将取指与译码、映射／派发／重命名（MDR）、保留站与执行端分开。译码扫描一批指令，检查第二条是否读取 load 的目的寄存器，以及操作类型、宽度、程序顺序距离和所在译码组是否符合实现限制。说明书举 CBZ、TBZ、ADD 等例子，也允许把置条件码、多寄存器输入等情形排除在外。</p><p>图 1 的融合准入阶段读取融合表空闲项数。即使指令对符合译码条件，低于门槛仍按原来的微操作分别派发。说明书 [0031]、[0056] 分别举 5 项和 3 项为门槛示例。第 1、20 项要求依据可用项数作融合准入决策，门槛本身由实现设置。</p><p>融合表记录条件分支类型、目标地址所需元数据等，或记录 ALU 操作码与立即数。第 5 项要求将表项索引作为给 LSU 的标识。原图 3 中，融合 load 经 LSU 保留站派发和发射，表索引后续还能送给分支执行单元。派发进入保留站、发射到执行流水线、完成和退休是不同事件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">同一个指令对在融合准入前后变成什么</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12547401B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">译码确定指令对是否符合条件，融合表空闲项数再决定派发合并的 load 或两条独立微操作。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同一个指令对在融合准入前后变成什么" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="us12547401b2-fig-1-svg-title us12547401b2-fig-1-svg-desc">
 <title id="us12547401b2-fig-1-svg-title">同一个指令对在融合准入前后变成什么</title>
 <desc id="us12547401b2-fig-1-svg-desc">译码确定指令对是否符合条件，融合表空闲项数再决定派发合并的 load 或两条独立微操作。</desc>
@@ -39,12 +85,21 @@
 <text x="36" y="480" class="legend" text-anchor="start">同一方案可支持 load＋条件分支与 load＋ALU。两类消费者需要的融合表字段不同。</text>
 <text x="36" y="512" class="legend" text-anchor="start">表项容量影响可融合比例，未准入的指令对仍可正常执行。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12547401b2-fig-1-candidate">译码候选检查</a> 译码阶段识别有 load 数据依赖的条件分支或 ALU 操作，先检查类型、位置和位宽约束。</li><li><a href="#us12547401b2-fig-1-admit">融合准入</a> 融合表空闲项数低于门槛时不建立融合。达到门槛只是准入条件之一。</li><li><a href="#us12547401b2-fig-1-table">融合表</a> 分配表项并记录分支类型、目标元数据或 ALU 操作码与立即数。</li><li><a href="#us12547401b2-fig-1-separate">普通派发</a> 有依赖但不符合融合条件时，load 与消费者走各自的派发计划，消费者仍等待 load 的结果。</li><li><a href="#us12547401b2-fig-1-overload">融合 load 微操作</a> 将融合标记和融合表项索引写入 load 微操作。实施例复用本次不适用的 load-pair 字段。</li><li><a href="#us12547401b2-fig-1-lsu">LSU 保留站</a> 派发到 LSU 的保留站后，等访存操作数就绪再发射到加载流水线。</li></ul>
-  <p class="figure-evidence">原图 2、3、6；说明书归档段 0027、0029、0031、0032、0034、0035、0041、0042、0054、0055、0056、0057、0058；权利要求 1、5、8、18、20 <a href="../diagrams/US12547401B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>取指译码／映射、派发与重命名</dt><dd>210/220</dd></div><div><dt>融合表／融合表项索引</dt><dd>310/312</dd></div><div><dt>LSU／LSU 保留站</dt><dd>230/232</dd></div></dl></details>
-</figure></section><section id="branch"><h2>比较转到加载流水线，分支执行单元仍负责哪些工作</h2><p>原图 3 的加载流水线在检测到融合标记后，可先向分支执行单元预留位置，并指示由 LSU 完成比较。加载流水线依据微操作的访存地址发出数据请求，同时用索引启动分支元数据读取。图 2 以并行框显示两路可以重叠。数据和条件类型都可用后，LSU 才能输出比较结果。</p><p>第 9 项要求分支执行单元向 LSU 提供条件类型，LSU 回传比较结果，目标地址由分支执行单元生成。第 6、11、19 项补充分支执行单元通过融合表索引读取元数据，第 7、14 项明确可以禁用分支端的重复比较。第 2 项也保留 LSU 到分支执行单元的条件结果信号。</p><p>如果最终分支方向与预测不符，原图 3、4 的分支执行单元负责清除错误路径并重定向。另一种情况是无法以融合状态完成，第 8 项允许促使两条指令分别执行。说明书还允许加载流水线独立向 load 的目的地转发原始值。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　加载流水线读数据时，分支单元同时准备条件与目标</h3>
-    <p id="fig-2-basis">LSU 发送融合表索引，分支执行单元回传条件类型。比较在数据到达的加载路径内做，结果回到分支单元用于决策。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12547401b2-fig-1-candidate" data-reading-target="us12547401b2-fig-1-candidate">译码候选检查</a><p>译码阶段识别有 load 数据依赖的条件分支或 ALU 操作，先检查类型、位置和位宽约束。</p></li><li><a href="#us12547401b2-fig-1-admit" data-reading-target="us12547401b2-fig-1-admit">融合准入</a><p>融合表空闲项数低于门槛时不建立融合。达到门槛只是准入条件之一。</p></li><li><a href="#us12547401b2-fig-1-table" data-reading-target="us12547401b2-fig-1-table">融合表</a><p>分配表项并记录分支类型、目标元数据或 ALU 操作码与立即数。</p></li><li><a href="#us12547401b2-fig-1-separate" data-reading-target="us12547401b2-fig-1-separate">普通派发</a><p>有依赖但不符合融合条件时，load 与消费者走各自的派发计划，消费者仍等待 load 的结果。</p></li><li><a href="#us12547401b2-fig-1-overload" data-reading-target="us12547401b2-fig-1-overload">融合 load 微操作</a><p>将融合标记和融合表项索引写入 load 微操作。实施例复用本次不适用的 load-pair 字段。</p></li><li><a href="#us12547401b2-fig-1-lsu" data-reading-target="us12547401b2-fig-1-lsu">LSU 保留站</a><p>派发到 LSU 的保留站后，等访存操作数就绪再发射到加载流水线。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0027、0029、0031、0032、0034、0035、0041、0042、0054、0055、0056、0057、0058；权利要求 1、5、8、18、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>取指译码／映射、派发与重命名</dt><dd>210/220</dd></div><div><dt>融合表／融合表项索引</dt><dd>310/312</dd></div><div><dt>LSU／LSU 保留站</dt><dd>230/232</dd></div></dl></details>
+</figure></section><section id="branch" class="article-section reading-chapter" aria-labelledby="branch-title"><h2 id="branch-title">比较转到加载流水线，分支执行单元仍负责哪些工作</h2><p>原图 3 的加载流水线在检测到融合标记后，可先向分支执行单元预留位置，并指示由 LSU 完成比较。加载流水线依据微操作的访存地址发出数据请求，同时用索引启动分支元数据读取。图 2 以并行框显示两路可以重叠。数据和条件类型都可用后，LSU 才能输出比较结果。</p><p>第 9 项要求分支执行单元向 LSU 提供条件类型，LSU 回传比较结果，目标地址由分支执行单元生成。第 6、11、19 项补充分支执行单元通过融合表索引读取元数据，第 7、14 项明确可以禁用分支端的重复比较。第 2 项也保留 LSU 到分支执行单元的条件结果信号。</p><p>如果最终分支方向与预测不符，原图 3、4 的分支执行单元负责清除错误路径并重定向。另一种情况是无法以融合状态完成，第 8 项允许促使两条指令分别执行。说明书还允许加载流水线独立向 load 的目的地转发原始值。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">加载流水线读数据时，分支单元同时准备条件与目标</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12547401B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">LSU 发送融合表索引，分支执行单元回传条件类型。比较在数据到达的加载路径内做，结果回到分支单元用于决策。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="加载流水线读数据时，分支单元同时准备条件与目标" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 656" role="img" aria-labelledby="us12547401b2-fig-2-svg-title us12547401b2-fig-2-svg-desc">
 <title id="us12547401b2-fig-2-svg-title">加载流水线读数据时，分支单元同时准备条件与目标</title>
 <desc id="us12547401b2-fig-2-svg-desc">LSU 发送融合表索引，分支执行单元回传条件类型。比较在数据到达的加载路径内做，结果回到分支单元用于决策。</desc>
@@ -74,12 +129,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">数据缓存</text>
 <text x="28" y="628" class="legend" text-anchor="start">时间向下。读数据与查分支元数据可重叠，LSU 等两路齐备后比较。图中完成信号对应预测正确。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12547401b2-fig-2-dispatch">融合 load 与表索引</a> 融合 load 进入 LSU 后，加载流水线提取融合标记和表索引。</li><li><a href="#us12547401b2-fig-2-reserve">预留分支位置</a> 预留分支位置，说明比较由 LSU 完成。分支单元无须再接收全宽操作数进行相同比较。</li><li><a href="#us12547401b2-fig-2-mem">读数据</a> 读取数据缓存，缓存缺失时等待下级回填。访存路径可与分支元数据路径重叠。</li><li><a href="#us12547401b2-fig-2-idx">发融合表索引</a> 索引供分支执行单元识别条件类型、选择目标地址所需字段。</li><li><a href="#us12547401b2-fig-2-type">返回条件类型</a> 分支类型送回 LSU。若为 TBZ，还需位索引或相应的掩码信息。</li><li><a href="#us12547401b2-fig-2-dat">数据可用</a> load 值从数据路径返回。实际实现可能也通过回填转发或 store-to-load forwarding 提供。</li><li><a href="#us12547401b2-fig-2-cmp">返回比较结果</a> 当数据与条件类型齐备时，LSU 可对对应部分执行比较并回送结果。</li><li><a href="#us12547401b2-fig-2-finish">融合 load 完成</a> 预测正确的实施例可回送融合 load 完成信号。预测错误时，分支执行单元决定重定向。</li></ul>
-  <p class="figure-evidence">原图 2、3、4、7；说明书归档段 0029、0033、0035、0036、0040、0041、0042、0043、0044、0045、0046、0047、0048、0049、0050、0060、0061、0062；权利要求 1、2、5、6、7、9、10、11、14、15、18、19 <a href="../diagrams/US12547401B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>融合 load 完成信号</dt><dd>318</dd></div><div><dt>融合表索引／条件分支类型／比较结果</dt><dd>312/314/316</dd></div><div><dt>数据缓存</dt><dd>217</dd></div><div><dt>加载流水线／分支执行单元</dt><dd>320/330</dd></div><div><dt>分支误预测清除</dt><dd>325</dd></div></dl></details>
-</figure></section><section id="alu"><h2>融合算术如何保留需要同时观察的两个结果</h2><p>图 3 展开原图 5。LSU 在等待数据返回的同时可借助融合表索引取得 ALU 操作与立即数。数据到达后，LSU 内 ALU 直接使用 load 值。说明书给出的候选操作包括 ADD、SUB、AND、OR 和移位等。相同位宽是一个实施例条件。</p><p>对于不同目的地，原始 load 值与 ALU 结果分别转发。第 13 项规定可以在同一个时钟周期送给两个目的地。对于实现允许的同目的地融合对，第 17 项指定只转发 ALU 结果。结果可被后续微操作通过旁路获取，架构状态何时退休仍由原有提交路径裁定。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　LSU 内 ALU 产出运算结果，原始 load 值按目的地关系转发</h3>
-    <p id="fig-3-basis">ALU 结果使用自己的目标寄存器。两条指令目标不同，原始数据可同时转发；目标相同时只留下 ALU 结果。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12547401b2-fig-2-dispatch" data-reading-target="us12547401b2-fig-2-dispatch">融合 load 与表索引</a><p>融合 load 进入 LSU 后，加载流水线提取融合标记和表索引。</p></li><li><a href="#us12547401b2-fig-2-reserve" data-reading-target="us12547401b2-fig-2-reserve">预留分支位置</a><p>预留分支位置，说明比较由 LSU 完成。分支单元无须再接收全宽操作数进行相同比较。</p></li><li><a href="#us12547401b2-fig-2-mem" data-reading-target="us12547401b2-fig-2-mem">读数据</a><p>读取数据缓存，缓存缺失时等待下级回填。访存路径可与分支元数据路径重叠。</p></li><li><a href="#us12547401b2-fig-2-idx" data-reading-target="us12547401b2-fig-2-idx">发融合表索引</a><p>索引供分支执行单元识别条件类型、选择目标地址所需字段。</p></li><li><a href="#us12547401b2-fig-2-type" data-reading-target="us12547401b2-fig-2-type">返回条件类型</a><p>分支类型送回 LSU。若为 TBZ，还需位索引或相应的掩码信息。</p></li><li><a href="#us12547401b2-fig-2-dat" data-reading-target="us12547401b2-fig-2-dat">数据可用</a><p>load 值从数据路径返回。实际实现可能也通过回填转发或 store-to-load forwarding 提供。</p></li><li><a href="#us12547401b2-fig-2-cmp" data-reading-target="us12547401b2-fig-2-cmp">返回比较结果</a><p>当数据与条件类型齐备时，LSU 可对对应部分执行比较并回送结果。</p></li><li><a href="#us12547401b2-fig-2-finish" data-reading-target="us12547401b2-fig-2-finish">融合 load 完成</a><p>预测正确的实施例可回送融合 load 完成信号。预测错误时，分支执行单元决定重定向。</p></li></ul>
+  <p class="figure-evidence">原图 2、3、4、7；说明书归档段 0029、0033、0035、0036、0040、0041、0042、0043、0044、0045、0046、0047、0048、0049、0050、0060、0061、0062；权利要求 1、2、5、6、7、9、10、11、14、15、18、19</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>融合 load 完成信号</dt><dd>318</dd></div><div><dt>融合表索引／条件分支类型／比较结果</dt><dd>312/314/316</dd></div><div><dt>数据缓存</dt><dd>217</dd></div><div><dt>加载流水线／分支执行单元</dt><dd>320/330</dd></div><div><dt>分支误预测清除</dt><dd>325</dd></div></dl></details>
+</figure></section><section id="alu" class="article-section reading-chapter" aria-labelledby="alu-title"><h2 id="alu-title">融合算术如何保留需要同时观察的两个结果</h2><p>图 3 展开原图 5。LSU 在等待数据返回的同时可借助融合表索引取得 ALU 操作与立即数。数据到达后，LSU 内 ALU 直接使用 load 值。说明书给出的候选操作包括 ADD、SUB、AND、OR 和移位等。相同位宽是一个实施例条件。</p><p>对于不同目的地，原始 load 值与 ALU 结果分别转发。第 13 项规定可以在同一个时钟周期送给两个目的地。对于实现允许的同目的地融合对，第 17 项指定只转发 ALU 结果。结果可被后续微操作通过旁路获取，架构状态何时退休仍由原有提交路径裁定。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">LSU 内 ALU 产出运算结果，原始 load 值按目的地关系转发</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12547401B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">ALU 结果使用自己的目标寄存器。两条指令目标不同，原始数据可同时转发；目标相同时只留下 ALU 结果。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="LSU 内 ALU 产出运算结果，原始 load 值按目的地关系转发" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 675" role="img" aria-labelledby="us12547401b2-fig-3-svg-title us12547401b2-fig-3-svg-desc">
 <title id="us12547401b2-fig-3-svg-title">LSU 内 ALU 产出运算结果，原始 load 值按目的地关系转发</title>
 <desc id="us12547401b2-fig-3-svg-desc">ALU 结果使用自己的目标寄存器。两条指令目标不同，原始数据可同时转发；目标相同时只留下 ALU 结果。</desc>
@@ -106,12 +170,21 @@
 <g id="us12547401b2-fig-3-suppressed"><rect x="691" y="502" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="691" y="502" width="231" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806.5" y="528" class="node-name" text-anchor="middle">抑制原始值转发</text><text x="806.5" y="550" class="node-detail" text-anchor="middle">同一目标只接收 ALU 结果</text></g>
 <text x="36" y="631" class="legend" text-anchor="start">是否允许融合仍由译码与表资源决定。转发接收数据与架构退休采用各自的时序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12547401b2-fig-3-load">加载流水线返回值</a> 原始 load 值既可供 LSU 内 ALU，也可被允许的独立目的地直接接收。</li><li><a href="#us12547401b2-fig-3-operation">融合表算术描述</a> 从融合表或 load 操作表取 opcode 和可能的立即数。译码和派发阶段已识别依赖关系。</li><li><a href="#us12547401b2-fig-3-alu">LSU 内 ALU</a> LSU 内 ALU 以 load 值和已解码的算术描述为输入，执行受支持的操作。</li><li><a href="#us12547401b2-fig-3-aludst">ALU 目的地</a> 例如原始值写入 x0、运算结果写入 x1 时，ALU 结果转发至 x1。</li><li><a href="#us12547401b2-fig-3-rawgate">原始值转发选择</a> 如果两条指令指定的目的地不同，保留原始数据的转发路径。图中用选择条件表示规则，说明书未给出门电路实现。</li><li><a href="#us12547401b2-fig-3-rawdst">load 目的地</a> 不同目的地的实施例可在同拍转发两种结果。此处只展示原始数据的接收端。</li><li><a href="#us12547401b2-fig-3-suppressed">抑制原始值转发</a> 对获准融合的同目标操作，省略原始数据转发，目标只接收 ALU 结果。</li></ul>
-  <p class="figure-evidence">原图 2、5、6、8；说明书归档段 0029、0031、0042、0052、0053、0054、0058、0064、0065、0066；权利要求 1、3、4、12、13、16、17 <a href="../diagrams/US12547401B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>加载流水线返回值</dt><dd>435</dd></div><div><dt>LSU 内 ALU／融合表算术描述</dt><dd>510/515</dd></div><div><dt>ALU 目的地／load 目的地</dt><dd>520A/520B</dd></div></dl></details>
-</figure></section><section id="latency"><h2>把收益的计时区间移到数据已就绪之后</h2><p>以第 5 拍 load 数据就绪为例，假设普通路径花 1 拍转发操作数，再花 1 拍比较，比较结果在第 7 拍可用。融合路径在分支元数据已就绪时，于数据到达后的第 1 拍完成比较，第 6 拍可用。图 4 的拍数是示例假设。缓存缺失或 store 数据前递等待会延后共同起点。</p><p>如果分支元数据到第 7 拍才准备好，融合比较可延迟至第 8 拍。说明书允许 LSU 在读数据前并行预留分支位置和查类型，减少元数据等待遮住收益的机会。评估时统一缓存命中条件，分别记载数据就绪至比较结果、预测错误检测至重定向，以及融合表或分支资源不足时的可融合比例。</p><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　同一次 load 返回，比较结果由谁在什么时候给出</h3>
-    <p id="fig-4-basis">保持访存路径相同。本地比较只在输入都准备好时节省转发时间；分支元数据晚到可抵消收益。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12547401b2-fig-3-load" data-reading-target="us12547401b2-fig-3-load">加载流水线返回值</a><p>原始 load 值既可供 LSU 内 ALU，也可被允许的独立目的地直接接收。</p></li><li><a href="#us12547401b2-fig-3-operation" data-reading-target="us12547401b2-fig-3-operation">融合表算术描述</a><p>从融合表或 load 操作表取 opcode 和可能的立即数。译码和派发阶段已识别依赖关系。</p></li><li><a href="#us12547401b2-fig-3-alu" data-reading-target="us12547401b2-fig-3-alu">LSU 内 ALU</a><p>LSU 内 ALU 以 load 值和已解码的算术描述为输入，执行受支持的操作。</p></li><li><a href="#us12547401b2-fig-3-aludst" data-reading-target="us12547401b2-fig-3-aludst">ALU 目的地</a><p>例如原始值写入 x0、运算结果写入 x1 时，ALU 结果转发至 x1。</p></li><li><a href="#us12547401b2-fig-3-rawgate" data-reading-target="us12547401b2-fig-3-rawgate">原始值转发选择</a><p>如果两条指令指定的目的地不同，保留原始数据的转发路径。图中用选择条件表示规则，说明书未给出门电路实现。</p></li><li><a href="#us12547401b2-fig-3-rawdst" data-reading-target="us12547401b2-fig-3-rawdst">load 目的地</a><p>不同目的地的实施例可在同拍转发两种结果。此处只展示原始数据的接收端。</p></li><li><a href="#us12547401b2-fig-3-suppressed" data-reading-target="us12547401b2-fig-3-suppressed">抑制原始值转发</a><p>对获准融合的同目标操作，省略原始数据转发，目标只接收 ALU 结果。</p></li></ul>
+  <p class="figure-evidence">原图 2、5、6、8；说明书归档段 0029、0031、0042、0052、0053、0054、0058、0064、0065、0066；权利要求 1、3、4、12、13、16、17</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>加载流水线返回值</dt><dd>435</dd></div><div><dt>LSU 内 ALU／融合表算术描述</dt><dd>510/515</dd></div><div><dt>ALU 目的地／load 目的地</dt><dd>520A/520B</dd></div></dl></details>
+</figure></section><section id="latency" class="article-section reading-chapter" aria-labelledby="latency-title"><h2 id="latency-title">把收益的计时区间移到数据已就绪之后</h2><p>以第 5 拍 load 数据就绪为例，假设普通路径花 1 拍转发操作数，再花 1 拍比较，比较结果在第 7 拍可用。融合路径在分支元数据已就绪时，于数据到达后的第 1 拍完成比较，第 6 拍可用。图 4 的拍数是示例假设。缓存缺失或 store 数据前递等待会延后共同起点。</p><p>如果分支元数据到第 7 拍才准备好，融合比较可延迟至第 8 拍。说明书允许 LSU 在读数据前并行预留分支位置和查类型，减少元数据等待遮住收益的机会。评估时统一缓存命中条件，分别记载数据就绪至比较结果、预测错误检测至重定向，以及融合表或分支资源不足时的可融合比例。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 同轴时序</p>
+        <h3 id="fig-4-title">同一次 load 返回，比较结果由谁在什么时候给出</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12547401B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">保持访存路径相同。本地比较只在输入都准备好时节省转发时间；分支元数据晚到可抵消收益。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="同一次 load 返回，比较结果由谁在什么时候给出" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12547401b2-fig-4-svg-title us12547401b2-fig-4-svg-desc">
 <title id="us12547401b2-fig-4-svg-title">同一次 load 返回，比较结果由谁在什么时候给出</title>
 <desc id="us12547401b2-fig-4-svg-desc">保持访存路径相同。本地比较只在输入都准备好时节省转发时间；分支元数据晚到可抵消收益。</desc>
@@ -162,12 +235,21 @@
 <text x="710.4" y="447" class="arrow-label" text-anchor="end">LSU 比较结果</text></g>
 <text x="24" y="512" class="legend" text-anchor="start">比较用时和转发用时均是示例假设。终点为比较结果可用，后续重定向另计。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12547401b2-fig-4-data">共同加载路径</a> 三种比较共用第 5 拍数据就绪，保持缓存和访存服务一致。</li><li><a href="#us12547401b2-fig-4-external">未融合</a> 普通路径需要将 load 值转给分支单元，再对值执行比较，用例中比较结果第 7 拍可用。</li><li><a href="#us12547401b2-fig-4-timely">融合，类型已就绪</a> 融合且分支类型已就绪时，第 5 拍之后立即启动本地比较。结果在第 6 拍可用。</li><li><a href="#us12547401b2-fig-4-late">融合，类型晚到</a> 若分支类型延迟到第 7 拍，数据早到也不能比较；该示例结果在第 8 拍可用。</li></ul>
-  <p class="figure-evidence">原图 3、4、7；说明书归档段 0017、0018、0019、0036、0040、0043、0044、0045、0046、0047、0048、0049、0062；权利要求 2、6、7、9、11、14、15 <a href="../diagrams/US12547401B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>load 数据／条件分支类型／比较结果</dt><dd>435/314/316</dd></div></dl></details>
-</figure></section><section id="mask"><h2>CBZ 与 TBZ 用什么掩码，目标地址怎样独立生成</h2><p>原图 4 的同一比较器接收两类输入。加载流水线提供 load 值。条件类型单元从融合表取得分支描述，区分 CBZ（为零则跳转）和 TBZ（指定比特为零则跳转），掩码生成器据此选取整值或指定比特。第 15 项要求按收到的指示在 LSU 构造掩码并比较。</p><p>图 5 以四位值 1000 演示掩码选择。CBZ 比较整值，结果非零。TBZ 若测试从低位数起的第 1 位，比较 0010 掩码选出的位，结果为零。比较结果确定条件是否满足，再与预测方向核对。分支目标地址仍由分支执行单元基于 PC 表片段与分支偏移量生成。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　条件掩码接入 LSU 比较器，PC 字段接入独立目标单元</h3>
-    <p id="fig-5-basis">CBZ 检查整值，TBZ 检查选定位。目标生成不依赖取得完整 load 值，实际取指仍由分支控制结果裁定。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12547401b2-fig-4-data" data-reading-target="us12547401b2-fig-4-data">共同加载路径</a><p>三种比较共用第 5 拍数据就绪，保持缓存和访存服务一致。</p></li><li><a href="#us12547401b2-fig-4-external" data-reading-target="us12547401b2-fig-4-external">未融合</a><p>普通路径需要将 load 值转给分支单元，再对值执行比较，用例中比较结果第 7 拍可用。</p></li><li><a href="#us12547401b2-fig-4-timely" data-reading-target="us12547401b2-fig-4-timely">融合，类型已就绪</a><p>融合且分支类型已就绪时，第 5 拍之后立即启动本地比较。结果在第 6 拍可用。</p></li><li><a href="#us12547401b2-fig-4-late" data-reading-target="us12547401b2-fig-4-late">融合，类型晚到</a><p>若分支类型延迟到第 7 拍，数据早到也不能比较；该示例结果在第 8 拍可用。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、7；说明书归档段 0017、0018、0019、0036、0040、0043、0044、0045、0046、0047、0048、0049、0062；权利要求 2、6、7、9、11、14、15</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">1 项</span></summary><dl><div><dt>load 数据／条件分支类型／比较结果</dt><dd>435/314/316</dd></div></dl></details>
+</figure></section><section id="mask" class="article-section reading-chapter" aria-labelledby="mask-title"><h2 id="mask-title">CBZ 与 TBZ 用什么掩码，目标地址怎样独立生成</h2><p>原图 4 的同一比较器接收两类输入。加载流水线提供 load 值。条件类型单元从融合表取得分支描述，区分 CBZ（为零则跳转）和 TBZ（指定比特为零则跳转），掩码生成器据此选取整值或指定比特。第 15 项要求按收到的指示在 LSU 构造掩码并比较。</p><p>图 5 以四位值 1000 演示掩码选择。CBZ 比较整值，结果非零。TBZ 若测试从低位数起的第 1 位，比较 0010 掩码选出的位，结果为零。比较结果确定条件是否满足，再与预测方向核对。分支目标地址仍由分支执行单元基于 PC 表片段与分支偏移量生成。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">条件掩码接入 LSU 比较器，PC 字段接入独立目标单元</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12547401B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">CBZ 检查整值，TBZ 检查选定位。目标生成不依赖取得完整 load 值，实际取指仍由分支控制结果裁定。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="条件掩码接入 LSU 比较器，PC 字段接入独立目标单元" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 735" role="img" aria-labelledby="us12547401b2-fig-5-svg-title us12547401b2-fig-5-svg-desc">
 <title id="us12547401b2-fig-5-svg-title">条件掩码接入 LSU 比较器，PC 字段接入独立目标单元</title>
 <desc id="us12547401b2-fig-5-svg-desc">CBZ 检查整值，TBZ 检查选定位。目标生成不依赖取得完整 load 值，实际取指仍由分支控制结果裁定。</desc>
@@ -195,12 +277,14 @@
 <text x="35" y="680" class="legend" text-anchor="start">示例以 0 为最低位编号。CBZ 选择后为非零，TBZ 选择后为零。</text>
 <text x="35" y="705" class="legend" text-anchor="start">掩码和判零位于 LSU，PC 片段与偏移量仍由分支执行单元使用。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us12547401b2-fig-5-branch">融合表分支描述</a> 分支执行单元依索引取得条件类型。如果是 TBZ，可重用表里的位位置字段。</li><li><a href="#us12547401b2-fig-5-mask">LSU 掩码生成器</a> 掩码由条件类型生成。这里用四位路径示意 CBZ 掩码 1111 和 TBZ 的单比特掩码 0010。</li><li><a href="#us12547401b2-fig-5-value">加载流水线返回值</a> 对同一个四位 load 值 1000，CBZ 选择全部四位，TBZ 示例只选择倒数第二位。</li><li><a href="#us12547401b2-fig-5-cmp">LSU 判零比较器</a> LSU 对选中的部分判零。CBZ 的选中值为 1000，比较为假；测试第 1 位的 TBZ 选出 0000，比较为真。</li><li><a href="#us12547401b2-fig-5-pc">PC 表与偏移量</a> 原图 4 的 PC 表字段与普通执行侧保留站提交的 PC 偏移量进入目标地址单元。它们可以先于 load 结果可用。</li><li><a href="#us12547401b2-fig-5-target">目标地址生成</a> 目标地址单元只需相应 PC 字段。比较信号和目标地址沿独立路径提供。</li><li><a href="#us12547401b2-fig-5-decision">分支方向校验</a> 从比较结果解析实际分支方向，再与已有预测核对。需要重定向时使用已生成的目标或顺序后继。</li></ul>
-  <p class="figure-evidence">原图 3、4、7；说明书归档段 0029、0042、0043、0044、0045、0046、0047、0048、0049、0050、0059、0061、0062；权利要求 2、6、9、10、11、14、15、18、19 <a href="../diagrams/US12547401B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>融合表分支描述／条件类型单元</dt><dd>335/410</dd></div><div><dt>LSU 掩码生成器／选择掩码／LSU 判零比较器</dt><dd>420/425/430</dd></div><div><dt>PC 表片段／PC 偏移量／分支目标地址</dt><dd>452/454/456</dd></div><div><dt>分支方向校验／目标地址生成</dt><dd>440/450</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12547401b2-fig-5-branch" data-reading-target="us12547401b2-fig-5-branch">融合表分支描述</a><p>分支执行单元依索引取得条件类型。如果是 TBZ，可重用表里的位位置字段。</p></li><li><a href="#us12547401b2-fig-5-mask" data-reading-target="us12547401b2-fig-5-mask">LSU 掩码生成器</a><p>掩码由条件类型生成。这里用四位路径示意 CBZ 掩码 1111 和 TBZ 的单比特掩码 0010。</p></li><li><a href="#us12547401b2-fig-5-value" data-reading-target="us12547401b2-fig-5-value">加载流水线返回值</a><p>对同一个四位 load 值 1000，CBZ 选择全部四位，TBZ 示例只选择倒数第二位。</p></li><li><a href="#us12547401b2-fig-5-cmp" data-reading-target="us12547401b2-fig-5-cmp">LSU 判零比较器</a><p>LSU 对选中的部分判零。CBZ 的选中值为 1000，比较为假；测试第 1 位的 TBZ 选出 0000，比较为真。</p></li><li><a href="#us12547401b2-fig-5-pc" data-reading-target="us12547401b2-fig-5-pc">PC 表与偏移量</a><p>原图 4 的 PC 表字段与普通执行侧保留站提交的 PC 偏移量进入目标地址单元。它们可以先于 load 结果可用。</p></li><li><a href="#us12547401b2-fig-5-target" data-reading-target="us12547401b2-fig-5-target">目标地址生成</a><p>目标地址单元只需相应 PC 字段。比较信号和目标地址沿独立路径提供。</p></li><li><a href="#us12547401b2-fig-5-decision" data-reading-target="us12547401b2-fig-5-decision">分支方向校验</a><p>从比较结果解析实际分支方向，再与已有预测核对。需要重定向时使用已生成的目标或顺序后继。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、7；说明书归档段 0029、0042、0043、0044、0045、0046、0047、0048、0049、0050、0059、0061、0062；权利要求 2、6、9、10、11、14、15、18、19</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>融合表分支描述／条件类型单元</dt><dd>335/410</dd></div><div><dt>LSU 掩码生成器／选择掩码／LSU 判零比较器</dt><dd>420/425/430</dd></div><div><dt>PC 表片段／PC 偏移量／分支目标地址</dt><dd>452/454/456</dd></div><div><dt>分支方向校验／目标地址生成</dt><dd>440/450</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项；全文核对覆盖 100 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -230,6 +314,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>译码器识别依赖 load 的指令，可在 LSU 执行部分后续操作；融合表可用项不足时挡住融合。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>限于条件分支时，LSU 判条件成立与否并把结果交给分支执行电路。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>第二条为算术指令时，操作可在 LSU 内的算术逻辑电路执行。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>原 load 和算术结果分别前递到各自的目的地。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>融合描述存入表，把该表项索引发给访存单元。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>LSU 把索引交给分支单元，由其查表并生成目标地址。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-5">5</a></td><td>由 LSU 通知分支单元跳过该次分支条件比较。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>无法保持融合执行时，将两条指令改为分别执行。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>访存电路读取数据、接收分支类型并比较，分支单元生成目标地址。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>把融合的 load 和分支信息存入表，再把索引送给 LSU。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>分支单元按索引查融合描述，确定条件分支类型。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-9">9</a></td><td>另允许将读取指令和依赖它的算术指令融合，由 LSU 处理。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>不同目的地的 load 值和算术结果可在同一拍分别前递。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>条件比较由 LSU 承担时，通知分支单元跳过比较。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>分支单元给 LSU 指示，LSU 按掩码对已加载值的指定部分作比较。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>允许查出另一个 load 依赖的算术指令，并在 LSU 中计算。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>两个操作共用目的地时，只转发算术结果。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>存入融合信息后，用指向表项的索引通知 LSU。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>LSU 将索引传给分支单元，后者根据表项识别分支类型并通过指示反馈。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>融合表可用条目低于阈值时拒绝融合。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US12547401B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12547401B2#knowledge">在关系图谱中定位 US12547401B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11416254B2</code>
+  </div>
+  <h3><a href="US11416254B2.html">用同一译码组的 store 源寄存器旁路 load</a></h3>
+  <p class="related-edge-label">移动消费者和复用生产者</p>
+  <p class="related-edge-summary">US12547401B2 让融合操作在 LSU 读取 load 的数据，再在 LSU 内执行依赖该值的比较或其他合格运算。US11416254B2 在同一解码组识别合格的较早 store，把 load 的目的映射到 store 的数据源物理寄存器。对照量可取 LSU 的比较结果可用时间，以及重命名旁路省去的数据搬运。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a><a href="US11416254B2.html#claim-1">对照篇权项 1</a><a href="US11416254B2.html#fig-2">对照篇图表 2</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12340222B2</code>
+  </div>
+  <h3><a href="US12340222B2.html">融合缓冲让宽寄存器生产者与后续消费者共享执行</a></h3>
+  <p class="related-edge-label">融合缓冲与 LSU 内执行</p>
+  <p class="related-edge-summary">US12340222B2 先暂存写目的寄存器的生产者。遇到合格消费者便融合。缓冲项需要腾出且不满足丢弃条件时，仍会发出原生产者执行。US12547401B2 在译码阶段识别合格的 load 及依赖操作，让 LSU 在取数后完成比较或其他运算。</p>
+<p class="related-evidence"><a href="US12340222B2.html#claim-2">对照篇权项 2</a><a href="US12340222B2.html#fig-4">对照篇图表 4</a><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#admission">译码找出数据依赖，融合表决定是否合并</a></li><li><a href="#branch">比较转到加载流水线，分支执行单元仍负责哪些工作</a></li><li><a href="#alu">融合算术如何保留需要同时观察的两个结果</a></li><li><a href="#latency">把收益的计时区间移到数据已就绪之后</a></li><li><a href="#mask">CBZ 与 TBZ 用什么掩码，目标地址怎样独立生成</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2026-02-10</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-06-10</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/739,070</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/3001、G06F9/30043、G06F9/30058 <details class="inline-more"><summary>其余 5 项</summary><span>G06F9/3016、G06F9/30185、G06F9/3838、G06F9/3858、G06F9/3861</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>John D. Pape、Skanda K. Srinivasa、Francesco Spadini、Brian T. Mokrzycki</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://eureka.patsnap.com/patent/US12547401B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12547401B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

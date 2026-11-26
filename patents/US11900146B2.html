@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>实时与非实时请求分表，公共仲裁用独立 credit 池约束 QoS · US11900146B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US11900146B2</code> · <a href="https://patents.google.com/patent/US11900146B2/en">专利全文</a></p>
-<h1>实时与非实时请求分表，公共仲裁用独立 credit 池约束 QoS</h1><p class="reading-question">非实时流量占满其可用 credit 后，实时内存请求怎样保留进入公共内存流水线的机会？</p>
-<p class="reading-answer">控制器给实时事务使用独立事务表和独立 credit 池。非实时、CPU 和 GPU 事务表共享另一池。各表先输出候选，公共仲裁器按 credit 和实时 QoS 选出要进入同一内存流水线的请求。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-02-13</dd></div><div><dt>申请号</dt><dd>US17/462,374</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Elli Bagelman</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#tables">各表选择候选后，才进入公共仲裁</a></li><li><a href="#credits">共享池耗尽只会阻止对应三张表的授予</a></li><li><a href="#data">事务表保存描述，读写 payload 走不同数据缓冲</a></li><li><a href="#deadline">实时请求还有充足时间时，非实时候选也可先行</a></li><li><a href="#scope">分池在独立权项内，乱序与 QoS 的表达各有边界</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="tables"><h2>各表选择候选后，才进入公共仲裁</h2><p>按图 1 从左向右看。实时与非实时事务表在原图 2 接收外设对应类型的请求。CPU、GPU 有各自的附加事务表。各表的选择电路决定把哪笔待处理事务送到公共仲裁器。实时表可让较新的请求先成为候选，这一步发生在跨表仲裁之前。</p><p>有多个候选时，公共仲裁器从中决定本轮进入内存流水线的一笔。四张表可以让排队和候选生成相互独立，执行阶段仍会争用同一个流水线。实时 QoS 因而还有在途服务时间、内存数据返回等条件。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　四张事务表各自选择候选，再参加同一轮仲裁</h3>
-    <p id="fig-1-basis">区分表内选择、跨表仲裁以及进入内存流水线三个位置。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11900146B2 实时与非实时请求分表，公共仲裁用独立 credit 池约束 QoS · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-slc" href="../index.html?topic=slc#catalog">SLC 与内存控制器</a>
+  </nav>
+  <p class="document-id">
+    <code>US11900146B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2024-02-13">2024-02-13</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US11900146B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>实时与非实时请求分表，公共仲裁用独立 credit 池约束 QoS</h1>
+  <p class="english-title" lang="en">Memory controller with separate transaction table for real time transactions</p>
+  <p class="document-question">非实时流量占满其可用 credit 后，实时内存请求怎样保留进入公共内存流水线的机会？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#tables">各表选择候选后，才进入公共仲裁</a></li><li><a href="#credits">共享池耗尽只会阻止对应三张表的授予</a></li><li><a href="#data">事务表保存描述，读写 payload 走不同数据缓冲</a></li><li><a href="#deadline">实时请求还有充足时间时，非实时候选也可先行</a></li><li><a href="#scope">分池在独立权项内，乱序与 QoS 的表达各有边界</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">控制器给实时事务使用独立事务表和独立 credit 池。非实时、CPU 和 GPU 事务表共享另一池。各表先输出候选，公共仲裁器按 credit 和实时 QoS 选出要进入同一内存流水线的请求。</p>
+  </section>
+  <div id="mechanism"><section id="tables" class="article-section reading-chapter" aria-labelledby="tables-title"><h2 id="tables-title">各表选择候选后，才进入公共仲裁</h2><p>按图 1 从左向右看。实时与非实时事务表在原图 2 接收外设对应类型的请求。CPU、GPU 有各自的附加事务表。各表的选择电路决定把哪笔待处理事务送到公共仲裁器。实时表可让较新的请求先成为候选，这一步发生在跨表仲裁之前。</p><p>有多个候选时，公共仲裁器从中决定本轮进入内存流水线的一笔。四张表可以让排队和候选生成相互独立，执行阶段仍会争用同一个流水线。实时 QoS 因而还有在途服务时间、内存数据返回等条件。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">四张事务表各自选择候选，再参加同一轮仲裁</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11900146B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">区分表内选择、跨表仲裁以及进入内存流水线三个位置。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="四张事务表各自选择候选，再参加同一轮仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 637" role="img" aria-labelledby="us11900146b2-fig-1-svg-title us11900146b2-fig-1-svg-desc">
 <title id="us11900146b2-fig-1-svg-title">四张事务表各自选择候选，再参加同一轮仲裁</title>
 <desc id="us11900146b2-fig-1-svg-desc">区分表内选择、跨表仲裁以及进入内存流水线三个位置。</desc>
@@ -49,19 +95,37 @@
 <text x="36" y="56" class="signal-title" text-anchor="start">四张事务表独立挑选候选，最后在同一仲裁器汇合</text>
 <text x="36" y="606" class="legend" text-anchor="start">实时表独享 credit 池，非实时、CPU 和 GPU 表共用另一池。是否获准仍由公共仲裁器决定。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11900146b2-fig-1-sr">实时表选择电路</a> 表内可以改变递交次序，不必始终输出最老请求。</li><li><a href="#us11900146b2-fig-1-cc">CPU 表输出候选</a> 在原图 2 的实例负责 CPU complex 的请求，credit 与非实时、GPU 共用。</li><li><a href="#us11900146b2-fig-1-arb">公共仲裁器</a> 检查 credit 和实时 QoS，选择跨表候选。</li><li><a href="#us11900146b2-fig-1-pipe">公共流水线</a> 接纳获准请求，具体执行仍共享。</li></ul>
-  <p class="figure-evidence">原图 1、2、3；说明书归档段 0019、0020、0021、0022、0023、0024、0027、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US11900146B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>外设代理</dt><dd>205</dd></div><div><dt>CPU complex</dt><dd>206</dd></div><div><dt>GPU complex</dt><dd>207</dd></div><div><dt>实时事务表</dt><dd>211</dd></div><div><dt>非实时事务表</dt><dd>212</dd></div><div><dt>CPU 事务表</dt><dd>213</dd></div><div><dt>GPU 事务表</dt><dd>214</dd></div><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表选择电路</dt><dd>221</dd></div><div><dt>非实时表选择电路</dt><dd>222</dd></div><div><dt>CPU 表选择电路</dt><dd>223</dd></div><div><dt>GPU 表选择电路</dt><dd>224</dd></div></dl></details>
-</figure></section><section id="credits"><h2>共享池耗尽只会阻止对应三张表的授予</h2><p>表 2 的第一行假定一笔事务消耗 1 credit。非实时、CPU、GPU 使用的共享池为 0 时，实时候选仍可能用自己的 1 credit 获准。第二行将余额反过来，实时表候选就要等待其独立池返还 credit。池不借用，公共流水线仍可能忙。</p><p>图 4 沿一次获准事务读 credit 的生命周期。仲裁器确认所属池余额，满足其他条件后授予并扣减，事务进入内存流水线。在说明书 ¶0034 的实现中，事务完成后把 credit 返还原池。部分实现可按事务大小决定所需 credit。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">表 2　两个 credit 池余额怎样限定候选资格</h3>
-    <p id="fig-2-basis">分池让一个池的耗尽不直接消耗另一个池的余额。</p></figcaption>
-  <table class="comparison-table" aria-labelledby="fig-2-title"><thead><tr><th scope="col">实时／共享池余量</th><th scope="col">实时表请求</th><th scope="col">其他三表请求</th></tr></thead><tbody><tr id="fig-2-table-row-1"><th scope="row">1／0</th><td>具备 credit 条件</td><td>等待共享池 credit</td></tr><tr id="fig-2-table-row-2"><th scope="row">0／1</th><td>等待实时池 credit</td><td>具备 credit 条件</td></tr><tr id="fig-2-table-row-3"><th scope="row">1／1</th><td>依据实时 QoS 参加仲裁</td><td>在不违反实时 QoS 时可获准</td></tr></tbody></table>
-  <ul class="figure-reading"><li><a href="#fig-2-basis">credit 计量条件</a> 示例每笔事务需一个 credit。具备 credit 条件后还要满足仲裁和其他资源约束。</li></ul>
-  <p class="figure-evidence">原图 2；说明书归档段 0034、0058；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> </p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表专用 credit 池</dt><dd>原图 2：Credits not Shared with Other Tables</dd></div><div><dt>其余三表共享 credit 池</dt><dd>原图 2：Shared Credits</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　获准时从对应池扣减 credit，事务完成后可返还</h3>
-    <p id="fig-4-basis">把候选、额度检查、授予、在途事务和 credit 返还串起来。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11900146b2-fig-1-sr" data-reading-target="us11900146b2-fig-1-sr">实时表选择电路</a><p>表内可以改变递交次序，不必始终输出最老请求。</p></li><li><a href="#us11900146b2-fig-1-cc" data-reading-target="us11900146b2-fig-1-cc">CPU 表输出候选</a><p>在原图 2 的实例负责 CPU complex 的请求，credit 与非实时、GPU 共用。</p></li><li><a href="#us11900146b2-fig-1-arb" data-reading-target="us11900146b2-fig-1-arb">公共仲裁器</a><p>检查 credit 和实时 QoS，选择跨表候选。</p></li><li><a href="#us11900146b2-fig-1-pipe" data-reading-target="us11900146b2-fig-1-pipe">公共流水线</a><p>接纳获准请求，具体执行仍共享。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0019、0020、0021、0022、0023、0024、0027、0029、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">12 项</span></summary><dl><div><dt>外设代理</dt><dd>205</dd></div><div><dt>CPU complex</dt><dd>206</dd></div><div><dt>GPU complex</dt><dd>207</dd></div><div><dt>实时事务表</dt><dd>211</dd></div><div><dt>非实时事务表</dt><dd>212</dd></div><div><dt>CPU 事务表</dt><dd>213</dd></div><div><dt>GPU 事务表</dt><dd>214</dd></div><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表选择电路</dt><dd>221</dd></div><div><dt>非实时表选择电路</dt><dd>222</dd></div><div><dt>CPU 表选择电路</dt><dd>223</dd></div><div><dt>GPU 表选择电路</dt><dd>224</dd></div></dl></details>
+</figure></section><section id="credits" class="article-section reading-chapter" aria-labelledby="credits-title"><h2 id="credits-title">共享池耗尽只会阻止对应三张表的授予</h2><p>表 2 的第一行假定一笔事务消耗 1 credit。非实时、CPU、GPU 使用的共享池为 0 时，实时候选仍可能用自己的 1 credit 获准。第二行将余额反过来，实时表候选就要等待其独立池返还 credit。池不借用，公共流水线仍可能忙。</p><p>图 4 沿一次获准事务读 credit 的生命周期。仲裁器确认所属池余额，满足其他条件后授予并扣减，事务进入内存流水线。在说明书 ¶0034 的实现中，事务完成后把 credit 返还原池。部分实现可按事务大小决定所需 credit。</p><figure class="exhibit redesigned-exhibit table-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">表 2 · 参数与边界对照</p>
+        <h3 id="fig-2-title">两个 credit 池余额怎样限定候选资格</h3>
+      </div>
+
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">分池让一个池的耗尽不直接消耗另一个池的余额。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="table-scroll" tabindex="0" role="region" aria-label="两个 credit 池余额怎样限定候选资格"><table class="comparison-table" aria-labelledby="fig-2-title"><thead><tr><th scope="col">实时／共享池余量</th><th scope="col">实时表请求</th><th scope="col">其他三表请求</th></tr></thead><tbody><tr id="fig-2-table-row-1"><th scope="row">1／0</th><td>具备 credit 条件</td><td>等待共享池 credit</td></tr><tr id="fig-2-table-row-2"><th scope="row">0／1</th><td>等待实时池 credit</td><td>具备 credit 条件</td></tr><tr id="fig-2-table-row-3"><th scope="row">1／1</th><td>依据实时 QoS 参加仲裁</td><td>在不违反实时 QoS 时可获准</td></tr></tbody></table></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-basis" data-reading-target="fig-2-basis">credit 计量条件</a><p>示例每笔事务需一个 credit。具备 credit 条件后还要满足仲裁和其他资源约束。</p></li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0034、0058；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表专用 credit 池</dt><dd>原图 2：Credits not Shared with Other Tables</dd></div><div><dt>其余三表共享 credit 池</dt><dd>原图 2：Shared Credits</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 事务时序</p>
+        <h3 id="fig-4-title">获准时从对应池扣减 credit，事务完成后可返还</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11900146B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">把候选、额度检查、授予、在途事务和 credit 返还串起来。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="获准时从对应池扣减 credit，事务完成后可返还" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 557" role="img" aria-labelledby="us11900146b2-fig-4-svg-title us11900146b2-fig-4-svg-desc">
 <title id="us11900146b2-fig-4-svg-title">获准时从对应池扣减 credit，事务完成后可返还</title>
 <desc id="us11900146b2-fig-4-svg-desc">把候选、额度检查、授予、在途事务和 credit 返还串起来。</desc>
@@ -85,12 +149,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">内存流水线</text>
 <text x="28" y="532" class="legend" text-anchor="start">不足和足额为两种分支。图示完成返还的实现，原文未规定返还使用专门消息。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11900146b2-fig-4-check">查询所属池</a> 实时表池独立，其余三表共享；需求可能按事务大小决定。</li><li><a href="#us11900146b2-fig-4-empty">不能满足 credit 时抑制授予</a> 当前池耗尽时只影响与该池关联的请求。</li><li><a href="#us11900146b2-fig-4-take">获准扣减</a> 按对应池当前可用 credit 记入消耗。</li><li><a href="#us11900146b2-fig-4-return">完成后返还原池</a> 其他在途请求仍会占用它们已经消耗的 credit。</li></ul>
-  <p class="figure-evidence">原图 2、4；说明书归档段 0032、0033、0034、0055、0058；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11900146B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表专用 credit 池</dt><dd>原图 2：Credits not Shared with Other Tables</dd></div><div><dt>其余三表共享 credit 池</dt><dd>原图 2：Shared Credits</dd></div></dl></details>
-</figure></section><section id="data"><h2>事务表保存描述，读写 payload 走不同数据缓冲</h2><p>图 3 上方走事务描述。写入数据先进入写数据缓冲，等对应写事务获准后送往内存。读请求执行后，返回的实际数据先进入读返回数据缓冲，再递送给请求方。</p><p>读返回数据缓冲可以按实现的排序约束提前递送已就绪的实时数据。授权第 7、8、14、18 项分别增加读写缓冲方面的限定。清点流水线占用时应同时观察事务表、内存服务中事务、写数据缓冲和读返回数据缓冲。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　事务描述与读写数据分别经过哪些端口</h3>
-    <p id="fig-3-basis">追踪写数据在授予前暂存在哪里，以及读数据怎样返回请求方。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11900146b2-fig-4-check" data-reading-target="us11900146b2-fig-4-check">查询所属池</a><p>实时表池独立，其余三表共享；需求可能按事务大小决定。</p></li><li><a href="#us11900146b2-fig-4-empty" data-reading-target="us11900146b2-fig-4-empty">不能满足 credit 时抑制授予</a><p>当前池耗尽时只影响与该池关联的请求。</p></li><li><a href="#us11900146b2-fig-4-take" data-reading-target="us11900146b2-fig-4-take">获准扣减</a><p>按对应池当前可用 credit 记入消耗。</p></li><li><a href="#us11900146b2-fig-4-return" data-reading-target="us11900146b2-fig-4-return">完成后返还原池</a><p>其他在途请求仍会占用它们已经消耗的 credit。</p></li></ul>
+  <p class="figure-evidence">原图 2、4；说明书归档段 0032、0033、0034、0055、0058；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时表专用 credit 池</dt><dd>原图 2：Credits not Shared with Other Tables</dd></div><div><dt>其余三表共享 credit 池</dt><dd>原图 2：Shared Credits</dd></div></dl></details>
+</figure></section><section id="data" class="article-section reading-chapter" aria-labelledby="data-title"><h2 id="data-title">事务表保存描述，读写 payload 走不同数据缓冲</h2><p>图 3 上方走事务描述。写入数据先进入写数据缓冲，等对应写事务获准后送往内存。读请求执行后，返回的实际数据先进入读返回数据缓冲，再递送给请求方。</p><p>读返回数据缓冲可以按实现的排序约束提前递送已就绪的实时数据。授权第 7、8、14、18 项分别增加读写缓冲方面的限定。清点流水线占用时应同时观察事务表、内存服务中事务、写数据缓冲和读返回数据缓冲。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">事务描述与读写数据分别经过哪些端口</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11900146B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">追踪写数据在授予前暂存在哪里，以及读数据怎样返回请求方。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="事务描述与读写数据分别经过哪些端口" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 641" role="img" aria-labelledby="us11900146b2-fig-3-svg-title us11900146b2-fig-3-svg-desc">
 <title id="us11900146b2-fig-3-svg-title">事务描述与读写数据分别经过哪些端口</title>
 <desc id="us11900146b2-fig-3-svg-desc">追踪写数据在授予前暂存在哪里，以及读数据怎样返回请求方。</desc>
@@ -119,12 +192,21 @@
 <text x="38" y="55" class="signal-title" text-anchor="start">事务描述由仲裁器选择，读写数据在各自缓冲区等待</text>
 <text x="38" y="614" class="legend" text-anchor="start">读返回数据缓冲可以按系统的排序要求改变返回顺序，例如优先递送已就绪的实时读。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11900146b2-fig-3-metadata">事务描述</a> 请求描述独立参与表内选择和公共仲裁。</li><li><a href="#us11900146b2-fig-3-write-out">写获准才送出数据</a> 对应数据从写数据缓冲读取，送往内存。</li><li><a href="#us11900146b2-fig-3-read-in">读数据缓冲</a> 内存读回的数据可临时存在读返回数据缓冲。</li><li><a href="#us11900146b2-fig-3-read-out">返回正确请求方</a> 部分实现可使已就绪的实时读数据先返回，遵守对应排序规则。</li></ul>
-  <p class="figure-evidence">原图 2；说明书归档段 0024、0035、0036、0060；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11900146B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>210</dd></div><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>写数据缓冲</dt><dd>227</dd></div><div><dt>读返回数据缓冲</dt><dd>228</dd></div><div><dt>内存</dt><dd>230</dd></div></dl></details>
-</figure></section><section id="deadline"><h2>实时请求还有充足时间时，非实时候选也可先行</h2><p>图 5 用说明书 ¶0033 的 QoS 条件构造对照。假定两笔请求都已就绪，流水线串行，实时服务用 2 周期，非实时服务用 3 周期。先服务非实时请求会让实时到第 5 周期才完成；若截止点为第 4 周期，这个顺序不可用。先服务实时则第 2 周期完成。</p><p>用两种候选顺序重算到达和完成事件：截止点为 4 时只有实时先行能够满足实时约束，放宽到 5 时两种顺序都可用。抽象模型用于核对为何实时优先级取决于剩余服务时间。实际内存可并行执行，需用实现中的延迟上界或进度指标判断。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　实时截止点决定非实时请求能否先进入流水线</h3>
-    <p id="fig-5-basis">同一批候选比较两种服务顺序。公共资源上先执行非实时请求是否可行取决于实时请求的剩余时间。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11900146b2-fig-3-metadata" data-reading-target="us11900146b2-fig-3-metadata">事务描述</a><p>请求描述独立参与表内选择和公共仲裁。</p></li><li><a href="#us11900146b2-fig-3-write-out" data-reading-target="us11900146b2-fig-3-write-out">写获准才送出数据</a><p>对应数据从写数据缓冲读取，送往内存。</p></li><li><a href="#us11900146b2-fig-3-read-in" data-reading-target="us11900146b2-fig-3-read-in">读数据缓冲</a><p>内存读回的数据可临时存在读返回数据缓冲。</p></li><li><a href="#us11900146b2-fig-3-read-out" data-reading-target="us11900146b2-fig-3-read-out">返回正确请求方</a><p>部分实现可使已就绪的实时读数据先返回，遵守对应排序规则。</p></li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0024、0035、0036、0060；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>内存控制器</dt><dd>210</dd></div><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>写数据缓冲</dt><dd>227</dd></div><div><dt>读返回数据缓冲</dt><dd>228</dd></div><div><dt>内存</dt><dd>230</dd></div></dl></details>
+</figure></section><section id="deadline" class="article-section reading-chapter" aria-labelledby="deadline-title"><h2 id="deadline-title">实时请求还有充足时间时，非实时候选也可先行</h2><p>图 5 用说明书 ¶0033 的 QoS 条件构造对照。假定两笔请求都已就绪，流水线串行，实时服务用 2 周期，非实时服务用 3 周期。先服务非实时请求会让实时到第 5 周期才完成；若截止点为第 4 周期，这个顺序不可用。先服务实时则第 2 周期完成。</p><p>用两种候选顺序重算到达和完成事件：截止点为 4 时只有实时先行能够满足实时约束，放宽到 5 时两种顺序都可用。抽象模型用于核对为何实时优先级取决于剩余服务时间。实际内存可并行执行，需用实现中的延迟上界或进度指标判断。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 同轴时序</p>
+        <h3 id="fig-5-title">实时截止点决定非实时请求能否先进入流水线</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11900146B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">同一批候选比较两种服务顺序。公共资源上先执行非实时请求是否可行取决于实时请求的剩余时间。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="实时截止点决定非实时请求能否先进入流水线" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 450" role="img" aria-labelledby="us11900146b2-fig-5-svg-title us11900146b2-fig-5-svg-desc">
 <title id="us11900146b2-fig-5-svg-title">实时截止点决定非实时请求能否先进入流水线</title>
 <desc id="us11900146b2-fig-5-svg-desc">同一批候选比较两种服务顺序。公共资源上先执行非实时请求是否可行取决于实时请求的剩余时间。</desc>
@@ -164,12 +246,14 @@
 <text x="710.4" y="355" class="arrow-label" text-anchor="end">完成晚于此点即违约</text></g>
 <text x="24" y="420" class="legend" text-anchor="start">工程模型假设流水线串行、两笔请求同时就绪、两个池均有足额 credit。原文未给固定服务时长。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#us11900146b2-fig-5-rt-first">实时先行</a> 本模型在周期 2 完成实时服务，早于截止点 4。</li><li><a href="#us11900146b2-fig-5-nrt-first">非实时先行</a> 推迟到周期 5 才完成实时请求。</li><li><a href="#us11900146b2-fig-5-limit">截止点</a> 模型独立设定。放宽到周期 5 时两种顺序均满足条件。</li></ul>
-  <p class="figure-evidence">原图 1、2、4；说明书归档段 0023、0032、0033、0059；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11900146B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时事务表</dt><dd>211</dd></div><div><dt>非实时事务表</dt><dd>212</dd></div></dl></details>
-</figure></section><section id="scope"><h2>分池在独立权项内，乱序与 QoS 的表达各有边界</h2><p>授权第 1、9、15 项都限定共享池与实时表的独立池。第 2、3 项增加独立选择电路和允许实时表乱序选出部分请求。第 15 项包含分别设置的两类选择电路，第 16、17 项再限定实时 QoS 及优先关系。</p><p>在手机 SoC 的显示、图形和 CPU 混合负载下，用同一请求轨迹比较分池和共享池时，应分别记录候选等待、获准到完成、读数据返回三个间隔，再统计实时截止违约和非实时请求的进展。这样才能定位瓶颈是在 credit 准入、公共内存流水线，还是读返回缓冲。</p></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11900146b2-fig-5-rt-first" data-reading-target="us11900146b2-fig-5-rt-first">实时先行</a><p>本模型在周期 2 完成实时服务，早于截止点 4。</p></li><li><a href="#us11900146b2-fig-5-nrt-first" data-reading-target="us11900146b2-fig-5-nrt-first">非实时先行</a><p>推迟到周期 5 才完成实时请求。</p></li><li><a href="#us11900146b2-fig-5-limit" data-reading-target="us11900146b2-fig-5-limit">截止点</a><p>模型独立设定。放宽到周期 5 时两种顺序均满足条件。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、4；说明书归档段 0023、0032、0033、0059；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>公共仲裁器</dt><dd>215</dd></div><div><dt>实时事务表</dt><dd>211</dd></div><div><dt>非实时事务表</dt><dd>212</dd></div></dl></details>
+</figure></section><section id="scope" class="article-section reading-chapter" aria-labelledby="scope-title"><h2 id="scope-title">分池在独立权项内，乱序与 QoS 的表达各有边界</h2><p>授权第 1、9、15 项都限定共享池与实时表的独立池。第 2、3 项增加独立选择电路和允许实时表乱序选出部分请求。第 15 项包含分别设置的两类选择电路，第 16、17 项再限定实时 QoS 及优先关系。</p><p>在手机 SoC 的显示、图形和 CPU 混合负载下，用同一请求轨迹比较分池和共享池时，应分别记录候选等待、获准到完成、读数据返回三个间隔，再统计实时截止违约和非实时请求的进展。这样才能定位瓶颈是在 credit 准入、公共内存流水线，还是读返回缓冲。</p></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、15 项；全文核对覆盖 91 个说明书归档段与 18 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -199,6 +283,58 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置内存控制器为同一批代理的两类请求分设实时与非实时表，另有附加处理电路表；实时信用独立，仲裁按 QoS 将胜出请求送进流水线。见原图 2。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>对实时表和非实时表分别设置选择电路，先各选出参加仲裁的候选。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>实时表可用不同于接收次序的顺序提名部分请求。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>附加事务表包括接收 CPU 请求的处理器表与接收 GPU 请求的图形表。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>仲裁器在多张事务表提出的请求之间做仲裁。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>执行实时 QoS 时，使实时请求优先于非实时、CPU 和 GPU 表的请求。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>配置写缓冲暂存新写请求的数据。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>配置读缓冲暂存从内存取回的读数据。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法分别入表并配置credit 池，对实时和共享来源做仲裁，胜出事务由控制器流水线处理。见原图 4。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>实时和非实时分别用选择电路从相应表提名候选。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>部分实时候选可以乱序提名。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>外设发出两类请求，CPU 和 GPU 请求分别进入处理器表与图形表。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>执行实时 QoS 时，让实时请求优先于非实时、CPU、GPU 表。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>写缓冲暂存待写数据，读缓冲暂存已取回的读数据。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统明确四张表和实时、非实时提名电路，实时池独享，其他三表共用。实时 QoS 在权利要求 16 追加。见原图 2。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>仲裁器额外执行实时请求的 QoS 策略。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>以优先实时表候选的方式实施该 QoS 策略。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11900146B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>提供读数据缓冲和写数据缓冲，分别暂存相关事务数据。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US11900146B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11900146B2#knowledge">在关系图谱中定位 US11900146B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-handoff">机制衔接</span>
+    <code>US12730763B2</code>
+  </div>
+  <h3><a href="US12730763B2.html">关键读到达时，内存控制器何时提前结束写轮次</a></h3>
+  <p class="related-edge-label">有信用仍需读轮次</p>
+  <p class="related-edge-summary">独立 credit 保住实时内存事务的仲裁资格。即便具备资格，读请求也可能赶上集中写轮次。另件授权的切换条件是处理器标明这笔读为关键读，并且指定优先级的写队列有足够空位等条件成立，可提前转入读轮次。</p>
+<p class="related-evidence"><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a><a href="US12730763B2.html#claim-1">对照篇权项 1</a><a href="US12730763B2.html#fig-3">对照篇图表 3</a></p>
+</li><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US10795818B1</code>
+  </div>
+  <h3><a href="US10795818B1.html">普通 snoop 积压时，控制器如何缩短敏感请求的等待</a></h3>
+  <p class="related-edge-label">限制先行探测与分离信用池</p>
+  <p class="related-edge-summary">US10795818B1 的两类探测共用输入通道，缓存控制器限制在一笔延迟敏感 snoop 之前处理的非敏感 snoop 数。US11900146B2 给实时内存事务表配置独立信用池。当其他事务表耗尽共享信用，实时请求仍可用本表额度参与仲裁。</p>
+<p class="related-evidence"><a href="US10795818B1.html#claim-1">对照篇权项 1</a><a href="US10795818B1.html#fig-2">对照篇图表 2</a><a href="#claim-1">本篇权项 1</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#tables">各表选择候选后，才进入公共仲裁</a></li><li><a href="#credits">共享池耗尽只会阻止对应三张表的授予</a></li><li><a href="#data">事务表保存描述，读写 payload 走不同数据缓冲</a></li><li><a href="#deadline">实时请求还有充足时间时，非实时候选也可先行</a></li><li><a href="#scope">分池在独立权项内，乱序与 QoS 的表达各有边界</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2024-02-13</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-08-31</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/462,374</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/467、G06F13/1605、G06F9/4887 <details class="inline-more"><summary>其余 2 项</summary><span>G06F9/5016、G06F2209/5011</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Ilya Granovsky、Elli Bagelman</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US11900146B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11900146B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>

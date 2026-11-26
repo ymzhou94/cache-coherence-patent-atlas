@@ -1,18 +1,64 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>系统缓存怎样用部分脏状态推迟读取旧缓存行 · US9218286B2</title>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
-<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
-</head><body><main class="frame redesigned">
-<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
-<header id="engineering"><p><code>US9218286B2</code> · <a href="https://patents.google.com/patent/US9218286B2/en">专利全文</a></p>
-<h1>系统缓存怎样用部分脏状态推迟读取旧缓存行</h1><p class="reading-question">一笔写入只覆盖 64 B 缓存行中的几个字，而且在系统缓存缺失。能否先收下这些字，等确实需要旧数据时再去读内存？</p>
-<p class="reading-answer">系统缓存先分配行，只写请求覆盖的字。标签把该行标成部分脏，关联的 ECC 位暂用来表示哪些字有效。以后需要完整行时，控制器先掩码写回有效字，再从下游取回已合并的整行。</p>
-<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2015-12-22</dd></div><div><dt>申请号</dt><dd>US13/629,196</dd></div><div><dt>最早优先权</dt><dd>2012-09-27</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu</dd></div></dl></details></header>
-<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#allocate-partial">写缺失时分配行，旧行留在下游</a></li><li><a href="#per-word-mask">按字记录哪些位置已有最新数据</a></li><li><a href="#full-read">整行读先让新旧数据合并</a></li><li><a href="#when-to-stop">是否还要访问下游，取决于后续访问的范围</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
-<div id="mechanism"><section id="allocate-partial"><h2>写缺失时分配行，旧行留在下游</h2><p>从图 1 的入口跟一笔部分写。内存控制器内的系统缓存查标签，发现本行缺失。只要选出可分配位置，控制器就能把这笔写的数据直接放入对应字，无须先取这次写没有覆盖的旧字。</p><p>控制器把标签设为部分脏（partial dirty）。在这个状态下，与该行关联的纠错码（ECC）位暂作有效掩码。后续路径先看行状态，再决定把这些位当成 ECC 还是掩码。说明书对这段时间的错误检测另无完整电路描述。</p><figure class="exhibit" id="fig-1">
-  <figcaption><h3 id="fig-1-title">图 1　写缺失只把收到的字写进系统缓存</h3>
-    <p id="fig-1-basis">图中区分标签路径、数据阵列写入与外部内存路径。对这个部分写缺失，可先分配行并直接写，省去为此次分配取旧整行的读取。</p></figcaption>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US9218286B2 系统缓存怎样用部分脏状态推迟读取旧缓存行 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-slc" href="../index.html?topic=slc#catalog">SLC 与内存控制器</a>
+  </nav>
+  <p class="document-id">
+    <code>US9218286B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2015-12-22">2015-12-22</time>
+    <a class="hero-source-link" href="https://patents.google.com/patent/US9218286B2/en" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>系统缓存怎样用部分脏状态推迟读取旧缓存行</h1>
+  <p class="english-title" lang="en">System cache with partial write valid states</p>
+  <p class="document-question">一笔写入只覆盖 64 B 缓存行中的几个字，而且在系统缓存缺失。能否先收下这些字，等确实需要旧数据时再去读内存？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#allocate-partial">写缺失时分配行，旧行留在下游</a></li><li><a href="#per-word-mask">按字记录哪些位置已有最新数据</a></li><li><a href="#full-read">整行读先让新旧数据合并</a></li><li><a href="#when-to-stop">是否还要访问下游，取决于后续访问的范围</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">系统缓存先分配行，只写请求覆盖的字。标签把该行标成部分脏，关联的 ECC 位暂用来表示哪些字有效。以后需要完整行时，控制器先掩码写回有效字，再从下游取回已合并的整行。</p>
+  </section>
+  <div id="mechanism"><section id="allocate-partial" class="article-section reading-chapter" aria-labelledby="allocate-partial-title"><h2 id="allocate-partial-title">写缺失时分配行，旧行留在下游</h2><p>从图 1 的入口跟一笔部分写。内存控制器内的系统缓存查标签，发现本行缺失。只要选出可分配位置，控制器就能把这笔写的数据直接放入对应字，无须先取这次写没有覆盖的旧字。</p><p>控制器把标签设为部分脏（partial dirty）。在这个状态下，与该行关联的纠错码（ECC）位暂作有效掩码。后续路径先看行状态，再决定把这些位当成 ECC 还是掩码。说明书对这段时间的错误检测另无完整电路描述。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">写缺失只把收到的字写进系统缓存</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US9218286B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">图中区分标签路径、数据阵列写入与外部内存路径。对这个部分写缺失，可先分配行并直接写，省去为此次分配取旧整行的读取。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="写缺失只把收到的字写进系统缓存" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 691" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
 <title id="fig-1-svg-title">写缺失只把收到的字写进系统缓存</title>
 <desc id="fig-1-svg-desc">图中区分标签路径、数据阵列写入与外部内存路径。对这个部分写缺失，可先分配行并直接写，省去为此次分配取旧整行的读取。</desc>
@@ -40,12 +86,21 @@
 <text x="44" y="48" class="signal-title" text-anchor="start">部分写缺失进入系统缓存</text>
 <text x="45" y="663" class="signal-title" text-anchor="start">图中只跟踪当前部分写的目标行。数据的其余字仍由下游旧行提供。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-1-miss">控制器识别部分写缺失</a> 缓存控制单元完成标签匹配。请求只改一部分字，硬件先分配一个缓存行位置。</li><li><a href="#fig-1-valid">关联位按部分脏状态改作有效掩码</a> 一根线更新标签状态，一根线更新数据阵列相邻的 ECC 位。该状态下，这些位通过掩码标明哪些字已写入。</li><li><a href="#fig-1-skip">当前写入不读取旧整行</a> 写请求的字直接落到分配的行。若分配必须先逐出另一条脏行，这种既有逐出流量仍按对应规则处理。</li></ul>
-  <p class="figure-evidence">原图 1、3、4、6、10；说明书归档段 0009、0049、0050、0064、0077、0078、0088、0089；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US9218286B2/fig-1.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器内的系统缓存</dt><dd>16、60、120</dd></div><div><dt>Apple 原文的 coherence point，一致性点（CP）</dt><dd>18</dd></div><div><dt>决定分配并更新标签、数据和有效位的控制单元</dt><dd>66／125</dd></div><div><dt>数据阵列和标签阵列</dt><dd>124、126</dd></div><div><dt>复用为字掩码的 ECC 位与标签状态</dt><dd>128、132</dd></div></dl></details>
-</figure></section><section id="per-word-mask"><h2>按字记录哪些位置已有最新数据</h2><p>图 2 按原图 7、8 的 64 B 例子，把十六个 32 位字与十六个有效位对齐。第一笔写占头两字，第二笔覆盖尾字。其余 13 个字留空。标签可命中这一行，但读到未写位置仍不能从本行取数据。</p><p>继续命中同一行的部分写覆盖本次的位置，并合并有效位。原图没有假定 CPU 字节序。其他实施例可用字节掩码或不同粒度。</p><figure class="exhibit" id="fig-2">
-  <figcaption><h3 id="fig-2-title">图 2　16 个有效位与一条 64 B 缓存行逐字对齐</h3>
-    <p id="fig-2-basis">按原图 7、8 所画顺序，从左至右编号字 0 至字 15。首次写将字 0、1 置有效，第二次写只补字 15。通路按掩码确定哪些字可以使用。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-1-miss" data-reading-target="fig-1-miss">控制器识别部分写缺失</a><p>缓存控制单元完成标签匹配。请求只改一部分字，硬件先分配一个缓存行位置。</p></li><li><a href="#fig-1-valid" data-reading-target="fig-1-valid">关联位按部分脏状态改作有效掩码</a><p>一根线更新标签状态，一根线更新数据阵列相邻的 ECC 位。该状态下，这些位通过掩码标明哪些字已写入。</p></li><li><a href="#fig-1-skip" data-reading-target="fig-1-skip">当前写入不读取旧整行</a><p>写请求的字直接落到分配的行。若分配必须先逐出另一条脏行，这种既有逐出流量仍按对应规则处理。</p></li></ul>
+  <p class="figure-evidence">原图 1、3、4、6、10；说明书归档段 0009、0049、0050、0064、0077、0078、0088、0089；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">5 项</span></summary><dl><div><dt>内存控制器内的系统缓存</dt><dd>16、60、120</dd></div><div><dt>Apple 原文的 coherence point，一致性点（CP）</dt><dd>18</dd></div><div><dt>决定分配并更新标签、数据和有效位的控制单元</dt><dd>66／125</dd></div><div><dt>数据阵列和标签阵列</dt><dd>124、126</dd></div><div><dt>复用为字掩码的 ECC 位与标签状态</dt><dd>128、132</dd></div></dl></details>
+</figure></section><section id="per-word-mask" class="article-section reading-chapter" aria-labelledby="per-word-mask-title"><h2 id="per-word-mask-title">按字记录哪些位置已有最新数据</h2><p>图 2 按原图 7、8 的 64 B 例子，把十六个 32 位字与十六个有效位对齐。第一笔写占头两字，第二笔覆盖尾字。其余 13 个字留空。标签可命中这一行，但读到未写位置仍不能从本行取数据。</p><p>继续命中同一行的部分写覆盖本次的位置，并合并有效位。原图没有假定 CPU 字节序。其他实施例可用字节掩码或不同粒度。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 微架构与信号</p>
+        <h3 id="fig-2-title">16 个有效位与一条 64 B 缓存行逐字对齐</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US9218286B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">按原图 7、8 所画顺序，从左至右编号字 0 至字 15。首次写将字 0、1 置有效，第二次写只补字 15。通路按掩码确定哪些字可以使用。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="16 个有效位与一条 64 B 缓存行逐字对齐" style="--figure-width:1420px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 725" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
 <title id="fig-2-svg-title">16 个有效位与一条 64 B 缓存行逐字对齐</title>
 <desc id="fig-2-svg-desc">按原图 7、8 所画顺序，从左至右编号字 0 至字 15。首次写将字 0、1 置有效，第二次写只补字 15。通路按掩码确定哪些字可以使用。</desc>
@@ -99,12 +154,21 @@
 <text x="47" y="43" class="signal-title" text-anchor="start">数据位置和有效位共用同一字序</text>
 <text x="47" y="699" class="signal-title" text-anchor="start">原文例为 16 个 32 位字。不把图示字序解读为 CPU 的端序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-2-mask-first">首写分配后，仅前两个字有效</a> 原图的 8 字节写填入头部两字，掩码的两个 1 分别对应这两个存储位置。零对应未写字；不能用其存储值代表内存内容。</li><li><a href="#fig-2-mask-after">后续部分写标记它覆盖的位置</a> 图中的第二笔写落在末字，其余字的有效位保持。可把累积掩码理解为向量 OR；每次写覆盖本次的数据位置。</li><li><a href="#fig-2-last">第二笔写落在字 15</a> 末位的掩码变为 1，中间仍有 13 个字未写。若以后所有位置均有效，说明书允许转换状态并恢复 ECC。</li></ul>
-  <p class="figure-evidence">原图 6、7、8、10；说明书归档段 0077、0078、0079、0080、0081、0082、0083、0089、0090；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US9218286B2/fig-2.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>与数据字逐位对应的掩码，原位置用于 ECC</dt><dd>128</dd></div><div><dt>含 16 个字的缓存行实例</dt><dd>130</dd></div><div><dt>第二笔写，数据为 0x230ABB4D</dt><dd>136</dd></div><div><dt>两次部分写后仍未写的字 2–14</dt><dd>138</dd></div></dl></details>
-</figure></section><section id="full-read"><h2>整行读先让新旧数据合并</h2><p>图 3 展开写回数据路径。掩码单元只给有效字打开下游写使能。没有写过的字保持下游旧值。内存得到的是缓存局部新字与未覆盖旧字的组合。</p><p>图 4 按请求时序铺开同一动作。标签命中部分脏行后，控制器先做带掩码的写回，随后才能读回合并过的完整行。写回和读之间要满足同址数据可见性。回填完整行后转为 clean，再交给请求方。该路径可能把首次写入省下的一次读移到之后的读请求上。</p><figure class="exhibit" id="fig-3">
-  <figcaption><h3 id="fig-3-title">图 3　逐字掩码决定哪部分下游旧行可以被覆盖</h3>
-    <p id="fig-3-basis">原图 9 的写回门以部分脏状态和字掩码共同控制。下游按字选择写入，未覆盖字留在原地址。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-2-mask-first" data-reading-target="fig-2-mask-first">首写分配后，仅前两个字有效</a><p>原图的 8 字节写填入头部两字，掩码的两个 1 分别对应这两个存储位置。零对应未写字；不能用其存储值代表内存内容。</p></li><li><a href="#fig-2-mask-after" data-reading-target="fig-2-mask-after">后续部分写标记它覆盖的位置</a><p>图中的第二笔写落在末字，其余字的有效位保持。可把累积掩码理解为向量 OR；每次写覆盖本次的数据位置。</p></li><li><a href="#fig-2-last" data-reading-target="fig-2-last">第二笔写落在字 15</a><p>末位的掩码变为 1，中间仍有 13 个字未写。若以后所有位置均有效，说明书允许转换状态并恢复 ECC。</p></li></ul>
+  <p class="figure-evidence">原图 6、7、8、10；说明书归档段 0077、0078、0079、0080、0081、0082、0083、0089、0090；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>与数据字逐位对应的掩码，原位置用于 ECC</dt><dd>128</dd></div><div><dt>含 16 个字的缓存行实例</dt><dd>130</dd></div><div><dt>第二笔写，数据为 0x230ABB4D</dt><dd>136</dd></div><div><dt>两次部分写后仍未写的字 2–14</dt><dd>138</dd></div></dl></details>
+</figure></section><section id="full-read" class="article-section reading-chapter" aria-labelledby="full-read-title"><h2 id="full-read-title">整行读先让新旧数据合并</h2><p>图 3 展开写回数据路径。掩码单元只给有效字打开下游写使能。没有写过的字保持下游旧值。内存得到的是缓存局部新字与未覆盖旧字的组合。</p><p>图 4 按请求时序铺开同一动作。标签命中部分脏行后，控制器先做带掩码的写回，随后才能读回合并过的完整行。写回和读之间要满足同址数据可见性。回填完整行后转为 clean，再交给请求方。该路径可能把首次写入省下的一次读移到之后的读请求上。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">逐字掩码决定哪部分下游旧行可以被覆盖</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US9218286B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">原图 9 的写回门以部分脏状态和字掩码共同控制。下游按字选择写入，未覆盖字留在原地址。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="逐字掩码决定哪部分下游旧行可以被覆盖" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 679" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
 <title id="fig-3-svg-title">逐字掩码决定哪部分下游旧行可以被覆盖</title>
 <desc id="fig-3-svg-desc">原图 9 的写回门以部分脏状态和字掩码共同控制。下游按字选择写入，未覆盖字留在原地址。</desc>
@@ -134,12 +198,21 @@
 <text x="45" y="48" class="signal-title" text-anchor="start">屏蔽未写字后，下游内存完成全行合并</text>
 <text x="45" y="613" class="signal-title" text-anchor="start">两条数据来源按同一地址、同一行合并。图 4 继续展开读请求的协议顺序。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-3-select">写回门同时检查行状态和字有效位</a> 在 partial dirty 状态下，ECC 存储位解释为掩码，不能把零对应的存储位置当作新数据。</li><li><a href="#fig-3-old">保留内存中的中间 13 字</a> 本例字 0、1、15 参与写回。字 2–14 保持内存里的值，这些位置缺失时也不会从系统缓存输出垃圾。</li><li><a href="#fig-3-read">读回的整行包含两类来源</a> 按掩码完成写回后，才请求同址整行。回填数据由新写入的字和从未覆盖的内存字组成。</li></ul>
-  <p class="figure-evidence">原图 8、9、11；说明书归档段 0082、0084、0085、0086、0092、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00023" aria-label="原文权利要求 23">23</a> <a href="../diagrams/US9218286B2/fig-3.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>发起掩码写回和后续整行读取的控制单元</dt><dd>125</dd></div><div><dt>向掩码单元提供的有效位与行状态</dt><dd>128、132</dd></div><div><dt>逐字控制下游写入的掩码单元</dt><dd>146</dd></div><div><dt>同址下游存储行和其中保留的字</dt><dd>142、144</dd></div></dl></details>
-</figure><figure class="exhibit" id="fig-4">
-  <figcaption><h3 id="fig-4-title">图 4　整行读命中部分脏行，先掩码写回再取整行</h3>
-    <p id="fig-4-basis">时序按缓存控制器观察的动作排序。回填后标签转换为 clean；支持部分读取的变体还有一条不同路径。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-3-select" data-reading-target="fig-3-select">写回门同时检查行状态和字有效位</a><p>在 partial dirty 状态下，ECC 存储位解释为掩码，不能把零对应的存储位置当作新数据。</p></li><li><a href="#fig-3-old" data-reading-target="fig-3-old">保留内存中的中间 13 字</a><p>本例字 0、1、15 参与写回。字 2–14 保持内存里的值，这些位置缺失时也不会从系统缓存输出垃圾。</p></li><li><a href="#fig-3-read" data-reading-target="fig-3-read">读回的整行包含两类来源</a><p>按掩码完成写回后，才请求同址整行。回填数据由新写入的字和从未覆盖的内存字组成。</p></li></ul>
+  <p class="figure-evidence">原图 8、9、11；说明书归档段 0082、0084、0085、0086、0092、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00023" aria-label="原文权利要求 23">23</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>发起掩码写回和后续整行读取的控制单元</dt><dd>125</dd></div><div><dt>向掩码单元提供的有效位与行状态</dt><dd>128、132</dd></div><div><dt>逐字控制下游写入的掩码单元</dt><dd>146</dd></div><div><dt>同址下游存储行和其中保留的字</dt><dd>142、144</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 事务时序</p>
+        <h3 id="fig-4-title">整行读命中部分脏行，先掩码写回再取整行</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US9218286B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">时序按缓存控制器观察的动作排序。回填后标签转换为 clean；支持部分读取的变体还有一条不同路径。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="整行读命中部分脏行，先掩码写回再取整行" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 517" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
 <title id="fig-4-svg-title">整行读命中部分脏行，先掩码写回再取整行</title>
 <desc id="fig-4-svg-desc">时序按缓存控制器观察的动作排序。回填后标签转换为 clean；支持部分读取的变体还有一条不同路径。</desc>
@@ -160,12 +233,21 @@
 <rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">下游内存</text>
 <text x="28" y="484" class="legend" text-anchor="start">顺序表示数据必须先更新。部分读取变体仅在请求范围已有效时可直接返回该部分及其掩码。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-4-dirty-hit">地址命中但行状态为 partial dirty</a> 标签命中只说明行存在，此处读请求需要完整数据。发回前必须补齐未写部分。</li><li><a href="#fig-4-order">先写回有效字，再发同址读</a> 这里展示同址可见性依赖，不限定外部控制器的确认包、互锁结构或具体周期。</li><li><a href="#fig-4-done">完整数据回填并应答</a> 请求方在这条路径上收到完整行。支持部分请求的实施例可用字掩码指示已有效的范围。</li></ul>
-  <p class="figure-evidence">原图 9、11；说明书归档段 0084、0085、0086、0091、0092、0093、0094、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00023" aria-label="原文权利要求 23">23</a> <a href="../diagrams/US9218286B2/fig-4.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>读请求命中部分脏行</dt><dd>174</dd></div><div><dt>掩码写回后取回并填入完整行</dt><dd>176、178</dd></div><div><dt>更新 clean 状态并返回数据</dt><dd>180、182</dd></div></dl></details>
-</figure></section><section id="when-to-stop"><h2>是否还要访问下游，取决于后续访问的范围</h2><p>图 5 给出另外两个出口。如果连续写最终覆盖整行，说明书允许转为整行有效并恢复 ECC。支持带掩码返回的实施例还可以直接满足已有效的部分读。没有收齐全部字时，普通整行读仍走图 4。</p><p>用 16 字模型复算原图 7、8，两笔写之后有效字正好是 0、1、15；掩码写回保留其余 13 字。以首次写即读旧行的写分配作为对照，若工作负载随后要求整行，两种模型均读下游一次，时点不同。连续覆盖整行且此前没有整行读时，部分脏模型从分配到写满期间不必读旧行。计数只含目标行，不含逐出其他行。</p><p>独立权利要求 1 和 18 写明部分写缺失时不先取旧行，再将 ECC 位复用为有效位。方法权项 7 先写入状态和位复用，免读条件由从属权项 9 补充。独立权利要求 14 从读命中部分脏行开始，覆盖只写有效片段、读回整行并响应。</p><figure class="exhibit" id="fig-5">
-  <figcaption><h3 id="fig-5-title">图 5　部分脏状态的出口取决于后续是写还是读</h3>
-    <p id="fig-5-basis">说明书给出三种后续路径。补齐整行和从下游重新回填都结束掩码阶段，但最后行状态不同。</p></figcaption>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-4-dirty-hit" data-reading-target="fig-4-dirty-hit">地址命中但行状态为 partial dirty</a><p>标签命中只说明行存在，此处读请求需要完整数据。发回前必须补齐未写部分。</p></li><li><a href="#fig-4-order" data-reading-target="fig-4-order">先写回有效字，再发同址读</a><p>这里展示同址可见性依赖，不限定外部控制器的确认包、互锁结构或具体周期。</p></li><li><a href="#fig-4-done" data-reading-target="fig-4-done">完整数据回填并应答</a><p>请求方在这条路径上收到完整行。支持部分请求的实施例可用字掩码指示已有效的范围。</p></li></ul>
+  <p class="figure-evidence">原图 9、11；说明书归档段 0084、0085、0086、0091、0092、0093、0094、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00023" aria-label="原文权利要求 23">23</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>读请求命中部分脏行</dt><dd>174</dd></div><div><dt>掩码写回后取回并填入完整行</dt><dd>176、178</dd></div><div><dt>更新 clean 状态并返回数据</dt><dd>180、182</dd></div></dl></details>
+</figure></section><section id="when-to-stop" class="article-section reading-chapter" aria-labelledby="when-to-stop-title"><h2 id="when-to-stop-title">是否还要访问下游，取决于后续访问的范围</h2><p>图 5 给出另外两个出口。如果连续写最终覆盖整行，说明书允许转为整行有效并恢复 ECC。支持带掩码返回的实施例还可以直接满足已有效的部分读。没有收齐全部字时，普通整行读仍走图 4。</p><p>用 16 字模型复算原图 7、8，两笔写之后有效字正好是 0、1、15；掩码写回保留其余 13 字。以首次写即读旧行的写分配作为对照，若工作负载随后要求整行，两种模型均读下游一次，时点不同。连续覆盖整行且此前没有整行读时，部分脏模型从分配到写满期间不必读旧行。计数只含目标行，不含逐出其他行。</p><p>独立权利要求 1 和 18 写明部分写缺失时不先取旧行，再将 ECC 位复用为有效位。方法权项 7 先写入状态和位复用，免读条件由从属权项 9 补充。独立权利要求 14 从读命中部分脏行开始，覆盖只写有效片段、读回整行并响应。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-5" aria-labelledby="fig-5-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 5 · 微架构与信号</p>
+        <h3 id="fig-5-title">部分脏状态的出口取决于后续是写还是读</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US9218286B2/fig-5.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-5-basis" class="exhibit-takeaway">说明书给出三种后续路径。补齐整行和从下游重新回填都结束掩码阶段，但最后行状态不同。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
   <div class="diagram-container" tabindex="0" role="region" aria-label="部分脏状态的出口取决于后续是写还是读" style="--figure-width:1360px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 672" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
 <title id="fig-5-svg-title">部分脏状态的出口取决于后续是写还是读</title>
 <desc id="fig-5-svg-desc">说明书给出三种后续路径。补齐整行和从下游重新回填都结束掩码阶段，但最后行状态不同。</desc>
@@ -194,12 +276,14 @@
 <g id="fig-5-keep"><rect x="955" y="449" width="357" height="116" rx="6" fill="#f5f5f5"/><rect x="955" y="449" width="357" height="116" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1133.5" y="475" class="node-name" text-anchor="middle">保留部分脏状态</text><text x="1133.5" y="497" class="node-detail" text-anchor="middle">直接响应不必写回和重读</text><text x="1133.5" y="515" class="node-detail" text-anchor="middle">未返回字不变</text></g>
 <text x="49" y="628" class="signal-title" text-anchor="start">下一次访问的覆盖范围，决定是否需要下游读写。</text>
 </svg></div>
-  <ul class="figure-reading"><li><a href="#fig-5-dirty">部分脏表示未覆盖字还缺失</a> 掩码使该状态能正确积累同一行的后续写。</li><li><a href="#fig-5-complete">写到所有字都有效可恢复 ECC</a> 各字都来自写入，按说明书可转为整行有效状态并恢复 ECC。没有下游写回的证据，不能将它当作 clean。</li><li><a href="#fig-5-direct">已覆盖的部分读可直接响应</a> 只在支持部分结果并能返回对应字掩码的实施例成立。任意整行读使用图 4 主线。</li></ul>
-  <p class="figure-evidence">原图 7、8、11；说明书归档段 0079、0080、0082、0083、0092、0093、0094、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US9218286B2/fig-5.html">打开独立图稿</a></p>
-  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>掩码存储字段与标签状态</dt><dd>128、132</dd></div><div><dt>整行回填与 clean 更新</dt><dd>178、180</dd></div><div><dt>读返回；对部分返回另见说明书 0095</dt><dd>182</dd></div></dl></details>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#fig-5-dirty" data-reading-target="fig-5-dirty">部分脏表示未覆盖字还缺失</a><p>掩码使该状态能正确积累同一行的后续写。</p></li><li><a href="#fig-5-complete" data-reading-target="fig-5-complete">写到所有字都有效可恢复 ECC</a><p>各字都来自写入，按说明书可转为整行有效状态并恢复 ECC。没有下游写回的证据，不能将它当作 clean。</p></li><li><a href="#fig-5-direct" data-reading-target="fig-5-direct">已覆盖的部分读可直接响应</a><p>只在支持部分结果并能返回对应字掩码的实施例成立。任意整行读使用图 4 主线。</p></li></ul>
+  <p class="figure-evidence">原图 7、8、11；说明书归档段 0079、0080、0082、0083、0092、0093、0094、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>掩码存储字段与标签状态</dt><dd>128、132</dd></div><div><dt>整行回填与 clean 更新</dt><dd>178、180</dd></div><div><dt>读返回；对部分返回另见说明书 0095</dt><dd>182</dd></div></dl></details>
 </figure></section></div>
-
-<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、7、14、18 项；全文核对覆盖 100 个说明书归档段与 23 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -236,6 +320,49 @@
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>缓存装置项规定局部写缺失分配、省略读旧行，以及把 ECC 位变为局部有效位。原图 6–7、10。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将对应缓存标签的状态字段设置为部分脏。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>把复用的 ECC 位限定为字掩码并标记哪些数据字有效。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>读命中时按字掩码写回有效数据，读取整行并存回该缓存位置。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>完整行回填后，把对应标签的状态设为干净。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>随后部分写命中同一行时，将请求数据存入该位置。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>局部写方法项在缺失时取得行，写指定范围、把行状态置为 partial dirty并复用 ECC 字段。原图 6–7、10。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>明确首个部分写只更新不足一个完整缓存行的数据。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>将部分写入缓存位置以前，不先读取相应旧行。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>写回只更新作为有效位的 ECC 字段所指示的数据。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>读命中部分脏行时写回有效部分，重取整行、存缓存并返回数据。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>前项的读请求进一步限定为部分读。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>对同址第二笔部分写仍省旧行读取，更新数据和有效掩码。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>读方法项限定命中部分脏后先按有效位写回，再读整行应答。原图 9、11。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>再次限定写回范围只含 ECC 位所标记的有效数据。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>用从内存重取到的完整行替换原部分脏行。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>把完成回填后的对应标签更新为干净。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>内存控制器项含系统缓存数据阵列、ECC 位、状态标签和部分写控制。原图 6–7、10。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>数据阵列的每条缓存行具备对应的 ECC 存储字段。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>控制器将对应缓存行标签设为部分脏。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>读命中时先写回有效数据，再取回整行存入系统缓存。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-21">21</a></td><td>明确使用重新解释的 ECC 位识别各有效字，只写回这些字。</td></tr><tr id="claim-23"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9218286B2/en#CLM-00023" aria-label="原文权利要求 23">23</a></th><td><a href="#claim-22">22</a></td><td>取回的整行存放在同一个缓存行位置。</td></tr></tbody>
   </table>
-</details></section>
-<p id="related"><a href="../index.html?patent=US9218286B2#knowledge">在专利关系图中定位</a></p>
-</main></body></html>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US9218286B2#knowledge">在关系图谱中定位 US9218286B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11586552B2</code>
+  </div>
+  <h3><a href="US11586552B2.html">部分无效的缓存区段如何读出最新数据</a></h3>
+  <p class="related-edge-label">补齐部分脏行</p>
+  <p class="related-edge-summary">同一缺失片段和本地脏片段并存时，两件给出不同的读补齐顺序。US9218286B2 的权 14 将 ECC 位暂用作有效位置，先把有效片段写回再从内存读行。US11586552B2 的权 1 先读下层，仅用返回值补无效片段，保留本地修改后合并应答。</p>
+<p class="related-evidence"><a href="#claim-14">本篇权项 14</a><a href="#fig-3">本篇图表 3</a><a href="US11586552B2.html#claim-1">对照篇权项 1</a><a href="US11586552B2.html#fig-2">对照篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#allocate-partial">写缺失时分配行，旧行留在下游</a></li><li><a href="#per-word-mask">按字记录哪些位置已有最新数据</a></li><li><a href="#full-read">整行读先让新旧数据合并</a></li><li><a href="#when-to-stop">是否还要访问下游，取决于后续访问的范围</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2015-12-22</dd></div>
+      <div><dt>最早优先权</dt><dd>2012-09-27</dd></div>
+      <div><dt>美国申请日</dt><dd>2012-09-27</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US13/629,196</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>Apple Inc</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F12/0804、G06F12/084、G06F2212/601 <details class="inline-more"><summary>其余 3 项</summary><span>G06F2212/6046、Y02B60/1225、Y02D10/00</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://patents.google.com/patent/US9218286B2/en" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US9218286B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-24</span>
+</div></footer>
+</body>
+</html>
