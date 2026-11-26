@@ -1,123 +1,149 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12547409B2 支持多种长度的分层 trace cache · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分层 trace cache 如何向前端提供更长的取指组 · US12547409B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12547409B2</code> · <a href="https://patents.google.com/patent/US12547409B2/en">专利全文</a></p>
+<h1>分层 trace cache 如何向前端提供更长的取指组</h1><p class="reading-question">靠近取指前端的 L1 trace cache 只能保存较短的条目。更长的 trace 应存在哪里，怎样在需求到来时完整送入前端？</p>
+<p class="reading-answer">较远的 L2 可以把长 trace 分成主阵列与溢出存储两段。预测到将使用时，先取出并组装到更宽的 fast array。长条目由 fast array 直接供给，短条目才可能晋升到较窄的 L1。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-02-10</dd></div><div><dt>申请号</dt><dd>US18/627,001</dd></div><div><dt>最早优先权</dt><dd>2024-04-04</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Muawya M. Al-Otoom、Ilhyun Kim、Niket K. Choudhary、Pruthivi Vuyyuru</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#levels">L1、fast array 和 L2 分别解决什么问题</a></li><li><a href="#prefetch">预取提前量要覆盖查找、组装和写入</a></li><li><a href="#storage">为什么 L2 的溢出指针不应留到需求路径上</a></li><li><a href="#timeliness">地址匹配、及时到达和接收位置缺一不可</a></li><li><a href="#wide-sequential">宽顺序取指组还需要表示第一个 taken 分支</a></li><li><a href="#claim-scope">独立权利要求与具体宽度实现</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="levels"><h2>L1、fast array 和 L2 分别解决什么问题</h2><p>普通 I-cache 按连续地址缓存指令。trace 可把预测 taken 分支前后的指令连到同一取指组。图 1 的近端 L1 trace cache 按最多 N 条指令设计，较远的 L2 可以保存更多条目或更长的条目。每次需求都等较远的 L2 读完，可能超出前端的取指时限。</p><p>中间的 fast array 容纳最多 N＋M 条指令，说明书给出占用较少条目数的设计。匹配的长 trace 可以从这里直接供给前端，短 trace 可在显示有用后晋升至 L1。图中的三个来源汇入指令缓冲。权利要求 5、13 涉及普通路径用一项、长 trace 用多项的接收方式。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　短 trace 可以进入 L1，长 trace 由 fast array 直接供给</h3>
+    <p id="fig-1-basis">前端近端 L1 只需容纳最多 N 条指令。fast array 能容纳 N＋M 条指令，长 trace 无需穿过 L1 才能进入指令缓冲。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="短 trace 可以进入 L1，长 trace 由 fast array 直接供给" style="--figure-width:1350px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1350 619" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">短 trace 可以进入 L1，长 trace 由 fast array 直接供给</title>
+<desc id="fig-1-svg-desc">前端近端 L1 只需容纳最多 N 条指令。fast array 能容纳 N＋M 条指令，长 trace 无需穿过 L1 才能进入指令缓冲。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-prefetch" d="M 341 297 L 535 297" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-promote" d="M 677 248 L 677 166" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-long-serve" d="M 821 297 L 1037 297" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-short-serve" d="M 821 123 L 950 123 Q 958 123 958 131 L 958 260 Q 958 268 966 268 L 1037 268" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-normal-serve" d="M 821 490 L 950 490 Q 958 490 958 482 L 958 341 Q 958 333 966 333 L 1037 333" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<rect x="367" y="261" width="140" height="18" fill="#f5f5f5"/><text x="437" y="275" class="arrow-label" text-anchor="middle">预测未来使用，预取</text>
+<rect x="728" y="195" width="126" height="18" fill="#f5f5f5"/><text x="791" y="209" class="arrow-label" text-anchor="middle">短且有用时可晋升</text>
+<rect x="841" y="308" width="164" height="18" fill="#f5f5f5"/><text x="923" y="322" class="arrow-label" text-anchor="middle">预取缓冲命中时供给</text>
+<rect x="848.5" y="88" width="111" height="18" fill="#f5f5f5"/><text x="904" y="102" class="arrow-label" text-anchor="middle">L1 命中时供给</text>
+<rect x="851" y="454" width="70" height="18" fill="#f5f5f5"/><text x="886" y="468" class="arrow-label" text-anchor="middle">普通取指</text>
+<g id="fig-1-l2"><rect x="48" y="248" width="293" height="106" rx="6" fill="#f5f5f5"/><rect x="48" y="248" width="293" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="194.5" y="274" class="node-name" text-anchor="middle">L2 trace cache</text><text x="194.5" y="296" class="node-detail" text-anchor="middle">保存 N 条或 N＋M 条的条目</text><text x="194.5" y="314" class="node-detail" text-anchor="middle">长 trace 可用溢出存储</text></g>
+<g id="fig-1-fast"><rect x="535" y="248" width="286" height="106" rx="6" fill="#f5f5f5"/><rect x="535" y="248" width="286" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="678" y="274" class="node-name" text-anchor="middle">fast array</text><text x="678" y="296" class="node-detail" text-anchor="middle">最多 N＋M 条指令</text><text x="678" y="314" class="node-detail" text-anchor="middle">可独立匹配当前取指</text></g>
+<g id="fig-1-l1"><rect x="535" y="82" width="286" height="84" rx="6" fill="#f5f5f5"/><rect x="535" y="82" width="286" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="678" y="108" class="node-name" text-anchor="middle">L1 trace cache</text><text x="678" y="130" class="node-detail" text-anchor="middle">每条 trace 最多 N 条指令</text></g>
+<g id="fig-1-icache"><rect x="535" y="450" width="286" height="83" rx="6" fill="#f5f5f5"/><rect x="535" y="450" width="286" height="83" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="678" y="476" class="node-name" text-anchor="middle">普通 I-cache</text><text x="678" y="498" class="node-detail" text-anchor="middle">缓存顺序地址的指令</text></g>
+<g id="fig-1-ib"><rect x="1037" y="241" width="263" height="122" rx="6" fill="#f5f5f5"/><rect x="1037" y="241" width="263" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1168.5" y="267" class="node-name" text-anchor="middle">前端指令缓冲</text><text x="1168.5" y="289" class="node-detail" text-anchor="middle">多个来源汇合</text><text x="1168.5" y="307" class="node-detail" text-anchor="middle">长 trace 可占用多个条目</text></g>
+<text x="49" y="48" class="signal-title" text-anchor="start">前端供给路径</text>
+<text x="50" y="579" class="signal-title" text-anchor="start">N 和 M 代表本实施例的容量参数。L1／L2 在本图均指 trace cache 层次。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-l2">较远的 L2 trace cache</a> L2 容量可以更大，能够保存更长的 trace。较远的数据到达前端需要更长时间，因而可提前预取。</li><li><a href="#fig-1-fast">近端预取缓冲</a> fast array 支持更宽的取指组。已有对应且匹配的条目时，可以从该位置直接为前端供给。</li><li><a href="#fig-1-l1">短 trace 可以晋升</a> 带扩展标志的长条目不晋升到窄 L1。短条目可按使用情况晋升。</li><li><a href="#fig-1-ib">前端指令缓冲</a> 某些实施例让普通缓存行或 L1 trace 各占一个条目，长 trace 同时使用多个条目。</li></ul>
+  <p class="figure-evidence">原图 11、12、14、19、29；说明书归档段 0178、0179、0180、0183、0184、0185、0186、0195、0198、0199、0218、0291、0292、0293、0294；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12547409B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>近端 L1 与较远 L2 trace cache</dt><dd>1110 / 1120</dd></div><div><dt>近端预取缓冲 fast array</dt><dd>1240</dd></div><div><dt>预取缓冲的扩展标志</dt><dd>1440</dd></div><div><dt>前端指令缓冲和普通指令缓存</dt><dd>1924 / 1925</dd></div></dl></details>
+</figure></section><section id="prefetch"><h2>预取提前量要覆盖查找、组装和写入</h2><p>图 2 从路径签名开始。签名可以由取指地址历史生成，lookahead 用匹配表项和置信度预判未来会访问哪条 trace。训练的一个例子是见到 L1 缺失但 L2 命中就累计相应签名的证据。</p><p>达到置信门槛发出预取后，L2 仍要读数据。长条目还可能先取指令前段，再定位尾段并组装。完整条目进入 fast array 后，需求到达且匹配地址时才能用它。该过程和短条目是否晋升 L1 是分开的控制。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　长 trace 需要在前端需求到来前完成预取</h3>
+    <p id="fig-2-basis">lookahead 先发起查找。L2 条目经组装进入 fast array，到需求命中时再为前端提供完整数据。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="长 trace 需要在前端需求到来前完成预取" style="--figure-width:968px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 968 524" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">长 trace 需要在前端需求到来前完成预取</title>
+<desc id="fig-2-svg-desc">lookahead 先发起查找。L2 条目经组装进入 fast array，到需求命中时再为前端提供完整数据。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="fig-2-signature"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/><rect x="198" y="96" width="78" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">当前路径签名</text></g>
+<g id="fig-2-predict"><path d="M 358 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/><rect x="434" y="144" width="91" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">预测并发出预取</text></g>
+<g id="fig-2-assemble"><path d="M 601 210 L 625 210 Q 633 210 633 218 L 633 220 Q 633 228 625 228 L 601 228" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#fig-2-arrow-control)"/><rect x="663" y="186" width="104" height="18" fill="#f5f5f5"/><text x="715" y="200" class="arrow-label" text-anchor="middle">读取并合并前后段</text></g>
+<g id="fig-2-fill"><path d="M 601 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-return)"/><rect x="644.5" y="240" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="254" class="arrow-label" text-anchor="middle">完整长 trace 写入</text></g>
+<g id="fig-2-fetch"><path d="M 116 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/><rect x="408.5" y="288" width="143" height="18" fill="#f5f5f5"/><text x="480" y="302" class="arrow-label" text-anchor="middle">需求取指，查找匹配条目</text></g>
+<g id="fig-2-serve"><path d="M 844 360 L 116 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/><rect x="395.5" y="336" width="169" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">直接供给完整长 trace</text></g>
+<g id="fig-2-enqueue"><path d="M 116 402 L 140 402 Q 148 402 148 410 L 148 412 Q 148 420 140 420 L 116 420" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#fig-2-arrow-control)"/><rect x="165" y="378" width="130" height="18" fill="#f5f5f5"/><text x="230" y="392" class="arrow-label" text-anchor="middle">写入多个指令缓冲条目</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">取指前端</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">lookahead 控制</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">L2 trace cache</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">fast array</text>
+<text x="28" y="484" class="legend" text-anchor="start">横向箭头标出数据去向，纵向为事件顺序。L2 组装与需求之间的空隙取决于预取提前量。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-predict">有效预取来自一条预测路径</a> 签名 lookahead 以取指路径地址历史预判将要执行的 trace。说明书的训练例包括 L1 缺失而 L2 命中。</li><li><a href="#fig-2-assemble">合并前段和尾段</a> L2 长条目需按扩展标志和指针取尾段。缓冲项组装完成后可匹配取指需求。</li><li><a href="#fig-2-fetch">需求到达</a> 有效预取项准备完毕且当前需求的地址匹配时，才会提供此前取得的数据。</li><li><a href="#fig-2-serve">整个长 trace 直接供给</a> 本例长条目从 fast array 提供，避免把它载入容量为 N 的近端 L1。迟到和取错的边界见表 4。</li></ul>
+  <p class="figure-evidence">原图 11、12、13、14；说明书归档段 0179、0180、0181、0183、0184、0185、0187、0188、0191、0196、0197、0199、0200、0293、0294、0295；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> <a href="../diagrams/US12547409B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>签名 lookahead 预取控制</dt><dd>1230</dd></div><div><dt>L2 trace cache</dt><dd>1120</dd></div><div><dt>溢出存储</dt><dd>1340</dd></div><div><dt>fast array</dt><dd>1240</dd></div><div><dt>指令缓冲</dt><dd>1924</dd></div></dl></details>
+</figure></section><section id="storage"><h2>为什么 L2 的溢出指针不应留到需求路径上</h2><p>图 3 放大一条长 trace。L2 主条目保存前 N 条以内的指令、扩展标志和尾段指针。扩展标志没置位时无需访问尾段。对于长条目，溢出存储保留剩余指令，硬件沿指针取回并补到对应前段之后。溢出区满时，说明书允许选择逐出或缩短后只留在主阵列。</p><p>fast array 的条目可以保存完整宽度。把指针查找和前后段拼接放在预取阶段，可在需求命中时直接得到完整的指令组。扩展标志仍用于区分是否能装入窄 L1。若前端用原有的窄缓冲条目，可以将一条长 trace 写入多个条目。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　L2 用扩展标志和指针连接长 trace 的两个物理分段</h3>
+    <p id="fig-3-basis">普通条目可以只从主阵列读取。长条目先解出尾段索引，再将前段与尾段拼成 fast array 的一个宽条目。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="L2 用扩展标志和指针连接长 trace 的两个物理分段" style="--figure-width:1380px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 664" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">L2 用扩展标志和指针连接长 trace 的两个物理分段</title>
+<desc id="fig-3-svg-desc">普通条目可以只从主阵列读取。长条目先解出尾段索引，再将前段与尾段拼成 fast array 的一个宽条目。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-prefix" d="M 386 191 L 512 191 Q 520 191 520 199 L 520 262 Q 520 270 528 270 L 554 270" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-pointer" d="M 219 255 L 219 403" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-suffix" d="M 386 458 L 489 458 Q 497 458 497 450 L 497 344 Q 497 336 505 336 L 554 336" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-packed" d="M 867 304 L 953 304 Q 961 304 961 296 L 961 183 Q 961 175 969 175 L 1052 175" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-consume" d="M 1191 240 L 1191 427" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<rect x="411" y="153" width="98" height="18" fill="#f5f5f5"/><text x="460" y="167" class="arrow-label" text-anchor="middle">读取指令前段</text>
+<rect x="326" y="313" width="168" height="18" fill="#f5f5f5"/><text x="410" y="327" class="arrow-label" text-anchor="middle">扩展标志置位时使用指针</text>
+<rect x="393" y="421" width="104" height="18" fill="#f5f5f5"/><text x="445" y="435" class="arrow-label" text-anchor="middle">读取相应尾段</text>
+<rect x="872" y="314" width="98" height="18" fill="#f5f5f5"/><text x="921" y="328" class="arrow-label" text-anchor="middle">写入完整条目</text>
+<rect x="1220" y="320" width="112" height="18" fill="#f5f5f5"/><text x="1276" y="334" class="arrow-label" text-anchor="middle">前端命中后供给</text>
+<g id="fig-3-main"><rect x="48" y="127" width="338" height="128" rx="6" fill="#f5f5f5"/><rect x="48" y="127" width="338" height="128" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="217" y="153" class="node-name" text-anchor="middle">L2 主阵列条目</text><text x="217" y="175" class="node-detail" text-anchor="middle">指令前段，最多 N 条</text><text x="217" y="193" class="node-detail" text-anchor="middle">扩展标志＋尾段指针</text></g>
+<g id="fig-3-tail"><rect x="48" y="403" width="338" height="113" rx="6" fill="#f5f5f5"/><rect x="48" y="403" width="338" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="217" y="429" class="node-name" text-anchor="middle">L2 溢出存储条目</text><text x="217" y="451" class="node-detail" text-anchor="middle">按指针读取余下 M 条以内</text><text x="217" y="469" class="node-detail" text-anchor="middle">仅长 trace 读取</text></g>
+<g id="fig-3-assemble"><rect x="554" y="242" width="313" height="130" rx="6" fill="#f5f5f5"/><rect x="554" y="242" width="313" height="130" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="710.5" y="268" class="node-name" text-anchor="middle">预取数据组装</text><text x="710.5" y="290" class="node-detail" text-anchor="middle">短条目只取前段</text><text x="710.5" y="308" class="node-detail" text-anchor="middle">长条目按顺序拼接前后段</text></g>
+<g id="fig-3-fast"><rect x="1052" y="126" width="276" height="114" rx="6" fill="#f5f5f5"/><rect x="1052" y="126" width="276" height="114" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1190" y="152" class="node-name" text-anchor="middle">fast array 宽条目</text><text x="1190" y="174" class="node-detail" text-anchor="middle">保存全长指令及扩展标志</text><text x="1190" y="192" class="node-detail" text-anchor="middle">无需在需求时再读溢出存储</text></g>
+<g id="fig-3-dispatch"><rect x="1052" y="427" width="276" height="114" rx="6" fill="#f5f5f5"/><rect x="1052" y="427" width="276" height="114" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1190" y="453" class="node-name" text-anchor="middle">前端指令缓冲</text><text x="1190" y="475" class="node-detail" text-anchor="middle">长 trace 可占多个条目</text><text x="1190" y="493" class="node-detail" text-anchor="middle">保持指令顺序</text></g>
+<text x="49" y="49" class="signal-title" text-anchor="start">较远一侧分段存储，较近一侧提供完整条目</text>
+<text x="50" y="613" class="signal-title" text-anchor="start">前段和尾段共享同一条 trace 的逻辑次序。扩展标志及指针属于元数据。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-main">L2 主阵列</a> 主条目包含指令前段、扩展标志与尾段指针。短条目只使用主阵列保存的指令。</li><li><a href="#fig-3-tail">溢出存储</a> 扩展标志开启时，根据主条目指针读取对应尾段。溢出存储满时说明书允许缩短条目或逐出一个溢出项。</li><li><a href="#fig-3-assemble">宽条目组装</a> 读取相应尾段后恢复顺序。fast array 可原生容纳完整宽条目，实施例中无需再追逐溢出指针。</li><li><a href="#fig-3-dispatch">消费宽条目</a> 前端缓冲会按可容纳宽度把这组指令写入多个条目。扩展标志为长时保持 fast array 供给路径。</li></ul>
+  <p class="figure-evidence">原图 13、14、29；说明书归档段 0196、0197、0198、0199、0200、0290、0291、0292、0294、0295；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12547409B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>L2 主阵列保存的 trace 指令</dt><dd>1310 / 1410</dd></div><div><dt>长条目的扩展标志</dt><dd>1320 / 1420</dd></div><div><dt>尾段索引</dt><dd>1330 / 1430</dd></div><div><dt>尾段所在溢出存储</dt><dd>1340</dd></div><div><dt>fast array 内的扩展标志</dt><dd>1440</dd></div></dl></details>
+</figure></section><section id="timeliness"><h2>地址匹配、及时到达和接收位置缺一不可</h2><p>表 4 固定普通取指服务和总工作量，只变动预取地址、发出时间及前端可用条目。提前四个周期足以让这一模型中的数据在需求时到位，实际提前量还受 L2 访问、溢出读、预取仲裁和缓冲容量影响。</p><p>本模型把迟到和取错都归到普通取指路径，它们会占用已有预取请求的 L2 带宽。要判断供给是否改善，观测应包含需求时可用的长条目比例、进入指令缓冲的有效指令数、占用条目数和错取流量。只统计预测命中率无法区分这些条件。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　同一组长 trace，提前、迟到和取错会怎样</h3>
+    <p id="fig-4-basis">教学模型需要 12 条正确指令。需求在第 10 周期到达，L2 读出、组装和写入 fast array 共 4 周期。普通路径在第 10、12 周期供给 8＋4 条。模型只在匹配且有两个空条目时一次接收 12 条。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">预取情形</th><th scope="col">发起 → 完整到达</th><th scope="col">需求时可用</th><th scope="col">12 条指令全部接收</th></tr></thead><tbody><tr id="fig-4-ontime"><th scope="row">地址匹配，提前到达</th><td>4 → 8</td><td>是，空余两个条目</td><td>10 周期</td></tr><tr id="fig-4-late"><th scope="row">地址匹配，迟到</th><td>8 → 12</td><td>否</td><td>12 周期</td></tr><tr id="fig-4-wrong"><th scope="row">地址不匹配，提前到达</th><td>4 → 8</td><td>否</td><td>12 周期</td></tr><tr id="fig-4-full"><th scope="row">地址匹配，接收容量不足</th><td>4 → 8</td><td>否，仅一个空条目</td><td>12 周期</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-ontime">正确且及时的预取</a> 第 4 周期发起，第 8 周期完整到达。需求在第 10 周期命中且有两个空条目，随即接收全部指令。</li><li><a href="#fig-4-late">正确数据迟到</a> 需求时没有可用的长条目，模型继续从普通路径取指。第 12 周期到达的预取对这次访问没有贡献。</li><li><a href="#fig-4-wrong">正确到达时间仍不足以保证收益</a> 取到的地址不匹配当前取指请求时，数据不被采用，预取已占用一次 L2 读取。</li><li><a href="#fig-4-full">指令缓冲也需要可用容量</a> 只有一个空条目时，模型不接收完整长 trace。普通路径先写一项，第 11 周期前端取走该项后，下一批普通指令可于第 12 周期写入。</li></ul>
+  <p class="figure-evidence">原图 11、12、14；说明书归档段 0179、0180、0183、0184、0191、0199、0291、0294；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> </p>
+  
+</figure></section><section id="wide-sequential"><h2>宽顺序取指组还需要表示第一个 taken 分支</h2><p>L2 的宽条目还可保存由预计 not-taken 分支连接的连续指令组。这类条目与有内部 taken 分支的长 trace 是不同用法。顺序组里的稳定 not-taken 分支和不稳定但预计 not-taken 分支可各自受限。说明书还允许跟踪两类条目的使用情况，决定保留与逐出。</p><p>图 5 将原图 16、18 的状态编码展开成等价的逻辑判断。第一条 taken 分支改变取指去向，后续分支不再影响这一组的出路。三个候选分支只需要四种方向结果，再分别编码强、弱置信度。图中顺序是程序顺序。实现可以从表项直接读出编码。说明书 0209 有一处使用 predicted-taken 的表述，图 5 的适用条件采用原图 16、18 与权利要求 6–10、14–16 对顺序组的限定。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　宽顺序取指组用第一个 taken 分支编码出路</h3>
+    <p id="fig-5-basis">宽顺序取指组中的分支按程序顺序检查。第一个 taken 之后的指令离开本条顺序路径，后续分支对本次出路没有影响。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="宽顺序取指组用第一个 taken 分支编码出路" style="--figure-width:1380px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 596" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
+<title id="fig-5-svg-title">宽顺序取指组用第一个 taken 分支编码出路</title>
+<desc id="fig-5-svg-desc">宽顺序取指组中的分支按程序顺序检查。第一个 taken 之后的指令离开本条顺序路径，后续分支对本次出路没有影响。</desc>
+<defs><marker id="fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-5-not-a" d="M 311 203.5 L 366 203.5" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<path id="fig-5-not-b" d="M 630 203.5 L 685 203.5" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<path id="fig-5-not-c" d="M 949 203.5 L 986 203.5 Q 994 203.5 994 211.5 L 994 307 Q 994 315 1002 315 L 1176 315 Q 1184 315 1184 323 L 1184 372" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<path id="fig-5-yes-a" d="M 179 266 L 179 372" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-yes-b" d="M 498 266 L 498 372" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-yes-c" d="M 817 266 L 817 372" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<rect x="312" y="170" width="52" height="18" fill="#f5f5f5"/><text x="338" y="184" class="arrow-label" text-anchor="middle">N</text>
+<rect x="631" y="170" width="52" height="18" fill="#f5f5f5"/><text x="657" y="184" class="arrow-label" text-anchor="middle">N</text>
+<rect x="1091" y="278" width="52" height="18" fill="#f5f5f5"/><text x="1117" y="292" class="arrow-label" text-anchor="middle">N</text>
+<rect x="195" y="304" width="52" height="18" fill="#f5f5f5"/><text x="221" y="318" class="arrow-label" text-anchor="middle">T</text>
+<rect x="514" y="304" width="52" height="18" fill="#f5f5f5"/><text x="540" y="318" class="arrow-label" text-anchor="middle">T</text>
+<rect x="833" y="304" width="52" height="18" fill="#f5f5f5"/><text x="859" y="318" class="arrow-label" text-anchor="middle">T</text>
+<g id="fig-5-b0"><polygon points="179,141 311,203.5 179,266 47,203.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="179" y="200.5" class="node-name" text-anchor="middle">分支 A taken？</text><text x="179" y="221.5" class="node-detail" text-anchor="middle">先检查程序顺序较早的分支</text></g>
+<g id="fig-5-b1"><polygon points="498,141 630,203.5 498,266 366,203.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="498" y="200.5" class="node-name" text-anchor="middle">分支 B taken？</text><text x="498" y="221.5" class="node-detail" text-anchor="middle">A 为 not-taken</text></g>
+<g id="fig-5-b2"><polygon points="817,141 949,203.5 817,266 685,203.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="200.5" class="node-name" text-anchor="middle">分支 C taken？</text><text x="817" y="221.5" class="node-detail" text-anchor="middle">A、B 均 not-taken</text></g>
+<g id="fig-5-out-a"><rect x="56" y="372" width="246" height="98" rx="6" fill="#f5f5f5"/><rect x="56" y="372" width="246" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="179" y="398" class="node-name" text-anchor="middle">TXX</text><text x="179" y="420" class="node-detail" text-anchor="middle">取分支 A 的跳转目标</text></g>
+<g id="fig-5-out-b"><rect x="375" y="372" width="246" height="98" rx="6" fill="#f5f5f5"/><rect x="375" y="372" width="246" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="498" y="398" class="node-name" text-anchor="middle">NTX</text><text x="498" y="420" class="node-detail" text-anchor="middle">取分支 B 的跳转目标</text></g>
+<g id="fig-5-out-c"><rect x="694" y="372" width="246" height="98" rx="6" fill="#f5f5f5"/><rect x="694" y="372" width="246" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="817" y="398" class="node-name" text-anchor="middle">NNT</text><text x="817" y="420" class="node-detail" text-anchor="middle">取分支 C 的跳转目标</text></g>
+<g id="fig-5-next"><rect x="1042" y="372" width="280" height="98" rx="6" fill="#f5f5f5"/><rect x="1042" y="372" width="280" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1182" y="398" class="node-name" text-anchor="middle">NNN</text><text x="1182" y="420" class="node-detail" text-anchor="middle">继续顺序取指</text></g>
+<g id="fig-5-confidence"><rect x="1042" y="114" width="280" height="98" rx="6" fill="#f5f5f5"/><rect x="1042" y="114" width="280" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1182" y="140" class="node-name" text-anchor="middle">每种方向组合两档置信度</text><text x="1182" y="162" class="node-detail" text-anchor="middle">强和弱共八种编码</text></g>
+<text x="48" y="55" class="signal-title" text-anchor="start">T 表示 taken，N 表示 not-taken，X 表示后续分支对本组出路无影响</text>
+<text x="49" y="549" class="signal-title" text-anchor="start">此图解释宽顺序组的分支编码。含内部 taken 分支的长 trace 仍按其 trace 路径供给。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-5-b0">第一条候选分支</a> TXX 表示第一条 taken。X 只表示后面的两条分支不影响这个顺序组的出路。</li><li><a href="#fig-5-b1">第二条候选分支</a> NTX 表示第一条 not-taken，第二条 taken，第三条此时不起作用。</li><li><a href="#fig-5-b2">第三条候选分支</a> NNT 选择第三条分支的跳转目标；NNN 保持顺序取指。</li><li><a href="#fig-5-confidence">相同方向组合可有不同置信度</a> 说明书原图 18 将四种方向组合各分强、弱两档。这个例子重用三位编码宽度。</li></ul>
+  <p class="figure-evidence">原图 15、16、17、18、29；说明书归档段 0201、0202、0203、0206、0208、0211、0212、0214、0215、0296、0297、0298；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12547409B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>宽顺序取指组中的多个候选分支</dt><dd>原图 15</dd></div><div><dt>四种第一个 taken 位置或全部 not-taken</dt><dd>原图 16</dd></div><div><dt>四种方向组合的强／弱预测状态</dt><dd>原图 18</dd></div><div><dt>普通 trace 可使用的专用预测 lane</dt><dd>724</dd></div></dl></details>
+</figure></section><section id="claim-scope"><h2>独立权利要求与具体宽度实现</h2><p>独立权利要求 1、11、17 覆盖两级不同长度的 trace 存储与可支持较长条目的预取缓冲。权利要求 2 约束能晋升的长度，权利要求 3、4、12 描述尾段指针，权利要求 5、13 描述接收缓冲占用。权利要求 6–10、14–16、18、19 涉及宽顺序组及分支状态。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US12547409B2</code><span>美国授权专利</span><time datetime="2026-02-10">2026-02-10</time></p>
-  <h1>支持多种长度的分层 trace cache</h1>
-  <p class="english-title" lang="en">Trace cache that supports multiple different trace lengths</p>
-  <p class="document-question">二级轨迹缓存如何在取指前端发出需求前送达长指令轨迹？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">预取器把预计会执行的长 trace 从较远层取到能容纳该长度的缓冲，再由缓冲给前端供指令。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>轨迹可含内部已跳转控制转移。长项为远层和缓冲所支持，只有及时到达才覆盖需求等待。</dd></div><div><dt>验证方法</dt><dd>固定前端实际分支路径与远层读延迟，比较按需读取与提前读取该长 trace。记录前端首次需要它的拍、整条轨迹可供给的拍，以及实际消费的指令数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12547409B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">遇到已预测为跳转的分支，接着执行的指令可能跨越连续地址范围。trace 按执行路径组织指令，可以把转移前后的指令放在同一条路径中。</p>
-    <p>一级轨迹缓存保存较短的执行路径，二级可以存更长的路径。如果预测某条轨迹即将执行，控制器可读出二级内容。较长的轨迹可放进支持相同长度的预取缓冲，由缓冲直接提供给前端。</p>
-    <ol class="walkthrough"><li><h3>识别可构建的路径</h3><p>I-cache 按连续地址保存指令。前端按 trace 的构建条件识别执行路径，这里的 trace 包含内部 taken 分支。</p></li><li><h3>把长项放到远层</h3><p>近层容纳较短的 trace。远层能存超过近层长度上限的项，两层可采用不同的容量与时序预算。</p></li><li><h3>预测后读取远层</h3><p>预取控制器预测某条 trace 将执行时，可先访问远层。读出的长项进入支持相同长度的快速预取缓冲。</p></li><li><h3>在前端请求时供给</h3><p>实际执行路径与预测一致、数据又及时到达时，前端可从缓冲取出 trace。数据晚于前端请求时，能隐藏的等待会变少。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 把从预取缓冲提升到近层限定在近层可容纳的长度内。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> 允许远层主条目保存前段，并用指针指向溢出缓冲中的其余指令。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>轨迹缓存</dt><dd>按执行路径保存指令，可跨内部已跳转分支。</dd></div><div><dt>溢出缓冲</dt><dd>为超出标准条目容量的轨迹保存后半段，由条目指针索引。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">远层如何把长 trace 送到前端</a></li><li><a href="#fig-2">长 trace 从预测到消费的时序</a></li><li><a href="#fig-4">二级条目通过指针取回长轨迹后段</a></li><li><a href="#fig-3">各层保存什么，最长能存多少</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">远层如何把长 trace 送到前端</h3></div>
-    <a class="paper-open" href="../mechanisms/US12547409B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="远层如何把长 trace 送到前端">
-    <img class="paper-image native-image" src="../mechanisms/US12547409B2/fig-1/diagram.svg" width="987" height="440"
-         style="--paper-width:987px" alt="远层如何把长 trace 送到前端。短 trace 可以由近层返回。远层读出的长 trace 先进入支持同等长度的预取缓冲，再送往前端。">
-  </div>
-  <figcaption>
-    <span>短 trace 可以由近层返回。远层读出的长 trace 先进入支持同等长度的预取缓冲，再送往前端。</span>
-    <span class="figure-evidence">原文图 11–14，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">长 trace 从预测到消费的时序</h3></div>
-    <a class="paper-open" href="../mechanisms/US12547409B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="长 trace 从预测到消费的时序">
-    <img class="paper-image native-image" src="../mechanisms/US12547409B2/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="长 trace 从预测到消费的时序。原图 12 的预测触发二级查找。缓冲在前端需要轨迹前取得完整数据时，才可能遮住二级访问等待。">
-  </div>
-  <figcaption>
-    <span>原图 12 的预测触发二级查找。缓冲在前端需要轨迹前取得完整数据时，才可能遮住二级访问等待。</span>
-    <span class="figure-evidence">原图 12、14，说明书 0183–0185、0198–0201，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">二级条目通过指针取回长轨迹后段</h3></div>
-    <a class="paper-open" href="../mechanisms/US12547409B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="二级条目通过指针取回长轨迹后段">
-    <img class="paper-image native-image" src="../mechanisms/US12547409B2/fig-4/diagram.svg" width="735" height="300"
-         style="--paper-width:735px" alt="二级条目通过指针取回长轨迹后段。扩展位与指针用于定位溢出后段。前后两段数据放入快速预取缓冲；超过 N 条指令的条目在原图 14 实施例中留在缓冲供取。">
-  </div>
-  <figcaption>
-    <span>扩展位与指针用于定位溢出后段。前后两段数据放入快速预取缓冲；超过 N 条指令的条目在原图 14 实施例中留在缓冲供取。</span>
-    <span class="figure-evidence">原图 13–14，说明书 0196–0201，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">各层保存什么，最长能存多少</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">路径</th><th scope="col">内容组织</th><th scope="col">长度约束</th></tr></thead><tbody><tr><th scope="row">顺序指令缓存</th><td>按连续地址缓存指令</td><td>N</td></tr><tr><th scope="row">一级轨迹缓存</th><td>可含内部跳转</td><td>N</td></tr><tr><th scope="row">二级轨迹缓存</th><td>可含内部跳转，可有溢出数据</td><td>N+M</td></tr><tr><th scope="row">快速预取缓冲</th><td>可供完整轨迹</td><td class="emphasis">N+M</td></tr></tbody></table>
-  <figcaption>
-    <span>远层的 trace 长度上限高于近层。返回缓冲也支持远层上限。</span>
-    <span class="figure-evidence">权 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>。长度上限由具体实现设定。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>扩宽二级轨迹上限</dt><dd>缓存更多路径指令 <span class="subdued">原图 13–14，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>先读完整二级轨迹</dt><dd>提前准备前端指令 <span class="subdued">原图 12–14，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>把远层轨迹放进预取缓冲时，溢出的后段也必须取得，才能交付完整长轨迹。若复用的是超过近层上限的长项，重复预测仍可能反复占用远层读取端口。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若多个长循环在相同短时间内交替被预测，完整轨迹可能已经从远层读到缓冲，却在实际取用前被替换。此时远层的高命中率可以与前端等待同时出现。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定近层最多存 8 条指令，远层最多存 16 条。A 有 6 条指令，跨内部跳转的 B 有 12 条。预测 B 的提前量足以完成远层读取。</dd></div><div><dt>处理结果</dt><dd>A 可存近层。B 存在远层，并预取到支持 16 条指令的缓冲。实际请求 B 时，缓冲可提供完整的 12 条。</dd></div><div><dt>结果解读</dt><dd>8、16、6、12 是算例长度。要衡量收益，需在前端请求 B 时检查数据是否已在缓冲就绪。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、17、19 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 11–14。装置项划分近、远轨迹容量，远层预取可进入能装整个长轨迹的缓冲。</p>
+  <p>原图 11–14。装置项划分近、远轨迹容量，远层预取可进入能装整个长轨迹的缓冲。按预测控制流排列的指令序列，可以跨普通指令缓存行，由至少一个取向内部转移连接。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=a%20given%20trace%20of%20the%20identified%20traces%20includes%20at%20least%20one%20internal%20taken%20control%20transfer%20instruction">F1</a></th><td>指令轨迹至少包含一次内部已发生的控制转移</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=At%202820%20%2C%20in%20the%20illustrated%20embodiment%2C%20the%20processor%20%28e.g.%2C%20training%20pipe%201934%20%29%20identifies%20traces">说明书 0275</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=store%20first%20one%20or%20more%20of%20the%20identified%20traces%20having%20up%20to%20the%20first%20number%20of">F2</a></th><td>较近层保存不超过第一长度上限的轨迹</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=At%202940%20%2C%20in%20the%20illustrated%20embodiment%2C%20the%20processor%20stores%20identified%20traces%20having%20up%20to%20the">说明书 0289</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=having%20up%20to%20a%20second%20number%20of%20instructions%2C%20greater%20than%20the%20first%20number%20of%20instructions">F3</a></th><td>较远层支持比近层长的轨迹</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=Therefore%2C%20in%20some%20embodiments%2C%20the%20L2%20trace%20cache%20discussed%20above%20is%20configured%20to%20cache%20traces%20having">说明书 0049</a> · 原图 13</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=prefetch%20the%20predicted%20trace%20from%20the%20second%20trace%20storage%20circuitry%20to%20the%20first%20trace%20storage%20circuitry">F4</a></th><td>预测将执行时，发起由二级往前端的轨迹预取</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=In%20some%20embodiments%2C%20the%20first%20trace%20storage%20circuitry%20is%20at%20a%20first%20level%20%28e.g.%2C%20L1%29%20in">说明书 0293</a> · 原图 12</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=the%20prefetch%20buffer%20circuitry%20supports%20traces%20having%20up%20to%20the%20second%20number%20of%20instructions">F5</a></th><td>预取缓冲可容纳远层长度的完整轨迹</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2012%20is%20a%20block%20diagram%20illustrating%20example%20signature-based%20prefetching%20and%20a%20prefetch%20buffer%2C%20according%20to">说明书 0183</a> · 原图 12</td></tr></tbody>
@@ -144,50 +170,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=wherein%20a%20given%20trace%20of%20the%20identified%20traces%20includes%20at%20least%20one%20internal%20taken%20control%20transfer">F16</a></th><td>所识别的轨迹至少含一个内部已跳转控制转移。</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2011%20is%20a%20block%20diagram%20illustrating%20an%20example%20processor%20with%20multiple%20trace%20cache%20levels%2C%20according">说明书 0178</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=store%20first%20one%20or%20more%20of%20the%20identified%20traces%20having%20up%20to%20the%20first%20number%20of">F17</a></th><td>一级存不超过 N 指令的轨迹。</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2014%20is%20a%20block%20diagram%20showing%20a%20more%20detailed%20example%20of%20circuitry%20configured%20to%20handle">说明书 0198</a> · 原图 14</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=store%20second%20one%20or%20more%20of%20the%20identified%20traces%20having%20up%20to%20a%20second%20number%20of">F18</a></th><td>二级容纳更宽的轨迹。</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2013%20is%20a%20block%20diagram%20illustrating%20an%20example%20trace%20cache%20instruction%20array%20that%20supports%20multiple">说明书 0196</a> · <a href="https://patents.google.com/patent/US12547409B2/en#:~:text=The%20L2%20cache%201120%20%2C%20in%20this%20example%2C%20includes%20L2%20instruction%20array%201410%20%2C%20extended%20field">说明书 0200</a> · 原图 13 · 原图 14</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=store%20a%20set%20of%20sequential%20instructions%20having%20up%20to%20the%20second%20number%20of%20instructions%20in%20the">F19</a></th><td>二级可存同等长度的顺序段，其中预计不跳转指令受数量约束。</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2015%20is%20a%20block%20diagram%20illustrating%20an%20example%20wide%20fetch%20group%20of%20sequential%20instructions%2C%20according">说明书 0202</a> · <a href="https://patents.google.com/patent/US12547409B2/en#:~:text=Note%20that%20various%20workloads%20may%20include%20a%20large%20number%20of%20sequential%20sets%20of%20up%20to%20N%2BM">说明书 0203</a> · 原图 15</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=fetch%20the%20set%20of%20sequential%20instructions%20from%20the%20second%20trace%20storage%20circuitry%20for%20execution%20in%20response">F20</a></th><td>命中时从二级取出该顺序段供执行。</td><td><a href="https://patents.google.com/patent/US12547409B2/en#:~:text=FIG.%2015%20is%20a%20block%20diagram%20illustrating%20an%20example%20wide%20fetch%20group%20of%20sequential%20instructions%2C%20according">说明书 0202</a> · 原图 15</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 11–14。装置项划分近、远轨迹容量，远层预取可进入能装整个长轨迹的缓冲。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>缓冲提升到一级只允许一级长度能容纳的轨迹。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>远层主条目可用指针指向保存在溢出缓冲的剩余指令。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>在二级条目保存前段和用于定位后段的信息。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>前端指令缓冲以多条目容纳二级来的长轨迹，以单条目容纳一级轨迹。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>二级还可存长的顺序指令段，设有预计不跳转指令数上限。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>顺序指令允许多个稳定不跳转指令，另限制不稳定但预测不跳转的数量。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>分别追踪二级轨迹和顺序段的使用，据此择逐。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-6">6</a></td><td>编码预测状态，以区分哪次转移跳转及没有任何跳转。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>允许对相同方向组合编码两个或更多置信状态。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>将短轨迹预取到一级并从一级供取，长轨迹进支持更宽的缓冲并从缓冲供取。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将长轨迹前段和溢出指针保存在二级主条目，后段另存于溢出条目。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>普通或一级指令进一条目的前端缓冲，二级轨迹可占用多条目。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>二级还存含受数量约束的预计不跳转指令的顺序段，命中时供给。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>分别限定稳定不跳转和不稳定但预测不跳转转移的数量。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>顺序段的状态编码可表示具体跳转位置和完全不跳转。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>硬件描述代码生成两级轨迹缓存仿真，预取缓冲支持较宽的二级轨迹。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>仿真模型另包含二级顺序指令存储和命中取出。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>二级支持更长的轨迹，也能缓存受不跳转阈值约束的顺序指令段。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 11–14。装置项划分近、远轨迹容量，远层预取可进入能装整个长轨迹的缓冲。按预测控制流排列的指令序列，可以跨普通指令缓存行，由至少一个取向内部转移连接。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>缓冲提升到一级只允许一级长度能容纳的轨迹。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>远层主条目可用指针指向保存在溢出缓冲的剩余指令。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>在二级条目保存前段和用于定位后段的信息。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>前端指令缓冲以多条目容纳二级来的长轨迹，以单条目容纳L1 轨迹。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>二级还可存长的顺序指令段，设有预计不跳转指令数上限。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>顺序指令允许多个稳定不跳转指令，另限制不稳定但预测不跳转的数量。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>分别追踪L2 轨迹和顺序段的使用，据此择逐。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-6">6</a></td><td>编码预测状态，以区分哪次转移跳转及没有任何跳转。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>允许对相同方向组合编码两个或更多置信状态。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>将短轨迹预取到一级并从一级供取，长轨迹进支持更宽的缓冲并从缓冲供取。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将长轨迹前段和溢出指针保存在二级主条目，后段另存于溢出条目。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>普通或一级指令进一条目的前端缓冲，L2 轨迹可占用多条目。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>二级还存含受数量约束的预计不跳转指令的顺序段，命中时供给。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>分别限定稳定不跳转和不稳定但预测不跳转转移的数量。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>顺序段的状态编码可表示具体跳转位置和完全不跳转。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>硬件描述代码生成两级轨迹缓存仿真，预取缓冲支持较宽的L2 轨迹。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>仿真模型另包含二级顺序指令存储和命中取出。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>二级支持更长的轨迹，也能缓存受不跳转阈值约束的顺序指令段。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>两层 trace 存储的最大长度不同。控制器预测未来会执行的 trace 并预取，缓冲也能容纳远层支持的长项。</dd></div><div><dt>说明书图 11–14</dt><dd>图中给出了分层存储、签名预取、快速缓冲和可存长 trace 的阵列。</dd></div><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12547409B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> 的场景边界</dt><dd>这一项单独限定较长宽度的顺序取指。权利要求 1 对预取缓冲有自己的限定。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12547409B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20250315262A1.html#engineering">把二级 trace cache 的轨迹提前送到前端</a>
-<p>US12547409B2 为近层和远层规定不同的轨迹容量，预取缓冲能接收远层较长的轨迹并供前端执行。US20250315262A1 权 2 进一步规定预测所用的信息：由执行路径中的指令地址生成签名。两项分别聚焦于长轨迹的容纳与交付，以及启动二级预取时使用的信号。</p></li><li><a href="US12530193B2.html#engineering">按内部控制转移的稳定性构建轨迹</a>
-<p>US12530193B2 按方向偏向决定条件控制转移能否放在轨迹内部。未达到偏向阈值的一类仍可作为该轨迹最后一个控制转移。US12547409B2 规定近层和远层支持不同的最大长度，能容纳较长轨迹的预取缓冲可把它交付给前端。</p></li><li><a href="US12585469B2.html#engineering">预测 trace cache 未命中时关闭数据读</a>
-<p>US18/627,035 与 US18/627,001 在各自说明书记载的关联申请中互相引用。前者权 1 在预测缺失时抑制本次数据阵列读取，后者权 1 用预取缓冲区向取指前端提供来自二级轨迹缓存的长轨迹。</p></li></ul>
-    <p><a href="../index.html?patent=US12547409B2#knowledge">在全量关系图上定位 US12547409B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2024-04-04</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-04-04</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-02-10</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/627,001</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Muawya M. Al-Otoom、Ilhyun Kim、Niket K. Choudhary、Pruthivi Vuyyuru</dd></div><div><dt>分类号</dt><dd>G06F9/3808、G06F9/3802、G06F9/3806、G06F9/3844</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12547409B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12547409B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 375 个说明书段落、19 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2A、图 2B、图 3、图 4、图 5、图 6、图 7、图 8、图 9、图 10A、图 10B、图 10C、图 11、图 12、图 13、图 14、图 15、图 16、图 17、图 18、图 19、图 20、图 21、图 22、图 23、图 24、图 25、图 26、图 27、图 28、图 29、图 30、图 31、图 32、图 33。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12547409B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

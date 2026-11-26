@@ -1,119 +1,155 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12619558B2 仅预留命中所需的内存控制器资源 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US12619558B2</code><span>美国授权专利</span><time datetime="2026-05-05">2026-05-05</time></p>
-  <h1>仅预留命中所需的内存控制器资源</h1>
-  <p class="english-title" lang="en">Memory controller reservation of resources for cache hit</p>
-  <p class="document-question">缺失资源用完时，控制器怎样让本来会命中的请求继续查标签？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">标签结果未知时，控制器只预留基本命中路径使用的一组资源，确认缺失后再申请缺失路径资源。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>命中组的必要条目须全部可用才能启动查询，申请缺失资源的等待留在结果之后。</dd></div><div><dt>验证方法</dt><dd>保持命中组有空位并填满缺失组，重放一条命中和一条缺失。记录标签启动、结果可见和缺失组分配的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12619558B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">查标签之前，请求可能直接命中，也可能需要 snoop 或访问下层。如果一开始就为所有结果占资源，缺失队列满时连直接命中也进不了流水线。</p>
-    <p>结果未知时，控制器尝试预留基本命中路径所需的整组条目。只有第一组齐备才启动查询。之后发现缺失时，再申请缺失路径资源。</p>
-    <ol class="walkthrough"><li><h3>预留直接命中所需的全部条目</h3><p>调度电路尝试预留第一组条目，其中包含基本命中需要的资源。整组齐备才发入流水线。</p></li><li><h3>用目录和标签判断结果</h3><p>查询把事务分成直接命中、命中但需 snoop、以及缺失。查到结果之后才能确定要用哪组后续资源。</p></li><li><h3>为已知的分支补资源</h3><p>纯命中可以用第一组完成，随后释放保留的重试条目。需要 snoop 时申请探测组，发生缺失时申请缺失路径所需的另一组。</p></li><li><h3>缺失资源不足时留在重试队列</h3><p>后续组没有空位时，请求可存进先前预留的 retry queue 条目等候。可以继续处理时，释放用不到的初始条目。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> 给出缺失后的两条资源路径。第二组可用便回收预留重试项和其他无用条目，第二组缺项时则把请求信息存到重试项，留待重新处理。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>DPQ</dt><dd>数据通路队列。把标签流水线的请求送入缓存读写的数据路径。</dd></div><div><dt>RHQ</dt><dd>重试队列。首次调度即分一项，若还要经过控制流水线则用该项保留请求。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">先预留基础条目，再查标签</a></li><li><a href="#fig-1">不同查询结果使用哪些资源组</a></li><li><a href="#fig-4">写系统内存时何时腾出 DPQ</a></li><li><a href="#fig-3">各阶段对资源可用性的要求</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">先预留基础条目，再查标签</h3></div>
-    <a class="paper-open" href="../mechanisms/US12619558B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="先预留基础条目，再查标签">
-    <img class="paper-image native-image" src="../mechanisms/US12619558B2/fig-2/diagram.svg" width="920" height="432"
-         style="--paper-width:920px" alt="先预留基础条目，再查标签。初始组齐备时启动查询。标签与目录结果出来后，才知道要进入哪条分支。">
-  </div>
-  <figcaption>
-    <span>初始组齐备时启动查询。标签与目录结果出来后，才知道要进入哪条分支。</span>
-    <span class="figure-evidence">图 11–12，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">不同查询结果使用哪些资源组</h3></div>
-    <a class="paper-open" href="../mechanisms/US12619558B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="不同查询结果使用哪些资源组">
-    <img class="paper-image native-image" src="../mechanisms/US12619558B2/fig-1/diagram.svg" width="860" height="488"
-         style="--paper-width:860px" alt="不同查询结果使用哪些资源组。第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。">
-  </div>
-  <figcaption>
-    <span>第一组齐备后才接纳请求。等标签和目录给出结果，再分别为探测或缺失申请后续条目。</span>
-    <span class="figure-evidence">图 7–10，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">写系统内存时何时腾出 DPQ</h3></div>
-    <a class="paper-open" href="../mechanisms/US12619558B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="写系统内存时何时腾出 DPQ">
-    <img class="paper-image native-image" src="../mechanisms/US12619558B2/fig-4/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="写系统内存时何时腾出 DPQ。控制器确认需要写系统内存后申请 WDFIFO 条目。取得条目时可把数据从 DPQ 转出；若缺条目，请求可在预留的 RHQ 项中等待。">
-  </div>
-  <figcaption>
-    <span>控制器确认需要写系统内存后申请 WDFIFO 条目。取得条目时可把数据从 DPQ 转出；若缺条目，请求可在预留的 RHQ 项中等待。</span>
-    <span class="figure-evidence">原图 8、11，说明书 0168、0184 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">各阶段对资源可用性的要求</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">已知状态</th><th scope="col">标签查询是否启动</th><th scope="col">后续所需资源</th><th scope="col">结果或等待位置</th></tr></thead><tbody><tr><th scope="row">第一组暂满</th><td class="emphasis">未启动</td><td>尚不申请后续组</td><td>在入口等待第一组空位</td></tr><tr><th scope="row">命中且无 snoop</th><td>入口已通过</td><td>无</td><td>使用第一组完成</td></tr><tr><th scope="row">命中且需 snoop</th><td>入口已通过</td><td>探测队列</td><td>取得探测条目后继续</td></tr><tr><th scope="row">缺失且缺失组可用</th><td>入口已通过</td><td>缺失路径组</td><td>推进内存访问</td></tr><tr><th scope="row">缺失组暂满</th><td>入口已通过</td><td>缺失路径组</td><td class="emphasis">在已预留的重试条目中等待</td></tr></tbody></table>
-  <figcaption>
-    <span>第一组还没留齐时，标签流水线不会启动。查到缺失或需 snoop 后，才申请对应资源。缺失路径暂时无法取得第二组资源时，可以用已预留的重试位置等待。表中的命中均指标签查询结果。</span>
-    <span class="figure-evidence">图 8、11–12，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>先预留命中资源</dt><dd>隔离缺失回压 <span class="subdued">原图 7、11–12，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>预留本地重试项</dt><dd>等待后续资源 <span class="subdued">原图 11，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>分组把不必要的预留从纯命中路径移开，但缺失是否能立刻推进由第二组容量决定。标签查询已完成、重试项仍占用和实际下层请求开始是三个时间点。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若缺失不断发生且第二组释放很慢，第一组重试项可能先占满，新的命中也难以开始。权利要求的分组降低了直接绑定，却没有让两组资源在这条重试路径上完全独立。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>第一组空 1 项，缺失组空 0 项，探测组空 1 项。用同一初始状态，分别单独检查纯命中、需 snoop 的命中和缺失。</dd></div><div><dt>处理结果</dt><dd>纯命中用第一组完成。需 snoop 的命中做完标签查询后申请探测条目。缺失也能启动查询，但第二组没有空位时，等在预留的重试位置。</dd></div><div><dt>结果解读</dt><dd>三笔请求分别运行，比较启动标签查询和完成各分支所需的条件。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#admission">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、15、20 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内存控制器在查询前预留缓存命中资源 · US12619558B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12619558B2</code> · <a href="https://patents.google.com/patent/US12619558B2/en">专利全文</a></p>
+<h1>内存控制器在查询前预留缓存命中资源</h1><p class="reading-question">当 DRAM 请求队列和 snoop 跟踪项正在被其他事务占据时，普通的内存侧缓存命中可否继续？</p>
+<p class="reading-answer">控制器用命中路径所需条目决定能否启动查询。后续只有真正缺失或需要 snoop 才申请对应资源。所需资源暂缺时，请求留在预先保留的重试队列项内。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-05-05</dd></div><div><dt>申请号</dt><dd>US18/819,877</dd></div><div><dt>最早优先权</dt><dd>2023-09-22</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Jurgen M. Schulz、Tom Greenshtein、Elli Bagelman</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#groups">为什么三组资源分两次申请</a></li><li><a href="#retry">查询后根据实际结果推进或重试</a></li><li><a href="#write-data">用 WDFIFO 隔离发往 DRAM 的写数据等待</a></li><li><a href="#snoop">同一地址的后来请求由哪个队列保存</a></li><li><a href="#scope">授权权项把哪些阶段写成限制条件</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="groups"><h2>为什么三组资源分两次申请</h2><p>控制器在结果未知时先尝试预留缓存命中所需的那组资源。图 1 左下的重试队列（RHQ）、数据通路队列（DPQ）、缓存命中输出事务表（MOTT）和读改写使用的读数据缓冲（RDD）是说明书示例。初始阶段任何必要项缺槽时，请求不能启动 tag 查询。</p><p>图 1 上方的 tag 流水线和一致性目录流水线接收同一个请求。前者判断内存侧缓存结果，后者判断是否有持有副本的代理需要处理。两者回答的问题不同。缓存命中也可能需要 snoop，缓存缺失也可能需要 snoop，所以右侧的 snoop 资源可与命中或缺失资源并用。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　命中、缺失与 snoop 使用不同的队列条目</h3>
+    <p id="fig-1-basis">从接纳仲裁向下看初始资源，再沿并行的 tag 与目录路径找到两个追加申请点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="命中、缺失与 snoop 使用不同的队列条目" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 606" role="img" aria-labelledby="us12619558b2-fig-1-svg-title us12619558b2-fig-1-svg-desc">
+<title id="us12619558b2-fig-1-svg-title">命中、缺失与 snoop 使用不同的队列条目</title>
+<desc id="us12619558b2-fig-1-svg-desc">从接纳仲裁向下看初始资源，再沿并行的 tag 与目录路径找到两个追加申请点。</desc>
+<defs><marker id="us12619558b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12619558b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12619558b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12619558b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12619558b2-fig-1-issue-tag" d="M 238 128 L 350 128" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-1-arrow-main)"/>
+<path id="us12619558b2-fig-1-issue-dir" d="M 143 94 L 143 82 Q 143 74 151 74 L 760 74 Q 768 74 768 82 L 768 94" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-1-arrow-main)"/>
+<path id="us12619558b2-fig-1-pre" d="M 138 268 L 138 184" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-1-arrow-control)"/>
+<path id="us12619558b2-fig-1-miss-probe" d="M 449 184 L 449 268" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-1-arrow-control)"/>
+<path id="us12619558b2-fig-1-snoop-probe" d="M 768 184 L 768 268" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-1-arrow-control)"/>
+<path id="us12619558b2-fig-1-dram-req" d="M 449 378 L 449 464" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-1-arrow-data)"/>
+<path id="us12619558b2-fig-1-snoop-send" d="M 768 378 L 768 464" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-1-arrow-data)"/>
+<path id="us12619558b2-fig-1-retry" d="M 350 346 L 302 346 Q 294 346 294 354 L 294 492 Q 294 500 286 500 L 238 500" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-1-arrow-control)"/>
+<path id="us12619558b2-fig-1-reissue" d="M 96 464 L 96 416 Q 96 408 88 408 L 28 408 Q 20 408 20 400 L 20 165 Q 20 157 28 157 L 40 157" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-1-arrow-return)"/>
+<rect x="244" y="103" width="100" height="18" fill="#f5f5f5"/><text x="294" y="117" class="arrow-label" text-anchor="middle">派发至 tag</text>
+<rect x="364.5" y="49" width="151" height="18" fill="#f5f5f5"/><text x="440" y="63" class="arrow-label" text-anchor="middle">并行派发至目录</text>
+<rect x="156.5" y="210" width="185" height="18" fill="#f5f5f5"/><text x="249" y="224" class="arrow-label" text-anchor="middle">查询前预留命中路径资源</text>
+<rect x="441.5" y="210" width="137" height="18" fill="#f5f5f5"/><text x="510" y="224" class="arrow-label" text-anchor="middle">缺失后追加申请</text>
+<rect x="685" y="210" width="182" height="18" fill="#f5f5f5"/><text x="776" y="224" class="arrow-label" text-anchor="middle">产生 snoop 后追加申请</text>
+<rect x="441" y="409" width="142" height="18" fill="#f5f5f5"/><text x="512" y="423" class="arrow-label" text-anchor="middle">资源齐备再送 MCU</text>
+<rect x="772" y="409" width="104" height="18" fill="#f5f5f5"/><text x="824" y="423" class="arrow-label" text-anchor="middle">输出 snoop</text>
+<rect x="199" y="444" width="180" height="18" fill="#f5f5f5"/><text x="289" y="458" class="arrow-label" text-anchor="middle">缺少资源，进入 RHQ</text>
+<rect x="42.5" y="386" width="139" height="18" fill="#f5f5f5"/><text x="112" y="400" class="arrow-label" text-anchor="middle">就绪后回到仲裁</text>
+<g id="us12619558b2-fig-1-arb"><rect x="40" y="94" width="198" height="90" rx="6" fill="#f5f5f5"/><rect x="40" y="94" width="198" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="139" y="120" class="node-name" text-anchor="middle">接纳仲裁器</text><text x="139" y="142" class="node-detail" text-anchor="middle">命中路径有槽才派发</text></g>
+<g id="us12619558b2-fig-1-tag"><rect x="350" y="94" width="198" height="90" rx="6" fill="#f5f5f5"/><rect x="350" y="94" width="198" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="449" y="120" class="node-name" text-anchor="middle">tag 流水线</text><text x="449" y="142" class="node-detail" text-anchor="middle">查内存侧缓存的 tag</text></g>
+<g id="us12619558b2-fig-1-dir"><rect x="658" y="94" width="220" height="90" rx="6" fill="#f5f5f5"/><rect x="658" y="94" width="220" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="768" y="120" class="node-name" text-anchor="middle">一致性目录流水线</text><text x="768" y="142" class="node-detail" text-anchor="middle">检查是否需要发 snoop</text></g>
+<g id="us12619558b2-fig-1-fast"><rect x="40" y="268" width="198" height="110" rx="6" fill="#f5f5f5"/><rect x="40" y="268" width="198" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="139" y="294" class="node-name" text-anchor="middle">命中路径资源组</text><text x="139" y="316" class="node-detail" text-anchor="middle">RHQ、DPQ、MOTT</text><text x="139" y="334" class="node-detail" text-anchor="middle">读改写所需的 RDD</text></g>
+<g id="us12619558b2-fig-1-miss"><rect x="350" y="268" width="198" height="110" rx="6" fill="#f5f5f5"/><rect x="350" y="268" width="198" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="449" y="294" class="node-name" text-anchor="middle">缓存缺失资源组</text><text x="449" y="316" class="node-detail" text-anchor="middle">MCU 读／写队列、RMFIFO</text><text x="449" y="334" class="node-detail" text-anchor="middle">写入 ID 等按请求类型</text></g>
+<g id="us12619558b2-fig-1-snoop"><rect x="658" y="268" width="220" height="110" rx="6" fill="#f5f5f5"/><rect x="658" y="268" width="220" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="768" y="294" class="node-name" text-anchor="middle">snoop 资源组</text><text x="768" y="316" class="node-detail" text-anchor="middle">COTT 存待发消息</text><text x="768" y="334" class="node-detail" text-anchor="middle">snoop 队列追踪 4-hop</text></g>
+<g id="us12619558b2-fig-1-rhq"><rect x="40" y="464" width="198" height="84" rx="6" fill="#f5f5f5"/><rect x="40" y="464" width="198" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="139" y="490" class="node-name" text-anchor="middle">重试队列 RHQ</text><text x="139" y="512" class="node-detail" text-anchor="middle">保留未能推进的请求</text></g>
+<g id="us12619558b2-fig-1-dram"><rect x="350" y="464" width="198" height="84" rx="6" fill="#f5f5f5"/><rect x="350" y="464" width="198" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="449" y="490" class="node-name" text-anchor="middle">内存通道单元 MCU</text><text x="449" y="512" class="node-detail" text-anchor="middle">通往 DRAM 命令与数据</text></g>
+<g id="us12619558b2-fig-1-agents"><rect x="658" y="464" width="220" height="84" rx="6" fill="#f5f5f5"/><rect x="658" y="464" width="220" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="768" y="490" class="node-name" text-anchor="middle">一致性代理</text><text x="768" y="512" class="node-detail" text-anchor="middle">接收 snoop，返回响应</text></g>
+<text x="40" y="42" class="signal-title" text-anchor="start">接纳阶段只检查命中路径，后续按查询结果追加资源</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12619558b2-fig-1-pre">查询前预留</a> 请求尚未完成 tag 查询时，先为潜在的缓存命中预留必要项。</li><li><a href="#us12619558b2-fig-1-issue-dir">并行派发至目录</a> tag 流水线判断内存侧缓存命中，目录流水线独立识别 snoop 需求。</li><li><a href="#us12619558b2-fig-1-miss">缓存缺失资源组</a> 读、写、PIO 各有对应 MCU 条目，按实际请求类型申请。</li><li><a href="#us12619558b2-fig-1-snoop">snoop 资源组</a> COTT 保存需要发往网络的消息。对需要回收响应的 4-hop snoop，snoop 队列记录等待状态。</li><li><a href="#us12619558b2-fig-1-reissue">RHQ 重新参与仲裁</a> 图中画出缺失资源暂缺的例子。其它条件未满足的请求也可能回 RHQ。</li></ul>
+  <p class="figure-evidence">原图 7、8、9、10；说明书归档段 0158、0163、0165、0167、0170、0171、0172、0179、0180、0181、0182、0183；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12619558B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>接纳仲裁器</dt><dd>120</dd></div><div><dt>tag 流水线</dt><dd>140</dd></div><div><dt>一致性目录流水线</dt><dd>310</dd></div><div><dt>重试队列 RHQ</dt><dd>150</dd></div><div><dt>snoop 队列</dt><dd>315</dd></div><div><dt>数据通路队列 DPQ</dt><dd>340</dd></div><div><dt>缓存命中输出事务表 MOTT</dt><dd>885A</dd></div><div><dt>一致性输出事务表 COTT</dt><dd>885B</dd></div><div><dt>读数据缓冲 RDD</dt><dd>855</dd></div><div><dt>MCU 读队列</dt><dd>920</dd></div><div><dt>MCU 写队列</dt><dd>930</dd></div><div><dt>MCU 写入 ID 队列</dt><dd>940</dd></div><div><dt>送往 MCU 的命令 FIFO（RMFIFO）</dt><dd>845</dd></div><div><dt>内存通道单元 MCU</dt><dd>815</dd></div><div><dt>命中路径资源组</dt><dd>715A</dd></div><div><dt>snoop 资源组</dt><dd>715B-1</dd></div><div><dt>缓存缺失资源组</dt><dd>715B-2</dd></div></dl></details>
+</figure></section><section id="retry"><h2>查询后根据实际结果推进或重试</h2><p>在图 2 的纯命中分支，控制器完成请求并归还 RHQ 槽。若请求缺失且所需追加条目齐备，可释放 RHQ 和未用的命中条目。若缺失所需的某个条目尚不可用，初始预留的 RHQ 槽继续保存该请求，等条件消失后再次仲裁。表 3 列出各分支占用条件。</p><p>GOP（global ordering point）是本说明书用来区分请求能否在内存控制器继续推进的全局排序点。地址冲突也可能阻止请求通过 GOP。一个已预留 RHQ 槽的请求可在本地等候，不会仅因无处记录这次重试而发回互连。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　先预留命中所需条目，再决定使用路径</h3>
+    <p id="fig-2-basis">对比入口资源不足、缓存命中和缓存缺失时，重试槽位的用途。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="先预留命中所需条目，再决定使用路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 503" role="img" aria-labelledby="us12619558b2-fig-2-svg-title us12619558b2-fig-2-svg-desc">
+<title id="us12619558b2-fig-2-svg-title">先预留命中所需条目，再决定使用路径</title>
+<desc id="us12619558b2-fig-2-svg-desc">对比入口资源不足、缓存命中和缓存缺失时，重试槽位的用途。</desc>
+<defs><marker id="us12619558b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12619558b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12619558b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12619558b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12619558b2-fig-2-reserve"><path d="M 116 120 L 480 120" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-2-arrow-main)"/><rect x="187.5" y="96" width="221" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">尝试预留命中所需条目，包括 RHQ</text></g>
+<g id="us12619558b2-fig-2-stall"><path d="M 480 168 L 116 168" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-2-arrow-return)"/><rect x="220" y="144" width="156" height="18" fill="#f5f5f5"/><text x="298" y="158" class="arrow-label" text-anchor="middle">缺少任一条目：先停在入口</text></g>
+<g id="us12619558b2-fig-2-start"><path d="M 116 216 L 298 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-2-arrow-data)"/><rect x="103" y="192" width="208" height="18" fill="#f5f5f5"/><text x="207" y="206" class="arrow-label" text-anchor="middle">条目齐备：发起 tag／目录查询</text></g>
+<g id="us12619558b2-fig-2-hit"><path d="M 298 264 L 480 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-2-arrow-data)"/><rect x="317.5" y="240" width="143" height="18" fill="#f5f5f5"/><text x="389" y="254" class="arrow-label" text-anchor="middle">纯命中：使用已预留条目</text></g>
+<g id="us12619558b2-fig-2-miss"><path d="M 298 312 L 662 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-2-arrow-data)"/><rect x="382.5" y="288" width="195" height="18" fill="#f5f5f5"/><text x="480" y="302" class="arrow-label" text-anchor="middle">缺失：申请与请求类型相符的条目</text></g>
+<g id="us12619558b2-fig-2-block"><path d="M 298 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-2-arrow-main)"/><rect x="460.5" y="336" width="221" height="18" fill="#f5f5f5"/><text x="571" y="350" class="arrow-label" text-anchor="middle">缺失资源未齐：写入已预留的 RHQ</text></g>
+<g id="us12619558b2-fig-2-wake"><path d="M 844 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-2-arrow-return)"/><rect x="395.5" y="384" width="169" height="18" fill="#f5f5f5"/><text x="480" y="398" class="arrow-label" text-anchor="middle">所需资源可用后重新参加仲裁</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">接纳仲裁器</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">tag／目录流水线</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">命中路径资源组</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">缓存缺失资源组</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">重试队列 RHQ</text>
+<text x="28" y="484" class="legend" text-anchor="start">入口等待、纯命中和缓存缺失是同一次请求可能走的不同分支。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12619558b2-fig-2-stall">入口尚无必要条目</a> 包括 RHQ 在内的命中所需组有任一项不足，此时先抑制启动处理。</li><li><a href="#us12619558b2-fig-2-hit">纯命中</a> 请求使用预留的命中条目完成，RHQ 槽可以释放。</li><li><a href="#us12619558b2-fig-2-block">缺失所需的资源不足</a> 控制器已有可用 RHQ 槽，保留请求直到具备重试条件。</li><li><a href="#us12619558b2-fig-2-wake">重新参加仲裁</a> 重试资格由资源与地址冲突条件共同决定，未必立即被仲裁器选中。</li></ul>
+  <p class="figure-evidence">原图 11、12；说明书归档段 0185、0186、0187、0189、0190、0191、0193、0194；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US12619558B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>接纳仲裁器</dt><dd>120</dd></div><div><dt>tag 流水线</dt><dd>140</dd></div><div><dt>一致性目录流水线</dt><dd>310</dd></div><div><dt>重试队列 RHQ</dt><dd>150</dd></div><div><dt>命中路径资源组</dt><dd>715A</dd></div><div><dt>缓存缺失资源组</dt><dd>715B-2</dd></div><div><dt>尝试预留命中资源</dt><dd>1120</dd></div><div><dt>将请求移入重试队列</dt><dd>1170</dd></div><div><dt>从重试队列重新处理</dt><dd>1180</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　各分支如何占用或释放预留项</h3>
+    <p id="fig-3-basis">用同一请求的查询结果区分占用哪些队列和何时释放 RHQ。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">处理阶段</th><th scope="col">初始命中资源</th><th scope="col">追加资源</th><th scope="col">RHQ 处理</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">等待进入流水线</th><td>须齐备</td><td>无申请</td><td>缺槽则不启动</td></tr><tr id="fig-3-table-row-2"><th scope="row">纯缓存命中</th><td>使用需要的条目</td><td>无</td><td>完成后可释放</td></tr><tr id="fig-3-table-row-3"><th scope="row">命中且需要 snoop</th><td>保留实际所需条目</td><td>追加所需 snoop 资源</td><td>等候或推进由当次所需资源和条件决定</td></tr><tr id="fig-3-table-row-4"><th scope="row">缺失，所需条目齐备</th><td>释放未使用的条目</td><td>取得所需缺失资源</td><td>可释放</td></tr><tr id="fig-3-table-row-5"><th scope="row">缺失，至少一个必要条目不足</th><td>等候可用条目后重新仲裁</td><td>暂缺</td><td>保存请求并重新处理</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">资源状态</a> 各分支的资源占用取决于实际请求类型和控制器实现。</li></ul>
+  <p class="figure-evidence">原图 8、11、12；说明书归档段 0167、0180、0185、0186、0191、0192、0193、0194；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>重试队列 RHQ</dt><dd>150</dd></div><div><dt>命中路径资源组</dt><dd>715A</dd></div><div><dt>snoop 资源组</dt><dd>715B-1</dd></div><div><dt>缓存缺失资源组</dt><dd>715B-2</dd></div></dl></details>
+</figure></section><section id="write-data"><h2>用 WDFIFO 隔离发往 DRAM 的写数据等待</h2><p>图 4 展示说明书 ¶0184 的实现。DPQ 同时供本地缓存访问以及某些送系统内存的写路径使用。送系统内存的脏数据先需要可用的写数据 FIFO（WDFIFO）槽。其队列不可用时，写请求停在 RHQ。预留成功后，数据通路才把写数据交给 WDFIFO，DPQ 可以释放该操作的条目，后续由内存通道单元（MCU）向 DRAM 发出。</p><p>同一写路径上，命令与数据分开跟踪。MCU 写入 ID 队列参与将写命令与分离的写数据关联，WDFIFO 则保存写数据。预留 WDFIFO 缩短的是 DPQ 因等待下一级写缓冲而可能产生的占用时间。整个请求的完成时间还取决于 MCU 和 DRAM 调度。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　WDFIFO 有槽后才让写数据经过 DPQ</h3>
+    <p id="fig-4-basis">写系统内存时的等待被保存在 RHQ，DPQ 内的写数据随后交给已取得条目的下游 FIFO。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="WDFIFO 有槽后才让写数据经过 DPQ" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 455" role="img" aria-labelledby="us12619558b2-fig-4-svg-title us12619558b2-fig-4-svg-desc">
+<title id="us12619558b2-fig-4-svg-title">WDFIFO 有槽后才让写数据经过 DPQ</title>
+<desc id="us12619558b2-fig-4-svg-desc">写系统内存时的等待被保存在 RHQ，DPQ 内的写数据随后交给已取得条目的下游 FIFO。</desc>
+<defs><marker id="us12619558b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12619558b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12619558b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12619558b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12619558b2-fig-4-need"><path d="M 298 120 L 662 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-4-arrow-data)"/><rect x="350" y="96" width="260" height="18" fill="#f5f5f5"/><text x="480" y="110" class="arrow-label" text-anchor="middle">需要写系统内存，检查并预留 WDFIFO</text></g>
+<g id="us12619558b2-fig-4-wait"><path d="M 298 168 L 116 168" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-4-arrow-return)"/><rect x="77" y="144" width="260" height="18" fill="#f5f5f5"/><text x="207" y="158" class="arrow-label" text-anchor="middle">WDFIFO 无空槽时转入 RHQ 等待</text></g>
+<g id="us12619558b2-fig-4-again"><path d="M 116 216 L 298 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-4-arrow-return)"/><rect x="103" y="192" width="208" height="18" fill="#f5f5f5"/><text x="207" y="206" class="arrow-label" text-anchor="middle">资源可用后，经仲裁重新进入流水线</text></g>
+<g id="us12619558b2-fig-4-dispatch"><path d="M 298 264 L 480 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-4-arrow-data)"/><rect x="272" y="240" width="234" height="18" fill="#f5f5f5"/><text x="389" y="254" class="arrow-label" text-anchor="middle">写路径所需条目已齐，允许进入 DPQ</text></g>
+<g id="us12619558b2-fig-4-push"><path d="M 480 312 L 662 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-4-arrow-main)"/><rect x="441" y="288" width="260" height="18" fill="#f5f5f5"/><text x="571" y="302" class="arrow-label" text-anchor="middle">脏数据从数据通路写入已预留 WDFIFO</text></g>
+<g id="us12619558b2-fig-4-drain"><path d="M 662 360 L 844 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-4-arrow-data)"/><rect x="642.5" y="336" width="221" height="18" fill="#f5f5f5"/><text x="753" y="350" class="arrow-label" text-anchor="middle">MCU 后续取写数据并发往系统内存</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">重试队列 RHQ</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">tag 流水线</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">数据通路队列 DPQ</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">写数据 FIFO</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">内存通道单元 MCU</text>
+<text x="28" y="436" class="legend" text-anchor="start">WDFIFO 已有空槽时可以直接推进写系统内存。虚线表示队列暂满时的等待路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12619558b2-fig-4-need">检查并预留 WDFIFO</a> WDFIFO 为即将送往系统内存的写数据留项。该例也需要相应的缺失资源。</li><li><a href="#us12619558b2-fig-4-wait">预留失败则使用 RHQ</a> DPQ 不必长时间保留等待下一级写数据槽的这一事务。</li><li><a href="#us12619558b2-fig-4-push">写数据进入 WDFIFO</a> DPQ 完成这段数据交接后即可释放该操作的项。</li><li><a href="#us12619558b2-fig-4-drain">MCU 向系统内存发出写请求</a> 命令、写入 ID 和写数据有各自路径。数据进入 WDFIFO 后，还需等 DRAM 写入完成。</li></ul>
+  <p class="figure-evidence">原图 8、9、11；说明书归档段 0167、0168、0175、0178、0184、0186；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US12619558B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>tag 流水线</dt><dd>140</dd></div><div><dt>重试队列 RHQ</dt><dd>150</dd></div><div><dt>数据通路队列 DPQ</dt><dd>340</dd></div><div><dt>写数据 FIFO（WDFIFO）</dt><dd>850</dd></div><div><dt>内存通道单元 MCU</dt><dd>815</dd></div><div><dt>MCU 写队列</dt><dd>930</dd></div><div><dt>MCU 写入 ID 队列</dt><dd>940</dd></div></dl></details>
+</figure></section><section id="snoop"><h2>同一地址的后来请求由哪个队列保存</h2><p>图 5 的请求 A 触发 4-hop snoop，目录与 tag 流水线在此时才请求 snoop 队列项。该队列项记录预期的 copy-back 响应或确认等。请求 B 随后访问同一缓存行，命中仍有效的 snoop 地址记录，先停在自己的 RHQ 项内。</p><p>收到所需响应后，原请求 A 可以重新参加仲裁。B 的对应重试条件还包括一致性操作结束、缓存行解锁。若原事务导致目录逐出并且需要脏数据写回，说明书 ¶0091 允许项继续保存到最后一次通过 GOP。图中的 4-hop 与本文实施例有关，两种 hop 形式均可走 COTT 输出，但该实施例仅在 snoop 队列中跟踪需要控制器收集响应的 4-hop snoop。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　4-hop snoop 跟踪项阻挡同一地址的后续请求</h3>
+    <p id="fig-5-basis">一条 snoop 跟踪项让原请求收齐响应，同时让后来命中该地址的请求在 RHQ 等到解锁。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="4-hop snoop 跟踪项阻挡同一地址的后续请求" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12619558b2-fig-5-svg-title us12619558b2-fig-5-svg-desc">
+<title id="us12619558b2-fig-5-svg-title">4-hop snoop 跟踪项阻挡同一地址的后续请求</title>
+<desc id="us12619558b2-fig-5-svg-desc">一条 snoop 跟踪项让原请求收齐响应，同时让后来命中该地址的请求在 RHQ 等到解锁。</desc>
+<defs><marker id="us12619558b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12619558b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12619558b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12619558b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12619558b2-fig-5-create"><path d="M 480 120 L 662 120" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-5-arrow-main)"/><rect x="395.5" y="96" width="351" height="18" fill="#f5f5f5"/><text x="571" y="110" class="arrow-label" text-anchor="middle">请求 A 需要 4-hop snoop，按需分配跟踪项</text></g>
+<g id="us12619558b2-fig-5-send"><path d="M 480 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-5-arrow-data)"/><rect x="564.5" y="144" width="195" height="18" fill="#f5f5f5"/><text x="662" y="158" class="arrow-label" text-anchor="middle">经 COTT 发出 snoop</text></g>
+<g id="us12619558b2-fig-5-lock"><path d="M 662 216 L 480 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-5-arrow-return)"/><rect x="434.5" y="192" width="273" height="18" fill="#f5f5f5"/><text x="571" y="206" class="arrow-label" text-anchor="middle">请求 B 命中待处理地址，无法通过 GOP</text></g>
+<g id="us12619558b2-fig-5-queue_b"><path d="M 480 264 L 116 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-5-arrow-data)"/><rect x="213.5" y="240" width="169" height="18" fill="#f5f5f5"/><text x="298" y="254" class="arrow-label" text-anchor="middle">B 等在 RHQ 的预留项</text></g>
+<g id="us12619558b2-fig-5-snoop_res"><path d="M 844 312 L 662 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12619558b2-fig-5-arrow-data)"/><rect x="642.5" y="288" width="221" height="18" fill="#f5f5f5"/><text x="753" y="302" class="arrow-label" text-anchor="middle">copy-back／确认更新跟踪项</text></g>
+<g id="us12619558b2-fig-5-source_reissue"><path d="M 662 360 L 298 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12619558b2-fig-5-arrow-main)"/><rect x="382.5" y="336" width="195" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">收到所需响应，A 重新参加仲裁</text></g>
+<g id="us12619558b2-fig-5-unlock"><path d="M 662 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-5-arrow-return)"/><rect x="252.5" y="384" width="273" height="18" fill="#f5f5f5"/><text x="389" y="398" class="arrow-label" text-anchor="middle">一致性事务结束且解锁，被阻塞的 B 可重试</text></g>
+<g id="us12619558b2-fig-5-retry_b"><path d="M 116 456 L 298 456" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12619558b2-fig-5-arrow-return)"/><rect x="103" y="432" width="208" height="18" fill="#f5f5f5"/><text x="207" y="446" class="arrow-label" text-anchor="middle">符合重试条件的 B 重新参加仲裁</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">重试队列 RHQ</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">接纳仲裁器</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">tag／目录流水线</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">snoop 队列</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">被 snoop 的代理</text>
+<text x="28" y="532" class="legend" text-anchor="start">采用说明书所示的 4-hop 例。请求 A 发起 snoop，请求 B 随后访问同一地址。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12619558b2-fig-5-create">创建 snoop 跟踪项</a> 目录流水线标示需要跟踪的响应。自由槽不足时，可用已预留的 RHQ 项等候。</li><li><a href="#us12619558b2-fig-5-lock">命中待处理地址</a> B 的 tag 流水线查询 snoop 队列中有效的地址记录，命中后不能通过 GOP。</li><li><a href="#us12619558b2-fig-5-snoop_res">copy-back／确认</a> 响应携带对应跟踪项的信息，更新其有限状态机。</li><li><a href="#us12619558b2-fig-5-source_reissue">A 再参与仲裁</a> 原请求在收齐所需响应后可被重新发出。</li><li><a href="#us12619558b2-fig-5-unlock">事务结束并解锁</a> RHQ 收到对应条件的更新后，才把被同址冲突阻塞的 B 列为重试候选。</li></ul>
+  <p class="figure-evidence">原图 3A、3B、3C、8、10；说明书归档段 0065、0068、0082、0085、0086、0087、0088、0091、0181、0192；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12619558B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>tag 流水线</dt><dd>140</dd></div><div><dt>一致性目录流水线</dt><dd>310</dd></div><div><dt>重试队列 RHQ</dt><dd>150</dd></div><div><dt>snoop 队列</dt><dd>315</dd></div><div><dt>一致性输出事务表 COTT</dt><dd>885B</dd></div><div><dt>snoop 跟踪项</dt><dd>314</dd></div><div><dt>snoop 地址比较器</dt><dd>380</dd></div><div><dt>snoop 响应</dt><dd>383</dd></div><div><dt>重试仲裁器</dt><dd>360</dd></div></dl></details>
+</figure></section><section id="scope"><h2>授权权项把哪些阶段写成限制条件</h2><p>独立权利要求 1、10、15 同时限定初始预留及判定缺失后的追加预留。其中第 10、15 项要求初始资源中含 RHQ。独立权利要求 20 明确限定判定产生 snoop 后再为相应资源组预留条目。第 11、12 项分别限定纯命中与命中且需要 snoop 的分支。</p><p>如果 RHQ 或 DPQ 自身被占满，即使请求后来会命中也无法启动查询。工程收益应在分阶段记录入口等待、RHQ 占用、DPQ 释放和请求完成后再评估。说明书图示和本文原型没有给出产品上的命中延迟或吞吐量测值。</p></section></div>
+<p><a class="lab-link" href="../lab.html#admission">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -144,50 +180,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=entries%20in%20a%20first%20set%20of%20the%20plurality%20of%20storage%20circuits%20that%20are%20needed%20to%20process">F19</a></th><td>控制器先尝试为命中路径所需的一组存储电路预留条目</td><td><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=FIG.%207%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20memory%20controller%20circuit%20that%20is">说明书 0159</a> · <a href="https://patents.google.com/patent/US12619558B2/en#:~:text=FIG.%2011%20illustrates%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%201100%20implemented%20by%20a">说明书 0185</a> · 原图 7、11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=without%20reserving%20entries%20in%20other%20sets%20of%20storage%20circuits">F20</a></th><td>此前不分配其他结果所需的存储条目</td><td><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=FIG.%2011%20illustrates%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%201100%20implemented%20by%20a">说明书 0185</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=based%20on%20successfully%20reserving%20entries%20in%20all%20of%20the%20first%20set%20of%20storage%20circuits">F21</a></th><td>第一组内所需条目全部预留成功才启动访存处理</td><td><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=FIG.%2011%20illustrates%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%201100%20implemented%20by%20a">说明书 0185</a> · 原图 11–12</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=to%20inhibit%20processing%20of%20the%20memory%20access%20request%20based%20on%20being%20unable%20to%20reserve%20an%20entry">F22</a></th><td>第一组缺少任一所需条目时暂缓启动</td><td><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=FIG.%2011%20illustrates%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%201100%20implemented%20by%20a">说明书 0185</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=a%20second%20set%20of%20storage%20circuits%20that%20includes%20a%20snoop%20queue%20circuit">F23</a></th><td>第二组含保存实际 snoop 相关信息的队列</td><td>原图 7–8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12619558B2/en#:~:text=after%20determining%20that%20a%20particular%20snoop%20has%20been%20generated%20for%20a%20particular%20memory%20access%20request">F24</a></th><td>确定该访存已生成特定 snoop 后才保留第二组条目</td><td>原图 11–12</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>内存控制器先为命中预留所需条目，初始资源齐备才启动，查到缺失才分后续资源。原图 7、11。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>控制电路含标签流水线，判断访问是否命中内存缓存。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>第一组加入重试队列，保存需要重过标签流水线的请求。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>检测到命中后使用初始条目完成并释放预留重试项。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>缺失所需其他资源可用时，释放重试项及未用的初始条目。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-3">3</a></td><td>缺失资源不可用时写入已预留的重试项，稍后重新调度。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-2">2</a></td><td>第一组加入命中输出缓冲，保存标签命中的结果信息。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-2">2</a></td><td>第一组含数据通路队列及保存命中读改写信息的读数据缓冲。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>snoop 队列属于另一资源组，在相应访存产生实际 snoop 后才预留条目。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>方法项初始组包含重试队列，先分初始资源并启动，再查标签和分缺失条目。原图 11–12。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>命中且不用 snoop 时，用初始资源完成并释放重试项。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>命中但需要 snoop 时，分配第一组之外的 snoop 条目并用它完成。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>缺失资源可用时归还重试项和不再需要的第一组条目。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>缺失资源不够时把请求存到已预留重试项，留待以后重发。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>多个内存平面控制器处理网络访存，初始预留重试项，命中完成时归还；另在确认缺失后分配缺失资源。原图 7、11–12。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第一组包括保存命中读改写数据的读缓冲项。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>缺失且其他条目不可用时保存到重试队列，稍后重试。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>仲裁器先保留重试项才允许请求入流水线，避免为此退回互连。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>多套网络各有网络接口，经指定接口接收该请求。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td>独立项</td><td>另一装置项先预留命中资源，发现实际产生 snoop 后才分配包含 snoop 队列的第二组。原图 7、11。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>标签结果出来前只预留第一组。确认缺失后才申请缺失所需的资源。</dd></div><div><dt>图 7、图 11–12</dt><dd>图 7 比较不同结果所需资源，图 11–12 给出命中、探测和缺失的预留流程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12619558B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>这些权项分别涉及探测分配、纯命中释放、缺失资源可用和资源不足时借助重试队列。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12619558B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>US9201796B2 权 1 在标签结束前把推测读放入缺失队列，确认缺失后才可访问外存；权 7 加入命中时撤销。US12619558B2 权 1 先预留命中组的全部必要条目，确认缺失后才申请缺失组。两种安排改变的是不同资源的占用时点。</p></li><li><a href="US20250103520A1.html#engineering">标签流水线发出前预留重试槽</a>
-<p>US20250103520A1 公开权 1 在请求发入标签流水线前保留重试槽，使已发请求不会仅因重试队列缺项而退回互连。US12619558B2 授权权 1 规定首次启动要先留齐命中所需的整组资源，查到缺失后再留缺失组。从两项可分别检查查询何时获准启动，以及首次受阻后能否在控制器内重试。</p></li><li><a href="US10795818B1.html#engineering">限制时延敏感 snoop 前的普通请求数</a>
-<p>US12619558B2 在标签结果未知时只检查命中所需资源，第一组齐备才启动查询。US10795818B1 的两类 snoop 共用无优先分流的输入通道，缓存控制器限制到来的延迟敏感 snoop 前面可先处理的普通请求数。前者测资源可用到标签查询启动，后者测探测接入与服务的间隔。</p></li></ul>
-    <p><a href="../index.html?patent=US12619558B2#knowledge">在全量关系图上定位 US12619558B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-09-22</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-08-29</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-05-05</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/819,877</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Jurgen M. Schulz、Tom Greenshtein、Elli Bagelman</dd></div><div><dt>分类号</dt><dd>G06F13/1642、G06F12/0223、G06F12/0815、G06F12/0831、G06F12/0833、G06F12/0859、G06F12/0895、G06F12/12、G06F13/1673、G06F2212/1008、G06F2212/1024、G06F2212/303</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12619558B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12619558B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 238 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1A、3A、3B、3C、6A、7、8、9、10、11、12。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US20250103520A1.html"><code>US20250103520A1</code> 标签流水线发出前预留重试槽</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12619558B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

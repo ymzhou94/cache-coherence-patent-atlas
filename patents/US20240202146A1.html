@@ -1,119 +1,227 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20240202146A1 让 DRAM 在接收 SYNC 后延迟启动数据时钟 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>提前发送 SYNC，保留 DRAM 数据时钟的启动点 · US20240202146A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20240202146A1</code> · <a href="https://patents.google.com/patent/US20240202146A1/en">专利全文</a></p>
+<h1>提前发送 SYNC，保留 DRAM 数据时钟的启动点</h1><p class="reading-question">控制器已经排好连续读数据的时序。若 SYNC 和另一 bank 的 ACT 要占用同一个命令周期，怎样解除冲突并让数据时钟仍在原时点启动？</p>
+<p class="reading-answer">控制器在较早的空闲命令周期发送 SYNC。DRAM 收到后额外等一周期，再按原有时序启动数据时钟。以原图 3F 为例，周期 17 发送 SYNC，周期 18 保留给 bank E 的第二次 ACT，周期 19 仍是首条 RD 和数据时钟的启动点。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-06-20</dd></div><div><dt>申请号</dt><dd>US18/588,406</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Gregory S. Mathews、Shane J. Keil</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#controller">控制器编排命令，DRAM 流水线执行 SYNC</a></li><li><a href="#slots">把周期 18 留给 ACT2，数据时钟仍在周期 19 启动</a></li><li><a href="#delay">延迟可以落在命令译码级，也可以落在 SYNC 执行级</a></li><li><a href="#datalanes">连续占用来自相邻 bank 的数据 beat 交错</a></li><li><a href="#scope">三个公开独立权项分别从器件、方法和控制器写起</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="controller"><h2>控制器编排命令，DRAM 流水线执行 SYNC</h2><p>沿图 1 追踪一次访问。互连请求由内存控制器仲裁。原图 2 的可选 memory cache 若不能完成请求，控制器把请求交给相应 MCU。调度器按 bank 和读写方向选择命令，再由内存接口把 ACT、RD、WR 和 SYNC 放进各自的 CMD 周期。</p><p>C CK 为命令和此处的计时基准，W CK 为数据时钟。DRAM 命令流水线接收 SYNC 后负责启动 W CK，而 RD 或 WR 指定访问的 bank 与方向。三件事分别是 CMD 上何时收到命令，DRAM 何时执行 SYNC，以及 DATA 上何时出现有效数据。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　跨越控制器与 DRAM 边界的 CMD 和 DATA 路径</h3>
+    <p id="fig-1-basis">上游仲裁和 bank 调度都发生在控制器。SYNC 通过 CMD 进入 DRAM 后，由 DRAM 控制 W CK。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="跨越控制器与 DRAM 边界的 CMD 和 DATA 路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 614" role="img" aria-labelledby="us20240202146a1-fig-1-svg-title us20240202146a1-fig-1-svg-desc">
+<title id="us20240202146a1-fig-1-svg-title">跨越控制器与 DRAM 边界的 CMD 和 DATA 路径</title>
+<desc id="us20240202146a1-fig-1-svg-desc">上游仲裁和 bank 调度都发生在控制器。SYNC 通过 CMD 进入 DRAM 后，由 DRAM 控制 W CK。</desc>
+<defs><marker id="us20240202146a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20240202146a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20240202146a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20240202146a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20240202146a1-fig-1-choose" d="M 244 141 L 373 141" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-1-arrow-main)"/>
+<path id="us20240202146a1-fig-1-lookup" d="M 589 141 L 711 141" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-1-arrow-main)"/>
+<path id="us20240202146a1-fig-1-miss" d="M 807 183 L 807 206 Q 807 214 799 214 L 154 214 Q 146 214 146 222 L 146 249" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-1-arrow-control)"/>
+<path id="us20240202146a1-fig-1-schedule" d="M 244 303 L 374 303" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-1-arrow-main)"/>
+<path id="us20240202146a1-fig-1-cmd" d="M 590 303 L 711 303" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-1-arrow-main)"/>
+<path id="us20240202146a1-fig-1-open" d="M 815 361 L 815 459" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-1-arrow-control)"/>
+<path id="us20240202146a1-fig-1-dq" d="M 711 507 L 590 507" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-1-arrow-data)"/>
+<path id="us20240202146a1-fig-1-return" d="M 482 459 L 482 361" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-1-arrow-return)"/>
+<rect x="269" y="114" width="72" height="18" fill="#f5f5f5"/><text x="305" y="128" class="arrow-label" text-anchor="middle">提交请求</text>
+<rect x="605" y="114" width="88" height="18" fill="#f5f5f5"/><text x="649" y="128" class="arrow-label" text-anchor="middle">检查缓存</text>
+<rect x="355.5" y="191" width="211" height="18" fill="#f5f5f5"/><text x="461" y="205" class="arrow-label" text-anchor="middle">缺失请求送往相应 MCU</text>
+<rect x="254" y="276" width="106" height="18" fill="#f5f5f5"/><text x="307" y="290" class="arrow-label" text-anchor="middle">分配命令周期</text>
+<rect x="603.5" y="276" width="93" height="18" fill="#f5f5f5"/><text x="650" y="290" class="arrow-label" text-anchor="middle">CMD ＋ C CK</text>
+<rect x="763" y="393" width="104" height="18" fill="#f5f5f5"/><text x="815" y="407" class="arrow-label" text-anchor="middle">ACT / RD / WR</text>
+<rect x="600" y="480" width="100" height="18" fill="#f5f5f5"/><text x="650" y="494" class="arrow-label" text-anchor="middle">DATA ／W CK</text>
+<rect x="431.5" y="396" width="101" height="18" fill="#f5f5f5"/><text x="482" y="410" class="arrow-label" text-anchor="middle">返回或发送</text>
+<g id="us20240202146a1-fig-1-ingress"><rect x="49" y="99" width="195" height="84" rx="6" fill="#f5f5f5"/><rect x="49" y="99" width="195" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146.5" y="125" class="node-name" text-anchor="middle">请求队列</text><text x="146.5" y="147" class="node-detail" text-anchor="middle">互连接入 CPU、GPU 等</text></g>
+<g id="us20240202146a1-fig-1-arbiter"><rect x="373" y="99" width="216" height="84" rx="6" fill="#f5f5f5"/><rect x="373" y="99" width="216" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="481" y="125" class="node-name" text-anchor="middle">内存请求仲裁器</text><text x="481" y="147" class="node-detail" text-anchor="middle">QoS、年龄和公平性</text></g>
+<g id="us20240202146a1-fig-1-cache"><rect x="711" y="99" width="207" height="84" rx="6" fill="#f5f5f5"/><rect x="711" y="99" width="207" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814.5" y="125" class="node-name" text-anchor="middle">memory cache</text><text x="814.5" y="147" class="node-detail" text-anchor="middle">命中可在控制器内完成</text></g>
+<g id="us20240202146a1-fig-1-sched"><rect x="48" y="249" width="196" height="112" rx="6" fill="#f5f5f5"/><rect x="48" y="249" width="196" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="146" y="275" class="node-name" text-anchor="middle">通道调度器</text><text x="146" y="297" class="node-detail" text-anchor="middle">MCU 独立排队</text><text x="146" y="315" class="node-detail" text-anchor="middle">为多个 bank 排定 CMD</text></g>
+<g id="us20240202146a1-fig-1-phy"><rect x="374" y="249" width="216" height="112" rx="6" fill="#f5f5f5"/><rect x="374" y="249" width="216" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="482" y="275" class="node-name" text-anchor="middle">内存接口电路</text><text x="482" y="297" class="node-detail" text-anchor="middle">命令时钟 C CK</text><text x="482" y="315" class="node-detail" text-anchor="middle">数据接口和 PHY</text></g>
+<g id="us20240202146a1-fig-1-pipeline"><rect x="711" y="249" width="207" height="112" rx="6" fill="#f5f5f5"/><rect x="711" y="249" width="207" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="814.5" y="275" class="node-name" text-anchor="middle">DRAM 命令流水线</text><text x="814.5" y="297" class="node-detail" text-anchor="middle">译码并执行 ACT、RD、WR</text><text x="814.5" y="315" class="node-detail" text-anchor="middle">SYNC 控制 W CK</text></g>
+<g id="us20240202146a1-fig-1-bank"><rect x="711" y="459" width="207" height="92" rx="6" fill="#f5f5f5"/><rect x="711" y="459" width="207" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814.5" y="485" class="node-name" text-anchor="middle">DRAM bank</text><text x="814.5" y="507" class="node-detail" text-anchor="middle">已激活的行提供或接收数据</text></g>
+<g id="us20240202146a1-fig-1-dqp"><rect x="374" y="459" width="216" height="92" rx="6" fill="#f5f5f5"/><rect x="374" y="459" width="216" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="482" y="485" class="node-name" text-anchor="middle">MCU 数据端口</text><text x="482" y="507" class="node-detail" text-anchor="middle">接收读数据或发送写数据</text></g>
+<text x="49" y="57" class="signal-title" text-anchor="start">控制器为命令总线分配周期，由 DRAM 决定何时启动数据时钟</text>
+<text x="49" y="586" class="legend" text-anchor="start">memory cache 为原图 2 的可选结构。图中 DATA 箭头表示读返回，写数据沿相反方向。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20240202146a1-fig-1-miss">内存 cache 缺失</a> 在含有 memory cache 的实施例中送相应 MCU。</li><li><a href="#us20240202146a1-fig-1-sched">MCU 通道调度器</a> 排列 ACT、RD、WR、SYNC，且每个 CMD 周期只装一条命令。</li><li><a href="#us20240202146a1-fig-1-cmd">CMD 命令路径</a> 使用 C CK 计时。</li><li><a href="#us20240202146a1-fig-1-dq">DATA 数据路径</a> 图画读返回，写数据方向相反；W CK 启动由 SYNC 控制。</li></ul>
+  <p class="figure-evidence">原图 1、2、3E、3F；说明书归档段 0022、0027、0030、0031、0033、0034、0039、0040、0053、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20240202146A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>110</dd></div><div><dt>控制电路</dt><dd>120</dd></div><div><dt>内存接口电路</dt><dd>130</dd></div><div><dt>命令时钟 C CK</dt><dd>142</dd></div><div><dt>命令总线 CMD</dt><dd>144</dd></div><div><dt>数据总线 DATA</dt><dd>146</dd></div><div><dt>DRAM 器件</dt><dd>150</dd></div><div><dt>DRAM bank A–D</dt><dd>152A–152D</dd></div><div><dt>请求队列</dt><dd>210A–210C</dd></div><div><dt>内存请求仲裁器</dt><dd>220</dd></div><div><dt>memory cache</dt><dd>230</dd></div><div><dt>内存通道单元（MCU）</dt><dd>240A–240B</dd></div><div><dt>通道调度器</dt><dd>244A–244B</dd></div></dl></details>
+</figure></section><section id="slots"><h2>把周期 18 留给 ACT2，数据时钟仍在周期 19 启动</h2><p>图 2 比较原图 3E 和 3F 在周期 16–19 的命令位置。第二次 ACT 要在周期 18 打开 bank E 对应的行。若把 SYNC 也排到周期 18，同一 CMD 周期出现两条命令。启用 sync delay mode 后，调度器改在空闲的周期 17 发出 SYNC。DRAM 在内部延迟一周期，使其等效于在 18 收到普通 SYNC，W CK 仍在周期 19 开始启动。</p><p>表 3 可逐项检查哪些观察点移动。bank A 的 RD 还是在 19，首个数据 beat 仍在 36。原图 4B 的虚线标出 bank A 的 RD 相对 tRCDr 最早时点被推迟两周期；这与 SYNC 在器件里增加一周期是两个独立调整。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　提前发出 SYNC，给 ACT2 E 留出周期 18</h3>
+    <p id="fig-2-basis">同一个周期网格对齐两条 CMD 方案、DRAM 执行和 W CK 启动。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前发出 SYNC，给 ACT2 E 留出周期 18" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us20240202146a1-fig-2-svg-title us20240202146a1-fig-2-svg-desc">
+<title id="us20240202146a1-fig-2-svg-title">提前发出 SYNC，给 ACT2 E 留出周期 18</title>
+<desc id="us20240202146a1-fig-2-svg-desc">同一个周期网格对齐两条 CMD 方案、DRAM 执行和 W CK 启动。</desc>
+<defs><marker id="us20240202146a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20240202146a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20240202146a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20240202146a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us20240202146a1-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">16</text>
+<line x1="354" y1="76" x2="354" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">17</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">18</text>
+<line x1="678" y1="76" x2="678" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">19</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">20</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（C CK 周期）</text>
+</g>
+<g id="us20240202146a1-fig-2-conflict"><text x="24" y="136" class="node-name" text-anchor="start">CMD · 无延迟模式</text>
+<rect x="192" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="136" class="arrow-label" text-anchor="middle">ACT1 E</text>
+<rect x="516" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="136" class="arrow-label" text-anchor="middle">ACT2 E ＋ SYNC</text>
+<rect x="678" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="136" class="arrow-label" text-anchor="middle">RD A</text>
+<circle cx="516" cy="131" r="5" fill="#4f5d75"/>
+<text x="516" y="171" class="arrow-label" text-anchor="end">两条命令争用周期 18</text></g>
+<g id="us20240202146a1-fig-2-moved"><text x="24" y="228" class="node-name" text-anchor="start">CMD · 延迟模式</text>
+<rect x="192" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="228" class="arrow-label" text-anchor="middle">ACT1 E</text>
+<rect x="354" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="228" class="arrow-label" text-anchor="middle">SYNC</text>
+<rect x="516" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="228" class="arrow-label" text-anchor="middle">ACT2 E</text>
+<rect x="678" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="228" class="arrow-label" text-anchor="middle">RD A</text>
+<circle cx="354" cy="223" r="5" fill="#4f5d75"/>
+<text x="354" y="263" class="arrow-label" text-anchor="end">周期 17 接收 SYNC</text></g>
+<g id="us20240202146a1-fig-2-execute"><text x="24" y="320" class="node-name" text-anchor="start">DRAM 内部执行</text>
+<rect x="354" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="320" class="arrow-label" text-anchor="middle">等待一周期</text>
+<rect x="516" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="320" class="arrow-label" text-anchor="middle">等效 SYNC</text>
+<circle cx="516" cy="315" r="5" fill="#4f5d75"/>
+<text x="516" y="355" class="arrow-label" text-anchor="end">周期 18 生效</text></g>
+<g id="us20240202146a1-fig-2-wck"><text x="24" y="412" class="node-name" text-anchor="start">数据时钟 W CK</text>
+<rect x="678" y="388" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="412" class="arrow-label" text-anchor="middle">开始启动</text>
+<circle cx="678" cy="407" r="5" fill="#bf4520"/>
+<text x="678" y="447" class="arrow-label" text-anchor="end">周期 19 启动</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">格宽代表一个 C CK 周期。圆点标记周期边界，W CK 的引脚波形由图 4B 给出。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20240202146a1-fig-2-conflict">周期 18 的冲突</a> 原图 3E 的计划将 SYNC 和 ACT2 E 放在同周期，实际总线不能同时发出。</li><li><a href="#us20240202146a1-fig-2-moved">周期 17 接收 SYNC</a> DRAM 已有一周期延迟的有效指示，CMD 周期 18 只发送 ACT2 E。</li><li><a href="#us20240202146a1-fig-2-execute">周期 18 等效生效</a> 提前的一周期由器件内部等待补偿。</li><li><a href="#us20240202146a1-fig-2-wck">周期 19 开始启动</a> 与在周期 18 收到普通 SYNC 的启动时点相同。</li></ul>
+  <p class="figure-evidence">原图 3E、3F、4B；说明书归档段 0049、0050、0051、0052、0053、0054、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US20240202146A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>命令时钟 C CK</dt><dd>142</dd></div><div><dt>命令总线 CMD</dt><dd>144</dd></div><div><dt>SYNC 命令</dt><dd>原图 4B：Sync/BL</dd></div><div><dt>bank E 的第二次 ACT</dt><dd>原图 4B：Act-2 Bank E</dd></div><div><dt>bank A 的 RD</dt><dd>原图 4B：RD (BNK A)</dd></div><div><dt>数据时钟 W CK</dt><dd>原图 4A：W CK (t)</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　SYNC 延迟模式前后的命令与数据时点</h3>
+    <p id="fig-3-basis">表内分列核对两个排程。标出无法在同周期发出的逻辑计划。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">观测点</th><th scope="col">图 3E 的计划（无延迟）</th><th scope="col">图 3F（内部延迟一周期）</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">CMD 接收 SYNC</th><td>18，与 ACT2 E 冲突</td><td>17，独占命令槽</td></tr><tr id="fig-3-table-row-2"><th scope="row">CMD 发送 ACT2 E</th><td>18，与 SYNC 冲突</td><td>18</td></tr><tr id="fig-3-table-row-3"><th scope="row">DRAM 内部等效 SYNC</th><td>18（若 SYNC 能发出）</td><td>18</td></tr><tr id="fig-3-table-row-4"><th scope="row">W CK 启动</th><td>19（若 SYNC 能发出）</td><td>19</td></tr><tr id="fig-3-table-row-5"><th scope="row">首条 RD A</th><td>19</td><td>19</td></tr><tr id="fig-3-table-row-6"><th scope="row">A 的首个 DATA beat</th><td>36</td><td>36</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">共同的时钟口径</a> 周期用原图 3E、3F 的 C CK 编号。无延迟列有 CMD 冲突，所列 W CK 时点为该计划的目标。</li></ul>
+  <p class="figure-evidence">原图 3E、3F；说明书归档段 0049、0051、0052、0053、0054、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00010" aria-label="原文权利要求 10">10</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>命令时钟 C CK</dt><dd>142</dd></div><div><dt>命令总线 CMD</dt><dd>144</dd></div><div><dt>bank E 的第二次 ACT</dt><dd>原图 4B：Act-2 Bank E</dd></div><div><dt>SYNC 命令</dt><dd>原图 4B：Sync/BL</dd></div><div><dt>数据时钟 W CK</dt><dd>原图 4A：W CK (t)</dd></div><div><dt>数据总线 DATA</dt><dd>146</dd></div></dl></details>
+</figure></section><section id="delay"><h2>延迟可以落在命令译码级，也可以落在 SYNC 执行级</h2><p>图 4 上方沿着延迟配置来源读。DRAM 可以事先收到启用 sync delay mode 的命令，也可以从本次 SYNC 操作数得到需要等待的周期数。未给出有效延迟时，器件按普通路径启动 W CK。</p><p>公开第 7 项把等待放在译码级，等满设定周期后再将 SYNC 送入执行电路。公开第 8 项允许译码级先转发命令，由执行级决定何时启动。说明书还举了多位计数器的实现，这一结构在第 5 项中有限定。图中的两条路径用来对照不同实现。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两种延迟电路实现与一条普通启动路径</h3>
+    <p id="fig-4-basis">同样的可选延迟由译码级或执行级承担，控制器可给模式级或单条命令级指示。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两种延迟电路实现与一条普通启动路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="us20240202146a1-fig-4-svg-title us20240202146a1-fig-4-svg-desc">
+<title id="us20240202146a1-fig-4-svg-title">两种延迟电路实现与一条普通启动路径</title>
+<desc id="us20240202146a1-fig-4-svg-desc">同样的可选延迟由译码级或执行级承担，控制器可给模式级或单条命令级指示。</desc>
+<defs><marker id="us20240202146a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20240202146a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20240202146a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20240202146a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20240202146a1-fig-4-cfg" d="M 232 142 L 369 142" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-4-arrow-control)"/>
+<path id="us20240202146a1-fig-4-dhold" d="M 145 206 L 145 303 Q 145 311 153 311 L 369 311" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-4-arrow-main)"/>
+<path id="us20240202146a1-fig-4-execsend" d="M 93 206 L 93 487 Q 93 495 101 495 L 369 495" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-4-arrow-data)"/>
+<path id="us20240202146a1-fig-4-go" d="M 590 313 L 713 313" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20240202146a1-fig-4-arrow-main)"/>
+<path id="us20240202146a1-fig-4-zero" d="M 590 496 L 813 496 Q 821 496 821 488 L 821 398" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-4-arrow-control)"/>
+<path id="us20240202146a1-fig-4-normal" d="M 590 152 L 812 152 Q 820 152 820 160 L 820 282" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20240202146a1-fig-4-arrow-return)"/>
+<rect x="251" y="116" width="102" height="18" fill="#f5f5f5"/><text x="302" y="130" class="arrow-label" text-anchor="middle">取有效延迟</text>
+<rect x="188.5" y="283" width="137" height="18" fill="#f5f5f5"/><text x="257" y="297" class="arrow-label" text-anchor="middle">译码后保留命令</text>
+<rect x="120.5" y="468" width="211" height="18" fill="#f5f5f5"/><text x="226" y="482" class="arrow-label" text-anchor="middle">立即转发 SYNC 与延迟值</text>
+<rect x="595.5" y="286" width="109" height="18" fill="#f5f5f5"/><text x="650" y="300" class="arrow-label" text-anchor="middle">等待结束才发</text>
+<rect x="649.5" y="466" width="139" height="18" fill="#f5f5f5"/><text x="719" y="480" class="arrow-label" text-anchor="middle">计数归零后启动</text>
+<rect x="619.5" y="123" width="183" height="18" fill="#f5f5f5"/><text x="711" y="137" class="arrow-label" text-anchor="middle">延迟为零，不加等待</text>
+<g id="us20240202146a1-fig-4-rx"><rect x="37" y="115" width="195" height="91" rx="6" fill="#f5f5f5"/><rect x="37" y="115" width="195" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134.5" y="141" class="node-name" text-anchor="middle">CMD 接收与译码</text><text x="134.5" y="163" class="node-detail" text-anchor="middle">识别 SYNC 和延迟指示</text></g>
+<g id="us20240202146a1-fig-4-state"><rect x="369" y="98" width="221" height="107" rx="6" fill="#f5f5f5"/><rect x="369" y="98" width="221" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479.5" y="124" class="node-name" text-anchor="middle">延迟配置来源</text><text x="479.5" y="146" class="node-detail" text-anchor="middle">事先启用 sync delay mode</text><text x="479.5" y="164" class="node-detail" text-anchor="middle">或读取本次 SYNC 操作数</text></g>
+<g id="us20240202146a1-fig-4-wait"><rect x="369" y="258" width="221" height="111" rx="6" fill="#f5f5f5"/><rect x="369" y="258" width="221" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479.5" y="284" class="node-name" text-anchor="middle">译码级延迟</text><text x="479.5" y="306" class="node-detail" text-anchor="middle">保持 SYNC，直到延迟结束</text></g>
+<g id="us20240202146a1-fig-4-counter"><rect x="369" y="444" width="221" height="111" rx="6" fill="#f5f5f5"/><rect x="369" y="444" width="221" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479.5" y="470" class="node-name" text-anchor="middle">执行级延迟</text><text x="479.5" y="492" class="node-detail" text-anchor="middle">译码后立即转发</text><text x="479.5" y="510" class="node-detail" text-anchor="middle">执行级可用多位计数器</text></g>
+<g id="us20240202146a1-fig-4-start"><rect x="713" y="282" width="209" height="116" rx="6" fill="#f5f5f5"/><rect x="713" y="282" width="209" height="116" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="817.5" y="308" class="node-name" text-anchor="middle">SYNC 执行电路</text><text x="817.5" y="330" class="node-detail" text-anchor="middle">让数据时钟 W CK 启动</text><text x="817.5" y="348" class="node-detail" text-anchor="middle">延迟取零时走普通路径</text></g>
+<text x="37" y="57" class="signal-title" text-anchor="start">同一延迟可以在译码级实现，也可以在 SYNC 执行级实现</text>
+<text x="37" y="589" class="legend" text-anchor="start">两条彩色支路表示互选的电路实现；公开权项同时覆盖无附加延迟的启动路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20240202146a1-fig-4-state">读取有效延迟指示</a> 一条配置信息启用模式，或本次 SYNC 操作数给出等待。</li><li><a href="#us20240202146a1-fig-4-dhold">等待放在译码级</a> 等待结束后才将已译码的 SYNC 送往执行级。</li><li><a href="#us20240202146a1-fig-4-execsend">等待放在执行级</a> 执行级收到 SYNC 和延迟值后，可装载多位计数器。</li><li><a href="#us20240202146a1-fig-4-normal">普通路径</a> 没有有效延迟指示时，沿用基础启动时序。</li></ul>
+  <p class="figure-evidence">原图 3F；说明书归档段 0053、0054、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> <a href="../diagrams/US20240202146A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>DRAM 器件</dt><dd>150</dd></div><div><dt>命令总线 CMD</dt><dd>144</dd></div><div><dt>SYNC 命令</dt><dd>原图 4B：Sync/BL</dd></div><div><dt>数据总线 DATA</dt><dd>146</dd></div><div><dt>数据时钟 W CK</dt><dd>原图 4A：W CK (t)</dd></div></dl></details>
+</figure></section><section id="datalanes"><h2>连续占用来自相邻 bank 的数据 beat 交错</h2><p>看图 5 的 DATA 行。bank A 和 bank B 的 RD 分别排在 19 和 21。在原图 3F 的 RL = 17 个 C CK 周期例子中，A 的两个 beat 分别从 36 和 40 起，占用 36–37 和 40–41，B 从 38 和 42 起，填上 A 两次传输之间的两个周期。接续的 bank C、D 对占用 44–51。</p><p>用原图 3F 的八个 bank 做离散周期校核。依次计算两次 ACT、RD 和两个 beat 的占用，延迟模式使 CMD 周期 18 的占用数由 2 降到 1。DATA 从周期 36 到 67 共 32 个周期，每周期恰有一个 beat 在传输，延迟模式前后的计划数据位置相同。模式只解决挡住这份数据排程的 SYNC 冲突。</p><p>原图 5 系列的写入示例采用 2/6 间隔，tRCDw 和 WL 与此读例不同。原图 6 系列改为 6/2 间隔，说明书报告写数据在首尾处各有两个空闲周期。工程判断应先固定读写方向、timing 参数、bank 访问序列，再看命令冲突、数据利用率和 W CK 活跃时间。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　相邻两个 bank 的 beat 交错，跨组时仍可连续传输</h3>
+    <p id="fig-5-basis">对齐两个 bank 对的 beat 占用和 DATA 总线，直接看见空隙如何被相邻 bank 填满。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="相邻两个 bank 的 beat 交错，跨组时仍可连续传输" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us20240202146a1-fig-5-svg-title us20240202146a1-fig-5-svg-desc">
+<title id="us20240202146a1-fig-5-svg-title">相邻两个 bank 的 beat 交错，跨组时仍可连续传输</title>
+<desc id="us20240202146a1-fig-5-svg-desc">对齐两个 bank 对的 beat 占用和 DATA 总线，直接看见空隙如何被相邻 bank 填满。</desc>
+<defs><marker id="us20240202146a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20240202146a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20240202146a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20240202146a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us20240202146a1-fig-5-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">36</text>
+<line x1="273" y1="76" x2="273" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="273" y="64" class="arrow-label" text-anchor="middle">38</text>
+<line x1="354" y1="76" x2="354" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">40</text>
+<line x1="435" y1="76" x2="435" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="435" y="64" class="arrow-label" text-anchor="middle">42</text>
+<line x1="516" y1="76" x2="516" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">44</text>
+<line x1="597" y1="76" x2="597" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="597" y="64" class="arrow-label" text-anchor="middle">46</text>
+<line x1="678" y1="76" x2="678" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">48</text>
+<line x1="759" y1="76" x2="759" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="759" y="64" class="arrow-label" text-anchor="middle">50</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">52</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（C CK 周期）</text>
+</g>
+<g id="us20240202146a1-fig-5-ab"><text x="24" y="136" class="node-name" text-anchor="start">bank A、B 的 beat</text>
+<rect x="192" y="112" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="232.5" y="136" class="arrow-label" text-anchor="middle">A₀</text>
+<rect x="273" y="112" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="313.5" y="136" class="arrow-label" text-anchor="middle">B₀</text>
+<rect x="354" y="112" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="394.5" y="136" class="arrow-label" text-anchor="middle">A₁</text>
+<rect x="435" y="112" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="475.5" y="136" class="arrow-label" text-anchor="middle">B₁</text>
+<circle cx="192" cy="131" r="5" fill="#4f5d75"/>
+<text x="192" y="171" class="arrow-label" text-anchor="end">RD A 在周期 19</text></g>
+<g id="us20240202146a1-fig-5-cd"><text x="24" y="228" class="node-name" text-anchor="start">bank C、D 的 beat</text>
+<rect x="516" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="556.5" y="228" class="arrow-label" text-anchor="middle">C₀</text>
+<rect x="597" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="637.5" y="228" class="arrow-label" text-anchor="middle">D₀</text>
+<rect x="678" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="718.5" y="228" class="arrow-label" text-anchor="middle">C₁</text>
+<rect x="759" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="799.5" y="228" class="arrow-label" text-anchor="middle">D₁</text>
+<circle cx="516" cy="223" r="5" fill="#4f5d75"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">RD C 在周期 27</text></g>
+<g id="us20240202146a1-fig-5-dq"><text x="24" y="320" class="node-name" text-anchor="start">DATA 总线占用</text>
+<rect x="192" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="232.5" y="320" class="arrow-label" text-anchor="middle">A₀</text>
+<rect x="273" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="313.5" y="320" class="arrow-label" text-anchor="middle">B₀</text>
+<rect x="354" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="394.5" y="320" class="arrow-label" text-anchor="middle">A₁</text>
+<rect x="435" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="475.5" y="320" class="arrow-label" text-anchor="middle">B₁</text>
+<rect x="516" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="556.5" y="320" class="arrow-label" text-anchor="middle">C₀</text>
+<rect x="597" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="637.5" y="320" class="arrow-label" text-anchor="middle">D₀</text>
+<rect x="678" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="718.5" y="320" class="arrow-label" text-anchor="middle">C₁</text>
+<rect x="759" y="296" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="799.5" y="320" class="arrow-label" text-anchor="middle">D₁</text>
+<circle cx="840" cy="315" r="5" fill="#bf4520"/>
+<text x="840" y="355" class="arrow-label" text-anchor="end">下一对 bank 从 52 开始接续</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">每个 beat 宽 2 个 C CK 周期。格子用起点包含、终点排除的方式画出；只截取 bank A–D。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20240202146a1-fig-5-ab">bank A、B 的交错</a> A₀、B₀、A₁、B₁ 依次占用；每个 beat 持续 2 个 C CK 周期。</li><li><a href="#us20240202146a1-fig-5-cd">下一个 bank 对</a> RD B 到 RD C 相隔 6 周期，C₀ 正好在 B₁ 后续上。</li><li><a href="#us20240202146a1-fig-5-dq">DATA 观察点</a> 图画 bank A–D，原图 3F 的 bank E–H 以同样节奏接续至周期 67。</li></ul>
+  <p class="figure-evidence">原图 3F、4D、4E、7；说明书归档段 0044、0045、0051、0057、0059、0060、0075；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20240202146A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>命令时钟 C CK</dt><dd>142</dd></div><div><dt>数据总线 DATA</dt><dd>146</dd></div></dl></details>
+</figure></section><section id="scope"><h2>三个公开独立权项分别从器件、方法和控制器写起</h2><p>公开第 1 项要求器件按是否收到延迟指示改变 W CK 的启动等待。公开第 9 项从 DRAM 收到 ACT 和 SYNC 后的操作来描述方法。公开第 15 项从控制器的 ACT、SYNC、RD 发送顺序写起。2/6 间隔和图中的 C CK 周期是实施例的具体选择。</p><p>在读写切换处，能否保持第一条读命令的时点取决于下一组 ACT 能否提前。说明书 ¶0058 的例子把两次 ACT 从周期 83、85 前移到 81、83，RD 保持在 100。该示例给出排程可行时的结果。手机 SoC 上的利用率和能耗还会随请求混合、读写切换和可并行 bank 数量变化。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US20240202146A1</code><span>美国公开申请</span><time datetime="2024-06-20">2024-06-20</time></p>
-  <h1>让 DRAM 在接收 SYNC 后延迟启动数据时钟</h1>
-  <p class="english-title" lang="en">Memory Device Bandwidth Optimization</p>
-  <p class="document-question">SYNC 与 bank 激活命令争用同一个命令时隙时，怎样保留所需的数据总线时序？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">DRAM 在收到 SYNC 后按延迟模式等待一个或多个命令总线周期，再启动数据总线时钟。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>启用延迟可移动 SYNC 在命令总线上的位置，数据时钟的有效启动时点须单独核对。</dd></div><div><dt>验证方法</dt><dd>保持同一 bank 激活和读事务序列，比较开启和关闭延迟模式。分别记录 ACT、SYNC、首次数据时钟边沿与首次数据传输的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009">原文权利要求 9</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">多 bank 的内存命令共享命令总线。激活命令占定时隙时，数据总线时钟的 SYNC 命令仍需在首笔数据传输之前生效。让器件内部延迟 SYNC 生效，可把命令发出周期与数据时钟启动周期分开。</p>
-    <p>控制器可提前在命令总线上发 SYNC。器件按延迟指示等待后再启动数据总线时钟。原图 3E–3F 把发出 SYNC 从第 18 命令周期移到第 17 周期，器件中额外等待一周期。</p>
-    <ol class="walkthrough"><li><h3>为 bank 激活安排时隙</h3><p>控制器把激活和访问命令编排到命令总线，满足相关 bank 等待条件。</p></li><li><h3>配置 SYNC 延迟</h3><p>器件收到延迟模式指示，或按实施例由 SYNC 参数携带延迟。</p></li><li><h3>提前发送 SYNC</h3><p>避开已分配给激活命令的时隙。</p></li><li><h3>按要求启动数据时钟</h3><p>器件内部的延迟逻辑使其在预定周期生效，后续才能按规定进行数据传输。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00005" aria-label="原文权利要求 5">5</a> 把等待周期编码在 SYNC 操作数字段，由器件端的多位计数器实现。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 分别允许译码器等待后转发，或由执行端等待后启动数据时钟。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>SYNC</dt><dd>在命令总线上发送、由内存器件执行的启动数据总线时钟命令。启用延迟后，发送周期与开启时刻可以分离。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">提前一周期发送，保留实际生效点</a></li><li><a href="#fig-1">命令总线和数据总线采用不同的生效时序</a></li><li><a href="#fig-4">SYNC 的等待可以放在流水线哪一级</a></li><li><a href="#fig-3">有无延迟模式的命令位置对照</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">提前一周期发送，保留实际生效点</h3></div>
-    <a class="paper-open" href="../mechanisms/US20240202146A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="提前一周期发送，保留实际生效点">
-    <img class="paper-image native-image" src="../mechanisms/US20240202146A1/fig-2/diagram.svg" width="560" height="386"
-         style="--paper-width:560px" alt="提前一周期发送，保留实际生效点。第 17 和 18 周期来自原图的实施例。">
-  </div>
-  <figcaption>
-    <span>第 17 和 18 周期来自原图的实施例。</span>
-    <span class="figure-evidence">原图 3E–3F，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/33/97/31/dde41989994bcb/US20240202146A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">命令总线和数据总线采用不同的生效时序</h3></div>
-    <a class="paper-open" href="../mechanisms/US20240202146A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="命令总线和数据总线采用不同的生效时序">
-    <img class="paper-image native-image" src="../mechanisms/US20240202146A1/fig-1/diagram.svg" width="231" height="688"
-         style="--paper-width:231px" alt="命令总线和数据总线采用不同的生效时序。器件内部延迟逻辑把提前发出的 SYNC 转换为目标时刻的数据时钟启动。">
-  </div>
-  <figcaption>
-    <span>器件内部延迟逻辑把提前发出的 SYNC 转换为目标时刻的数据时钟启动。</span>
-    <span class="figure-evidence">原图 1–2、图 3E–3F，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/33/97/31/dde41989994bcb/US20240202146A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">SYNC 的等待可以放在流水线哪一级</h3></div>
-    <a class="paper-open" href="../mechanisms/US20240202146A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="SYNC 的等待可以放在流水线哪一级">
-    <img class="paper-image native-image" src="../mechanisms/US20240202146A1/fig-4/diagram.svg" width="1112" height="332"
-         style="--paper-width:1112px" alt="SYNC 的等待可以放在流水线哪一级。译码侧方案在转发前等待。执行侧方案先接收操作数，再由计数器等待后启动数据总线时钟。">
-  </div>
-  <figcaption>
-    <span>译码侧方案在转发前等待。执行侧方案先接收操作数，再由计数器等待后启动数据总线时钟。</span>
-    <span class="figure-evidence">说明书 0056，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">有无延迟模式的命令位置对照</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">方式</th><th scope="col">SYNC 发出周期</th><th scope="col">器件处理效果</th></tr></thead><tbody><tr><th scope="row">原计划</th><td>18</td><td>按原定时启动，但命令时隙有争用</td></tr><tr><th scope="row">使能延迟</th><td>17</td><td>内部等一周期，保留原启动时点</td></tr><tr><th scope="row">禁用延迟且提前发</th><td>17</td><td>启动时点改变，须另验约束</td></tr></tbody></table>
-  <figcaption>
-    <span>比较命令占用与实际启动时间。</span>
-    <span class="figure-evidence">原图 3E–3F，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="https://patentimages.storage.googleapis.com/33/97/31/dde41989994bcb/US20240202146A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>提前占用命令槽</dt><dd>避免命令冲突 <span class="subdued">原图 3E–3F，说明书 0057</span></dd></div><div><dt>在器件内延迟启动</dt><dd>保留时钟生效点 <span class="subdued">公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>两种放置方式都能调整启动时刻，等待分别占用译码侧或执行侧资源。可同时记录命令译码、执行端接收和数据时钟启动，判断等待期间后续非 SYNC 命令能否继续推进。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>原图 3E、3F 利用了可供提前发送 SYNC 的命令周期。若相同周期必须发其他 bank 的激活命令，提前插入 SYNC 可能推迟该激活。可核对数据时钟对齐后两笔读请求的返回时刻。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>原图 3E–3F 中本需在第 18 个命令总线周期处理 SYNC，那里又是激活命令的时隙。</dd></div><div><dt>处理结果</dt><dd>改在第 17 周期发出 SYNC。器件内部延迟一周期，使时钟启动仍对应原第 18 周期的效果。</dd></div><div><dt>结果解读</dt><dd>这是一组披露的命令时序。“周期”指命令总线周期，不能直接把一周期换算成整条 DRAM 读延迟。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,49 +245,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=a%20memory%20interface%20circuit%20configured%20to%20couple%20to%20a%20memory%20device%20via%20a%20command%20bus%20including">F12</a></th><td>内存控制器接口通过分别有时钟的命令和数据总线连接器件</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=the%20memory%20device%20includes%20a%20plurality%20of%20memory%20banks">F13</a></th><td>所接内存器件包括多个 bank</td><td><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=FIGS.%204%20A-J%20illustrate%20different%20portions%20of%20a%20single%20timing%20diagram%20for%20a%20read%20operation%20that">说明书 0059</a> · 原图 4A–4J</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=send%20a%20set%20of%20activate%20commands%20that%20indicate%20a%20particular%20memory%20bank%20of%20the%20memory%20device">F14</a></th><td>控制电路向指定 bank 发送一组 ACT</td><td><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=FIGS.%204%20A-J%20illustrate%20different%20portions%20of%20a%20single%20timing%20diagram%20for%20a%20read%20operation%20that">说明书 0059</a> · 原图 3F</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=send%2C%20a%20number%20of%20command%20clock%20cycles%20after%20the%20last%20of%20the%20set%20of%20activation%20commands">F15</a></th><td>最后一次 ACT 之后间隔若干命令周期，发送启动数据时钟的 SYNC</td><td><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=In%20any%20event%2C%20when%20the%20sync%20delay%20mode%20is%20enabled%2C%20this%20allows%20the%20timing%20set%20forth">说明书 0057</a> · 原图 3F</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=send%2C%20after%20a%20determined%20number%20of%20command%20clock%20cycles%2C%20a%20read%20command%20for%20the%20particular%20memory">F16</a></th><td>再等待确定数量的命令周期，向该 bank 发读命令</td><td><a href="https://patents.google.com/patent/US20240202146A1/en#:~:text=FIGS.%204%20A-J%20illustrate%20different%20portions%20of%20a%20single%20timing%20diagram%20for%20a%20read%20operation%20that">说明书 0059</a> · 原图 4A–4J</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>内存器件项包括 bank、命令总线和数据总线。命令流水线执行 SYNC 并按有无延迟指示决定是否插入等待。原图 1–2、3E–3F。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>独立延迟命令可令器件进入 SYNC 延迟模式。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>SYNC 操作数用命令总线周期数表示需等待时长，流水线由它识别是否延迟。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>非零操作数指示有 SYNC 延迟。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>器件用多位计数器及操作数实现指示的等待时长。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>流水线明确包含命令译码电路和执行电路。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>译码电路译码后等待，再把 SYNC 转发到执行电路。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>译码电路先转发，执行电路按是否有延迟指示决定何时启动时钟。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法项指定接收 ACT 后经过若干命令周期接 SYNC，在延迟模式下再等一个或更多命令周期后开数据时钟。原图 3F、7。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>另一命令序列在不同 ACT 间隔发 SYNC，随后不加额外等待启动时钟。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>等待完指定命令周期后，再接收对同一 bank 的读命令。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>通过已启动时钟的数据总线返回被读取的数据。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>SYNC 自身携带启动数据时钟前要等待的命令周期数。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>命令序列开始前，器件已接收进入延迟模式的指示。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>接口装置项通过命令、数据总线连接多 bank 器件，并由控制电路按相对间隔发 ACT、SYNC 及 RD。原图 1–3。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>控制电路等候的确定周期数大于一。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>在 SYNC 操作数内编码需停顿的命令时钟周期数。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>控制器可省略操作数，使器件不插入附加延迟。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>发送 SYNC 前发延迟模式命令，器件在时钟启动前插入等待。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>控制器经有数据时钟的数据总线接收读回复。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></dt><dd>明确延迟对象是器件内的数据总线时钟启动。</dd></div><div><dt>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20240202146A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>规定控制器发送激活、SYNC 与读命令的次序。</dd></div><div><dt>原图 3E–3F、图 7</dt><dd>对照原时隙冲突与提前发出 SYNC 的调度。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20240202146A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12079144B1.html#engineering">数据总线忙时选择仅需命令的请求</a>
-<p>US20240202146A1 允许 DRAM 在命令总线上提前接收 SYNC，并由器件延迟启动数据时钟。US12079144B1 在数据总线不可用时优先考虑无需发送数据操作数的请求。判断命令带宽是否得到利用时，要分别计量命令发出、数据时钟启动和数据实际传输。</p></li><li><a href="US12444474B2.html#engineering">内存供电切换期间重复校准接口时序</a>
-<p>US20240202146A1 在 DRAM 侧按 SYNC 延迟指示选择数据时钟的启动时点。US12444474B2 在性能状态切换期间重复发起存储器时序测试，根据返回的计数值调节送往存储器的时钟延迟。前者的观测量是某笔事务的命令到数据时钟启动间隔，后者的观测量是电压变化期间的接口时钟延迟及其校准值。</p></li></ul>
-    <p><a href="../index.html?patent=US20240202146A1#knowledge">在全量关系图上定位 US20240202146A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-02-27</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-06-20</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/588,406</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Gregory S. Mathews、Shane J. Keil</dd></div><div><dt>分类号</dt><dd>G06F3/0659、G06F1/06、G06F13/1647、G06F13/1684、G06F3/061、G06F3/0679、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20240202146A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20240202146A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国公开申请全文，覆盖 121 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20240202146A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

@@ -1,119 +1,180 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12216594B2 双 rank 读轮次按请求数分配槽位并按 QoS 切换 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按读请求量和 QoS 排两个 DRAM rank 的读轮 · US12216594B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12216594B2</code> · <a href="https://patents.google.com/patent/US12216594B2/en">专利全文</a></p>
+<h1>按读请求量和 QoS 排两个 DRAM rank 的读轮</h1><p class="reading-question">两组候选都占同一条内存通道。为什么实时带宽不足时，控制器反而少换 rank？</p>
+<p class="reading-answer">每个 rank 的候选读数量先决定本轮名额，QoS 再决定怎样把这些读组织成片段。缩减切换能保留共享通道的服务时间。允许多切换时，另一 rank 的低延迟请求可以更早服务。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-02-04</dd></div><div><dt>申请号</dt><dd>US18/469,905</dd></div><div><dt>最早优先权</dt><dd>2022-09-19</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Shane J. Keil、Gregory S. Mathews、Lakshmi Narasimha Murthy Nukala</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#round">先分每个 rank 的读槽，再决定谁先发</a></li><li><a href="#indexes">队首怎样同时照顾年龄、虚拟通道和页命中</a></li><li><a href="#qos">什么时候只允许一次切换</a></li><li><a href="#cost">同样的七个读槽，为什么尾读结果会不同</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="round"><h2>先分每个 rank 的读槽，再决定谁先发</h2><p>图 1 中，两 rank 共享外部 DRAM 通道。rank 是一组共同选通的 DRAM 器件，bank 是器件内部的并行访问组织。内存控制器先按目的 rank 划分请求，再结合总读槽数分配这一轮的服务名额。原文限定名额以各自等待数为依据，未指定一个固定比例公式。</p><p>仲裁器还要确定从哪个 rank 开始、能不能在轮中返回同一 rank。下游命令接口再按实际协议产生访问所需的命令并返回数据。独立权利要求 1、9、17 聚焦读轮，说明书原图 6、7 描述的是另一类写轮。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　读请求数决定每个 rank 分到多少槽，QoS 决定如何排在总线上</h3>
+    <p id="fig-1-basis">控制器先从待服务请求按目的 rank 分配一轮的槽位。实际发出顺序还要考虑起始 rank 和 QoS 允许的切换次数。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="读请求数决定每个 rank 分到多少槽，QoS 决定如何排在总线上" style="--figure-width:1140px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 578" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">读请求数决定每个 rank 分到多少槽，QoS 决定如何排在总线上</title>
+<desc id="fig-1-svg-desc">控制器先从待服务请求按目的 rank 分配一轮的槽位。实际发出顺序还要考虑起始 rank 和 QoS 允许的切换次数。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-target" d="M 257 239 L 295 239 Q 303 239 303 231 L 303 135 Q 303 127 311 127 L 351 127" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-service" d="M 257 292 L 295 292 Q 303 292 303 300 L 303 425 Q 303 433 311 433 L 351 433" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-counts" d="M 581 125 L 669 125" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-budgets" d="M 771 179 L 771 246" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-policy" d="M 581 433 L 612 433 Q 620 433 620 425 L 620 349 Q 620 341 628 341 L 669 341" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-issue" d="M 872 308 L 940 308" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-chan" d="M 1024 371 L 1024 432" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<rect x="257.5" y="100" width="91" height="18" fill="#f5f5f5"/><text x="303" y="114" class="arrow-label" text-anchor="middle">按地址分组</text>
+<rect x="260" y="404" width="88" height="18" fill="#f5f5f5"/><text x="304" y="418" class="arrow-label" text-anchor="middle">分类 QoS</text>
+<rect x="583.5" y="98" width="85" height="18" fill="#f5f5f5"/><text x="626" y="112" class="arrow-label" text-anchor="middle">待服务数</text>
+<rect x="775" y="202" width="120" height="18" fill="#f5f5f5"/><text x="835" y="216" class="arrow-label" text-anchor="middle">各 rank 名额</text>
+<rect x="574" y="404" width="86" height="18" fill="#f5f5f5"/><text x="617" y="418" class="arrow-label" text-anchor="middle">策略条件</text>
+<rect x="877" y="279" width="56" height="18" fill="#f5f5f5"/><text x="905" y="293" class="arrow-label" text-anchor="middle">读命令</text>
+<rect x="1014.5" y="391" width="89" height="18" fill="#f5f5f5"/><text x="1059" y="405" class="arrow-label" text-anchor="middle">共享总线</text>
+<g id="fig-1-input"><rect x="37" y="211" width="220" height="111" rx="6" fill="#f5f5f5"/><rect x="37" y="211" width="220" height="111" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="237" class="node-name" text-anchor="middle">代理的读请求</text><text x="147" y="259" class="node-detail" text-anchor="middle">解码目的 rank</text><text x="147" y="277" class="node-detail" text-anchor="middle">保留虚拟通道与 QoS</text></g>
+<g id="fig-1-backlog"><rect x="351" y="72" width="230" height="111" rx="6" fill="#f5f5f5"/><rect x="351" y="72" width="230" height="111" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="466" y="98" class="node-name" text-anchor="middle">各 rank 待服务数</text><text x="466" y="120" class="node-detail" text-anchor="middle">分别统计 A 与 B</text><text x="466" y="138" class="node-detail" text-anchor="middle">本轮共享总槽数</text></g>
+<g id="fig-1-qos"><rect x="351" y="375" width="230" height="116" rx="6" fill="#f5f5f5"/><rect x="351" y="375" width="230" height="116" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="466" y="401" class="node-name" text-anchor="middle">读轮 QoS 策略</text><text x="466" y="423" class="node-detail" text-anchor="middle">实时带宽是否满足</text><text x="466" y="441" class="node-detail" text-anchor="middle">低延迟请求及其等待</text></g>
+<g id="fig-1-slots"><rect x="669" y="62" width="203" height="117" rx="6" fill="#f5f5f5"/><rect x="669" y="62" width="203" height="117" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="770.5" y="88" class="node-name" text-anchor="middle">本轮读槽分配</text><text x="770.5" y="110" class="node-detail" text-anchor="middle">按请求数给 rank A/B</text><text x="770.5" y="128" class="node-detail" text-anchor="middle">总和受轮次容量约束</text></g>
+<g id="fig-1-schedule"><rect x="669" y="246" width="203" height="125" rx="6" fill="#f5f5f5"/><rect x="669" y="246" width="203" height="125" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="770.5" y="272" class="node-name" text-anchor="middle">内存读仲裁器</text><text x="770.5" y="294" class="node-detail" text-anchor="middle">确定起始 rank</text><text x="770.5" y="312" class="node-detail" text-anchor="middle">决定换 rank 的次数</text><text x="770.5" y="330" class="node-detail" text-anchor="middle">在已分配槽内选请求</text></g>
+<g id="fig-1-bus"><rect x="940" y="246" width="167" height="125" rx="6" fill="#f5f5f5"/><rect x="940" y="246" width="167" height="125" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1023.5" y="272" class="node-name" text-anchor="middle">共享 DRAM 通道</text><text x="1023.5" y="294" class="node-detail" text-anchor="middle">同一命令接口</text><text x="1023.5" y="312" class="node-detail" text-anchor="middle">在 A/B 间发出</text></g>
+<g id="fig-1-devices"><rect x="940" y="432" width="167" height="101" rx="6" fill="#f5f5f5"/><rect x="940" y="432" width="167" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1023.5" y="458" class="node-name" text-anchor="middle">两个 DRAM rank</text><text x="1023.5" y="480" class="node-detail" text-anchor="middle">rank A、rank B</text><text x="1023.5" y="498" class="node-detail" text-anchor="middle">各自为设备集合</text></g>
+<text x="37" y="33" class="signal-title" text-anchor="start">为一轮分配请求数量，然后选择各 rank 的执行顺序</text>
+<text x="37" y="548" class="legend" text-anchor="start">这里的 rank 是 DRAM 设备组织；bank 是 rank 内访问的另一层资源。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-input">请求同时带目的 rank 和服务要求</a> 按目标地址把读请求归到相应 rank，保留其 QoS。rank 是可共同选择的一组 DRAM 器件。原图两 rank 共用控制器外部通道。</li><li><a href="#fig-1-slots">槽位是本轮允许服务的读请求数量</a> 分配由各 rank 等待数和本轮总槽数决定。专利没有在该段写死一个按比例分配的算术规则。</li><li><a href="#fig-1-qos">切换次数用另一条策略输入</a> 可考虑实时带宽或低延迟要求。分配四个槽给某个 rank 的决定，与把四个槽拆成几段的决定分开。</li><li><a href="#fig-1-schedule">提交仲裁选中的请求</a> 仲裁器结合起始 rank、各 rank 名额和切换策略。把请求交给下游命令接口后，协议才生成适用的读命令序列。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、8；说明书归档段 0032、0033、0034、0035、0036、0037、0041、0044、0045、0046、0047、0080、0081、0082、0083；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12216594B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>101</dd></div><div><dt>两个 DRAM rank</dt><dd>102A、102B</dd></div><div><dt>共享通信总线</dt><dd>109</dd></div><div><dt>读轮两组槽位</dt><dd>201A、201B</dd></div><div><dt>按 rank 分组的读请求</dt><dd>202A、202B</dd></div><div><dt>rank 切换数和 QoS 条件</dt><dd>203、204</dd></div><div><dt>仲裁电路</dt><dd>305</dd></div></dl></details>
+</figure></section><section id="indexes"><h2>队首怎样同时照顾年龄、虚拟通道和页命中</h2><p>图 2 从同一笔 LLT（低延迟事务）读 X 出发。控制器可从虚拟通道加 bank 的队首找一类最老候选，从只按通道的队首找另一个，再用同页命中链挑可复用页状态的请求。同页链仍只合并同一虚拟通道。</p><p>请求可以同时挂入不同链。发出 X 后需要更新它出现过的各链，避免另一个队首继续把 X 当作候选。说明书还举例按年龄阈值保证久等的请求前进。第 8 项写入至少一个按年龄组织的链表，没有要求上述三个索引必须同时存在。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同一请求可以出现在三个索引视角，出队时一并摘除</h3>
+    <p id="fig-2-basis">原图 4 使用按虚拟通道和 bank、仅按虚拟通道、按同页命中的三个链表视角。仲裁可通过各自队首取候选，事务发出后应更新它出现过的所有链表。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一请求可以出现在三个索引视角，出队时一并摘除" style="--figure-width:1160px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 644" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">同一请求可以出现在三个索引视角，出队时一并摘除</title>
+<desc id="fig-2-svg-desc">原图 4 使用按虚拟通道和 bank、仅按虚拟通道、按同页命中的三个链表视角。仲裁可通过各自队首取候选，事务发出后应更新它出现过的所有链表。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-to-bank" d="M 257 251 L 292 251 Q 300 251 300 243 L 300 127 Q 300 119 308 119 L 400 119" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-to-vc" d="M 257 286 L 400 286" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-to-page" d="M 257 320 L 292 320 Q 300 320 300 328 L 300 471 Q 300 479 308 479 L 400 479" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-bank-candidate" d="M 689 119 L 750 119 Q 758 119 758 127 L 758 242 Q 758 250 766 250 L 847 250" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-vc-candidate" d="M 689 287 L 847 287" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-page-candidate" d="M 689 479 L 749 479 Q 757 479 757 471 L 757 333 Q 757 325 765 325 L 847 325" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-dispatch" d="M 981 347 L 981 465" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="292" y="91" width="114" height="18" fill="#f5f5f5"/><text x="349" y="105" class="arrow-label" text-anchor="middle">VC / bank</text>
+<rect x="273.5" y="258" width="107" height="18" fill="#f5f5f5"/><text x="327" y="272" class="arrow-label" text-anchor="middle">虚拟通道</text>
+<rect x="290.5" y="452" width="109" height="18" fill="#f5f5f5"/><text x="345" y="466" class="arrow-label" text-anchor="middle">同页且同 VC</text>
+<rect x="702" y="91" width="116" height="18" fill="#f5f5f5"/><text x="760" y="105" class="arrow-label" text-anchor="middle">bank 队首</text>
+<rect x="714.5" y="260" width="103" height="18" fill="#f5f5f5"/><text x="766" y="274" class="arrow-label" text-anchor="middle">VC 队首</text>
+<rect x="738.5" y="297" width="105" height="18" fill="#f5f5f5"/><text x="791" y="311" class="arrow-label" text-anchor="middle">同页候选</text>
+<rect x="987" y="392" width="90" height="18" fill="#f5f5f5"/><text x="1032" y="406" class="arrow-label" text-anchor="middle">选中 X</text>
+<g id="fig-2-request"><rect x="35" y="229" width="222" height="112" rx="6" fill="#f5f5f5"/><rect x="35" y="229" width="222" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="146" y="255" class="node-name" text-anchor="middle">待发读 X</text><text x="146" y="277" class="node-detail" text-anchor="middle">rank A / bank k</text><text x="146" y="295" class="node-detail" text-anchor="middle">虚拟通道 LLT / 页 p</text></g>
+<g id="fig-2-perbank"><rect x="400" y="61" width="289" height="115" rx="6" fill="#f5f5f5"/><rect x="400" y="61" width="289" height="115" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="544.5" y="87" class="node-name" text-anchor="middle">按虚拟通道及 bank 的链</text><text x="544.5" y="109" class="node-detail" text-anchor="middle">队首（最老） → X → 队尾</text><text x="544.5" y="127" class="node-detail" text-anchor="middle">以 LLT / bank k 为例</text></g>
+<g id="fig-2-vc"><rect x="400" y="230" width="289" height="115" rx="6" fill="#f5f5f5"/><rect x="400" y="230" width="289" height="115" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="544.5" y="256" class="node-name" text-anchor="middle">按虚拟通道的链</text><text x="544.5" y="278" class="node-detail" text-anchor="middle">队首（最老） → X → 队尾</text><text x="544.5" y="296" class="node-detail" text-anchor="middle">聚合所有 LLT 请求</text></g>
+<g id="fig-2-page"><rect x="400" y="425" width="289" height="115" rx="6" fill="#f5f5f5"/><rect x="400" y="425" width="289" height="115" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="544.5" y="451" class="node-name" text-anchor="middle">同页命中的链</text><text x="544.5" y="473" class="node-detail" text-anchor="middle">队首（最老） → X → 队尾</text><text x="544.5" y="491" class="node-detail" text-anchor="middle">同 page p 且同虚拟通道</text></g>
+<g id="fig-2-arbitrate"><rect x="847" y="229" width="272" height="118" rx="6" fill="#f5f5f5"/><rect x="847" y="229" width="272" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="983" y="255" class="node-name" text-anchor="middle">从队首等候选中仲裁</text><text x="983" y="277" class="node-detail" text-anchor="middle">用年龄、通道、bank 和页</text><text x="983" y="295" class="node-detail" text-anchor="middle">决定本次使用的请求</text></g>
+<g id="fig-2-remove"><rect x="847" y="465" width="272" height="103" rx="6" fill="#f5f5f5"/><rect x="847" y="465" width="272" height="103" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="983" y="491" class="node-name" text-anchor="middle">发出 X 并更新其所有链</text><text x="983" y="513" class="node-detail" text-anchor="middle">把 X 从每一条相关链摘除</text></g>
+<text x="35" y="32" class="signal-title" text-anchor="start">三种候选视角共享待处理事务，由仲裁最终发出</text>
+<text x="35" y="598" class="legend" text-anchor="start">图示增加 X 来解释跨链关系。具体 head / tail 与 relink 由各链维护。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-request">以下三条链表可以包含同一请求 X</a> X 面向一个 bank 和 page，归某个虚拟通道。图中各个 X 都表示同一请求挂入对应视角，不表示提交三笔内存读。</li><li><a href="#fig-2-perbank">按虚拟通道和 bank 比较队首</a> 这个视角让仲裁按 bank 获取较早的请求，同时保留虚拟通道分类。图内文字从队首向后读。原图举例的 link 字段指向更老的请求。</li><li><a href="#fig-2-vc">按虚拟通道获取最老候选</a> LLT、RT 或 bulk 等可以用各自队首获取候选。年龄门槛还能帮助保证久等的读取得进展。</li><li><a href="#fig-2-page">同一页命中还要匹配虚拟通道</a> 页命中链不会把不同虚拟通道的访问为了命中率合并成同一组。</li><li><a href="#fig-2-remove">发出时更新所有相关关系</a> 同一个事务一旦被选择，链表要重新链接到其它条目。只从一个视角摘除会保留已发事务的过期候选。</li></ul>
+  <p class="figure-evidence">原图 3、4、8；说明书归档段 0039、0040、0043、0044、0049、0050、0051、0052、0053、0054、0055、0056、0088；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> <a href="../diagrams/US12216594B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求链表集合</dt><dd>304</dd></div><div><dt>按虚拟通道和 bank 的链表</dt><dd>402</dd></div><div><dt>按虚拟通道的链表</dt><dd>403</dd></div><div><dt>同页命中链</dt><dd>404</dd></div><div><dt>各类链表队首</dt><dd>411–413</dd></div><div><dt>仲裁电路</dt><dd>305</dd></div></dl></details>
+</figure></section><section id="qos"><h2>什么时候只允许一次切换</h2><p>图 3 从实时带宽的观察结果出发。第 3、19 项在实时带宽不满足时限制一次切换。第 4、20 项在满足时允许多个切换。这里的带宽判断针对请求的实时服务要求。另一条规则才负责起始 rank，比如先服务含最老低延迟读的 rank。</p><p>如果读轮已经吃紧，减少切换能让同一批请求占用更少的通道时间。带宽有余量后，可以交换局部发出先后，提前服务另一 rank 的请求。第 5 至 7 项分别描述不同的起始选择，不能从其中一项推断其它运行模式。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　实时带宽不足时减少 rank 切换，起始 rank 仍可按低延迟要求选</h3>
+    <p id="fig-3-basis">原图 8 的例子允许 QoS 控制一轮能切几次。实时带宽未满足时限制一次，满足后允许多次。一开始从哪个 rank 发出，可用独立的低延迟候选规则。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="实时带宽不足时减少 rank 切换，起始 rank 仍可按低延迟要求选" style="--figure-width:1160px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 550" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">实时带宽不足时减少 rank 切换，起始 rank 仍可按低延迟要求选</title>
+<desc id="fig-3-svg-desc">原图 8 的例子允许 QoS 控制一轮能切几次。实时带宽未满足时限制一次，满足后允许多次。一开始从哪个 rank 发出，可用独立的低延迟候选规则。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-check" d="M 247 182 L 334 182" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-unmet" d="M 617 182 L 683 182 Q 691 182 691 174 L 691 106 Q 691 98 699 98 L 789 98" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-met" d="M 475.5 249 L 475.5 271 Q 475.5 279 483.5 279 L 789 279" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-start-rank" d="M 143 234 L 143 440 Q 143 448 151 448 L 334 448" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-use-first" d="M 617 448 L 789 448" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-use-policy-single" d="M 1057 103 L 1102 103 Q 1110 103 1110 111 L 1110 432 Q 1110 440 1102 440 L 1057 440" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-use-policy-multi" d="M 921 323 L 921 402" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<rect x="290" y="154" width="0" height="18" fill="#f5f5f5"/><text x="290" y="168" class="arrow-label" text-anchor="middle"></text>
+<rect x="696" y="69" width="80" height="18" fill="#f5f5f5"/><text x="736" y="83" class="arrow-label" text-anchor="middle">未满足</text>
+<rect x="648" y="250" width="78" height="18" fill="#f5f5f5"/><text x="687" y="264" class="arrow-label" text-anchor="middle">已满足</text>
+<rect x="174.5" y="420" width="103" height="18" fill="#f5f5f5"/><text x="226" y="434" class="arrow-label" text-anchor="middle">独立选择</text>
+<rect x="647" y="419" width="114" height="18" fill="#f5f5f5"/><text x="704" y="433" class="arrow-label" text-anchor="middle">起始 rank</text>
+<rect x="1106" y="364" width="0" height="18" fill="#f5f5f5"/><text x="1106" y="378" class="arrow-label" text-anchor="middle"></text>
+<rect x="933.5" y="359" width="139" height="18" fill="#f5f5f5"/><text x="1003" y="373" class="arrow-label" text-anchor="middle">允许分段调度</text>
+<g id="fig-3-begin"><rect x="36" y="129" width="211" height="105" rx="6" fill="#f5f5f5"/><rect x="36" y="129" width="211" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="141.5" y="155" class="node-name" text-anchor="middle">开始本轮读调度</text><text x="141.5" y="177" class="node-detail" text-anchor="middle">两个 rank 的读槽已分配</text></g>
+<g id="fig-3-qos"><polygon points="475.5,115 617,182 475.5,249 334,182" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="475.5" y="179" class="node-name" text-anchor="middle">实时带宽已满足？</text><text x="475.5" y="200" class="node-detail" text-anchor="middle">请求 QoS 或状态观测</text></g>
+<g id="fig-3-single"><rect x="789" y="50" width="268" height="95" rx="6" fill="#f5f5f5"/><rect x="789" y="50" width="268" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="923" y="76" class="node-name" text-anchor="middle">限制一次 rank 切换</text><text x="923" y="98" class="node-detail" text-anchor="middle">减少换 rank 空窗</text></g>
+<g id="fig-3-multi"><rect x="789" y="228" width="268" height="95" rx="6" fill="#f5f5f5"/><rect x="789" y="228" width="268" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="923" y="254" class="node-name" text-anchor="middle">允许多次切换</text><text x="923" y="276" class="node-detail" text-anchor="middle">可提前服务另一 rank</text></g>
+<g id="fig-3-first"><rect x="334" y="402" width="283" height="91" rx="6" fill="#f5f5f5"/><rect x="334" y="402" width="283" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="475.5" y="428" class="node-name" text-anchor="middle">另选起始 rank</text><text x="475.5" y="450" class="node-detail" text-anchor="middle">例如看最老的 LLT</text></g>
+<g id="fig-3-run"><rect x="789" y="402" width="268" height="91" rx="6" fill="#f5f5f5"/><rect x="789" y="402" width="268" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="923" y="428" class="node-name" text-anchor="middle">服务被分配的读槽</text><text x="923" y="450" class="node-detail" text-anchor="middle">按起始 rank 和切换策略</text></g>
+<text x="36" y="33" class="signal-title" text-anchor="start">一条路径控制每轮切换次数，另一条路径选择起始 rank</text>
+<text x="36" y="526" class="legend" text-anchor="start">该图描述原图 8 的 QoS 示例。原图 9 另单独给出单次切换的读顺序。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-qos">实时带宽约束先决定可用策略</a> 这种模式优先少支付切换开销。原文以实时带宽是否满足来选择有没有机会多切几次。</li><li><a href="#fig-3-single">未满足时限制一次</a> 各 rank 可集中服务。在该实施例，发完第一组，再经过一次 rank 切换到第二组。</li><li><a href="#fig-3-multi">多次只是允许</a> 有足够实时带宽时可交错两侧请求。实际能切几次还受候选、轮次和实现限制。</li><li><a href="#fig-3-first">起始 rank 可以用低延迟请求年龄选</a> 一个实现找两 rank 最老的待处理 LLT，另有按数量、前一写轮或权重选择的实现。低延迟门槛与实时带宽是不同指标。</li><li><a href="#fig-3-run">一个轮次执行的不是固定槽序</a> 选定起始 rank 后，按允许的切换数和各自名额决定发出顺序。图 4 对照两个可行序列。</li></ul>
+  <p class="figure-evidence">原图 2、3、8、9；说明书归档段 0036、0041、0045、0083、0084、0085、0086、0087、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12216594B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>读轮的 QoS 条件</dt><dd>204</dd></div><div><dt>根据 QoS 设置切换次数</dt><dd>804</dd></div><div><dt>从首个 rank 发送、切换、向次个 rank 发送</dt><dd>904、905、906</dd></div></dl></details>
+</figure></section><section id="cost"><h2>同样的七个读槽，为什么尾读结果会不同</h2><p>图 4 给两个 rank 相同的读槽名额。一次切换让首个 B 等到 A 的首批发完，整轮结束较早。三次切换让首个 B 提前服务，但付出更多切换空窗。这里计的是通道服务从读轮起点到选定读完成的时间，未纳入上游排队。</p><p>表 5 固定请求和顺序，改变每次切换的模型成本。工程自测应同时看实时请求在约定窗口中的实际带宽和低延迟请求的等待，并将 rank 切换和 DRAM 的其它空窗单独计数。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　保持同样的 4+3 读槽，切换次数改变首次服务与轮次末尾</h3>
+    <p id="fig-4-basis">两种排法从 rank A 开始，每个读槽占一拍，换 rank 另占一拍。交错允许 B 的第一笔更早结束，却延长这轮使用共享通道的总时间。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="保持同样的 4+3 读槽，切换次数改变首次服务与轮次末尾" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 393" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">保持同样的 4+3 读槽，切换次数改变首次服务与轮次末尾</title>
+<desc id="fig-4-svg-desc">两种排法从 rank A 开始，每个读槽占一拍，换 rank 另占一拍。交错允许 B 的第一笔更早结束，却延长这轮使用共享通道的总时间。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">轮次开始</text>
+<line x1="386.4" y1="76" x2="386.4" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="386.4" y="64" class="arrow-label" text-anchor="middle">交错 B 首读完成</text>
+<line x1="580.8" y1="76" x2="580.8" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">集中 B 首读完成</text>
+<line x1="710.4" y1="76" x2="710.4" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">集中结束</text>
+<line x1="840" y1="76" x2="840" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">交错结束</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="fig-4-grouped"><text x="24" y="136" class="node-name" text-anchor="start">一次切换</text>
+<rect x="192" y="112" width="259.2" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="321.6" y="136" class="arrow-label" text-anchor="middle">rank A ×4</text>
+<rect x="451.2" y="112" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="483.6" y="136" class="arrow-label" text-anchor="middle">切换</text>
+<rect x="516" y="112" width="194.4" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="613.2" y="136" class="arrow-label" text-anchor="middle">rank B ×3</text>
+<circle cx="710.4" cy="131" r="5" fill="#4f5d75"/>
+<text x="710.4" y="171" class="arrow-label" text-anchor="end">本轮结束</text></g>
+<g id="fig-4-interleave"><text x="24" y="228" class="node-name" text-anchor="start">三次切换</text>
+<rect x="192" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="224.4" y="228" class="arrow-label" text-anchor="middle">A</text>
+<rect x="256.8" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="289.2" y="228" class="arrow-label" text-anchor="middle">切换</text>
+<rect x="321.6" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="228" class="arrow-label" text-anchor="middle">B</text>
+<rect x="386.4" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="418.8" y="228" class="arrow-label" text-anchor="middle">切换</text>
+<rect x="451.2" y="204" width="194.4" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="548.4" y="228" class="arrow-label" text-anchor="middle">rank A ×3</text>
+<rect x="645.6" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="228" class="arrow-label" text-anchor="middle">切换</text>
+<rect x="710.4" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="228" class="arrow-label" text-anchor="middle">rank B ×2</text>
+<circle cx="840" cy="223" r="5" fill="#bf4520"/>
+<text x="840" y="263" class="arrow-label" text-anchor="end">本轮结束</text></g>
+<text x="24" y="328" class="legend" text-anchor="start">模型用固定空拍代表切换开销。未建模 ACT、读返回流水或具体 DRAM 协议时序。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-grouped">一次切换顺序跑完各自名额</a> 四个 A 读槽集中，等一拍切换后才开始三个 B 读槽。B 首笔完成在第 6 拍。</li><li><a href="#fig-4-interleave">提前给 B 一个槽，再回 A</a> 相同的 4+3 个读槽被拆成 A、B、A、B 四段。B 首笔完成在第 3 拍，三次切换分别有一个空拍。</li><li><a href="#fig-4-axis">同一时间基准比较两个终点</a> 统一从读轮开始计到第一笔 B 完成和本轮最后一笔完成。数字只表示服务槽示意，真实条件可受 bank 并行、切换协议和请求就绪程度影响。</li></ul>
+  <p class="figure-evidence">原图 2、8、9；说明书归档段 0035、0036、0041、0082、0083、0084、0092、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12216594B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>分配给两个 rank 的读槽</dt><dd>201A、201B</dd></div><div><dt>本轮 rank 切换次数</dt><dd>203</dd></div><div><dt>等待切换到下一 rank</dt><dd>905</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　不同切换开销下，轮次成本和 B 首读等待怎样变化</h3>
+    <p id="fig-5-basis">读 7 拍的工作量固定，图 4 的两种排法分别切换 1 次和 3 次。若每次占用 c 拍，则集中一轮需 7+c，交错一轮需 7+3c。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">每次切换占用</th><th scope="col">一次切换整轮</th><th scope="col">三次切换整轮</th><th scope="col">一次切换 B 首读</th><th scope="col">三次切换 B 首读</th></tr></thead><tbody><tr id="fig-5-zero"><th scope="row">0 拍</th><td>7 拍</td><td>7 拍</td><td>5 拍</td><td>2 拍</td></tr><tr id="fig-5-one"><th scope="row">1 拍</th><td>8 拍</td><td>10 拍</td><td>6 拍</td><td>3 拍</td></tr><tr id="fig-5-two"><th scope="row">2 拍</th><td>9 拍</td><td>13 拍</td><td>7 拍</td><td>4 拍</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-zero">模型中的零成本边界</a> 当切换不占共享通道拍数，两种排法的整轮时间相同。交错仍可把侧 B 的第一个请求调到前面。</li><li><a href="#fig-5-one">每次一拍的基准</a> 集中读轮 8 拍，交错 10 拍。若只看 B 第一笔，从第 6 拍提前到第 3 拍。</li><li><a href="#fig-5-two">每次两拍</a> 二者总轮次时间差扩大到 4 拍。应把共享通道利用率与重点请求尾延迟分别评估。</li></ul>
+  <p class="figure-evidence">原图 2、8、9；说明书归档段 0035、0036、0041、0082、0083、0084、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US12216594B2</code><span>美国授权专利</span><time datetime="2025-02-04">2025-02-04</time></p>
-  <h1>双 rank 读轮次按请求数分配槽位并按 QoS 切换</h1>
-  <p class="english-title" lang="en">Read arbiter circuit with dual memory rank support</p>
-  <p class="document-question">两个 DRAM rank 共用数据总线时，读轮次如何兼顾槽位分配和请求时限？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">控制器按两个 rank 的待处理读数分配本轮读槽位，按服务质量要求决定该轮内的 rank 切换次数。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>槽位分配和 rank 切换约束是在同一读轮次确定的两个量，需分别观测。</dd></div><div><dt>验证方法</dt><dd>保持两个 rank 的到达序列不变，仅改变服务质量约束。记录每 rank 分得槽位、服务次序、切换次数和第一笔读等待。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12216594B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">同一个读轮次可服务两个 rank。过于频繁的 rank 切换消耗总线时序裕量，只按一种请求来源服务又可能延长另一侧等待。</p>
-    <p>控制器按两个 rank 的待处理读请求数分配本轮的读槽位，并用服务质量约束确定本轮允许的 rank 切换次数，然后执行已分配的读。</p>
-    <ol class="walkthrough"><li><h3>按目标 rank 对请求分类</h3><p>两个请求子集分别对应两个共用物理总线的 rank。</p></li><li><h3>在读轮次起点分配槽位</h3><p>用两侧待处理数量为有限的读槽位分配额度。</p></li><li><h3>确定 rank 切换次数</h3><p>按一项或多项 QoS 要求决定在本轮切换多少次。</p></li><li><h3>执行分配结果</h3><p>仲裁器按得到的槽位和切换约束发出读请求。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00005" aria-label="原文权利要求 5">5</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 分别以最老的低延迟请求、最多的低延迟请求和最少的低延迟请求选择起始 rank。首发选择发生在槽位分配以后，三种条件对应不同实施方式。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>DRAM rank</dt><dd>由获得同一片选的一组 DRAM 存储芯片组成，可与其他 rank 共用通信总线。</dd></div><div><dt>读槽</dt><dd>内存控制器在一个读轮次可安排的读访问机会，不能据此直接换算字节或时钟周期。</dd></div><div><dt>rank 切换</dt><dd>相邻服务阶段改向另一 rank，通常涉及共享总线时序约束。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">先确定槽位和切换，再执行本轮读</a></li><li><a href="#fig-1">两个 rank 共用总线，由读仲裁器分配槽位</a></li><li><a href="#fig-4">相同的六个读槽如何交错</a></li><li><a href="#fig-3">双 rank 读仲裁的三项输入</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">先确定槽位和切换，再执行本轮读</h3></div>
-    <a class="paper-open" href="../mechanisms/US12216594B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="先确定槽位和切换，再执行本轮读">
-    <img class="paper-image native-image" src="../mechanisms/US12216594B2/fig-2/diagram.svg" width="920" height="386"
-         style="--paper-width:920px" alt="先确定槽位和切换，再执行本轮读。读槽位是命令调度额度，不能直接等同于字节吞吐量。">
-  </div>
-  <figcaption>
-    <span>读槽位是命令调度额度，不能直接等同于字节吞吐量。</span>
-    <span class="figure-evidence">原图 8–9，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/44/af/98/a077980f6031c4/US12216594.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">两个 rank 共用总线，由读仲裁器分配槽位</h3></div>
-    <a class="paper-open" href="../mechanisms/US12216594B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="两个 rank 共用总线，由读仲裁器分配槽位">
-    <img class="paper-image native-image" src="../mechanisms/US12216594B2/fig-1/diagram.svg" width="932" height="332"
-         style="--paper-width:932px" alt="两个 rank 共用总线，由读仲裁器分配槽位。槽位分配和 rank 切换采用不同输入。">
-  </div>
-  <figcaption>
-    <span>槽位分配和 rank 切换采用不同输入。</span>
-    <span class="figure-evidence">原图 2–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/44/af/98/a077980f6031c4/US12216594.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-4-title">相同的六个读槽如何交错</h3></div>
-    <a class="paper-open" href="../mechanisms/US12216594B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="相同的六个读槽如何交错">
-    <img class="paper-image native-image" src="../mechanisms/US12216594B2/fig-4/diagram.svg" width="532" height="564"
-         style="--paper-width:532px" alt="相同的六个读槽如何交错。假设 rank 0、1 分得 4 和 2 个读槽，从 rank 0 开始。一次切换时 rank 1 第五槽获得服务。允许多切换时示例第三槽可先服务 rank 1；这里未给定切换耗时。">
-  </div>
-  <figcaption>
-    <span>假设 rank 0、1 分得 4 和 2 个读槽，从 rank 0 开始。一次切换时 rank 1 第五槽获得服务。允许多切换时示例第三槽可先服务 rank 1；这里未给定切换耗时。</span>
-    <span class="figure-evidence">原图 8–9；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；六槽模型，非实测 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/44/af/98/a077980f6031c4/US12216594.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">双 rank 读仲裁的三项输入</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">决策</th><th scope="col">输入</th><th scope="col">示例约束</th></tr></thead><tbody><tr><th scope="row">分配读槽</th><td>两组待处理读数</td><td>总槽数表示本轮最大读访问数</td></tr><tr><th scope="row">限制 rank 切换</th><td>实时带宽 QoS 未满足</td><td class="emphasis">只切换一次</td></tr><tr><th scope="row">允许多次切换</th><td>实时带宽 QoS 满足</td><td class="emphasis">可切换多于一次</td></tr><tr><th scope="row">选择首发 rank</th><td>最老、最多或最少低延迟请求</td><td>分属三个替代实施方式</td></tr></tbody></table>
-  <figcaption>
-    <span>权利要求没有要求使用固定优先级。</span>
-    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>，原图 8。 · <a href="https://patentimages.storage.googleapis.com/44/af/98/a077980f6031c4/US12216594.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按待处理读数分槽</dt><dd>适配两 rank 需求 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>；原图 8</span></dd></div><div><dt>按实时带宽门控切换</dt><dd>限制总线切换开销 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；原图 8–9</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>首发 rank 提前使用本轮分配的槽位，另一个 rank 则要等待首次切换。可在槽位和切换次数相同的原图 8、9 流程中记录各 rank 首次读命令与最老请求的读数据返回时间。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若某个 rank 有一笔很老的低延迟请求，另一 rank 同时积压许多较新的同类请求，选最老请求会提前一笔而推迟另一侧。最老请求的改善与两侧各自的延迟分布需要一起看。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学设定中读轮次最多允许六次读，rank 0 有四个等待请求，rank 1 有两个，其中一个具有时限。</dd></div><div><dt>处理结果</dt><dd>总槽位分配仍参考 4 与 2 的待处理量。时限可影响何时以及允许几次切到 rank 1。</dd></div><div><dt>结果解读</dt><dd>例子未指定实际槽位计算公式。比较方案时保留相同的最大槽位与 DRAM 时序。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +198,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=the%20design%20information%20specifies%20a%20design%20of%20at%20least%20a%20portion%20of%20a%20hardware%20integrated%20circuit">F11</a></th><td>非暂态介质保存制造系统可识别的设计信息。</td><td>原图 12</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=a%20given%20memory%20rank%20that%20includes%20a%20plurality%20of%20memory%20circuits%20coupled%20to%20a%20common%20communication">F12</a></th><td>rank 内由多颗内存电路连接公共总线。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=a%20first%20subset%20of%20read%20requests%20to%20a%20first%20memory%20rank%20of%20the%20plurality%20of%20memory">F13</a></th><td>读取按两种目标 rank 分成两组。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=based%20on%20respective%20numbers%20of%20requests%20in%20the%20first%20subset%20and%20the%20second%20subset%2C%20a%20first">F14</a></th><td>按两组读请求数分配有限读槽。</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=a%20number%20of%20rank%20switches%20between%20the%20first%20memory%20rank%20and%20the%20second%20memory%20rank%20based">F15</a></th><td>按 QoS 要求确定本轮两 rank 之间切换次数。</td><td><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=Memory%20control%20circuit%20101%20is%20also%20configured%20to%20determine%2C%20for%20the%20read%20turn%2C%20a%20number%20of">说明书 0036</a> · <a href="https://patents.google.com/patent/US12216594B2/en#:~:text=As%20described%20above%2C%20control%20circuit%20302%20may%20be%20configured%20to%20determine%20a%20number%20of%20rank%20switches">说明书 0041</a> · <a href="https://patents.google.com/patent/US12216594B2/en#:~:text=In%20some%20embodiments%2C%20determining%20the%20number%20of%20rank%20switches%20includes%20setting%2C%20by%20the%20memory%20control%20circuit%2C">说明书 0084</a> · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12216594B2/en#:~:text=perform%20allocated%20read%20requests%20during%20the%20read%20turn%20using%20the%20number%20of%20rank%20switches">F16</a></th><td>执行本轮已分配的读并使用确定的切换次数。</td><td>原图 8–9</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置内存控制器按两个 rank 的请求数分配读槽，按 QoS 设切换次数并执行本轮读。见原图 2、8。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>QoS 条件包括实时内存带宽要求。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>实时带宽不足时，将本轮 rank 切换次数设为一次。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>实时带宽满足时，允许本轮 rank 切换次数大于一次。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>先服务仍等待最老低延迟 QoS 读请求的 rank，并首先使用分给它的槽位。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>从待处理低延迟读数量最多的 rank 开始执行分配请求。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>从待处理低延迟读数量最少的 rank 开始执行分配请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>将读请求放入至少一个按请求年龄排列的链表。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法规定总槽数对应读轮次的最大读访问数。按两组请求数分配，并按 QoS 在轮次开始时确定切换数。见原图 8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>QoS 条件包括实时内存带宽要求。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>实时带宽不足时，将本轮 rank 切换次数设为一次。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>实时带宽满足时，允许本轮 rank 切换次数大于一次。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>按最老低延迟读选初始 rank，完成第一组读后切至另一 rank 执行第二组。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>按最多低延迟读选初始 rank，完成第一组读后切到另一 rank。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>按最少低延迟读选初始 rank，完成第一组读后切到另一 rank。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-9">9</a></td><td>用链表按请求年龄跟踪待处理读取。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>介质记录制造系统可识别的硬件设计，所设计电路按请求数分槽、按 QoS 设换 rank 次数并发出已分配的读。见原图 8、12。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>QoS 条件包括实时内存带宽要求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>实时带宽不足时，将本轮 rank 切换次数设为一次。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>实时带宽满足时，允许本轮 rank 切换次数大于一次。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12216594B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></dt><dd>分配槽位基于待处理请求数量，切换次数基于 QoS。</dd></div><div><dt>原图 2–5</dt><dd>给出读仲裁结构、链表与 rank 共享总线。</dd></div><div><dt>原图 8–9</dt><dd>两种双 rank 读轮次的分配实施方式。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12216594B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11403037B2.html#engineering">根据内存总线活动调整连续读写轮次</a>
-<p>US11403037B2 用测得的内存访问效率调整下一组读写轮次的连续请求数。US12216594B2 在一轮读操作开始时按两个 rank 的请求数分配槽位，再依服务质量要求决定允许的 rank 切换次数。两种仲裁分别改变每轮读写的长度和同一读轮次内的 rank 服务顺序。</p></li></ul>
-    <p><a href="../index.html?patent=US12216594B2#knowledge">在全量关系图上定位 US12216594B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-09-19</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-09-19</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-02-04</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/469,905</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Shane J. Keil、Gregory S. Mathews、Lakshmi Narasimha Murthy Nukala</dd></div><div><dt>分类号</dt><dd>G06F13/1626、G06F13/1678、G06F13/1689</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12216594B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12216594B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 136 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12216594B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

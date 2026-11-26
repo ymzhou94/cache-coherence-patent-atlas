@@ -1,119 +1,195 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12737296B2 统一地址空间中分散的相邻内存块 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>共享地址空间如何在多个内存控制器间分流 · US12737296B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12737296B2</code> · <a href="https://patents.justia.com/patent/12737296">专利全文</a></p>
+<h1>共享地址空间如何在多个内存控制器间分流</h1><p class="reading-question">CPU、GPU 和外设共享地址语义时，同一页相邻块怎样到达不同控制器？目录如何在这些分布式目标上维持一致性？</p>
+<p class="reading-answer">互连根据请求地址把相邻块分配给多个负责不同地址范围的控制器。各控制器可以带本地内存侧缓存和目录。有序更新目录后，代理用 snoop 携带的预期状态处理互连上到达次序不同的消息。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-09-15</dd></div><div><dt>申请号</dt><dd>US18/607,128</dd></div><div><dt>最早优先权</dt><dd>2021-08-23</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Per H. Hammarlund、Lior Zimet、James Vash、Gaurav Garg、Sergio Kolor、Harshavardhan Kaushikkar、Ramesh B. Gunna、Steven R. Hutsell</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#networks">统一地址语义之下有哪些互连路径</a></li><li><a href="#page-blocks">同一页的两个相邻块如何分到不同控制器</a></li><li><a href="#directory">谁供数，以及为何接收方要等待预期状态</a></li><li><a href="#service">分流什么时候能缩短一批请求的完成时间</a></li><li><a href="#select">哪些地址位决定目标，哪些只决定控制器内部资源</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="networks"><h2>统一地址语义之下有哪些互连路径</h2><p>图 1 按说明书 FIG. 6–9 区分 CPU、I/O 和 relaxed-order 三条网络。这一实施例让 CPU cluster 的一致性内存请求走 CPU 网络，CPU 访问设备空间可以改走 I/O 网络，GPU 请求走 relaxed-order 网络。多个网络在内存控制器汇合，控制器侧仍可能竞争入口、队列或 DRAM 服务。</p><p>每个控制器负责一部分地址。CPU cluster 的 LLC 和控制器侧可选的内存侧缓存处于不同层级。权利要求 10 涉及代理与系统内存之间的缓存，权利要求 11 加入各控制器侧的内存侧缓存，权利要求 12、13 再加入按地址范围分布的目录。图 1 画单 die 的连接关系，原图 10 另展示这些网络经硬件接口延伸到第二个 die，跨 die 与片内访问的延迟仍可不同。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　三条互连按事务角色接入同一组内存控制器</h3>
+    <p id="fig-1-basis">CPU 一致性访问、CPU PIO、外设与 GPU 在不同网络上发出，在控制器可能重新竞争共享资源。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="三条互连按事务角色接入同一组内存控制器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 589" role="img" aria-labelledby="us12737296b2-fig-1-svg-title us12737296b2-fig-1-svg-desc">
+<title id="us12737296b2-fig-1-svg-title">三条互连按事务角色接入同一组内存控制器</title>
+<desc id="us12737296b2-fig-1-svg-desc">CPU 一致性访问、CPU PIO、外设与 GPU 在不同网络上发出，在控制器可能重新竞争共享资源。</desc>
+<defs><marker id="us12737296b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12737296b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12737296b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12737296b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12737296b2-fig-1-cpu-path" d="M 206 148 L 316 148" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-main)"/>
+<path id="us12737296b2-fig-1-io-path" d="M 206 316 L 316 316" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-data)"/>
+<path id="us12737296b2-fig-1-gpu-path" d="M 206 480 L 316 480" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-data)"/>
+<path id="us12737296b2-fig-1-pio" d="M 140 191 L 140 214 Q 140 222 148 222 L 340 222 Q 348 222 348 230 L 348 269" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12737296b2-fig-1-arrow-control)"/>
+<path id="us12737296b2-fig-1-cpu-m" d="M 532 143 L 589 143 Q 597 143 597 151 L 597 253 Q 597 261 605 261 L 666 261" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-main)"/>
+<path id="us12737296b2-fig-1-io-m" d="M 532 307 L 666 307" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-data)"/>
+<path id="us12737296b2-fig-1-gpu-m" d="M 532 480 L 589 480 Q 597 480 597 472 L 597 362 Q 597 354 605 354 L 666 354" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-data)"/>
+<path id="us12737296b2-fig-1-mc-mem" d="M 785 381 L 785 467" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-1-arrow-data)"/>
+<rect x="210.5" y="122" width="101" height="18" fill="#f5f5f5"/><text x="261" y="136" class="arrow-label" text-anchor="middle">内存请求</text>
+<rect x="210.5" y="290" width="101" height="18" fill="#f5f5f5"/><text x="261" y="304" class="arrow-label" text-anchor="middle">外设事务</text>
+<rect x="210.5" y="454" width="101" height="18" fill="#f5f5f5"/><text x="261" y="468" class="arrow-label" text-anchor="middle">内存请求</text>
+<rect x="154.5" y="197" width="185" height="18" fill="#f5f5f5"/><text x="247" y="211" class="arrow-label" text-anchor="middle">CPU 核访问设备空间</text>
+<rect x="538.5" y="112" width="121" height="18" fill="#f5f5f5"/><text x="599" y="126" class="arrow-label" text-anchor="middle">CPU 网络入口</text>
+<rect x="540" y="281" width="118" height="18" fill="#f5f5f5"/><text x="599" y="295" class="arrow-label" text-anchor="middle">I/O 网络入口</text>
+<rect x="537.5" y="482" width="121" height="18" fill="#f5f5f5"/><text x="598" y="496" class="arrow-label" text-anchor="middle">GPU 网络入口</text>
+<rect x="790.5" y="410" width="131" height="18" fill="#f5f5f5"/><text x="856" y="424" class="arrow-label" text-anchor="middle">访问所辖内存</text>
+<g id="us12737296b2-fig-1-cpu"><rect x="40" y="103" width="166" height="88" rx="6" fill="#f5f5f5"/><rect x="40" y="103" width="166" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="123" y="129" class="node-name" text-anchor="middle">CPU cluster</text><text x="123" y="151" class="node-detail" text-anchor="middle">核与 LLC 发起内存事务</text></g>
+<g id="us12737296b2-fig-1-io"><rect x="40" y="269" width="166" height="88" rx="6" fill="#f5f5f5"/><rect x="40" y="269" width="166" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="123" y="295" class="node-name" text-anchor="middle">I/O cluster</text><text x="123" y="317" class="node-detail" text-anchor="middle">经 I/O agent 接入</text></g>
+<g id="us12737296b2-fig-1-gpu"><rect x="40" y="435" width="166" height="88" rx="6" fill="#f5f5f5"/><rect x="40" y="435" width="166" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="123" y="461" class="node-name" text-anchor="middle">GPU</text><text x="123" y="483" class="node-detail" text-anchor="middle">relaxed-order</text><text x="123" y="501" class="node-detail" text-anchor="middle">网络</text></g>
+<g id="us12737296b2-fig-1-cpu-net"><rect x="316" y="103" width="216" height="88" rx="6" fill="#f5f5f5"/><rect x="316" y="103" width="216" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="424" y="129" class="node-name" text-anchor="middle">CPU 网络</text><text x="424" y="151" class="node-detail" text-anchor="middle">环形拓扑示例</text><text x="424" y="169" class="node-detail" text-anchor="middle">一致性内存访问</text></g>
+<g id="us12737296b2-fig-1-io-net"><rect x="316" y="269" width="216" height="88" rx="6" fill="#f5f5f5"/><rect x="316" y="269" width="216" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="424" y="295" class="node-name" text-anchor="middle">I/O 网络</text><text x="424" y="317" class="node-detail" text-anchor="middle">环形拓扑示例</text><text x="424" y="335" class="node-detail" text-anchor="middle">I/O 流量与设备访问</text></g>
+<g id="us12737296b2-fig-1-gpu-net"><rect x="316" y="435" width="216" height="88" rx="6" fill="#f5f5f5"/><rect x="316" y="435" width="216" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="424" y="461" class="node-name" text-anchor="middle">relaxed-order 网络</text><text x="424" y="483" class="node-detail" text-anchor="middle">网格拓扑示例</text><text x="424" y="501" class="node-detail" text-anchor="middle">降低部分访问的排序限制</text></g>
+<g id="us12737296b2-fig-1-mc"><rect x="666" y="235" width="236" height="146" rx="6" fill="#f5f5f5"/><rect x="666" y="235" width="236" height="146" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="784" y="261" class="node-name" text-anchor="middle">多个内存控制器</text><text x="784" y="283" class="node-detail" text-anchor="middle">各负责一部分地址</text><text x="784" y="301" class="node-detail" text-anchor="middle">可配内存侧缓存与目录</text><text x="784" y="319" class="node-detail" text-anchor="middle">各自仲裁与排队</text></g>
+<g id="us12737296b2-fig-1-mem"><rect x="666" y="467" width="236" height="76" rx="6" fill="#f5f5f5"/><rect x="666" y="467" width="236" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="784" y="493" class="node-name" text-anchor="middle">系统内存设备</text><text x="784" y="515" class="node-detail" text-anchor="middle">由各自控制器连接</text></g>
+<text x="41" y="60" class="signal-title" text-anchor="start">统一地址空间之下，事务可走不同的互连网络</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12737296b2-fig-1-cpu-path">CPU 一致性内存事务</a> 在示例中，cluster 经 LLC 向 CPU 网络发出一致性访问。</li><li><a href="#us12737296b2-fig-1-pio">CPU 访问设备空间</a> 同一 CPU cluster 可按事务类型选择 I/O 网络。</li><li><a href="#us12737296b2-fig-1-gpu-net">relaxed-order 网络</a> GPU 流量在该示例使用单独网络，连到内存控制器。</li><li><a href="#us12737296b2-fig-1-mc">内存控制器</a> 每个控制器服务对应地址范围，可有各自缓存及一致性目录。</li></ul>
+  <p class="figure-evidence">原图 1、6、7、8、9、10、11、12；说明书归档段 0097、0102、0103、0108、0138、0140、0143、0144、0146、0147、0149、0152；权利要求 1、4、5、6、7、10、11、12、13 <a href="../diagrams/US12737296B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU cluster</dt><dd>A22A–A22B</dd></div><div><dt>I/O cluster</dt><dd>A24A–A24D</dd></div><div><dt>GPU</dt><dd>A28A–A28D</dd></div><div><dt>CPU 网络交换节点</dt><dd>A32</dd></div><div><dt>I/O 网络交换节点</dt><dd>A34</dd></div><div><dt>relaxed-order 网络交换节点</dt><dd>A36</dd></div><div><dt>内存控制器</dt><dd>A26A–A26D</dd></div><div><dt>系统内存设备</dt><dd>A30A–A30D</dd></div><div><dt>跨 die 通路</dt><dd>26</dd></div></dl></details>
+</figure></section><section id="page-blocks"><h2>同一页的两个相邻块如何分到不同控制器</h2><p>图 2 按原图 57 及 ¶0651 取页内最前面两块。第一块 B0 映射到 die 0 西侧控制器，下一块 B1 映射到 die 1 的另一侧控制器。B0、B1 是本图中的两个地址块。用该示例描述的是控制器落点和可达路径，实际路由可只部分分离。</p><p>内存位置配置（Memory Location Configuration，MLC）由硬件组件持有，映射需按系统配置建立。第 1、18 项要求的是统一地址空间中给定页的相邻块分布到多个控制器。第 3 项允许统一地址空间采用有别于物理地址空间的虚拟地址空间。图中映射不据此推断特定 OS 的页表策略。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同页 B0、B1 映射到两个 die 的控制器</h3>
+    <p id="fig-2-basis">从一个页里的两个相邻地址块出发，看请求端位置选择与两个不同的硬件落点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同页 B0、B1 映射到两个 die 的控制器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 585" role="img" aria-labelledby="us12737296b2-fig-2-svg-title us12737296b2-fig-2-svg-desc">
+<title id="us12737296b2-fig-2-svg-title">同页 B0、B1 映射到两个 die 的控制器</title>
+<desc id="us12737296b2-fig-2-svg-desc">从一个页里的两个相邻地址块出发，看请求端位置选择与两个不同的硬件落点。</desc>
+<defs><marker id="us12737296b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12737296b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12737296b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12737296b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12737296b2-fig-2-b0" d="M 229 153 L 261 153 Q 269 153 269 161 L 269 230 Q 269 238 277 238 L 306 238" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-main)"/>
+<path id="us12737296b2-fig-2-b1" d="M 229 427 L 261 427 Q 269 427 269 419 L 269 315 Q 269 307 277 307 L 306 307" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-data)"/>
+<path id="us12737296b2-fig-2-local-route" d="M 506 241 L 533 241 Q 541 241 541 233 L 541 161 Q 541 153 549 153 L 579 153" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-main)"/>
+<path id="us12737296b2-fig-2-remote-route" d="M 506 297 L 533 297 Q 541 297 541 305 L 541 419 Q 541 427 549 427 L 579 427" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-data)"/>
+<path id="us12737296b2-fig-2-to-local" d="M 745 153 L 799 153" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-main)"/>
+<path id="us12737296b2-fig-2-to-remote" d="M 745 427 L 799 427" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-2-arrow-data)"/>
+<rect x="225" y="123" width="76" height="18" fill="#f5f5f5"/><text x="263" y="137" class="arrow-label" text-anchor="middle">请求 B0</text>
+<rect x="224" y="436" width="78" height="18" fill="#f5f5f5"/><text x="263" y="450" class="arrow-label" text-anchor="middle">请求 B1</text>
+<rect x="494.5" y="90" width="91" height="18" fill="#f5f5f5"/><text x="540" y="104" class="arrow-label" text-anchor="middle">B0 的目标</text>
+<rect x="493" y="463" width="88" height="18" fill="#f5f5f5"/><text x="537" y="477" class="arrow-label" text-anchor="middle">B1 的目标</text>
+<rect x="771" y="126" width="0" height="18" fill="#f5f5f5"/><text x="771" y="140" class="arrow-label" text-anchor="middle"></text>
+<rect x="771" y="400" width="0" height="18" fill="#f5f5f5"/><text x="771" y="414" class="arrow-label" text-anchor="middle"></text>
+<g id="us12737296b2-fig-2-page0"><rect x="42" y="109" width="187" height="92" rx="6" fill="#f5f5f5"/><rect x="42" y="109" width="187" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="135.5" y="135" class="node-name" text-anchor="middle">相邻块 B0</text><text x="135.5" y="157" class="node-detail" text-anchor="middle">同页内的第一个块</text></g>
+<g id="us12737296b2-fig-2-page1"><rect x="42" y="383" width="187" height="92" rx="6" fill="#f5f5f5"/><rect x="42" y="383" width="187" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="135.5" y="409" class="node-name" text-anchor="middle">相邻块 B1</text><text x="135.5" y="431" class="node-detail" text-anchor="middle">同页内的下一个块</text></g>
+<g id="us12737296b2-fig-2-decoder"><rect x="306" y="208" width="200" height="128" rx="6" fill="#f5f5f5"/><rect x="306" y="208" width="200" height="128" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="406" y="234" class="node-name" text-anchor="middle">请求端地址选择逻辑</text><text x="406" y="256" class="node-detail" text-anchor="middle">按地址位和 MLC 配置</text><text x="406" y="274" class="node-detail" text-anchor="middle">生成目标 die／控制器</text></g>
+<g id="us12737296b2-fig-2-local"><rect x="579" y="109" width="166" height="92" rx="6" fill="#f5f5f5"/><rect x="579" y="109" width="166" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="662" y="135" class="node-name" text-anchor="middle">本地西侧互连</text><text x="662" y="157" class="node-detail" text-anchor="middle">B0 留在 die 0</text></g>
+<g id="us12737296b2-fig-2-remote"><rect x="579" y="383" width="166" height="92" rx="6" fill="#f5f5f5"/><rect x="579" y="383" width="166" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="662" y="409" class="node-name" text-anchor="middle">跨 die 通路</text><text x="662" y="431" class="node-detail" text-anchor="middle">B1 去 die 1 东侧</text></g>
+<g id="us12737296b2-fig-2-dest0"><rect x="799" y="109" width="135" height="92" rx="6" fill="#f5f5f5"/><rect x="799" y="109" width="135" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="866.5" y="135" class="node-name" text-anchor="middle">西侧控制器</text><text x="866.5" y="157" class="node-detail" text-anchor="middle">目标在 die 0</text></g>
+<g id="us12737296b2-fig-2-dest1"><rect x="799" y="383" width="135" height="92" rx="6" fill="#f5f5f5"/><rect x="799" y="383" width="135" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="866.5" y="409" class="node-name" text-anchor="middle">东侧控制器</text><text x="866.5" y="431" class="node-detail" text-anchor="middle">目标在 die 1</text></g>
+<text x="42" y="60" class="signal-title" text-anchor="start">原图 57 的一种落点组合 · 同一页可跨控制器或跨 die 分布</text>
+<text x="42" y="532" class="legend" text-anchor="start">图只标明可到达的端点。实际共享路段与跨 die 延迟取决于互连实现。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12737296b2-fig-2-b0">同页的第一个块 B0</a> 说明书示例的首块映射到 die 0 的西侧控制器。</li><li><a href="#us12737296b2-fig-2-b1">同页的下一块 B1</a> 紧邻的下一块映射到 die 1 的另一侧。它仍是同一页内的块。</li><li><a href="#us12737296b2-fig-2-decoder">请求端地址选择逻辑</a> MLC 提供配置，源组件根据地址确定目标再送入互连。</li><li><a href="#us12737296b2-fig-2-remote">跨 die 通路</a> 图中画的是目标与跨 die 关系。共享链路及排队时间取决于互连实现和请求流。</li></ul>
+  <p class="figure-evidence">原图 56、57、58、59、61；说明书归档段 0574、0575、0576、0581、0588、0589、0591、0626、0627、0638、0643、0644、0646、0651、0685；权利要求 1、2、3、18、19 <a href="../diagrams/US12737296B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>西侧互连</dt><dd>F20A</dd></div><div><dt>东侧互连</dt><dd>F20B</dd></div><div><dt>die 0 西侧内存控制器</dt><dd>die 0 的 F12A</dd></div><div><dt>die 1 东侧内存控制器</dt><dd>die 1 的 F12G</dd></div><div><dt>地址选择配置寄存器</dt><dd>F60</dd></div><div><dt>跨 die 通路</dt><dd>26</dd></div></dl></details>
+</figure></section><section id="directory"><h2>谁供数，以及为何接收方要等待预期状态</h2><p>表 3中的目录决定谁供数。以原图 42 为例，可先选择持有主共享或更高状态副本的代理，其次在次共享代理中选择，若无副本由控制器发 Fill。snoop forward 把块直接送请求代理，snoop back 把块送回内存控制器。不同请求类型还会影响失效确认的目的地。</p><p>图 6 继续看消息竞争。A 的较早 CRdEx 已在内存控制器定序，目录把 A 记成 E。B 的后续 CRdEx 让控制器向 A 发 SnpFwdI，消息携带预期的 E。若 snoop 比 A 的 FillE 先到，A 当前状态仍为 I，须等 FillE 补足状态再处理。第 14 项要求目录对已在目录顺序处理过的请求保持精确，第 15 项约束目标状态不匹配时延后处理。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　目录状态怎样决定 snoop 方向和处理时机</h3>
+    <p id="fig-3-basis">先按目录和请求属性确定供数目标。消息到达后，目标代理再用当前缓存状态判断能否处理。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件</th><th scope="col">硬件位置</th><th scope="col">动作</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">有主共享等可供数副本</th><td>内存控制器一致性目录</td><td>优先选可供数的持有者</td></tr><tr id="fig-3-table-row-2"><th scope="row">SnpFwd</th><td>持有副本的代理</td><td>把块发给请求代理</td></tr><tr id="fig-3-table-row-3"><th scope="row">snoop back</th><td>持有副本的代理</td><td>把块返回内存控制器</td></tr><tr id="fig-3-table-row-4"><th scope="row">预期 E，目标还在 I</th><td>被 snoop 的代理</td><td>暂挂消息，等回填产生预期状态</td></tr><tr id="fig-3-table-row-5"><th scope="row">无缓存代理持有副本</th><td>内存控制器</td><td>按协议生成 Fill</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">供数与接收条件</a> 目录可以领先于代理收到回填，代理因此需要单独比较该 snoop 携带的预期状态。</li></ul>
+  <p class="figure-evidence">原图 27、28、29、30、42；说明书归档段 0255、0256、0257、0268、0269、0270、0273、0275、0277、0278；权利要求 12、13、14、15、16、17 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性目录</dt><dd>C26</dd></div><div><dt>控制器内的一致性控制器</dt><dd>C24</dd></div><div><dt>期望 E 的 SnpFwdI</dt><dd>C42</dd></div><div><dt>先行事务的 FillE</dt><dd>C40</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">图 6　后发 snoop 比先行回填先到，接收方如何处理</h3>
+    <p id="fig-6-basis">沿 A 的本地 I→E 和等待的 SnpFwdI 读出，目录定序与实际消息到达的次序为何可以不同。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="后发 snoop 比先行回填先到，接收方如何处理" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12737296b2-fig-6-svg-title us12737296b2-fig-6-svg-desc">
+<title id="us12737296b2-fig-6-svg-title">后发 snoop 比先行回填先到，接收方如何处理</title>
+<desc id="us12737296b2-fig-6-svg-desc">沿 A 的本地 I→E 和等待的 SnpFwdI 读出，目录定序与实际消息到达的次序为何可以不同。</desc>
+<defs><marker id="us12737296b2-fig-6-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12737296b2-fig-6-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12737296b2-fig-6-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12737296b2-fig-6-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12737296b2-fig-6-a-req"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-data)"/><rect x="239.5" y="96" width="117" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">A 发 CRdEx</text></g>
+<g id="us12737296b2-fig-6-early"><path d="M 480 162 L 504 162 Q 512 162 512 170 L 512 172 Q 512 180 504 180 L 480 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-control)"/><rect x="483.5" y="138" width="221" height="18" fill="#f5f5f5"/><text x="594" y="152" class="arrow-label" text-anchor="middle">发出 FillE，目录记录 A:E</text></g>
+<g id="us12737296b2-fig-6-b-req"><path d="M 844 216 L 480 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-data)"/><rect x="603.5" y="192" width="117" height="18" fill="#f5f5f5"/><text x="662" y="206" class="arrow-label" text-anchor="middle">B 发 CRdEx</text></g>
+<g id="us12737296b2-fig-6-update-dir"><path d="M 480 258 L 504 258 Q 512 258 512 266 L 512 268 Q 512 276 504 276 L 480 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-control)"/><rect x="444.5" y="234" width="299" height="18" fill="#f5f5f5"/><text x="594" y="248" class="arrow-label" text-anchor="middle">发出 SnpFwdI，目录更新 A:I、B:E</text></g>
+<g id="us12737296b2-fig-6-snoop"><path d="M 480 312 L 116 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-main)"/><rect x="187.5" y="288" width="221" height="18" fill="#f5f5f5"/><text x="298" y="302" class="arrow-label" text-anchor="middle">SnpFwdI（预期 E）先到 A</text></g>
+<g id="us12737296b2-fig-6-pend"><path d="M 116 354 L 140 354 Q 148 354 148 362 L 148 364 Q 148 372 140 372 L 116 372" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-control)"/><rect x="132.5" y="330" width="195" height="18" fill="#f5f5f5"/><text x="230" y="344" class="arrow-label" text-anchor="middle">A 当前 I，暂挂 snoop</text></g>
+<g id="us12737296b2-fig-6-fill"><path d="M 480 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12737296b2-fig-6-arrow-return)"/><rect x="194" y="384" width="208" height="18" fill="#f5f5f5"/><text x="298" y="398" class="arrow-label" text-anchor="middle">先行事务的 FillE 到达 A</text></g>
+<g id="us12737296b2-fig-6-fwd"><path d="M 116 456 L 844 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-6-arrow-main)"/><rect x="304.5" y="432" width="351" height="18" fill="#f5f5f5"/><text x="480" y="446" class="arrow-label" text-anchor="middle">A 处理暂挂 snoop，按本例向 B 发 FillM</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">请求代理 A</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">内存控制器／目录</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">请求代理 B</text>
+<text x="28" y="532" class="legend" text-anchor="start">上下表示一条可发生的收发时间线。第一条 FillE 先发出，但晚于后发 snoop 到达 A。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12737296b2-fig-6-early">先发 FillE</a> A 的 CRdEx 在控制器先排序。控制器发出 FillE 后，目录先记录 A 拥有 E 状态副本。</li><li><a href="#us12737296b2-fig-6-snoop">后发 SnpFwdI 先到</a> B 的请求按目录顺序在后。SnpFwdI 带预期 E，先到了 A。</li><li><a href="#us12737296b2-fig-6-pend">比较 I 和预期 E</a> A 本地还未写入回填，因此保存等待中的 snoop。</li><li><a href="#us12737296b2-fig-6-fill">先行 FillE 到达</a> A 记录 E。该实施例允许 A 先做一次操作，数据可变成 M，仍可符合目录 E 的匹配规则。</li><li><a href="#us12737296b2-fig-6-fwd">向请求代理 B 发 FillM</a> A 完成待处理 snoop 并失效自己的副本。数据沿 snoop forward 路径送给 B。</li></ul>
+  <p class="figure-evidence">原图 27、29、32、33、34；说明书归档段 0255、0259、0270、0272、0273、0274、0275、0276；权利要求 14、15、17 <a href="../diagrams/US12737296B2/fig-6.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性目录</dt><dd>C26</dd></div><div><dt>控制器内的一致性控制器</dt><dd>C24</dd></div><div><dt>请求代理 A</dt><dd>CA0</dd></div><div><dt>请求代理 B</dt><dd>CA1</dd></div><div><dt>暂挂 snoop</dt><dd>C102</dd></div><div><dt>期望 E 的 SnpFwdI</dt><dd>C42</dd></div><div><dt>先行事务的 FillE</dt><dd>C40</dd></div><div><dt>后续事务的 FillM</dt><dd>C44</dd></div></dl></details>
+</figure></section><section id="service"><h2>分流什么时候能缩短一批请求的完成时间</h2><p>图 4 把两个独立请求限制为相同的控制器服务时间。令服务一笔用 1 时隙，开始时刻为请求到达与该控制器可用时刻中的较晚者。两笔都在时隙 0 到达。同一控制器分别在时隙 1、2 结束。分到两个空闲控制器时都在时隙 1 结束。Python 事件模型按队列可用时刻核算这三条服务线。</p><p>最后一行让 B1 晚一个时隙到达，可能来自请求依赖或链路排队。即使控制器不同，两笔仍要到时隙 2 才全部做完。这个例子测的是最后一个控制器操作结束的时刻，页内分流提供的是服务重叠的可能。真机还需测发起端到返回端的延迟、D2D 链路及控制器队列占用。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两个控制器同时收到请求时，服务可以重叠</h3>
+    <p id="fig-4-basis">上面一行显示同一个控制器串行服务，两条中间轨道显示分流后服务重叠，末行检验晚到的代价。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两个控制器同时收到请求时，服务可以重叠" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 556" role="img" aria-labelledby="us12737296b2-fig-4-svg-title us12737296b2-fig-4-svg-desc">
+<title id="us12737296b2-fig-4-svg-title">两个控制器同时收到请求时，服务可以重叠</title>
+<desc id="us12737296b2-fig-4-svg-desc">上面一行显示同一个控制器串行服务，两条中间轨道显示分流后服务重叠，末行检验晚到的代价。</desc>
+<defs><marker id="us12737296b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12737296b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12737296b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12737296b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12737296b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">时隙 0</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">时隙 1</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">时隙 2</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（服务时隙）</text>
+</g>
+<g id="us12737296b2-fig-4-single"><text x="24" y="136" class="node-name" text-anchor="start">同归一个控制器</text>
+<rect x="192" y="112" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="136" class="arrow-label" text-anchor="middle">控制器服务 B0</text>
+<rect x="516" y="112" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="136" class="arrow-label" text-anchor="middle">控制器服务 B1</text>
+<circle cx="840" cy="131" r="5" fill="#4f5d75"/>
+<text x="840" y="171" class="arrow-label" text-anchor="end">两笔均结束</text></g>
+<g id="us12737296b2-fig-4-parallel0"><text x="24" y="228" class="node-name" text-anchor="start">分流后西侧控制器</text>
+<rect x="192" y="204" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="228" class="arrow-label" text-anchor="middle">控制器服务 B0</text>
+<circle cx="516" cy="223" r="5" fill="#4f5d75"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">B0 完成</text></g>
+<g id="us12737296b2-fig-4-parallel1"><text x="24" y="320" class="node-name" text-anchor="start">分流后东侧控制器</text>
+<rect x="192" y="296" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="320" class="arrow-label" text-anchor="middle">控制器服务 B1</text>
+<circle cx="516" cy="315" r="5" fill="#bf4520"/>
+<text x="516" y="355" class="arrow-label" text-anchor="end">两笔均结束</text></g>
+<g id="us12737296b2-fig-4-staggered"><text x="24" y="412" class="node-name" text-anchor="start">东侧到达晚一时隙</text>
+<rect x="516" y="388" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="412" class="arrow-label" text-anchor="middle">控制器服务 B1</text>
+<circle cx="840" cy="407" r="5" fill="#4f5d75"/>
+<text x="840" y="447" class="arrow-label" text-anchor="end">两笔均结束</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">每个控制器一次服务一笔，固定 1 时隙。末行的 B1 是唯一晚到的请求。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12737296b2-fig-4-single">同归一个控制器</a> 两笔请求同时入队，只允许一次服务一笔。B1 等待 B0 的服务时隙。</li><li><a href="#us12737296b2-fig-4-parallel0">分流后的本侧队列</a> 控制器空闲，B0 一到就能开始服务。</li><li><a href="#us12737296b2-fig-4-parallel1">分流后的另一侧队列</a> B1 也能立即开始，两笔在同一阶段完成。</li><li><a href="#us12737296b2-fig-4-staggered">B1 晚到</a> 即使控制器空闲，B1 晚一个时隙到达时也不能与 B0 并行。</li></ul>
+  <p class="figure-evidence">原图 6、10、56、57、58；说明书归档段 0640、0641、0643、0644、0645、0646；权利要求 1、18 <a href="../diagrams/US12737296B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>A26A–A26D</dd></div><div><dt>西侧互连</dt><dd>F20A</dd></div><div><dt>东侧互连</dt><dd>F20B</dd></div></dl></details>
+</figure></section><section id="select"><h2>哪些地址位决定目标，哪些只决定控制器内部资源</h2><p>图 5 把原图 58 和 59 放在同一条读图路径。请求端逻辑用 MLC 的地址位掩码与反相位求出 die、slice、row、side。一种实现各层分别做 XOR 归约，逻辑可以并行。确定了控制器之后，还可用 plane 和 pipe 等层级选择控制器内部访问位置。</p><p>在说明书给出的可逆实现中，控制器还可按删除位掩码从内部队列的地址中省去已知选择位。恢复完整地址时，用选中控制器对应的散列结果和剩余位重算。这段地址压缩依赖专门的位选择规则。独立权利要求 1、18 对散列的具体层数、XOR 逻辑及地址压缩无对应限定。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　请求端选择控制器，控制器再选内部 plane 和 pipe</h3>
+    <p id="fig-5-basis">按每级的输入字段、选择结果与存储地址去向，读出地址位掩码在何处生效。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="请求端选择控制器，控制器再选内部 plane 和 pipe" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 558" role="img" aria-labelledby="us12737296b2-fig-5-svg-title us12737296b2-fig-5-svg-desc">
+<title id="us12737296b2-fig-5-svg-title">请求端选择控制器，控制器再选内部 plane 和 pipe</title>
+<desc id="us12737296b2-fig-5-svg-desc">按每级的输入字段、选择结果与存储地址去向，读出地址位掩码在何处生效。</desc>
+<defs><marker id="us12737296b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12737296b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12737296b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12737296b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12737296b2-fig-5-pa" d="M 237 151 L 314 151 Q 322 151 322 159 L 322 227 Q 322 235 330 235 L 355 235" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12737296b2-fig-5-arrow-data)"/>
+<path id="us12737296b2-fig-5-ms" d="M 237 348 L 304 348 Q 312 348 312 340 L 312 285 Q 312 277 320 277 L 355 277" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12737296b2-fig-5-arrow-control)"/>
+<path id="us12737296b2-fig-5-id" d="M 559 235 L 618 235 Q 626 235 626 227 L 626 164 Q 626 156 634 156 L 711 156" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12737296b2-fig-5-arrow-main)"/>
+<path id="us12737296b2-fig-5-level" d="M 559 277 L 618 277 Q 626 277 626 285 L 626 391 Q 626 399 634 399 L 711 399" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12737296b2-fig-5-arrow-control)"/>
+<path id="us12737296b2-fig-5-comp" d="M 711 423 L 653 423 Q 645 423 645 431 L 645 458 Q 645 466 637 466 L 566 466" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12737296b2-fig-5-arrow-return)"/>
+<rect x="236.5" y="123" width="87" height="18" fill="#f5f5f5"/><text x="280" y="137" class="arrow-label" text-anchor="middle">地址位</text>
+<rect x="234" y="351" width="136" height="18" fill="#f5f5f5"/><text x="302" y="365" class="arrow-label" text-anchor="middle">配置各层选位</text>
+<rect x="559.5" y="128" width="161" height="18" fill="#f5f5f5"/><text x="640" y="142" class="arrow-label" text-anchor="middle">决定去哪个控制器</text>
+<rect x="568" y="369" width="150" height="18" fill="#f5f5f5"/><text x="643" y="383" class="arrow-label" text-anchor="middle">也可解码内部层级</text>
+<rect x="565.5" y="472" width="139" height="18" fill="#f5f5f5"/><text x="635" y="486" class="arrow-label" text-anchor="middle">已有定位结果</text>
+<g id="us12737296b2-fig-5-addr"><rect x="37" y="107" width="200" height="91" rx="6" fill="#f5f5f5"/><rect x="37" y="107" width="200" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137" y="133" class="node-name" text-anchor="middle">内存请求地址</text><text x="137" y="155" class="node-detail" text-anchor="middle">同一地址位向量进入选择器</text></g>
+<g id="us12737296b2-fig-5-mask"><rect x="37" y="297" width="200" height="99" rx="6" fill="#f5f5f5"/><rect x="37" y="297" width="200" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137" y="323" class="node-name" text-anchor="middle">地址位掩码</text><text x="137" y="345" class="node-detail" text-anchor="middle">每个层级选择参与的地址位</text><text x="137" y="363" class="node-detail" text-anchor="middle">另有反相控制位</text></g>
+<g id="us12737296b2-fig-5-xor"><rect x="355" y="207" width="204" height="99" rx="6" fill="#f5f5f5"/><rect x="355" y="207" width="204" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="457" y="233" class="node-name" text-anchor="middle">并行选择逻辑</text><text x="457" y="255" class="node-detail" text-anchor="middle">各层独立选位并求值</text><text x="457" y="273" class="node-detail" text-anchor="middle">一例为 XOR 归约再反相</text></g>
+<g id="us12737296b2-fig-5-target"><rect x="711" y="105" width="201" height="122" rx="6" fill="#f5f5f5"/><rect x="711" y="105" width="201" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="811.5" y="131" class="node-name" text-anchor="middle">互连的目标控制器</text><text x="811.5" y="153" class="node-detail" text-anchor="middle">die、slice、row、side</text><text x="811.5" y="171" class="node-detail" text-anchor="middle">确定目标与路由</text></g>
+<g id="us12737296b2-fig-5-internal"><rect x="711" y="347" width="201" height="105" rx="6" fill="#f5f5f5"/><rect x="711" y="347" width="201" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="373" class="node-name" text-anchor="middle">控制器内的访问位置</text><text x="811.5" y="395" class="node-detail" text-anchor="middle">plane、pipe</text><text x="811.5" y="413" class="node-detail" text-anchor="middle">可继续得到 bank 位置</text></g>
+<g id="us12737296b2-fig-5-compact"><rect x="350" y="414" width="216" height="93" rx="6" fill="#f5f5f5"/><rect x="350" y="414" width="216" height="93" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="458" y="440" class="node-name" text-anchor="middle">控制器内部地址</text><text x="458" y="462" class="node-detail" text-anchor="middle">按删除位掩码移除地址位</text><text x="458" y="480" class="node-detail" text-anchor="middle">有条件恢复完整地址</text></g>
+<text x="37" y="58" class="signal-title" text-anchor="start">可编程地址选择 · 层级用于定位，组合逻辑可以并行</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12737296b2-fig-5-mask">地址位掩码与反相位</a> 按层指定参与选择的地址位。全零掩码时可用反相位固定一个分支。</li><li><a href="#us12737296b2-fig-5-xor">并行选择逻辑</a> FIG. 58 的顺序表示定位层级。说明书允许逻辑同时求取不同层级。</li><li><a href="#us12737296b2-fig-5-target">目标控制器</a> die、slice、row、side 的组合识别路由目的地。</li><li><a href="#us12737296b2-fig-5-internal">plane 与 pipe</a> 内存控制器还可解码内部的 plane、pipe、bank group 与 bank。</li><li><a href="#us12737296b2-fig-5-compact">内部地址压缩</a> 控制器记得已选层级的结果，可在位选择满足可逆条件时恢复完整地址。</li></ul>
+  <p class="figure-evidence">原图 58、59、60、61、62、67、68；说明书归档段 0635、0636、0638、0639、0642、0654、0657、0662、0666、0667、0671、0683、0687、0688、0690；权利要求 1、18 <a href="../diagrams/US12737296B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>die 选择</dt><dd>F40</dd></div><div><dt>slice 选择</dt><dd>F42</dd></div><div><dt>row 选择</dt><dd>F44</dd></div><div><dt>side 选择</dt><dd>F46</dd></div><div><dt>plane 选择</dt><dd>F48</dd></div><div><dt>pipe 选择</dt><dd>F50</dd></div><div><dt>地址选择配置寄存器</dt><dd>F60</dd></div><div><dt>地址位掩码</dt><dd>F68</dd></div><div><dt>反相位</dt><dd>F66</dd></div><div><dt>删除位掩码寄存器</dt><dd>F62</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US12737296B2</code><span>美国授权专利</span><time datetime="2026-09-15">2026-09-15</time></p>
-  <h1>统一地址空间中分散的相邻内存块</h1>
-  <p class="english-title" lang="en">Scalable system on a chip</p>
-  <p class="document-question">异构代理共用地址空间时，同一页的数据怎样分给不同的内存控制器？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">互连将统一地址空间中同一页的相邻块分布到多个内存控制器。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>权利要求的范围是同封装 SoC 中的统一内存架构。地址交错能分散请求，排队和并行度仍由实际控制器资源决定。</dd></div><div><dt>验证方法</dt><dd>保持读请求数与步长，分别发出页内连续请求和落到单一控制器的对照流。记录每个地址的目标控制器与各控制器的发出周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.justia.com/patent/12737296">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">一段连续地址可以由多个控制器分担。CPU、GPU 和外设仍用同一套地址访问内存，控制器的归属由互连和地址映射决定。</p>
-    <p>CPU、GPU 和外设经互连访问一个统一地址空间。同一页的相邻块由多个内存控制器分担。独权没有规定统一地址空间必须用物理地址。后续权项另描述控制器侧缓存和分布式目录。</p>
-    <ol class="walkthrough"><li><h3>接入统一地址空间</h3><p>同封装的单片或多片 SoC 用互连连接异构代理和多个控制器，控制器再接系统内存。</p></li><li><h3>按地址定位控制器</h3><p>同一页中的相邻块分给多个控制器。说明书后半的实施例用可配置映射或哈希从请求地址计算片区和控制器等位置。</p></li><li><h3>在内存控制器侧查找</h3><p>从属项可在控制器与内存之间加入内存缓存，也可按地址子集把目录分布到各控制器。</p></li><li><h3>根据目录状态决定谁供数</h3><p>说明书给出向请求者转发、向内存控制器返回数据两种命令。目录可以按已排序的状态产生后续消息，即使端点还在等待前一个事务完成。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 1 将同一页的相邻块分散到多个控制器。权利要求 12、13 另限定按统一地址空间子集分布的目录，并把目录放到内存控制器。数据落点和一致性查询各有对应的接口。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>统一地址空间</dt><dd>CPU、GPU 和外设使用同一套标识访问内存，目标控制器由地址映射决定。</dd></div><div><dt>预期缓存状态</dt><dd>一致性命令指明目标缓存执行该命令时应达到的状态。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">一页的相邻块落到两个控制器</a></li><li><a href="#fig-1">多个控制器怎样接入统一内存</a></li><li><a href="#fig-4">同页访问可以并行服务的条件</a></li><li><a href="#fig-3">目录怎样确定供数方向</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">一页的相邻块落到两个控制器</h3></div>
-    <a class="paper-open" href="../mechanisms/US12737296B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="一页的相邻块落到两个控制器">
-    <img class="paper-image native-image" src="../mechanisms/US12737296B2/fig-2/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="一页的相邻块落到两个控制器。两个地址在同一页内相邻。原图 58 的可编程散列是一种控制器选择方法。示意用 B0 去 C0、B1 去 C1 展示两种落点。">
-  </div>
-  <figcaption>
-    <span>两个地址在同一页内相邻。原图 58 的可编程散列是一种控制器选择方法。示意用 B0 去 C0、B1 去 C1 展示两种落点。</span>
-    <span class="figure-evidence">权利要求 1、18，图 56–59；教学示意 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12737296">专利 PDF</a> · <a href="https://patents.justia.com/patent/12737296">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">多个控制器怎样接入统一内存</h3></div>
-    <a class="paper-open" href="../mechanisms/US12737296B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="多个控制器怎样接入统一内存">
-    <img class="paper-image native-image" src="../mechanisms/US12737296B2/fig-1/diagram.svg" width="647" height="488"
-         style="--paper-width:647px" alt="多个控制器怎样接入统一内存。权利要求 1 给出异构代理和多个控制器间的互连。控制器侧缓存与分布目录见权利要求 10–17。">
-  </div>
-  <figcaption>
-    <span>权利要求 1 给出异构代理和多个控制器间的互连。控制器侧缓存与分布目录见权利要求 10–17。</span>
-    <span class="figure-evidence">图 1、6、10，权利要求 1、10–13 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12737296">专利 PDF</a> · <a href="https://patents.justia.com/patent/12737296">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">同页访问可以并行服务的条件</h3></div>
-    <a class="paper-open" href="../mechanisms/US12737296B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="同页访问可以并行服务的条件">
-    <img class="paper-image native-image" src="../mechanisms/US12737296B2/fig-4/diagram.svg" width="408" height="440"
-         style="--paper-width:408px" alt="同页访问可以并行服务的条件。假定各控制器同一时间只能服务一笔，且互连及内存端口无额外争用。分流到不同控制器的相邻块请求可以重叠；状态轴不表示实际访问拍数。">
-  </div>
-  <figcaption>
-    <span>假定各控制器同一时间只能服务一笔，且互连及内存端口无额外争用。分流到不同控制器的相邻块请求可以重叠；状态轴不表示实际访问拍数。</span>
-    <span class="figure-evidence">图 6–10、图 56–59，权利要求 1、18；工程示意 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12737296">专利 PDF</a> · <a href="https://patents.justia.com/patent/12737296">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">目录怎样确定供数方向</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件</th><th scope="col">决策点</th><th scope="col">后续动作</th></tr></thead><tbody><tr><th scope="row">目录已定序并更新</th><td>内存控制器的目录</td><td>记录尚未完成的拥有状态</td></tr><tr><th scope="row">预期 E，目标缓存当前 I</th><td>目标缓存</td><td class="emphasis">暂挂 snoop，等回填使状态匹配</td></tr><tr><th scope="row">SnpFwd</th><td>持有者</td><td class="emphasis">把数据直接发给请求代理</td></tr><tr><th scope="row">SnpBack</th><td>持有者</td><td>把数据发回内存控制器</td></tr></tbody></table>
-  <figcaption>
-    <span>目录可先更新已定序请求的状态。原图 29 中，目标仍是 I 而命令预期 E，目标等上一次填充后再处理 snoop。</span>
-    <span class="figure-evidence">原图 27–30、42，说明书 0255–0257、0273–0278，权利要求 12–17。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12737296">专利 PDF</a> · <a href="https://patents.justia.com/patent/12737296">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>相邻块按地址分流</dt><dd>分摊控制器请求 <span class="subdued">原图 56–59，权利要求 1、18</span></dd></div><div><dt>命令携带预期状态</dt><dd>处理在途一致性竞争 <span class="subdued">原图 29–30，权利要求 14–15</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>控制器间分散可增加相邻块独立服务的机会。一致性操作又要经过负责该地址子集的目录，可能额外访问互连。应把目标控制器分布和目录查询／回填路径分开观察。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>即使连续块平均分散，若多个核反复写同一个共享块，相关目录和供数路径仍集中在这一块。权利要求给出页内分布，热点是否减轻取决于实际冲突地址。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设一页有 B0 至 B3 共 4 个相邻块和两个控制器。偶数块归 C0，奇数块归 C1。</dd></div><div><dt>处理结果</dt><dd>CPU 读 B0、GPU 同时读 B1 时，两条请求可由各自的控制器接收。对 CPU 和 GPU 来说，两者仍是统一地址空间中的地址。</dd></div><div><dt>结果解读</dt><dd>奇偶映射是此例的设定。独立权项规定同页相邻块分开存放，具体哈希、行长度及可用带宽要看实施方式。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -130,50 +206,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.justia.com/patent/12737296#:~:text=communicating%2C%20via%20a%20unified%20memory%20architecture%2C%20among%20a%20plurality%20of%20processor%20cores%2C%20a%20plurality%20of%20graphics">F5</a></th><td>CPU、GPU 和独立外设通过统一内存架构访问。</td><td><a href="https://patents.justia.com/patent/12737296#:~:text=FIG.%2056%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20plurality%20of%20systems%20on%20a">说明书 0574</a> · <a href="https://patents.justia.com/patent/12737296#:~:text=As%20illustrated%20in%20FIG.%2056%2C%20the%20I%2FO%20clusters%20F18A-F18B%2C%20the%20P%20clusters%20F14A-F14B%2C%20the%20GPUs%20F16A-FF16B%2C">说明书 0588</a> · 原图 56</td></tr><tr><th scope="row"><a href="https://patents.justia.com/patent/12737296#:~:text=a%20plurality%20of%20memory%20controller%20circuits%20over%20an%20interconnect%20fabric%20in%20a%20system">F6</a></th><td>互连把异构代理接到多个内存控制器。</td><td><a href="https://patents.justia.com/patent/12737296#:~:text=The%20system%20shown%20in%20FIG.%2056%20further%20includes%20a%20plurality%20of%20memory%20devices%20F28%20coupled%20to">说明书 0577</a> · <a href="https://patents.justia.com/patent/12737296#:~:text=As%20illustrated%20in%20FIG.%2056%2C%20the%20I%2FO%20clusters%20F18A-F18B%2C%20the%20P%20clusters%20F14A-F14B%2C%20the%20GPUs%20F16A-FF16B%2C">说明书 0588</a> · 原图 56</td></tr><tr><th scope="row"><a href="https://patents.justia.com/patent/12737296#:~:text=included%20in%20a%20system%20on%20a%20chip%20%28SOC%29%20integrated%20onto%20one%20or%20more%20co-packaged%20semiconductor%20dies">F7</a></th><td>相应部件位于同封装一个或多个 SoC 裸片上。</td><td><a href="https://patents.justia.com/patent/12737296#:~:text=The%20network%20switches%20A36%20near%20the%20bottom%20of%20the%20SOC%20A30%20as%20oriented%20in%20FIG.%209">说明书 0146</a> · <a href="https://patents.justia.com/patent/12737296#:~:text=FIG.%2056%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20plurality%20of%20systems%20on%20a">说明书 0574</a> · 原图 10 · 原图 56</td></tr><tr><th scope="row"><a href="https://patents.justia.com/patent/12737296#:~:text=distributing%2C%20in%20the%20SOC%2C%20adjacent%20blocks%20of%20a%20given%20page%20within%20a%20unified%20address%20space%20defined">F8</a></th><td>将统一空间同一页的相邻块分发给不同内存控制器。</td><td><a href="https://patents.justia.com/patent/12737296#:~:text=FIG.%2058%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20binary%20decision%20tree%20to%20determine">说明书 0638</a> · <a href="https://patents.justia.com/patent/12737296#:~:text=For%20example%2C%20consecutive%20cache%20blocks%20%28e.g.%2C%20aligned%2064%20byte%20or%20128%20byte%20blocks%29%20may%20be%20mapped">说明书 0644</a> · 原图 57 · 原图 58</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 10、56–59。系统项列出同封装 SoC 的 CPU、GPU、外设、互连和多个内存控制器，统一空间内同页相邻块分散。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>CPU 核、GPU 和外设可访问统一地址空间中的任一地址。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>统一地址空间可用区别于系统内存物理地址空间的虚拟地址。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>为处理器、GPU 及外设的内存访问提供一套共同语义。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>共同的访问语义包含内存排序属性。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-4">4</a></td><td>共同的访问语义包含服务质量属性。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-4">4</a></td><td>共同的访问语义包含缓存一致性。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>各内存控制器设有连接映射为随机访问内存的设备的接口。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>该内存设备为动态随机访问内存。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>在内存和 CPU、GPU、外设之间再设一级或多级缓存。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>各控制器的内存缓存位于互连与系统内存之间。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-1">1</a></td><td>设置多个分布目录，分别跟踪统一地址空间的子集。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>将分布目录置于各内存控制器处。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-1">1</a></td><td>目录按控制器所辖内存跟踪各缓存副本，对已定序、尚未完结的请求也保持精确。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td>一致性命令携带目标缓存的预期状态，实际状态不匹配则推迟处理。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td>主共享缓存与次共享缓存持有同一块，由主共享缓存响应请求者。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td>按请求类型调用不同命令，分别向请求者转发或回送控制器。</td></tr><tr id="claim-18"><th scope="row">18</th><td>独立项</td><td>在同封装 SoC 内让异构代理和内存控制器经统一架构通信，并将同页相邻块分配给不同控制器。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>处理器核、GPU 和外设可访问统一空间的任意地址。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-18">18</a></td><td>统一内存为处理器核、GPU 与外设提供一套共同的访存语义。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 1、18</dt><dd>同封装 SoC 中的异构代理通过统一内存架构访问，同页相邻块由多个内存控制器分担。</dd></div><div><dt>图 27–28、56–59</dt><dd>这些图区分缓存一致性、代理间传输及地址位置选择。可沿相应路径分别追踪目录状态和物理落点。</dd></div><div><dt>权利要求 10–17</dt><dd>从属权项进一步限定缓存层、分布式目录、状态比较及不同供数方向。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.justia.com/patent/12737296">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20230367510A1.html#engineering">用可编程多粒度地址散列选择内存控制器</a>
-<p>US12737296B2 的统一地址架构把同一页中的相邻块分布到多个内存控制器。US20230367510A1 公开权 26 也规定页内块分布，并进一步说明互连怎样按可编程字段选择各粒度的地址位，通过散列找到目标控制器。可分别检查页内布局与单个物理请求的目标控制器。</p></li><li><a href="US12561267B2.html#engineering">CPU 和 GPU 通过独立片上网络访问内存</a>
-<p>US12561267B2 让 CPU 核簇和 GPU 通过独立片上交换网络访问由共用内存控制器管理的系统内存。US12737296B2 从统一地址空间出发，把页内相邻内存块分散到多个内存控制器。前一方案可用来分析流量在哪张网络排队，后一方案可用来分析连续访问落在哪个控制器。</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
-<p>US12737296B2 的从属权利要求把跟踪地址子集一致性状态的多个目录布置在各内存控制器。US12332792B2 也由内存控制器维护目录，进一步限定接收代理如何把同块的早到 snoop 写入在途请求缓冲项，等原请求完成再处理。前者说明地址如何找到对应目录，后者说明取得目录结果之后如何处理同块竞态。</p></li></ul>
-    <p><a href="../index.html?patent=US12737296B2#knowledge">在全量关系图上定位 US12737296B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-08-23</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-03-15</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-09-15</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/607,128</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Per H. Hammarlund、Lior Zimet、James Vash、Gaurav Garg、Sergio Kolor、Harshavardhan Kaushikkar、Ramesh B. Gunna、Steven R. Hutsell</dd></div><div><dt>分类号</dt><dd>G06F12/0831</dd></div><div><dt>著录来源</dt><dd><a href="https://patentsgazette.uspto.gov/week37/OG/patentee/alphaH_Utility.html">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.justia.com/patent/12737296">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Justia 授权全文及 USPTO 授权公报，Patsnap 说明书前 352 段交叉核对，覆盖 1062 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、6、10、27、28、39、42。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12737296B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

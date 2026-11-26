@@ -1,116 +1,148 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11275697B2 合并 TLB 失效请求时保留电源状态边界 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TLB 已在电源状态转换中清除时，去掉被覆盖的失效请求 · US11275697B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11275697B2</code> · <a href="https://patents.google.com/patent/US11275697B2/en">专利全文</a></p>
+<h1>TLB 已在电源状态转换中清除时，去掉被覆盖的失效请求</h1><p class="reading-question">合并的一批 TLBI 跨过目标处理器的非活动和恢复活动边界，合并端怎样判断哪些能去掉？</p>
+<p class="reading-answer">说明书用目标 TLB 的清除事件和各请求的接收时间标记来判断。已由清除覆盖的请求可去掉。与恢复活动边界同时或其后收到的请求保留；新活动期已经能够安装新的翻译。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2022-03-15</dd></div><div><dt>申请号</dt><dd>US16/786,231</dd></div><div><dt>最早优先权</dt><dd>2019-05-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Kutty Banerjee、Pratik Chandresh Shah、Tatsuya Iwamoto、David E. Roberts</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#target">合并端持有请求，目标 MMU 持有翻译</a></li><li><a href="#boundary">同一批四条请求跨过恢复活动边界</a></li><li><a href="#filter">先确认清除，再比较请求接收与恢复时间</a></li><li><a href="#observable">保留的 TLBI 怎样影响下一次地址翻译</a></li><li><a href="#scope">独立权项限定合并和按非活动转换去掉请求</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="target"><h2>合并端持有请求，目标 MMU 持有翻译</h2><p>图 1 从 CPU 侧的一次页表维护读起。应用、操作系统或驱动触发维护，合并端收集到达同一个目标 TLB 的请求，记录地址范围和接收标记。说明书 ¶0028 也允许 MMU 自身合并。若继续执行失效，合并端会把 TLBI 送到 GPU TLBI 控制器。</p><p>GPU MMU 从 TLB 缓存的翻译或 GPU 页表取得映射。CPU 与 GPU 在原图 1 的实施例可属于独立电源域，GPU 进入非活动时 CPU 侧仍可能接收并整理维护请求。这里判断的是同一目标 TLB 的失效义务，分组须保留目标身份。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　CPU 侧请求经合并端到达 GPU 的 TLBI 控制器</h3>
+    <p id="fig-1-basis">沿同一目标的 TLBI 发送路径，分清请求合并位置、GPU TLB 和页表。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="CPU 侧请求经合并端到达 GPU 的 TLBI 控制器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 624" role="img" aria-labelledby="us11275697b2-fig-1-svg-title us11275697b2-fig-1-svg-desc">
+<title id="us11275697b2-fig-1-svg-title">CPU 侧请求经合并端到达 GPU 的 TLBI 控制器</title>
+<desc id="us11275697b2-fig-1-svg-desc">沿同一目标的 TLBI 发送路径，分清请求合并位置、GPU TLB 和页表。</desc>
+<defs><marker id="us11275697b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11275697b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11275697b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11275697b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11275697b2-fig-1-recv" d="M 236 143 L 350 143" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-1-arrow-main)"/>
+<path id="us11275697b2-fig-1-send" d="M 574 143 L 703 143" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-1-arrow-main)"/>
+<path id="us11275697b2-fig-1-states" d="M 272 377 L 452 377 Q 460 377 460 369 L 460 210" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-1-arrow-control)"/>
+<path id="us11275697b2-fig-1-invalidate" d="M 820 208 L 820 319" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-1-arrow-main)"/>
+<path id="us11275697b2-fig-1-table" d="M 703 398 L 643 398 Q 635 398 635 406 L 635 512 Q 635 520 627 520 L 571 520" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-1-arrow-return)"/>
+<rect x="242" y="116" width="104" height="18" fill="#f5f5f5"/><text x="294" y="130" class="arrow-label" text-anchor="middle">待失效的范围</text>
+<rect x="571" y="116" width="136" height="18" fill="#f5f5f5"/><text x="639" y="130" class="arrow-label" text-anchor="middle">只发送保留的 TLBI</text>
+<rect x="297.5" y="347" width="149" height="18" fill="#f5f5f5"/><text x="372" y="361" class="arrow-label" text-anchor="middle">状态和转换标记</text>
+<rect x="750" y="256" width="140" height="18" fill="#f5f5f5"/><text x="820" y="270" class="arrow-label" text-anchor="middle">使 TLB 条目失效</text>
+<rect x="517.5" y="440" width="167" height="18" fill="#f5f5f5"/><text x="601" y="454" class="arrow-label" text-anchor="middle">翻译缺失时访问页表</text>
+<g id="us11275697b2-fig-1-host"><rect x="44" y="100" width="192" height="89" rx="6" fill="#f5f5f5"/><rect x="44" y="100" width="192" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140" y="126" class="node-name" text-anchor="middle">CPU 侧发起方</text><text x="140" y="148" class="node-detail" text-anchor="middle">应用或内核触发维护</text></g>
+<g id="us11275697b2-fig-1-merge"><rect x="350" y="100" width="224" height="110" rx="6" fill="#f5f5f5"/><rect x="350" y="100" width="224" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="462" y="126" class="node-name" text-anchor="middle">合并端</text><text x="462" y="148" class="node-detail" text-anchor="middle">可在驱动、OS 或 MMU</text><text x="462" y="166" class="node-detail" text-anchor="middle">按目标 TLB 组织请求</text></g>
+<g id="us11275697b2-fig-1-ctl"><rect x="703" y="100" width="218" height="108" rx="6" fill="#f5f5f5"/><rect x="703" y="100" width="218" height="108" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="812" y="126" class="node-name" text-anchor="middle">GPU TLBI 控制器</text><text x="812" y="148" class="node-detail" text-anchor="middle">执行发送到 GPU 的失效</text></g>
+<g id="us11275697b2-fig-1-hist"><rect x="54" y="322" width="218" height="113" rx="6" fill="#f5f5f5"/><rect x="54" y="322" width="218" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="163" y="348" class="node-name" text-anchor="middle">目标处理器状态记录</text><text x="163" y="370" class="node-detail" text-anchor="middle">活动、非活动转换</text><text x="163" y="388" class="node-detail" text-anchor="middle">为请求提供比较参照</text></g>
+<g id="us11275697b2-fig-1-mmu"><rect x="703" y="319" width="218" height="123" rx="6" fill="#f5f5f5"/><rect x="703" y="319" width="218" height="123" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="812" y="345" class="node-name" text-anchor="middle">GPU MMU</text><text x="812" y="367" class="node-detail" text-anchor="middle">查询 GPU TLB</text><text x="812" y="385" class="node-detail" text-anchor="middle">缺失时查 GPU 页表</text></g>
+<g id="us11275697b2-fig-1-pte"><rect x="353" y="478" width="218" height="90" rx="6" fill="#f5f5f5"/><rect x="353" y="478" width="218" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="462" y="504" class="node-name" text-anchor="middle">GPU 页表</text><text x="462" y="526" class="node-detail" text-anchor="middle">PTE 提供地址翻译</text></g>
+<text x="44" y="57" class="signal-title" text-anchor="start">GPU MMU 的翻译路径与跨电源状态的 TLBI 请求筛选</text>
+<text x="44" y="596" class="legend" text-anchor="start">示例将合并端画在目标 GPU 之外。原文也允许由 MMU 合并；GPU 和 CPU 可分别管理供电。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11275697b2-fig-1-merge">TLBI 合并端</a> 保留目标、范围和接收标记。可以由驱动、操作系统或 MMU 承担。</li><li><a href="#us11275697b2-fig-1-states">目标状态记录</a> 比较的是这个目标 TLB 所关联处理器的状态和转换。</li><li><a href="#us11275697b2-fig-1-send">送出筛选后保留的请求</a> 收到请求与发出 TLBI 分属两个时点。</li><li><a href="#us11275697b2-fig-1-table">GPU 页表访问</a> MMU 在 TLB 中找不到翻译时访问页表。</li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0016、0020、0021、0022、0025、0026、0028、0033；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> <a href="../diagrams/US11275697B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU</dt><dd>102</dd></div><div><dt>GPU complex</dt><dd>136</dd></div><div><dt>GPU 总线</dt><dd>140</dd></div><div><dt>GPU MMU</dt><dd>142</dd></div><div><dt>GPU TLB</dt><dd>144</dd></div><div><dt>GPU TLBI 控制器</dt><dd>148</dd></div><div><dt>GPU 页表</dt><dd>146</dd></div><div><dt>GPU 内存</dt><dd>138</dd></div><div><dt>目标处理器</dt><dd>202</dd></div><div><dt>电源状态转换记录</dt><dd>224</dd></div></dl></details>
+</figure></section><section id="boundary"><h2>同一批四条请求跨过恢复活动边界</h2><p>图 2 还原原图 2 在恢复活动后筛选的第二个批次。旧活动期收到一条，在非活动期收到两条，恢复活动当时收到一条。目标在进入非活动时已清除 TLB。合并端直到恢复活动后才扫描该批次，此时仅查看目标现在是否活动会丢失前面清除事件的信息。</p><p>沿恢复活动的竖线向下读，边界请求落在新活动期。从旧活动期到恢复前的三条请求已被清除覆盖，可从批次中移除。边界请求仍可立即发送或留待与晚到请求合并。接收标记可以是真实时间戳，也可以是在状态转换时更新的活动期代号，比较关系须保留。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　恢复活动边界上的请求留在批次中</h3>
+    <p id="fig-2-basis">同一活动状态时间线上对齐四条请求的接收点和合并端稍后的筛选点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="恢复活动边界上的请求留在批次中" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 587" role="img" aria-labelledby="us11275697b2-fig-2-svg-title us11275697b2-fig-2-svg-desc">
+<title id="us11275697b2-fig-2-svg-title">恢复活动边界上的请求留在批次中</title>
+<desc id="us11275697b2-fig-2-svg-desc">同一活动状态时间线上对齐四条请求的接收点和合并端稍后的筛选点。</desc>
+<defs><marker id="us11275697b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11275697b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11275697b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11275697b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">原图 2 的事件重排 · 时间只表示先后顺序</text>
+<line x1="339" x2="339" y1="101" y2="533" stroke="#4f5d75" opacity=".18"/>
+<text x="339" y="92" class="arrow-label" text-anchor="middle">进入非活动</text>
+<line x1="624" x2="624" y1="101" y2="533" stroke="#4f5d75" opacity=".18"/>
+<text x="624" y="92" class="arrow-label" text-anchor="middle">恢复活动</text>
+<line x1="746" x2="746" y1="101" y2="533" stroke="#4f5d75" opacity=".18"/>
+<text x="746" y="92" class="arrow-label" text-anchor="middle">筛选同一批</text>
+<line x1="855" x2="855" y1="101" y2="533" stroke="#4f5d75" opacity=".18"/>
+<text x="855" y="92" class="arrow-label" text-anchor="middle">再次非活动</text>
+<g id="us11275697b2-fig-2-power"><text x="24" y="170" class="node-name" text-anchor="start">目标处理器状态</text>
+<line x1="200" x2="883" y1="153" y2="153" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="891" y="157" class="arrow-label" text-anchor="start">活动</text>
+<line x1="200" x2="883" y1="198" y2="198" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="891" y="202" class="arrow-label" text-anchor="start">非活动</text>
+<polyline points="200,153 339,153 339,198 624,198 624,153 855,153 855,198 883,198" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="us11275697b2-fig-2-requests"><text x="24" y="320" class="node-name" text-anchor="start">TLBI 请求接收</text>
+<polyline points="200,327 883,327" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="us11275697b2-fig-2-select"><text x="24" y="453" class="node-name" text-anchor="start">合并端筛选</text>
+<polyline points="200,460 883,460" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="us11275697b2-fig-2-clear"><circle cx="339" cy="198" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="245" y="216" width="188" height="18" fill="#f5f5f5"/><text x="339" y="230" class="arrow-label" text-anchor="middle">本次进入非活动清除 TLB</text></g>
+<g id="us11275697b2-fig-2-old"><circle cx="277" cy="327" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="210.5" y="285" width="117" height="18" fill="#f5f5f5"/><text x="269" y="299" class="arrow-label" text-anchor="middle">旧活动期请求</text></g>
+<g id="us11275697b2-fig-2-sleep-a"><circle cx="420" cy="327" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="348" y="285" width="130" height="18" fill="#f5f5f5"/><text x="413" y="299" class="arrow-label" text-anchor="middle">非活动期请求 A</text></g>
+<g id="us11275697b2-fig-2-sleep-b"><circle cx="493" cy="327" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="427.5" y="356" width="127" height="18" fill="#f5f5f5"/><text x="491" y="370" class="arrow-label" text-anchor="middle">非活动期请求 B</text></g>
+<g id="us11275697b2-fig-2-edge"><circle cx="624" cy="327" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="555.5" y="285" width="143" height="18" fill="#f5f5f5"/><text x="627" y="299" class="arrow-label" text-anchor="middle">恢复边界上的请求</text></g>
+<g id="us11275697b2-fig-2-sift"><circle cx="746" cy="460" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="500.5" y="490" width="327" height="18" fill="#f5f5f5"/><text x="664" y="504" class="arrow-label" text-anchor="middle">剔除恢复前的三条请求，保留边界请求</text></g>
+<text x="24" y="558" class="legend" text-anchor="start">本批包含四条请求。边界上收到的请求属于新活动期；横轴无周期、时间单位或电平含义。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11275697b2-fig-2-clear">进入非活动并清除</a> 本实施例中，在进入非活动时清除目标 TLB。</li><li><a href="#us11275697b2-fig-2-old">旧活动期收到的请求</a> 在后续清除覆盖的范围内。</li><li><a href="#us11275697b2-fig-2-sleep-a">非活动期收到的请求</a> 旧翻译不再保留；该批还有下一条非活动期请求。</li><li><a href="#us11275697b2-fig-2-edge">恢复边界上的请求</a> 等于恢复点，按新活动期处理。</li><li><a href="#us11275697b2-fig-2-sift">筛选同一批次</a> 三条早于恢复点的由清除覆盖，保留边界上收到的请求。</li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0027、0030、0031、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US11275697B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>目标处理器</dt><dd>202</dd></div><div><dt>活动期</dt><dd>204</dd></div><div><dt>非活动期</dt><dd>206</dd></div><div><dt>TLBI 请求接收轨道</dt><dd>208</dd></div><div><dt>本批旧活动期请求</dt><dd>212</dd></div><div><dt>非活动期前一条请求</dt><dd>214</dd></div><div><dt>非活动期后一条请求</dt><dd>216</dd></div><div><dt>恢复边界上的请求</dt><dd>218</dd></div><div><dt>进入非活动的状态转换</dt><dd>226</dd></div><div><dt>恢复活动的状态转换</dt><dd>228</dd></div><div><dt>恢复活动后筛选本批的时点</dt><dd>232</dd></div><div><dt>再次进入非活动的状态转换</dt><dd>230</dd></div></dl></details>
+</figure></section><section id="filter"><h2>先确认清除，再比较请求接收与恢复时间</h2><p>图 3 第一处判断是工程实现须确认目标 TLB 的清除状态。对可能保留 TLB 的低功耗状态，保持失效义务。对同一目标确认曾清除后，下一处比较使用严格早于恢复点。这个条件让在恢复当时收到的请求继续执行。</p><p>用四条带有接收标记的请求验证判定。按时间标记 0、2、3、4 到达，恢复点设为 4。在确认清除的图 2 示例中，仅保留标记 4 对应请求。若状态报告未确认清除，四条请求均保留。这些是事件标记，未计入周期或运行时间。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　确认清除覆盖后，用严格早于恢复点的条件筛选</h3>
+    <p id="fig-3-basis">把批内请求逐项送入判断，显示保留态或边界等号时走哪条支路。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="确认清除覆盖后，用严格早于恢复点的条件筛选" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 613" role="img" aria-labelledby="us11275697b2-fig-3-svg-title us11275697b2-fig-3-svg-desc">
+<title id="us11275697b2-fig-3-svg-title">确认清除覆盖后，用严格早于恢复点的条件筛选</title>
+<desc id="us11275697b2-fig-3-svg-desc">把批内请求逐项送入判断，显示保留态或边界等号时走哪条支路。</desc>
+<defs><marker id="us11275697b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11275697b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11275697b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11275697b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11275697b2-fig-3-find" d="M 241 161 L 352 161" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-3-arrow-main)"/>
+<path id="us11275697b2-fig-3-uncertain" d="M 562 161 L 631 161 Q 639 161 639 169 L 639 208 Q 639 216 647 216 L 703 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-3-arrow-return)"/>
+<path id="us11275697b2-fig-3-known" d="M 457 216 L 457 299" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-3-arrow-control)"/>
+<path id="us11275697b2-fig-3-after" d="M 562 354 L 794 354 Q 802 354 802 346 L 802 271" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-3-arrow-main)"/>
+<path id="us11275697b2-fig-3-before" d="M 457 409 L 457 436 Q 457 444 465 444 L 695 444" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-3-arrow-main)"/>
+<path id="us11275697b2-fig-3-dropnext" d="M 804 494 L 804 524 Q 804 532 796 532 L 154 532 Q 146 532 146 524 L 146 493" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11275697b2-fig-3-arrow-data)"/>
+<path id="us11275697b2-fig-3-keepnext" d="M 911 220 L 925 220 Q 933 220 933 228 L 933 545 Q 933 553 925 553 L 117 553 Q 109 553 109 545 L 109 493" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11275697b2-fig-3-arrow-data)"/>
+<path id="us11275697b2-fig-3-checknext" d="M 51 447 L 35 447 Q 27 447 27 439 L 27 159 Q 27 151 35 151 L 53 151" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-3-arrow-control)"/>
+<rect x="297" y="133" width="0" height="18" fill="#f5f5f5"/><text x="297" y="147" class="arrow-label" text-anchor="middle"></text>
+<rect x="571.5" y="128" width="103" height="18" fill="#f5f5f5"/><text x="623" y="142" class="arrow-label" text-anchor="middle">未确认清除</text>
+<rect x="390" y="245" width="126" height="18" fill="#f5f5f5"/><text x="453" y="259" class="arrow-label" text-anchor="middle">确认本次清除</text>
+<rect x="600.5" y="323" width="161" height="18" fill="#f5f5f5"/><text x="681" y="337" class="arrow-label" text-anchor="middle">等于或晚于恢复点</text>
+<rect x="502" y="416" width="154" height="18" fill="#f5f5f5"/><text x="579" y="430" class="arrow-label" text-anchor="middle">严格早于恢复点</text>
+<rect x="543" y="501" width="0" height="18" fill="#f5f5f5"/><text x="543" y="515" class="arrow-label" text-anchor="middle"></text>
+<rect x="539" y="526" width="0" height="18" fill="#f5f5f5"/><text x="539" y="540" class="arrow-label" text-anchor="middle"></text>
+<rect x="35" y="282" width="0" height="18" fill="#f5f5f5"/><text x="35" y="296" class="arrow-label" text-anchor="middle"></text>
+<g id="us11275697b2-fig-3-batch"><rect x="53" y="111" width="188" height="91" rx="6" fill="#f5f5f5"/><rect x="53" y="111" width="188" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="137" class="node-name" text-anchor="middle">取出一条批内请求</text><text x="147" y="159" class="node-detail" text-anchor="middle">读取目标与接收标记</text></g>
+<g id="us11275697b2-fig-3-check"><polygon points="457,106 562,161 457,216 352,161" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="457" y="158" class="node-name" text-anchor="middle">已确认清除？</text><text x="457" y="179" class="node-detail" text-anchor="middle">核对状态报告</text></g>
+<g id="us11275697b2-fig-3-compare"><polygon points="457,299 562,354 457,409 352,354" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="457" y="351" class="node-name" text-anchor="middle">早于恢复点？</text><text x="457" y="372" class="node-detail" text-anchor="middle">比较接收标记</text></g>
+<g id="us11275697b2-fig-3-keep"><rect x="703" y="167" width="208" height="104" rx="6" fill="#f5f5f5"/><rect x="703" y="167" width="208" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="807" y="193" class="node-name" text-anchor="middle">保留失效义务</text><text x="807" y="215" class="node-detail" text-anchor="middle">可发送或继续合并</text></g>
+<g id="us11275697b2-fig-3-drop"><rect x="695" y="396" width="216" height="98" rx="6" fill="#f5f5f5"/><rect x="695" y="396" width="216" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="422" class="node-name" text-anchor="middle">从批次中剔除</text><text x="803" y="444" class="node-detail" text-anchor="middle">旧翻译已被清除覆盖</text></g>
+<g id="us11275697b2-fig-3-next"><rect x="51" y="402" width="191" height="91" rx="6" fill="#f5f5f5"/><rect x="51" y="402" width="191" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146.5" y="428" class="node-name" text-anchor="middle">继续扫描同一批</text><text x="146.5" y="450" class="node-detail" text-anchor="middle">逐条保留或剔除</text></g>
+<text x="53" y="60" class="signal-title" text-anchor="start">先确认同一目标 TLB 已清除，再用恢复边界筛选批次</text>
+<text x="53" y="581" class="legend" text-anchor="start">图示恢复活动后的筛选。仍处于非活动期时，可按说明书 ¶0027、0031 处理已由清除覆盖的请求。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11275697b2-fig-3-check">核对清除状态</a> 未确认清除时保留失效义务。</li><li><a href="#us11275697b2-fig-3-compare">比较接收及恢复标记</a> 请求严格早于恢复点时，才走清除覆盖支路。</li><li><a href="#us11275697b2-fig-3-after">边界及新活动期</a> 等于恢复点的请求继续保留。</li><li><a href="#us11275697b2-fig-3-drop">从批次去掉旧请求</a> 还能继续判断同一批中其他范围的请求。</li></ul>
+  <p class="figure-evidence">原图 2、3；说明书归档段 0027、0029、0030、0031、0032、0033；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US11275697B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>进入非活动的状态转换</dt><dd>226</dd></div><div><dt>恢复活动的状态转换</dt><dd>228</dd></div><div><dt>将多条请求并入一个批次</dt><dd>306</dd></div><div><dt>去掉由电源状态转换覆盖的请求</dt><dd>310</dd></div></dl></details>
+</figure></section><section id="observable"><h2>保留的 TLBI 怎样影响下一次地址翻译</h2><p>图 4 把常规维护路径拆成可分别观测的事件。CPU 更新目标页表后提交失效请求，合并端把保留的请求送给 GPU MMU。接下来核对 GPU TLB 中的相关旧映射已失效，以及目标在重新查页表时使用已经可见的新映射。</p><p>说明书的直接收益是减少发送到目标的 TLBI，尤其是跨 CPU/GPU 总线串行传输时。需要分别计数进入合并端的请求、真正发出的 TLBI、目标处理开销。清除事件和页表更新必须按实现的可见性规则核实，图 4 的完成观察点也不指定总线应答消息。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　保留的请求发出后，检查目标完成失效和翻译更新</h3>
+    <p id="fig-4-basis">分开页表写入、TLBI 发出、目标失效完成与下一次 page walk。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="保留的请求发出后，检查目标完成失效和翻译更新" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 505" role="img" aria-labelledby="us11275697b2-fig-4-svg-title us11275697b2-fig-4-svg-desc">
+<title id="us11275697b2-fig-4-svg-title">保留的请求发出后，检查目标完成失效和翻译更新</title>
+<desc id="us11275697b2-fig-4-svg-desc">分开页表写入、TLBI 发出、目标失效完成与下一次 page walk。</desc>
+<defs><marker id="us11275697b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11275697b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11275697b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11275697b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11275697b2-fig-4-initial"><path d="M 844 120 L 601 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11275697b2-fig-4-arrow-data)"/><rect x="625" y="96" width="195" height="18" fill="#f5f5f5"/><text x="722.5" y="110" class="arrow-label" text-anchor="middle">从页表取得旧映射并填入 TLB</text></g>
+<g id="us11275697b2-fig-4-change"><path d="M 116 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-4-arrow-main)"/><rect x="319.5" y="144" width="78" height="18" fill="#f5f5f5"/><text x="358.5" y="158" class="arrow-label" text-anchor="middle">更新页表映射</text></g>
+<g id="us11275697b2-fig-4-request"><path d="M 116 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11275697b2-fig-4-arrow-data)"/><rect x="159" y="192" width="156" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">发送针对该范围的失效请求</text></g>
+<g id="us11275697b2-fig-4-retain"><path d="M 358 264 L 844 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11275697b2-fig-4-arrow-main)"/><rect x="490.5" y="240" width="221" height="18" fill="#f5f5f5"/><text x="601" y="254" class="arrow-label" text-anchor="middle">已恢复活动的请求继续发送 TLBI</text></g>
+<g id="us11275697b2-fig-4-invalidate"><path d="M 844 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-4-arrow-return)"/><rect x="529.5" y="288" width="143" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">目标完成失效（观察点）</text></g>
+<g id="us11275697b2-fig-4-walk"><path d="M 844 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11275697b2-fig-4-arrow-data)"/><rect x="586" y="336" width="273" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">随后访问该范围时重新做 page walk</text></g>
+<g id="us11275697b2-fig-4-newmap"><path d="M 601 408 L 844 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11275697b2-fig-4-arrow-return)"/><rect x="670.5" y="384" width="104" height="18" fill="#f5f5f5"/><text x="722.5" y="398" class="arrow-label" text-anchor="middle">返回更新后的映射</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">内存管理／驱动</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">TLBI 合并端</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">GPU 页表</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">GPU MMU／TLB</text>
+<text x="28" y="484" class="legend" text-anchor="start">工程观测顺序。页表更新可见性、失效完成的确认方式和屏障要求取决于实现。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11275697b2-fig-4-change">更新目标页表</a> 相应映射需要对目标 MMU 可见。</li><li><a href="#us11275697b2-fig-4-retain">发送保留的 TLBI</a> 如本批落在恢复活动边界上的失效请求。</li><li><a href="#us11275697b2-fig-4-invalidate">目标失效观察点</a> 用于验证旧翻译已经不能命中。实现自行规定确认方式。</li><li><a href="#us11275697b2-fig-4-newmap">随后翻译使用新映射</a> 比较目标重新查页表后得到的条目。</li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0017、0018、0019、0025、0026、0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US11275697B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>GPU TLB</dt><dd>144</dd></div><div><dt>GPU TLBI 控制器</dt><dd>148</dd></div><div><dt>GPU 页表</dt><dd>146</dd></div><div><dt>恢复边界上的请求</dt><dd>218</dd></div></dl></details>
+</figure></section><section id="scope"><h2>独立权项限定合并和按非活动转换去掉请求</h2><p>授权第 1、8、15 项分别涵盖方法、程序存储装置和电子设备。第 2、3 项引入时间戳及状态转换时间线，第 4 项增加判定第三条请求在活动期到达后发出 TLBI。第 7 项才明确把进入非活动和清除 TLB 绑定，另外第 14 项对程序存储装置给出对应限制。</p><p>原图 2 展示的保留条件依赖目标的清除记录和具体恢复边界。活动标记应按目标 TLB 保存。并发或跨多个电源转换时，必须能确认所用状态记录对应这次待筛选的请求。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US11275697B2</code><span>美国授权专利</span><time datetime="2022-03-15">2022-03-15</time></p>
-  <h1>合并 TLB 失效请求时保留电源状态边界</h1>
-  <p class="english-title" lang="en">Translation lookaside buffer invalidation for merged invalidation requests across power boundaries</p>
-  <p class="document-question">目标 CPU 或 GPU 在合并请求期间进入低功耗状态时，哪些 TLB 失效仍须发送？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">TLB 维护逻辑合并清除请求，在检测到目标处理器转入指定非活动状态后可丢弃被覆盖的合并请求。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>只在已确认的状态转换覆盖相关维护时才可省去该批消息，目标核恢复后的新请求需根据其时间区间判断。</dd></div><div><dt>验证方法</dt><dd>以相同请求地址分别将一组失效请求放在目标状态转换之前和之后。对齐状态转换、合并判定及实际发出到目标的失效消息。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11275697B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">CPU 与 GPU 可以处于不同电源域。内核更新页表时，需要按地址转换缓存状态清除可能过时的 TLB 条目。多个失效请求合并后，目标处理器可能已完成一次清除这些条目的电源状态转换。</p>
-    <p>合并端在发送前组合多个 TLB 失效请求，并判断目标处理器是否进入非活动模式。对采用时间线的实施例，可比较各请求接收时间和电源状态变化，丢弃已由 TLB 清除覆盖的请求。目标恢复后收到的请求保留。</p>
-    <ol class="walkthrough"><li><h3>合并发往同一 TLB 的请求</h3><p>驱动或其他处理实体可积累多个清除请求。使用权利要求 2 的时间戳实施例时，记录各自的接收时间。</p></li><li><h3>取得目标活动时间线</h3><p>权利要求 3 依据目标处理器进入活动或非活动模式的指示建时间线。</p></li><li><h3>丢弃由失效状态覆盖的早期请求</h3><p>原图 2 的例子中，进非活动模式会清空 TLB。目标恢复前收到的请求可以丢弃。</p></li><li><h3>保留新活动期的请求</h3><p>到达时间等于或晚于恢复活动点的请求仍归入新活动期。原图 2 的请求 218 可立即发出，或与请求 220 等后续项再合并。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 用请求接收标记关联目标处理器的活动时间线。原图 2 把与重新进入活动状态同一时刻收到的请求划入新活动区间。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 明确一种会清除 TLB 的转换。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>TLB</dt><dd>缓存虚拟地址到物理地址翻译及相关权限的硬件结构。</dd></div><div><dt>TLBI</dt><dd>使目标 TLB 中匹配的翻译条目失效的维护请求或操作。</dd></div><div><dt>非活动模式</dt><dd>原文对处理器断电或低功耗状态的统称。是否同时清除 TLB 取决于实施方式。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">目标电源域的状态进入 TLBI 合并判断</a></li><li><a href="#fig-2">恢复活动边界上的请求怎样保留</a></li><li><a href="#fig-3">按活动区间比较请求的作用</a></li><li><a href="#fig-4">核对请求筛选的三个时间点</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">目标电源域的状态进入 TLBI 合并判断</h3></div>
-    <a class="paper-open" href="../mechanisms/US11275697B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="目标电源域的状态进入 TLBI 合并判断">
-    <img class="paper-image native-image" src="../mechanisms/US11275697B2/fig-1/diagram.svg" width="836" height="332"
-         style="--paper-width:836px" alt="目标电源域的状态进入 TLBI 合并判断。合并端使用发往同一 TLB 的请求和目标处理器状态。使用时间戳的实施例还比较请求接收与状态转换时间。">
-  </div>
-  <figcaption>
-    <span>合并端使用发往同一 TLB 的请求和目标处理器状态。使用时间戳的实施例还比较请求接收与状态转换时间。</span>
-    <span class="figure-evidence">原图 1–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/10/f9/0a/847e6dda94bb01/US11275697.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">恢复活动边界上的请求怎样保留</h3></div>
-    <a class="paper-open" href="../mechanisms/US11275697B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="恢复活动边界上的请求怎样保留">
-    <img class="paper-image native-image" src="../mechanisms/US11275697B2/fig-2/diagram.svg" width="560" height="536"
-         style="--paper-width:560px" alt="恢复活动边界上的请求怎样保留。在采用非活动时清空 TLB 的例子中，合并端在时点 232 去掉旧请求。与恢复活动点 228 同时收到的请求 218 仍可发送，或留待和下一条合并。">
-  </div>
-  <figcaption>
-    <span>在采用非活动时清空 TLB 的例子中，合并端在时点 232 去掉旧请求。与恢复活动点 228 同时收到的请求 218 仍可发送，或留待和下一条合并。</span>
-    <span class="figure-evidence">原图 2–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/10/f9/0a/847e6dda94bb01/US11275697.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">按活动区间比较请求的作用</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">到达相对状态边界</th><th scope="col">额外条件</th><th scope="col">请求处理</th></tr></thead><tbody><tr><th scope="row">恢复活动前</th><td>目标 TLB 已随非活动转换清除</td><td>可去掉已覆盖请求</td></tr><tr><th scope="row">等于或晚于恢复活动点</th><td>可出现新的翻译</td><td class="emphasis">保留，可发送或继续合并</td></tr><tr><th scope="row">目标低功耗但 TLB 保留</th><td>未确认清除</td><td>需继续履行失效义务</td></tr></tbody></table>
-  <figcaption>
-    <span>实际动作取决于目标状态转换是否覆盖该请求。</span>
-    <span class="figure-evidence">原图 2–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>。 · <a href="https://patentimages.storage.googleapis.com/10/f9/0a/847e6dda94bb01/US11275697.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">核对请求筛选的三个时间点</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">部件或路径</th><th scope="col">观察事件</th><th scope="col">用于确认</th></tr></thead><tbody><tr><th scope="row">页表及维护路径</th><td>页表更新、合并端收到失效请求</td><td>明确时间戳起点</td></tr><tr><th scope="row">目标处理器</th><td>进入非活动、TLB 清除、重新活动</td><td>确认该次转换覆盖旧条目</td></tr><tr><th scope="row">合并端及目标 TLB</th><td>TLBI 是否实际发出、目标翻译是否使用新映射</td><td>区分发送、执行和翻译结果</td></tr></tbody></table>
-  <figcaption>
-    <span>同一目标的状态转换时间与请求接收时间用于判定；发送和实际失效分别记录。</span>
-    <span class="figure-evidence">原图 1–2，工程观测口径。 · <a href="https://patentimages.storage.googleapis.com/10/f9/0a/847e6dda94bb01/US11275697.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>合并同目标失效请求</dt><dd>减少重复维护发送 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>；原图 3</span></dd></div><div><dt>按目标活动边界筛选</dt><dd>保留恢复后的维护 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>；原图 2</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>边界判定需要合并端保存各请求的时间标记，并能与状态转换可靠定序。可记录同一目标处理器的活动通知、请求接收、实际失效和恢复后的首次地址翻译，核对区间归属。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若目标处理器从保留 TLB 内容的低功耗状态恢复，丢弃请求可能保留旧翻译。可在休眠期间更改页表映射，恢复后读取相同虚拟地址。这个反例针对保留态，原文的清空实施例另作验证。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>采用进入非活动模式时清空 TLB 的实现。两笔请求在本次进入非活动模式前收到，第三笔在重新活动时收到。</dd></div><div><dt>处理结果</dt><dd>两笔早期请求由清除覆盖。第三笔属于新的活动区间，可发往目标，也可留待与之后的请求合并。</dd></div><div><dt>结果解读</dt><dd>若目标还可能保留 TLB 内容，单凭低功耗状态或 OS 调度事件无法判定早期请求可省去。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -134,49 +166,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=a%20memory%3B%20and%20one%20or%20more%20processors%20operatively%20coupled%20to%20the%20memory">F12</a></th><td>电子设备的一个或多个处理器连接存储器。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=Referring%20to%20FIG.%201%20%2C%20the%20disclosed%20embodiments%20may%20be%20performed%20by%20representative%20computer%20system%20100">说明书 0015</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=a%20first%20request%20to%20clear%20one%20or%20more%20entries%20of%20a%20translation%20lookaside%20buffer%20%28TLB%29">F13</a></th><td>接收第一笔清除一个或多个 TLB 条目的请求。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20illustrating%20a%20technique%20for%20memory%20management%2C%20in%20accordance%20with%20aspects">说明书 0033</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=a%20second%20request%20to%20clear%20one%20or%20more%20entries%20of%20the%20TLB">F14</a></th><td>接收目标为同一 TLB 的第二笔清除请求。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20illustrating%20a%20technique%20for%20memory%20management%2C%20in%20accordance%20with%20aspects">说明书 0033</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=the%20first%20request%20with%20the%20second%20request">F15</a></th><td>把两条清除请求合并为一批。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20illustrating%20a%20technique%20for%20memory%20management%2C%20in%20accordance%20with%20aspects">说明书 0033</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=a%20processor%20of%20the%20one%20or%20more%20processors%20associated%20with%20the%20TLB%20transitioned%20to%20an%20inactive">F16</a></th><td>从设备的处理器中确定目标 TLB 所属处理器已进入非活动模式。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20illustrating%20a%20technique%20for%20memory%20management%2C%20in%20accordance%20with%20aspects">说明书 0033</a> · 原图 2–3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=the%20bundled%20first%20and%20second%20requests%20based%20on%20the%20determination">F17</a></th><td>根据非活动模式的判定丢弃两条合并的请求。</td><td><a href="https://patents.google.com/patent/US11275697B2/en#:~:text=FIG.%203%20is%20a%20flow%20diagram%20illustrating%20a%20technique%20for%20memory%20management%2C%20in%20accordance%20with%20aspects">说明书 0033</a> · 原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>内存管理方法接收同一 TLB 的两笔清除请求，合并后判断对应处理器已进入非活动模式，并据此丢弃这两笔请求。见原图 3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>给两笔失效分别关联接收时间标记，利用这两个标记作状态判定。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>根据活动及非活动转换指示建立时间线，再与请求接收时间戳比较。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>把第三条并入同批；按时间线判定其属于活动期时，向目标 TLB 发相应失效请求。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>目标处理器至少在第一笔清除请求到达之后进入非活动模式。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>限定目标处理器为 GPU 或 CPU。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>将进入非活动模式的动作限定为清空目标 TLB。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>非暂态程序存储介质保存实现接收、合并、判定及丢弃步骤的指令。见原图 3。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>分别记录两条请求的接收时间戳，并以此参与非活动模式判定。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>根据活动及非活动转换指示建立时间线，再与请求接收时间戳比较。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>把第三条并入同批；按时间线判定其属于活动期时，向目标 TLB 发相应失效请求。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-8">8</a></td><td>目标处理器在收到至少第一笔请求后进入非活动模式。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>目标处理器为 GPU 或 CPU。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>目标处理器进入非活动模式包括清空它的 TLB。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>电子设备含存储器与一或多个相连的处理器。该设备的处理器执行指令，确定其中目标 TLB 对应的处理器进入非活动模式，再丢弃合并请求。见原图 1、3。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>分别记录两条请求的接收时间戳，并以此参与非活动模式判定。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>根据活动及非活动转换指示建立时间线，再与请求接收时间戳比较。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>把第三条并入同批；按时间线判定其属于活动期时，向目标 TLB 发相应失效请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>处理器在至少第一笔请求到达后才进入非活动模式。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>目标处理器为 GPU 或 CPU。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>从属项给出接收时间戳与电源状态时间线之间的比较。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11275697B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></dt><dd>活动区间的新请求仍发出，另一个从属项明确转换包括清除 TLB。</dd></div><div><dt>原图 1–3</dt><dd>给出 CPU/GPU 电源域、失效请求时间线和筛选流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11275697B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
-<p>US11275697B2 权 7 规定进入非活动状态时清 TLB；权 1 在确认该状态转换后丢弃已合并的清除请求。US11586551B2 权 18 面对仍保留阵列的空闲核，在其恢复执行前按缓冲记录使对应条目失效。两端的处置不同，判断时应检查进入低功耗状态是否已清除目标状态。</p></li><li><a href="US12229561B1.html#engineering">TLBI 后的数据同步屏障等待目标核在途访问</a>
-<p>US11275697B2 合并同一 TLB 的失效请求，确认对应处理器进入非活动模式后丢弃这批请求。US12229561B1 的目标处理器收到 TLBI 之后的 DSB 通知时，按相关已完成地址转换指令的退休情况给出应答。两个判断分别发生在失效请求的传递路径和目标核流水线。</p></li></ul>
-    <p><a href="../index.html?patent=US11275697B2#knowledge">在全量关系图上定位 US11275697B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2019-05-31</dd></div>
-    <div><dt>美国申请日</dt><dd>2020-02-10</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2022-03-15</dd></div>
-    <div><dt>美国申请号</dt><dd>US16/786,231</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Kutty Banerjee、Pratik Chandresh Shah、Tatsuya Iwamoto、David E. Roberts</dd></div><div><dt>分类号</dt><dd>G06F12/1027、G06F2212/1024、G06F2212/302、G06F2212/682、G06F2212/683、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11275697B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11275697B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 34 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11275697B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

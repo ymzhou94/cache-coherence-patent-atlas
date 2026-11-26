@@ -1,181 +1,213 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12657030B2 把条件指令的偏向预测写进缓存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在指令缓存中保存条件指令的偏向预测 · US12657030B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12657030B2</code> · <a href="https://eureka.patsnap.com/patent/US12657030B2">专利全文</a></p>
+<h1>在指令缓存中保存条件指令的偏向预测</h1><p class="reading-question">如果某条条件指令一直得到相同结果，怎样让后续取指沿用这个方向，减少读取常规预测表？</p>
+<p class="reading-answer">回填指令缓存时，偏向预测器按指令 PC 查询历史结果，取指前端在缓存条目中保存偏向信息。后续取指可以沿缓存给出的预测方向走。执行流水线仍求实际条件，发现改向时重定向，并把该偏向表项改为未认定偏向。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-06-16</dd></div><div><dt>申请号</dt><dd>US18/774,678</dd></div><div><dt>最早优先权</dt><dd>2022-02-01</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ian D Kountanis、Douglas C Holman、Wei-Han Lien、Pruthivi Vuyyuru、Ethan R Schuchman、Niket K Choudhary、Kulin N Kothari、Haoyan Jia</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#stage">把偏向分类放到指令缓存回填，把当次预测留到取指</a></li><li><a href="#training-to-fill">偏向表更新和缓存获得新编码是两个事件</a></li><li><a href="#encoding">缓存条目如何把回填时的偏向交给取指</a></li><li><a href="#states">第一次执行建立偏向，反向一次后退回常规预测</a></li><li><a href="#recovery">两级仲裁如何安排一次偏向误判的恢复</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="stage"><h2>把偏向分类放到指令缓存回填，把当次预测留到取指</h2><p>原图 1 中，回填电路从下一级缓存或内存得到指令字，偏向预测器依据条件指令 PC 查偏向表。图 1 的上行把偏向编码写进指令缓存。已在缓存里的指令可直接取出，无需再走一次回填。如果该指令无有效偏向，取指电路可调用常规方向预测器，例如由不同历史长度的表组成的 TAGE。</p><p>偏向表说明一条指令倾向一直为真或一直为假，常规预测器只预测本次真假。对已经带偏向信息的指令，说明书允许跳过后级预测器，也允许做预测后再忽略其输出。第二种实现仍占用后级预测表读取。独立权项 1、8、15 写的是缓存编码，第 7、14 项才进一步限定回填预测和取指预测分别发生在哪个阶段。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　偏向预测在回填时编码，常规预测在取指时补足</h3>
+    <p id="fig-1-basis">同一条条件指令从上级存储回填后，偏向字段可以随缓存条目跨越多次取指。执行结果反馈给两个预测路径。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="偏向预测在回填时编码，常规预测在取指时补足" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 646" role="img" aria-labelledby="us12657030b2-fig-1-svg-title us12657030b2-fig-1-svg-desc">
+<title id="us12657030b2-fig-1-svg-title">偏向预测在回填时编码，常规预测在取指时补足</title>
+<desc id="us12657030b2-fig-1-svg-desc">同一条条件指令从上级存储回填后，偏向字段可以随缓存条目跨越多次取指。执行结果反馈给两个预测路径。</desc>
+<defs><marker id="us12657030b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657030b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657030b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657030b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657030b2-fig-1-tagged" d="M 221 121 L 290 121" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-main)"/>
+<path id="us12657030b2-fig-1-read" d="M 465 121 L 554 121" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-data)"/>
+<path id="us12657030b2-fig-1-ops" d="M 738 121 L 807 121" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-data)"/>
+<path id="us12657030b2-fig-1-trainpc" d="M 90 158 L 90 304" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-data)"/>
+<path id="us12657030b2-fig-1-biasdir" d="M 176 304 L 176 158" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-1-arrow-return)"/>
+<path id="us12657030b2-fig-1-unknown" d="M 604 158 L 604 304" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-data)"/>
+<path id="us12657030b2-fig-1-pred" d="M 694 304 L 694 158" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-1-arrow-return)"/>
+<path id="us12657030b2-fig-1-run" d="M 867 158 L 867 455" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-1-arrow-data)"/>
+<path id="us12657030b2-fig-1-updatebias" d="M 899 531 L 899 576 Q 899 584 891 584 L 133 584 Q 125 584 125 576 L 125 380" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-1-arrow-return)"/>
+<path id="us12657030b2-fig-1-updatedir" d="M 807 490 L 658 490 Q 650 490 650 482 L 650 380" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-1-arrow-return)"/>
+<rect x="222" y="90" width="66" height="18" fill="#f5f5f5"/><text x="255" y="104" class="arrow-label" text-anchor="middle">写入编码</text>
+<rect x="467.5" y="90" width="85" height="18" fill="#f5f5f5"/><text x="510" y="104" class="arrow-label" text-anchor="middle">缓存指令表示</text>
+<rect x="746" y="90" width="52" height="18" fill="#f5f5f5"/><text x="772" y="104" class="arrow-label" text-anchor="middle">指令</text>
+<rect x="103.5" y="206" width="95" height="18" fill="#f5f5f5"/><text x="151" y="220" class="arrow-label" text-anchor="middle">条件指令 PC</text>
+<rect x="190.5" y="249" width="85" height="18" fill="#f5f5f5"/><text x="233" y="263" class="arrow-label" text-anchor="middle">偏向结果</text>
+<rect x="477.5" y="204" width="103" height="18" fill="#f5f5f5"/><text x="529" y="218" class="arrow-label" text-anchor="middle">无偏向：发查询</text>
+<rect x="706" y="244" width="82" height="18" fill="#f5f5f5"/><text x="747" y="258" class="arrow-label" text-anchor="middle">当次预测</text>
+<rect x="756.5" y="382" width="97" height="18" fill="#f5f5f5"/><text x="805" y="396" class="arrow-label" text-anchor="middle">译码后执行</text>
+<rect x="361.5" y="554" width="159" height="18" fill="#f5f5f5"/><text x="441" y="568" class="arrow-label" text-anchor="middle">实际结果更新偏向表</text>
+<rect x="673" y="460" width="112" height="18" fill="#f5f5f5"/><text x="729" y="474" class="arrow-label" text-anchor="middle">可更新预测表</text>
+<g id="us12657030b2-fig-1-fill"><rect x="34" y="84" width="187" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="84" width="187" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127.5" y="110" class="node-name" text-anchor="middle">指令缓存回填电路</text><text x="127.5" y="132" class="node-detail" text-anchor="middle">收到原始条件指令</text></g>
+<g id="us12657030b2-fig-1-cache"><rect x="290" y="84" width="175" height="74" rx="6" fill="#f5f5f5"/><rect x="290" y="84" width="175" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="377.5" y="110" class="node-name" text-anchor="middle">指令缓存</text><text x="377.5" y="132" class="node-detail" text-anchor="middle">保存指令及其偏向</text></g>
+<g id="us12657030b2-fig-1-fetch"><rect x="554" y="84" width="184" height="74" rx="6" fill="#f5f5f5"/><rect x="554" y="84" width="184" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="646" y="110" class="node-name" text-anchor="middle">取指电路</text><text x="646" y="132" class="node-detail" text-anchor="middle">选择这次的预测方向</text></g>
+<g id="us12657030b2-fig-1-dec"><rect x="807" y="84" width="120" height="74" rx="6" fill="#f5f5f5"/><rect x="807" y="84" width="120" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="867" y="110" class="node-name" text-anchor="middle">译码器</text><text x="867" y="132" class="node-detail" text-anchor="middle">生成指令操作</text></g>
+<g id="us12657030b2-fig-1-bias"><rect x="34" y="304" width="187" height="76" rx="6" fill="#f5f5f5"/><rect x="34" y="304" width="187" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127.5" y="330" class="node-name" text-anchor="middle">偏向预测器</text><text x="127.5" y="352" class="node-detail" text-anchor="middle">用指令 PC 查偏向表</text></g>
+<g id="us12657030b2-fig-1-normal"><rect x="554" y="304" width="184" height="76" rx="6" fill="#f5f5f5"/><rect x="554" y="304" width="184" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="646" y="330" class="node-name" text-anchor="middle">常规方向预测器</text><text x="646" y="352" class="node-detail" text-anchor="middle">可用 TAGE 历史表</text></g>
+<g id="us12657030b2-fig-1-exec"><rect x="807" y="455" width="120" height="76" rx="6" fill="#f5f5f5"/><rect x="807" y="455" width="120" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="867" y="481" class="node-name" text-anchor="middle">执行流水线</text><text x="867" y="503" class="node-detail" text-anchor="middle">求实际条件</text></g>
+<text x="36" y="625" class="legend" text-anchor="start">图中画出说明书把两次预测分别放在回填和取指的实施例。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657030b2-fig-1-fill">指令缓存回填电路</a> 回填电路接收条件指令字，拿该指令的 PC 查询偏向表。原图的 prefetch stage 指从下级填入指令缓存。</li><li><a href="#us12657030b2-fig-1-bias">偏向预测器</a> 偏向表项只描述先前条件是否表现为始终真或始终假。写入图 3 所列的缓存表示之一。</li><li><a href="#us12657030b2-fig-1-cache">指令缓存</a> 命中已有缓存行时直接向取指电路交付带偏向表示的指令。</li><li><a href="#us12657030b2-fig-1-fetch">取指电路</a> 有有效偏向时可沿该方向取指。没有偏向时，查常规方向预测器。</li><li><a href="#us12657030b2-fig-1-normal">常规方向预测器</a> 典型 TAGE 按 PC 和不同长度历史访问多个带标签表，取匹配的最长历史结果。说明书也允许读取常规表后忽略其输出。</li><li><a href="#us12657030b2-fig-1-exec">执行流水线</a> 执行流水线求出实际条件结果，可更新两个预测表，并在误判时引起前端重定向。</li></ul>
+  <p class="figure-evidence">原图 1、4、9；说明书归档段 0020、0021、0024、0025、0026、0027、0028、0029、0032、0033、0040、0041、0042、0043、0045、0046、0047、0048、0049、0050、0073、0074；权利要求 1、4、7、8、11、14、15、18 <a href="../diagrams/US12657030B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>指令缓存回填电路／指令缓存</dt><dd>150/102</dd></div><div><dt>取指电路／译码器</dt><dd>152/154</dd></div><div><dt>偏向预测器／偏向表</dt><dd>156/158</dd></div><div><dt>常规方向预测器／预测表</dt><dd>160/162</dd></div><div><dt>执行流水线</dt><dd>164</dd></div></dl></details>
+</figure></section><section id="training-to-fill"><h2>偏向表更新和缓存获得新编码是两个事件</h2><p>图 2 跟踪同一条条件指令。首次回填时偏向表仍为 00，取指按常规方向预测处理。执行得到真后，偏向表先更新为 10。图中选择该行后来重新回填的情形，第二次回填查到 10 并把偏向写入指令缓存，这一版缓存表示才可供后续取指直接使用。</p><p>较后一次执行得到假时，偏向表更新为 11。这个更新只说明偏向预测器的当前状态，原文没有保证旧缓存条目在同一拍擦除或重编码。分析收益时，要分别记录执行结果产生、偏向表写入以及新的缓存表示开始对取指生效的时刻。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　从首次执行训练到下一次回填写入偏向信息</h3>
+    <p id="fig-2-basis">图中间隔一次缓存行重填。偏向表先得到实际结果，缓存表示在回填时读取已有偏向并写入。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从首次执行训练到下一次回填写入偏向信息" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us12657030b2-fig-2-svg-title us12657030b2-fig-2-svg-desc">
+<title id="us12657030b2-fig-2-svg-title">从首次执行训练到下一次回填写入偏向信息</title>
+<desc id="us12657030b2-fig-2-svg-desc">图中间隔一次缓存行重填。偏向表先得到实际结果，缓存表示在回填时读取已有偏向并写入。</desc>
+<defs><marker id="us12657030b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657030b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657030b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657030b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12657030b2-fig-2-first"><path d="M 116 120 L 601 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-data)"/><rect x="300" y="96" width="117" height="18" fill="#f5f5f5"/><text x="358.5" y="110" class="arrow-label" text-anchor="middle">首次填入，尚无偏向</text></g>
+<g id="us12657030b2-fig-2-fetch_first"><path d="M 601 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-data)"/><rect x="670.5" y="144" width="104" height="18" fill="#f5f5f5"/><text x="722.5" y="158" class="arrow-label" text-anchor="middle">经常规预测后执行</text></g>
+<g id="us12657030b2-fig-2-learn"><path d="M 844 216 L 358 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-main)"/><rect x="529.5" y="192" width="143" height="18" fill="#f5f5f5"/><text x="601" y="206" class="arrow-label" text-anchor="middle">首次结果为真，写 10</text></g>
+<g id="us12657030b2-fig-2-reload"><path d="M 116 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-data)"/><rect x="152.5" y="240" width="169" height="18" fill="#f5f5f5"/><text x="237" y="254" class="arrow-label" text-anchor="middle">后来重填，按 PC 查偏向</text></g>
+<g id="us12657030b2-fig-2-reply"><path d="M 358 312 L 116 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-2-arrow-return)"/><rect x="191.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="237" y="302" class="arrow-label" text-anchor="middle">返回偏向 10</text></g>
+<g id="us12657030b2-fig-2-put"><path d="M 116 360 L 601 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-main)"/><rect x="300" y="336" width="117" height="18" fill="#f5f5f5"/><text x="358.5" y="350" class="arrow-label" text-anchor="middle">写入指令及偏向信息</text></g>
+<g id="us12657030b2-fig-2-reuse"><path d="M 601 408 L 844 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-data)"/><rect x="651" y="384" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="398" class="arrow-label" text-anchor="middle">后续按已编码的方向取指</text></g>
+<g id="us12657030b2-fig-2-opposite"><path d="M 844 456 L 358 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-2-arrow-main)"/><rect x="536" y="432" width="130" height="18" fill="#f5f5f5"/><text x="601" y="446" class="arrow-label" text-anchor="middle">实际改为假，写 11</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">缓存回填电路</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">偏向表</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">指令缓存</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">执行流水线</text>
+<text x="28" y="532" class="legend" text-anchor="start">时间向下。两次回填之间的间隔由缓存命中和替换决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657030b2-fig-2-first">首次填入，尚无偏向</a> 第一次回填只有原始条件指令，偏向表条目是初始 00。</li><li><a href="#us12657030b2-fig-2-learn">首次结果为真，写 10</a> 执行结果为真可以把该条目的偏向状态从 00 改成 10。</li><li><a href="#us12657030b2-fig-2-reload">后来重填，按 PC 查偏向</a> 模型选择指令后来再次回填的情形，若中途没有重新编码或回填，旧缓存副本可能未见新预测。</li><li><a href="#us12657030b2-fig-2-put">写入指令及偏向信息</a> 回填写编码时才产生带偏向信息的新缓存副本。</li><li><a href="#us12657030b2-fig-2-opposite">实际改为假，写 11</a> 真实结果改为假后，执行侧可先更新偏向表为 11，错误目标取指需重定向。</li></ul>
+  <p class="figure-evidence">原图 1、2A、3A、4；说明书归档段 0021、0024、0025、0027、0028、0031、0036、0037、0039、0041、0042、0045、0047、0049、0050；权利要求 1、4、5、6、7、14 <a href="../diagrams/US12657030B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>指令缓存回填电路／指令缓存</dt><dd>150/102</dd></div><div><dt>偏向预测器／偏向表</dt><dd>156/158</dd></div><div><dt>执行流水线</dt><dd>164</dd></div><div><dt>查偏向／更新偏向表</dt><dd>404/414</dd></div></dl></details>
+</figure></section><section id="encoding"><h2>缓存条目如何把回填时的偏向交给取指</h2><p>第 2、9、16、17 项给出在缓存里重编码为非条件内部表示的方式，第 3、10 项则保留指令并加上识别偏向的元数据。图 3 用同一条偏向为真的条件指令画出这两个实施选择。元数据如何分配到缓存行中的位、重编码如何保留执行所需的条件信息，说明书均未定义。</p><p>缓存编码只为推测取指提供方向，架构条件仍由执行阶段求值。方向不同时要丢弃错误路径的工作并重取指。偏向表更新和已缓存副本如何同步是实现需要处理的问题。授权文本描述了写入编码与更新预测表，未规定每次从 10 或 01 变成 11 后如何更新仍驻留的旧编码。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　给指令附加偏向字段，或改写缓存内部编码</h3>
+    <p id="fig-3-basis">两种方式分别修改缓存条目的元数据或内部表示。取指遇到偏向即可跳过常规方向预测，执行端仍保有条件的实际求值。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="给指令附加偏向字段，或改写缓存内部编码" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 582" role="img" aria-labelledby="us12657030b2-fig-3-svg-title us12657030b2-fig-3-svg-desc">
+<title id="us12657030b2-fig-3-svg-title">给指令附加偏向字段，或改写缓存内部编码</title>
+<desc id="us12657030b2-fig-3-svg-desc">两种方式分别修改缓存条目的元数据或内部表示。取指遇到偏向即可跳过常规方向预测，执行端仍保有条件的实际求值。</desc>
+<defs><marker id="us12657030b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657030b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657030b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657030b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657030b2-fig-3-data" d="M 244 237 L 270 237 Q 278 237 278 229 L 278 125 Q 278 117 286 117 L 352 117" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-3-arrow-data)"/>
+<path id="us12657030b2-fig-3-rewrite" d="M 244 272 L 270 272 Q 278 272 278 280 L 278 382 Q 278 390 286 390 L 352 390" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-3-arrow-data)"/>
+<path id="us12657030b2-fig-3-side" d="M 577 117 L 618 117 Q 626 117 626 125 L 626 229 Q 626 237 634 237 L 701 237" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-3-arrow-main)"/>
+<path id="us12657030b2-fig-3-bits" d="M 577 390 L 618 390 Q 626 390 626 382 L 626 280 Q 626 272 634 272 L 701 272" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-3-arrow-main)"/>
+<path id="us12657030b2-fig-3-exec" d="M 819 292 L 819 446" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-3-arrow-data)"/>
+<rect x="201" y="75" width="132" height="18" fill="#f5f5f5"/><text x="267" y="89" class="arrow-label" text-anchor="middle">保留指令字另编码</text>
+<rect x="184.5" y="406" width="137" height="18" fill="#f5f5f5"/><text x="253" y="420" class="arrow-label" text-anchor="middle">改写条目内部形式</text>
+<rect x="641" y="155" width="146" height="18" fill="#f5f5f5"/><text x="714" y="169" class="arrow-label" text-anchor="middle">读指令与偏向字段</text>
+<rect x="639.5" y="357" width="157" height="18" fill="#f5f5f5"/><text x="718" y="371" class="arrow-label" text-anchor="middle">按内部形式识别方向</text>
+<rect x="677.5" y="399" width="131" height="18" fill="#f5f5f5"/><text x="743" y="413" class="arrow-label" text-anchor="middle">继续执行所取指令</text>
+<g id="us12657030b2-fig-3-prediction"><rect x="33" y="217" width="211" height="75" rx="6" fill="#f5f5f5"/><rect x="33" y="217" width="211" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="138.5" y="243" class="node-name" text-anchor="middle">回填时得到偏向</text><text x="138.5" y="265" class="node-detail" text-anchor="middle">示例：条件 C 偏向为真</text></g>
+<g id="us12657030b2-fig-3-append"><rect x="352" y="78" width="225" height="78" rx="6" fill="#f5f5f5"/><rect x="352" y="78" width="225" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="464.5" y="104" class="node-name" text-anchor="middle">条目追加元数据</text><text x="464.5" y="126" class="node-detail" text-anchor="middle">条件指令 C ＋ 偏向为真</text></g>
+<g id="us12657030b2-fig-3-record"><rect x="352" y="351" width="225" height="78" rx="6" fill="#f5f5f5"/><rect x="352" y="351" width="225" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="464.5" y="377" class="node-name" text-anchor="middle">缓存内部重编码</text><text x="464.5" y="399" class="node-detail" text-anchor="middle">使用非条件预测表示</text></g>
+<g id="us12657030b2-fig-3-bypass"><rect x="701" y="217" width="224" height="75" rx="6" fill="#f5f5f5"/><rect x="701" y="217" width="224" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="813" y="243" class="node-name" text-anchor="middle">缓存命中取指</text><text x="813" y="265" class="node-detail" text-anchor="middle">使用已编码的方向</text></g>
+<g id="us12657030b2-fig-3-verify"><rect x="701" y="446" width="224" height="77" rx="6" fill="#f5f5f5"/><rect x="701" y="446" width="224" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813" y="472" class="node-name" text-anchor="middle">执行核验条件</text><text x="813" y="494" class="node-detail" text-anchor="middle">真实结果驱动更新和恢复</text></g>
+<text x="33" y="550" class="legend" text-anchor="start">元数据与重编码是同一缓存边界的两种实施方式。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657030b2-fig-3-prediction">回填时得到偏向</a> 回填时获得偏向表的方向。图示同一条条件指令被预测偏向为真。</li><li><a href="#us12657030b2-fig-3-append">条目追加元数据</a> 一种格式把偏向信息附在缓存条目中，条件指令和新增的元数据可同时被读取。</li><li><a href="#us12657030b2-fig-3-record">缓存内部重编码</a> 另一方式在缓存里重编码为非条件形式，常规方向预测器可将其视为无需再判向。</li><li><a href="#us12657030b2-fig-3-bypass">缓存命中取指</a> 两个实施方式都可使缓存命中提供偏向方向。是否仍读取常规预测表由已采用的旁路策略决定。</li><li><a href="#us12657030b2-fig-3-verify">执行核验条件</a> 说明书按实际执行来检测错误。重编码的每一位怎样安排、执行端怎样保留操作语义由实现选择。</li></ul>
+  <p class="figure-evidence">原图 1、2A、4；说明书归档段 0024、0025、0026、0027、0028、0029、0041、0042、0043、0045、0047、0048、0049；权利要求 1、2、3、7、8、9、10、14、15、16、17 <a href="../diagrams/US12657030B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>指令缓存条目</dt><dd>102</dd></div><div><dt>偏向预测／常规方向预测</dt><dd>404/406</dd></div><div><dt>按选定方向获取推测目标</dt><dd>408</dd></div><div><dt>执行核验／更新偏向表</dt><dd>412/414</dd></div></dl></details>
+</figure></section><section id="states"><h2>第一次执行建立偏向，反向一次后退回常规预测</h2><p>图 4 按原图 4A、3A 使用 2 位编码。00 表示对应条目尚无观测，第一次得到真或假后写成 10 或 01。在这个实施例中，一次实际反向使条目变成 11。11 等待重置后重新训练。说明书允许统计 11 的比例，到阈值后重置这类条目或整张表，但未给固定阈值。</p><p>原图 2B、3B 的常规基础表也使用 2 位，含义却是强假、弱假、弱真、强真。偏向表 01 表示曾一直为假，基础表 01 表示弱假。本案的偏向表可用散列后的 PC 查找。不同地址若落到同一索引，表项会混合其观测，偏向准确率会下降。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两位偏向表项只有四种状态，11 等待重置</h3>
+    <p id="fig-4-basis">首次观测写入真或假。与已学偏向相反时变成不偏向，后续执行不会直接在 01 与 10 之间切换。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两位偏向表项只有四种状态，11 等待重置" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 613" role="img" aria-labelledby="us12657030b2-fig-4-svg-title us12657030b2-fig-4-svg-desc">
+<title id="us12657030b2-fig-4-svg-title">两位偏向表项只有四种状态，11 等待重置</title>
+<desc id="us12657030b2-fig-4-svg-desc">首次观测写入真或假。与已学偏向相反时变成不偏向，后续执行不会直接在 01 与 10 之间切换。</desc>
+<defs><marker id="us12657030b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657030b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657030b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657030b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657030b2-fig-4-learnf" d="M 257 134 L 680 134" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-4-arrow-data)"/>
+<path id="us12657030b2-fig-4-learnt" d="M 158 173 L 158 370" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-4-arrow-data)"/>
+<path id="us12657030b2-fig-4-changef" d="M 778 173 L 778 370" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-4-arrow-main)"/>
+<path id="us12657030b2-fig-4-changet" d="M 257 409 L 680 409" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-4-arrow-main)"/>
+<path id="us12657030b2-fig-4-reset" d="M 778 448 L 778 515 Q 778 523 770 523 L 30 523 Q 22 523 22 515 L 22 142 Q 22 134 30 134 L 60 134" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-4-arrow-return)"/>
+<rect x="408" y="102" width="124" height="18" fill="#f5f5f5"/><text x="470" y="116" class="arrow-label" text-anchor="middle">执行结果为假</text>
+<rect x="170.5" y="253" width="117" height="18" fill="#f5f5f5"/><text x="229" y="267" class="arrow-label" text-anchor="middle">执行结果为真</text>
+<rect x="630" y="253" width="126" height="18" fill="#f5f5f5"/><text x="693" y="267" class="arrow-label" text-anchor="middle">执行结果改为真</text>
+<rect x="407.5" y="377" width="125" height="18" fill="#f5f5f5"/><text x="470" y="391" class="arrow-label" text-anchor="middle">执行结果改为假</text>
+<rect x="405" y="493" width="116" height="18" fill="#f5f5f5"/><text x="463" y="507" class="arrow-label" text-anchor="middle">重置为初始</text>
+<g id="us12657030b2-fig-4-cold"><rect x="60" y="95" width="197" height="78" rx="6" fill="#f5f5f5"/><rect x="60" y="95" width="197" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="158.5" y="121" class="node-name" text-anchor="middle">00｜初始</text><text x="158.5" y="143" class="node-detail" text-anchor="middle">未观测这项条件</text></g>
+<g id="us12657030b2-fig-4-f"><rect x="680" y="95" width="196" height="78" rx="6" fill="#f5f5f5"/><rect x="680" y="95" width="196" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="778" y="121" class="node-name" text-anchor="middle">01｜偏向为假</text><text x="778" y="143" class="node-detail" text-anchor="middle">相符时保持 01</text></g>
+<g id="us12657030b2-fig-4-t"><rect x="60" y="370" width="197" height="78" rx="6" fill="#f5f5f5"/><rect x="60" y="370" width="197" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="158.5" y="396" class="node-name" text-anchor="middle">10｜偏向为真</text><text x="158.5" y="418" class="node-detail" text-anchor="middle">相符时保持 10</text></g>
+<g id="us12657030b2-fig-4-unbiased"><rect x="680" y="370" width="196" height="78" rx="6" fill="#f5f5f5"/><rect x="680" y="370" width="196" height="78" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="778" y="396" class="node-name" text-anchor="middle">11｜未认定偏向</text><text x="778" y="418" class="node-detail" text-anchor="middle">保持至重置</text></g>
+<text x="60" y="570" class="legend" text-anchor="start">状态转移由执行结果驱动。同方向再次出现时，已训练的偏向保持。</text>
+<text x="60" y="594" class="legend" text-anchor="start">原图 3B 的常规预测表按强弱逐步更新，两个表的位值含义不同。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657030b2-fig-4-cold">00｜初始</a> 00 表示索引条目无观测。初始状态并不预测假。</li><li><a href="#us12657030b2-fig-4-f">01｜偏向为假</a> 01 对应偏向为假。实际仍假可保持，第一次实际为真则退出偏向。</li><li><a href="#us12657030b2-fig-4-t">10｜偏向为真</a> 10 对应偏向为真。实际仍真可保持，第一次实际为假则退出偏向。</li><li><a href="#us12657030b2-fig-4-unbiased">11｜未认定偏向</a> 11 表示已观测但未认定偏向。常规预测器可以对该动态指令继续预测。</li><li><a href="#us12657030b2-fig-4-reset">重置为初始</a> 说明书允许未偏向表项比例达到阈值时重置。复位后这些条目可以重新学习。</li></ul>
+  <p class="figure-evidence">原图 2A、2B、3A、3B；说明书归档段 0030、0031、0034、0035、0036、0037、0038、0039、0040、0041、0044、0050；权利要求 4、5、6、11、12、13、18、19、20 <a href="../diagrams/US12657030B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>初始／偏向为假／偏向为真／未认定偏向</dt><dd>302/304/306/308</dd></div><div><dt>强假／弱假／弱真／强真</dt><dd>312/314/316/318</dd></div></dl></details>
+</figure></section><section id="recovery"><h2>两级仲裁如何安排一次偏向误判的恢复</h2><p>原图 5–8 另描述按预测置信度分派条件指令的实施例。高置信度的指令可去没有直接重定向端口的流水线，低置信度可去能直接让前端重取指的流水线。高置信指令若误判，要先转入可重定向流水线重执行。因此关注的差别是从检测误判到发出正确取指地址的延迟，无误判时流水线级数可以相同。</p><p>原图 7 的两个需要重执行的候选先比较程序顺序，较老者进入共用的回放流水线。该流水线的报告随后与另一条可重定向流水线的报告再次比较年龄，才把选中的正确目标发回前端。图 5 展开了两个仲裁点。两级仲裁属于说明书的恢复实施例，主独立权项并未要求这些执行流水线。</p><p>对于相位改变的程序，分别统计常规预测表的读取次数、偏向误判次数和各恢复路径的重定向延迟。减少读取要以实际旁路情况为准。若偏向编码更新滞后或方向经常改变，新增的恢复周期会抵消前端读取减少的收益。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　两条误判恢复路径在不同阶段按程序顺序仲裁</h3>
+    <p id="fig-5-basis">没有重定向端口的流水线要先送一条较老误判重执行。可重定向侧再选择较老的误判并重取指。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两条误判恢复路径在不同阶段按程序顺序仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 780" role="img" aria-labelledby="us12657030b2-fig-5-svg-title us12657030b2-fig-5-svg-desc">
+<title id="us12657030b2-fig-5-svg-title">两条误判恢复路径在不同阶段按程序顺序仲裁</title>
+<desc id="us12657030b2-fig-5-svg-desc">没有重定向端口的流水线要先送一条较老误判重执行。可重定向侧再选择较老的误判并重取指。</desc>
+<defs><marker id="us12657030b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657030b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657030b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657030b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657030b2-fig-5-high1" d="M 199 335 L 216 335 Q 224 335 224 327 L 224 116 Q 224 108 232 108 L 288 108" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-high2" d="M 199 365 L 242 365 Q 250 365 250 357 L 250 264 Q 250 256 258 256 L 288 256" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-low1" d="M 111 388 L 111 460 Q 111 468 119 468 L 288 468" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-low2" d="M 64 388 L 64 607 Q 64 615 72 615 L 288 615" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-pending1" d="M 523 108 L 602 108 Q 610 108 610 116 L 610 160 Q 610 168 618 168 L 706 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-pending2" d="M 523 256 L 630 256 Q 638 256 638 248 L 638 209 Q 638 201 646 201 L 706 201" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-replay" d="M 816 223 L 816 346 Q 816 354 808 354 L 408 354 Q 400 354 400 362 L 400 445" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-main)"/>
+<path id="us12657030b2-fig-5-mis1" d="M 523 481 L 619 481 Q 627 481 627 489 L 627 538 Q 627 546 635 546 L 706 546" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-mis2" d="M 523 634 L 647 634 Q 655 634 655 626 L 655 584 Q 655 576 663 576 L 706 576" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657030b2-fig-5-arrow-data)"/>
+<path id="us12657030b2-fig-5-target" d="M 813 599 L 813 729 Q 813 737 805 737 L 122 737 Q 114 737 114 729 L 114 716" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657030b2-fig-5-arrow-return)"/>
+<rect x="124.5" y="138" width="85" height="18" fill="#f5f5f5"/><text x="167" y="152" class="arrow-label" text-anchor="middle">高置信度</text>
+<rect x="221" y="235" width="0" height="18" fill="#f5f5f5"/><text x="221" y="249" class="arrow-label" text-anchor="middle"></text>
+<rect x="150.5" y="437" width="91" height="18" fill="#f5f5f5"/><text x="196" y="451" class="arrow-label" text-anchor="middle">低置信度</text>
+<rect x="230" y="585" width="0" height="18" fill="#f5f5f5"/><text x="230" y="599" class="arrow-label" text-anchor="middle"></text>
+<rect x="521.5" y="77" width="87" height="18" fill="#f5f5f5"/><text x="565" y="91" class="arrow-label" text-anchor="middle">误判报告</text>
+<rect x="528.5" y="226" width="87" height="18" fill="#f5f5f5"/><text x="572" y="240" class="arrow-label" text-anchor="middle">误判报告</text>
+<rect x="516" y="323" width="146" height="18" fill="#f5f5f5"/><text x="589" y="337" class="arrow-label" text-anchor="middle">较老指令重执行</text>
+<rect x="529.5" y="450" width="85" height="18" fill="#f5f5f5"/><text x="572" y="464" class="arrow-label" text-anchor="middle">A 的误判</text>
+<rect x="530.5" y="604" width="85" height="18" fill="#f5f5f5"/><text x="573" y="618" class="arrow-label" text-anchor="middle">B 的误判</text>
+<rect x="353" y="705" width="190" height="18" fill="#f5f5f5"/><text x="448" y="719" class="arrow-label" text-anchor="middle">选中误判的正确取指地址</text>
+<g id="us12657030b2-fig-5-dispatch"><rect x="32" y="315" width="167" height="73" rx="6" fill="#f5f5f5"/><rect x="32" y="315" width="167" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="115.5" y="341" class="node-name" text-anchor="middle">按置信度分派</text><text x="115.5" y="363" class="node-detail" text-anchor="middle">发往可用流水线</text></g>
+<g id="us12657030b2-fig-5-noa"><rect x="288" y="74" width="235" height="67" rx="6" fill="#f5f5f5"/><rect x="288" y="74" width="235" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="405.5" y="100" class="node-name" text-anchor="middle">无重定向端口 A</text><text x="405.5" y="122" class="node-detail" text-anchor="middle">高置信度指令</text></g>
+<g id="us12657030b2-fig-5-nob"><rect x="288" y="222" width="235" height="67" rx="6" fill="#f5f5f5"/><rect x="288" y="222" width="235" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="405.5" y="248" class="node-name" text-anchor="middle">无重定向端口 B</text><text x="405.5" y="270" class="node-detail" text-anchor="middle">高置信度指令</text></g>
+<g id="us12657030b2-fig-5-fast0"><rect x="288" y="445" width="235" height="73" rx="6" fill="#f5f5f5"/><rect x="288" y="445" width="235" height="73" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="405.5" y="471" class="node-name" text-anchor="middle">可重定向流水线 A</text><text x="405.5" y="493" class="node-detail" text-anchor="middle">可重执行选中的误判</text></g>
+<g id="us12657030b2-fig-5-fast1"><rect x="288" y="597" width="235" height="72" rx="6" fill="#f5f5f5"/><rect x="288" y="597" width="235" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="405.5" y="623" class="node-name" text-anchor="middle">可重定向流水线 B</text><text x="405.5" y="645" class="node-detail" text-anchor="middle">低置信度指令</text></g>
+<g id="us12657030b2-fig-5-selreplay"><rect x="706" y="145" width="217" height="78" rx="6" fill="#f5f5f5"/><rect x="706" y="145" width="217" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814.5" y="171" class="node-name" text-anchor="middle">重执行仲裁</text><text x="814.5" y="193" class="node-detail" text-anchor="middle">从报告中选较老指令</text></g>
+<g id="us12657030b2-fig-5-selredirect"><rect x="706" y="521" width="217" height="78" rx="6" fill="#f5f5f5"/><rect x="706" y="521" width="217" height="78" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="814.5" y="547" class="node-name" text-anchor="middle">重定向仲裁</text><text x="814.5" y="569" class="node-detail" text-anchor="middle">比较两条误判的程序顺序</text></g>
+<g id="us12657030b2-fig-5-front"><rect x="32" y="645" width="167" height="71" rx="6" fill="#f5f5f5"/><rect x="32" y="645" width="167" height="71" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="115.5" y="671" class="node-name" text-anchor="middle">取指前端</text><text x="115.5" y="693" class="node-detail" text-anchor="middle">从正确地址重新取指</text></g>
+<text x="33" y="762" class="legend" text-anchor="start">流水线分派与两级年龄仲裁来自说明书原图 7。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657030b2-fig-5-dispatch">按置信度分派</a> 根据被采用的偏向预测或常规预测的置信度，分派条件指令。说明书还允许运行时按流水线占用调整。</li><li><a href="#us12657030b2-fig-5-noa">无重定向端口 A</a> 两条无直接重定向端口的流水线可并行求值。发现误判时报告相应指令。</li><li><a href="#us12657030b2-fig-5-selreplay">重执行仲裁</a> 如果两条报告同时到达，比较解码序号或 ROB 中的程序顺序，选择较老指令送去重执行。</li><li><a href="#us12657030b2-fig-5-fast0">可重定向流水线 A</a> 具有直接重定向端口的这条流水线既接收低置信度指令，也承担来自第一仲裁的重执行。</li><li><a href="#us12657030b2-fig-5-selredirect">重定向仲裁</a> 第二仲裁比较两条可重定向流水线所报告的误判年龄，允许较老的一条驱动前端。</li><li><a href="#us12657030b2-fig-5-front">取指前端</a> 前端收到正确目标地址后重定向取指。原文未给仲裁或重执行需要几拍。</li></ul>
+  <p class="figure-evidence">原图 5、6、7、8、9；说明书归档段 0051、0052、0053、0054、0055、0056、0057、0058、0059、0060、0061、0062、0063、0064、0065、0066、0067、0068、0069、0070、0071、0073、0074、0075 <a href="../diagrams/US12657030B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>指令分派电路</dt><dd>502</dd></div><div><dt>无重定向端口 A／B</dt><dd>504/708</dd></div><div><dt>可重定向流水线 A／B</dt><dd>506/710</dd></div><div><dt>重执行仲裁／重定向仲裁</dt><dd>712/714</dd></div><div><dt>取指前端</dt><dd>100</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US12657030B2</code><span>美国授权专利</span><time datetime="2026-06-16">2026-06-16</time></p>
-  <h1>把条件指令的偏向预测写进缓存</h1>
-  <p class="english-title" lang="en">Cached instruction recording for prediction embedding</p>
-  <p class="document-question">条件指令长期表现为相同方向时，缓存如何为下一次取指保留这条历史信息？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">偏向预测电路以历史执行判断条件指令方向是否稳定。预测达到偏向条件后，取指译码电路把对应信息写入缓存。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>权利要求的偏向表示条件预计恒真或恒假。行为改向可能触发重新预测及状态更新。</dd></div><div><dt>验证方法</dt><dd>固定分支轨迹与缓存容量，比较每次查条件预测器和使用缓存偏向信息。分别统计稳定阶段与改向阶段的预测表读取、错误预测以及首次恢复时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12657030B2">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">如果条件曾经多次以同一方向执行，偏向表可以记录这一行为。持续有效的记录可由取指和译码阶段写入缓存。</p>
-    <p>偏向预测器按条件指令以往的执行结果，判断预计恒真、预计恒假或未形成偏向。取指译码电路可以附加偏向字段，也可以把缓存里的内部表示改写为无条件指令。</p>
-    <ol class="walkthrough"><li><h3>更新偏向表</h3><p>执行结果用于学习该处条件行为，保持有偏向和未偏向的区分。</p></li><li><h3>生成前端可用的类别</h3><p>预测器将是否偏向以及方向等信息交给取指译码通路。</p></li><li><h3>把偏向状态编码进缓存</h3><p>缓存可保存相应信息。权 2 进一步规定可重编码为无条件形式。</p></li><li><h3>下次从缓存取指</h3><p>命中时即可读取已有的偏向编码，何时绕开常规预测器取决于实现。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 2、3 给出两种缓存内部表示。一种重编码成无条件形式，一种保留条件指令并附加偏向信息。权 4 则以指令地址在偏向表中读取用于分类的值。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>偏向预测</dt><dd>根据此前执行判断条件预计恒真或恒假。实际出现相反结果时可能换类。</dd></div><div><dt>偏向表</dt><dd>按指令地址查询、保存方向历史判定的表。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">从历史结果到偏向标记的传播</a></li><li><a href="#fig-1">偏向训练结果进入缓存表示</a></li><li><a href="#fig-3">缓存怎样记录指令的偏向</a></li><li><a href="#fig-4">原图 3A 的偏向表如何随执行结果更新</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">从历史结果到偏向标记的传播</h3></div>
-    <a class="paper-open" href="../mechanisms/US12657030B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="从历史结果到偏向标记的传播">
-    <img class="paper-image native-image" src="../mechanisms/US12657030B2/fig-2/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="从历史结果到偏向标记的传播。偏向电路在加载指令到缓存时给出分类。取指命中后可直接用偏向；在相应实施例中，未偏向指令再由普通条件预测器处理。">
-  </div>
-  <figcaption>
-    <span>偏向电路在加载指令到缓存时给出分类。取指命中后可直接用偏向；在相应实施例中，未偏向指令再由普通条件预测器处理。</span>
-    <span class="figure-evidence">图 3A–4，权利要求 1、8。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657030">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">偏向训练结果进入缓存表示</h3></div>
-    <a class="paper-open" href="../mechanisms/US12657030B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="偏向训练结果进入缓存表示">
-    <img class="paper-image native-image" src="../mechanisms/US12657030B2/fig-1/diagram.svg" width="653" height="284"
-         style="--paper-width:653px" alt="偏向训练结果进入缓存表示。如果条件曾经多次以同一方向执行，偏向表可以记录这一行为。持续有效的记录可由取指和译码阶段写入缓存。">
-  </div>
-  <figcaption>
-    <span>如果条件曾经多次以同一方向执行，偏向表可以记录这一行为。持续有效的记录可由取指和译码阶段写入缓存。</span>
-    <span class="figure-evidence">图 1–2B，权利要求 1–2。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657030">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">缓存怎样记录指令的偏向</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">情形</th><th scope="col">缓存保存内容</th><th scope="col">后续预测路径</th></tr></thead><tbody><tr><th scope="row">附加字段</th><td>条件指令及偏向信息</td><td class="emphasis">按偏向预测处理</td></tr><tr><th scope="row">重编码</th><td>用非条件指令表示</td><td>可绕开普通预测器</td></tr><tr><th scope="row">无偏向</th><td>条件指令</td><td>随后取指时由普通预测器给结果</td></tr></tbody></table>
-  <figcaption>
-    <span>原文给出两种偏向表示。未偏向指令可在随后取指时使用第二个预测器。</span>
-    <span class="figure-evidence">图 3A–4，权利要求 1–2。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657030">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">原图 3A 的偏向表如何随执行结果更新</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">当前状态</th><th scope="col">观察结果</th><th scope="col">下一状态</th></tr></thead><tbody><tr><th scope="row">00 尚未遇到</th><td>首次真实结果为假</td><td>01 偏向假</td></tr><tr><th scope="row">00 尚未遇到</th><td>首次真实结果为真</td><td>10 偏向真</td></tr><tr><th scope="row">01 偏向假</th><td>后来实际为真</td><td class="emphasis">11 未偏向</td></tr><tr><th scope="row">10 偏向真</th><td>后来实际为假</td><td class="emphasis">11 未偏向</td></tr></tbody></table>
-  <figcaption>
-    <span>二位编码只属于该实施例。已预测恒真或恒假的指令出现矛盾结果时，转到未偏向状态。</span>
-    <span class="figure-evidence">原图 3A，说明书 0035–0039，权利要求 5–6。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657030">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>提前为条件指令分类</dt><dd>形成缓存可用偏向 <span class="subdued">原图 1、4，权利要求 1</span></dd></div><div><dt>在缓存内编码偏向</dt><dd>减少后续预测器访问 <span class="subdued">原图 4，权利要求 2–3、7</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>重编码的静态指令和附带字段占用不同的缓存元数据，命中后的消费逻辑也不同。即使能减少常规预测器访问，训练偏向表及改变编码仍需执行和更新资源。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若一个短循环交替处理两批数据，两批各自都保持相反的条件结果，缓存可保有上一批的偏向。阶段足够短时，恢复和状态更新可能抵消省下的表访问。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>条件指令 C 在一个程序阶段总表现为同一结果，达到偏向预测触发条件。另一阶段 C 的结果发生变化。</dd></div><div><dt>处理结果</dt><dd>正常阶段可用缓存中编码的偏向信息；变化后进入发现失配和恢复的路径。</dd></div><div><dt>结果解读</dt><dd>测量真正减少的预测表访问，也计入阶段变化后新增的错误和恢复。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>原图 1、4。处理器含学习条件偏向的电路，以及把预测信息编码到缓存的取指译码电路。</p>
+  <p>原图 1、4。处理器含学习条件偏向的电路，以及把预测信息编码到缓存的取指译码电路。根据历史观察预测条件指令在后续执行中一贯为真或为假。预测结果编码到缓存内部表示。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=according%20to%20one%20or%20more%20previous%20executions%20of%20the%20individual%20conditional%20instructions">F1</a></th><td>根据同一条件指令早先的执行结果训练偏向预测</td><td>原图 2A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20is%20always%20true%20or%20always%20false">F2</a></th><td>训练输出区分偏向和非偏向，偏向预测有恒真与恒假两类</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · 原图 2A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=encode%2C%20in%20a%20cache%2C%20information%20identifying%20a%20first%20conditional%20instruction%20as%20biased">F3</a></th><td>取指译码电路把某条指令已被预测为偏向的信息编码进缓存</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · 原图 1</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=according%20to%20one%20or%20more%20previous%20executions%20of%20the%20individual%20conditional%20instructions">F1</a></th><td>根据同一条件指令早先的执行结果训练偏向预测</td><td>原图 2A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20is%20always%20true%20or%20always%20false">F2</a></th><td>训练输出区分偏向和非偏向，偏向预测有预测为恒真与预测为恒假两类</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · 原图 2A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=encode%2C%20in%20a%20cache%2C%20information%20identifying%20a%20first%20conditional%20instruction%20as%20biased">F3</a></th><td>取指译码电路把某条指令已被预测为偏向的信息编码进缓存</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · 原图 1</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-8" aria-labelledby="independent-8-title">
   <h4 id="independent-8-title">权利要求 8</h4>
   <p>原图 3A–4。方法项列出历史预测、对特定指令作偏向判定和编码到缓存。</p>
   <table class="comparison-table" aria-labelledby="independent-8-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=according%20to%20one%20or%20more%20previous%20executions%20of%20the%20individual%20conditional%20instructions">F4</a></th><td>用条件指令此前执行作为预测输入。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=After%20execution%20of%20the%20instruction%2C%20e.g.%2C%20in%20the%20execution%20pipeline%20164%2C%20the%20condition%20of%20the%20conditional">说明书 0037</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20predicted%20conditions%20individually%20comprise%20a%20biased%20condition%20or%20an%20unbiased%20condition">F5</a></th><td>预测区分有偏向与无偏向。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20indicated%20in%20FIG.%203A%2C%20once%20being%20updated%20to%20the%20value%20%E2%80%9C10%E2%80%9D%20%28e.g.%2C%20biased%20true%29%20or">说明书 0039</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20of%20the%20respective%20conditions%20is%20always%20true%20or">F6</a></th><td>有偏向表示预计条件恒真或恒假。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=generating%2C%20by%20the%20bias%20prediction%20circuit%2C%20a%20prediction%20of%20the%20biased%20condition%20for%20a%20first%20conditional">F7</a></th><td>偏向电路对指定指令给出有偏向的预测。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIG.%204%2C%20a%20flowchart%20illustrating%20one%20embodiment%20of%20operations%20of%20a%20processor%2030">说明书 0045</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=encoding%2C%20in%20a%20cache%20of%20the%20processor%20using%20a%20fetch%20and%20decode%20circuit%20of%20the%20processor%2C">F8</a></th><td>由取指译码电路在缓存中编码指令的偏向身份。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20table%20158%20and%20%2F%20or%20the%20table%28s%29%20162%20may%20be">说明书 0042</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20described%20above%2C%20in%20the%20illustrated%20embodiment%2C%20when%20the%20bias%20prediction%20circuit%20156%20predicts%20that%20the">说明书 0047</a> · 原图 1 · 原图 4</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=according%20to%20one%20or%20more%20previous%20executions%20of%20the%20individual%20conditional%20instructions">F4</a></th><td>用条件指令此前执行作为预测输入。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=After%20execution%20of%20the%20instruction%2C%20e.g.%2C%20in%20the%20execution%20pipeline%20164%2C%20the%20condition%20of%20the%20conditional">说明书 0037</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20predicted%20conditions%20individually%20comprise%20a%20biased%20condition%20or%20an%20unbiased%20condition">F5</a></th><td>预测区分有偏向与无偏向。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20indicated%20in%20FIG.%203A%2C%20once%20being%20updated%20to%20the%20value%20%E2%80%9C10%E2%80%9D%20%28e.g.%2C%20biased%20true%29%20or">说明书 0039</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20of%20the%20respective%20conditions%20is%20always%20true%20or">F6</a></th><td>有偏向表示预计条件预测为恒真或预测为恒假。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=generating%2C%20by%20the%20bias%20prediction%20circuit%2C%20a%20prediction%20of%20the%20biased%20condition%20for%20a%20first%20conditional">F7</a></th><td>偏向电路对指定指令给出有偏向的预测。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIG.%204%2C%20a%20flowchart%20illustrating%20one%20embodiment%20of%20operations%20of%20a%20processor%2030">说明书 0045</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=encoding%2C%20in%20a%20cache%20of%20the%20processor%20using%20a%20fetch%20and%20decode%20circuit%20of%20the%20processor%2C">F8</a></th><td>由取指译码电路在缓存中编码指令的偏向身份。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20table%20158%20and%20%2F%20or%20the%20table%28s%29%20162%20may%20be">说明书 0042</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20described%20above%2C%20in%20the%20illustrated%20embodiment%2C%20when%20the%20bias%20prediction%20circuit%20156%20predicts%20that%20the">说明书 0047</a> · 原图 1 · 原图 4</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
   <h4 id="independent-15-title">权利要求 15</h4>
   <p>原图 1、4。系统项要求处理器各含偏向预测和缓存编码两个模块。</p>
   <table class="comparison-table" aria-labelledby="independent-15-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=a%20bias%20prediction%20circuit%20configured%20to%20predict%20respective%20conditions%20for%20individual%20conditional%20instructions%20according%20to%20one">F9</a></th><td>处理器内的偏向预测器以已执行结果预测条件。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=After%20execution%20of%20the%20instruction%2C%20e.g.%2C%20in%20the%20execution%20pipeline%20164%2C%20the%20condition%20of%20the%20conditional">说明书 0037</a> · 原图 1 · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20predicted%20conditions%20individually%20comprise%20a%20biased%20condition%20or%20an%20unbiased%20condition">F10</a></th><td>预测结果区分偏向与无偏向。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20indicated%20in%20FIG.%203A%2C%20once%20being%20updated%20to%20the%20value%20%E2%80%9C10%E2%80%9D%20%28e.g.%2C%20biased%20true%29%20or">说明书 0039</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20is%20always%20true%20or%20always%20false">F11</a></th><td>有偏向表示预测恒真或恒假。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=a%20fetch%20and%20decode%20circuit%20configured%20to%20encode%2C%20in%20a%20cache%2C%20information%20identifying%20a%20first%20conditional">F12</a></th><td>取指译码电路把已判定偏向的身份存入缓存。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20table%20158%20and%20%2F%20or%20the%20table%28s%29%20162%20may%20be">说明书 0042</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20described%20above%2C%20in%20the%20illustrated%20embodiment%2C%20when%20the%20bias%20prediction%20circuit%20156%20predicts%20that%20the">说明书 0047</a> · 原图 1 · 原图 4</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=a%20bias%20prediction%20circuit%20configured%20to%20predict%20respective%20conditions%20for%20individual%20conditional%20instructions%20according%20to%20one">F9</a></th><td>处理器内的偏向预测器以已执行结果预测条件。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=After%20execution%20of%20the%20instruction%2C%20e.g.%2C%20in%20the%20execution%20pipeline%20164%2C%20the%20condition%20of%20the%20conditional">说明书 0037</a> · 原图 1 · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20predicted%20conditions%20individually%20comprise%20a%20biased%20condition%20or%20an%20unbiased%20condition">F10</a></th><td>预测结果区分偏向与无偏向。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=Turning%20now%20to%20FIGS.%203A%20and%203B%2C%20state%20machines%20of%20the%20bias%20prediction%20circuit%20156%20and">说明书 0035</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20indicated%20in%20FIG.%203A%2C%20once%20being%20updated%20to%20the%20value%20%E2%80%9C10%E2%80%9D%20%28e.g.%2C%20biased%20true%29%20or">说明书 0039</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=the%20biased%20condition%20indicates%20that%20a%20respective%20condition%20is%20always%20true%20or%20always%20false">F11</a></th><td>有偏向表示预测预测为恒真或预测为恒假。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20prediction%20from%20the%20bias%20prediction%20circuit%20156%20and%20the%20instruction">说明书 0027</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=a%20fetch%20and%20decode%20circuit%20configured%20to%20encode%2C%20in%20a%20cache%2C%20information%20identifying%20a%20first%20conditional">F12</a></th><td>取指译码电路把已判定偏向的身份存入缓存。</td><td><a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20the%20bias%20table%20158%20and%20%2F%20or%20the%20table%28s%29%20162%20may%20be">说明书 0042</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=In%20the%20illustrated%20embodiment%2C%20when%20a%20conditional%20instruction%20is%20predicted%20to%20be%20biased%20true%20or%20biased">说明书 0043</a> · <a href="https://eureka.patsnap.com/patent/US12657030B2#:~:text=As%20described%20above%2C%20in%20the%20illustrated%20embodiment%2C%20when%20the%20bias%20prediction%20circuit%20156%20predicts%20that%20the">说明书 0047</a> · 原图 1 · 原图 4</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1、4。处理器含学习条件偏向的电路，以及把预测信息编码到缓存的取指译码电路。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>将缓存中识别为偏向的指令具体重编码为无条件指令。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>缓存保留原条件指令，并将预测的偏向追加到相应条目。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>用条件指令的地址查询偏向表，再按表值预测。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>表值区分未遇到、偏向假、偏向真和无偏向。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>首次结果把状态改成偏向真或假，后来观察到矛盾结果则改成无偏向。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>加载到缓存时先做偏向判断，日后取到未偏向指令时另做普通预测。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>按历史执行预测条件，为偏向指令生成偏向结果，并由取指译码电路在缓存中编码。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>用缓存中的非条件指令重编码偏向指令。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>保存原条件指令并附加预测偏向信息。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>以指令地址从偏向表取值并生成预测。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>偏向表用值区分未遇到、偏向假、偏向真与无偏向。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>首次实际结果决定偏向真或假，后来方向相反则标成无偏向。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-8">8</a></td><td>加载缓存时处理偏向，再在取出未偏向条件指令时提供后续条件预测。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>系统内处理器根据执行历史预测偏向，并由取指译码电路写入缓存。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>在缓存中用非条件指令重编码偏向指令。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>在缓存中用非条件指令重编码偏向指令。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>以指定地址读偏向表并以该值作预测。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>偏向表编码未遇到、偏向真、偏向假和无偏向。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>遇到反例后将此前偏向真或假的条目转成无偏向。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1、4。处理器含学习条件偏向的电路，以及把预测信息编码到缓存的取指译码电路。根据历史观察预测条件指令在后续执行中一贯为真或为假。预测结果编码到缓存内部表示。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>将缓存中识别为偏向的指令具体重编码为无条件指令。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>缓存保留原条件指令，并将预测的偏向追加到相应条目。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>用条件指令的地址查询偏向表，再按表值预测。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>表值区分未遇到、偏向假、偏向真和无偏向。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>首次结果把状态改成偏向真或假，后来观察到矛盾结果则改成无偏向。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>加载到缓存时先做偏向判断，日后取到未偏向指令时另做普通预测。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>按历史执行预测条件，为偏向指令生成偏向结果，并由取指译码电路在缓存中编码。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>用缓存中的非条件指令重编码偏向指令。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>保存原条件指令并附加预测偏向信息。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>以指令地址从偏向表取值并生成预测。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>偏向表用值区分未遇到、偏向假、偏向真与无偏向。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>首次实际结果决定偏向真或假，后来方向相反则标成无偏向。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-8">8</a></td><td>加载缓存时处理偏向，再在取出未偏向条件指令时提供后续条件预测。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>系统内处理器根据执行历史预测偏向，并由取指译码电路写入缓存。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>在缓存中用非条件指令重编码偏向指令。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>在缓存中用非条件指令重编码偏向指令。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>以指定地址读偏向表并以该值作预测。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>偏向表编码未遇到、偏向真、偏向假和无偏向。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>遇到反例后将此前偏向真或假的条目转成无偏向。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1–2B，权利要求 1–2</dt><dd>预测电路将条件指令划为偏向或未偏向，取指译码电路把偏向信息编码在缓存中。部分实施例在缓存里改用无条件的内部表示，之后可据此决定是否查常规条件预测器。</dd></div><div><dt>图 3A–4，权利要求 1、8</dt><dd>测量真正减少的预测表访问，也计入阶段变化后新增的错误和恢复。</dd></div><div><dt>图 3A–4，权利要求 1–2</dt><dd>程序行为随阶段变化时，偏向判断会失效。须核对改向的检测、恢复路径以及缓存编码的更新。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12657030B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12530193B2.html#engineering">按内部控制转移的稳定性构建轨迹</a>
-<p>US12657030B2 根据以往执行预测条件指令的偏向，再把预测得到的偏向信息写入缓存。US12530193B2 对过去的控制转移方向设偏向阈值，只有达到偏向阈值的条件控制转移可以成为轨迹内部指令。两份权项分别把历史信息用于缓存编码和轨迹构造。</p></li></ul>
-    <p><a href="../index.html?patent=US12657030B2#knowledge">在全量关系图上定位 US12657030B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-02-01</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-07-16</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-06-16</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/774,678</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ian D Kountanis、Douglas C Holman、Wei-Han Lien、Pruthivi Vuyyuru、Ethan R Schuchman、Niket K Choudhary、Kulin N Kothari、Haoyan Jia</dd></div><div><dt>分类号</dt><dd>G06F9/30145、G06F9/3806、G06F9/3844、G06F9/3846、G06F9/3848、G06F9/3856</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12657030B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12657030B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 130 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 3A。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12657030B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

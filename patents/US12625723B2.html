@@ -1,116 +1,184 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12625723B2 I/O 代理用分类型计数器约束事务发出 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I/O agent 用绑定计数器保证跨类型事务顺序 · US12625723B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12625723B2</code> · <a href="https://patents.google.com/patent/US12625723B2/en">专利全文</a></p>
+<h1>I/O agent 用绑定计数器保证跨类型事务顺序</h1><p class="reading-question">同一外设的宽松排序和非宽松排序事务进了不同队列。I/O agent 如何等到早到事务完成，同时继续接收后来事务？</p>
+<p class="reading-answer">TOR 按类型维护队列，并维护可绑定的计数器。等待事务分配时绑定当时的活动计数器。后续先行型事务进入新计数器。队首检查保留同类顺序，绑定计数器回到初值才表示这组跨类型依赖已完成。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-05-12</dd></div><div><dt>申请号</dt><dd>US17/657,524</dd></div><div><dt>最早优先权</dt><dd>2021-04-16</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sagi Lahav、Lital Levy-Rubin、Gaurav Garg、Gerard R. Williams, III、Samer Nassar、Per H. Hammarlund、Harshavardhan Kaushikkar、Srinivasa Rangan Sridharan、Jeff Gonion</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#io-placement">依赖检查在 IOA 流水线的哪一侧</a></li><li><a href="#binding">分配 E 时固定需要等待的 RO 事务</a></li><li><a href="#lifetime">计数回到初值与归还池槽是两件事</a></li><li><a href="#scope">独立权利要求和实现边界</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="io-placement"><h2>依赖检查在 IOA 流水线的哪一侧</h2><p>外设侧互连把设备请求送入 I/O agent，SoC 侧互连通往内存控制器。外设入口和请求表（Table of Requests，TOR）都能向流水线仲裁器提供事务。图 1 的上半部画出首次进入 IOA 流水线的路径，回路表示事务已在 TOR 分配，后续满足条件时仍经同一仲裁器进入流水线。说明书 FIG. 2 还画有独立的 SoC 入口，可接收由 SoC 发来的 snoop。</p><p>TOR 入口队列内的链表解决同类事务的发出顺序。依赖逻辑负责跨类型等待关系，原文称需要等候的先行事务类型为 push transaction type set。宽松排序（RO）和非宽松排序（nRO）是 FIG. 6 的一组示例。一种事务也可以为多种等待类型增加多个活动计数器。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　IOA 流水线由 TOR 依赖逻辑释放候选事务</h3>
+    <p id="fig-1-basis">定位事务首次进入、TOR 分配和重新发出三段，再沿两条控制线读出依赖状态由谁维护。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="IOA 流水线由 TOR 依赖逻辑释放候选事务" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 580" role="img" aria-labelledby="us12625723b2-fig-1-svg-title us12625723b2-fig-1-svg-desc">
+<title id="us12625723b2-fig-1-svg-title">IOA 流水线由 TOR 依赖逻辑释放候选事务</title>
+<desc id="us12625723b2-fig-1-svg-desc">定位事务首次进入、TOR 分配和重新发出三段，再沿两条控制线读出依赖状态由谁维护。</desc>
+<defs><marker id="us12625723b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625723b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625723b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625723b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12625723b2-fig-1-initial" d="M 207 135 L 295 135" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-1-arrow-main)"/>
+<path id="us12625723b2-fig-1-selected" d="M 477 135 L 580 135" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-1-arrow-main)"/>
+<path id="us12625723b2-fig-1-dispatch" d="M 755 135 L 791 135" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-1-arrow-data)"/>
+<path id="us12625723b2-fig-1-allocated" d="M 620 184 L 620 216 Q 620 224 612 224 L 441 224 Q 433 224 433 232 L 433 269" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-1-arrow-main)"/>
+<path id="us12625723b2-fig-1-update" d="M 711 184 L 711 269" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-1-arrow-control)"/>
+<path id="us12625723b2-fig-1-head" d="M 477 315 L 580 315" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-1-arrow-control)"/>
+<path id="us12625723b2-fig-1-eligible" d="M 295 313 L 253 313 Q 245 313 245 305 L 245 174 Q 245 166 253 166 L 295 166" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-1-arrow-return)"/>
+<path id="us12625723b2-fig-1-track" d="M 635 360 L 635 438" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-1-arrow-control)"/>
+<path id="us12625723b2-fig-1-lookup" d="M 708 438 L 708 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-1-arrow-return)"/>
+<rect x="212" y="111" width="80" height="18" fill="#f5f5f5"/><text x="252" y="125" class="arrow-label" text-anchor="middle">首次进入</text>
+<rect x="488" y="111" width="80" height="18" fill="#f5f5f5"/><text x="528" y="125" class="arrow-label" text-anchor="middle">仲裁结果</text>
+<rect x="773" y="111" width="0" height="18" fill="#f5f5f5"/><text x="773" y="125" class="arrow-label" text-anchor="middle"></text>
+<rect x="453" y="202" width="170" height="18" fill="#f5f5f5"/><text x="538" y="216" class="arrow-label" text-anchor="middle">分配并按类型排队</text>
+<rect x="718" y="216" width="104" height="18" fill="#f5f5f5"/><text x="770" y="230" class="arrow-label" text-anchor="middle">分配／完成</text>
+<rect x="480.5" y="291" width="97" height="18" fill="#f5f5f5"/><text x="529" y="305" class="arrow-label" text-anchor="middle">链表头候选</text>
+<rect x="114" y="226" width="142" height="18" fill="#f5f5f5"/><text x="185" y="240" class="arrow-label" text-anchor="middle">满足依赖后再仲裁</text>
+<rect x="508" y="388" width="118" height="18" fill="#f5f5f5"/><text x="567" y="402" class="arrow-label" text-anchor="middle">按事务更新</text>
+<rect x="712" y="388" width="114" height="18" fill="#f5f5f5"/><text x="769" y="402" class="arrow-label" text-anchor="middle">读取绑定值</text>
+<g id="us12625723b2-fig-1-peripheral"><rect x="45" y="93" width="162" height="91" rx="6" fill="#f5f5f5"/><rect x="45" y="93" width="162" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="126" y="119" class="node-name" text-anchor="middle">外设入口队列</text><text x="126" y="141" class="node-detail" text-anchor="middle">接收设备请求</text></g>
+<g id="us12625723b2-fig-1-arb"><rect x="295" y="93" width="182" height="91" rx="6" fill="#f5f5f5"/><rect x="295" y="93" width="182" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="386" y="119" class="node-name" text-anchor="middle">流水线仲裁器</text><text x="386" y="141" class="node-detail" text-anchor="middle">选取可进入流水线的事务</text></g>
+<g id="us12625723b2-fig-1-pipe"><rect x="580" y="93" width="175" height="91" rx="6" fill="#f5f5f5"/><rect x="580" y="93" width="175" height="91" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="667.5" y="119" class="node-name" text-anchor="middle">IOA 流水线</text><text x="667.5" y="141" class="node-detail" text-anchor="middle">解码、匹配、判定与分派</text></g>
+<g id="us12625723b2-fig-1-soc"><rect x="791" y="93" width="131" height="91" rx="6" fill="#f5f5f5"/><rect x="791" y="93" width="131" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="856.5" y="119" class="node-name" text-anchor="middle">SoC 出口队列</text><text x="856.5" y="141" class="node-detail" text-anchor="middle">待发互连消息</text></g>
+<g id="us12625723b2-fig-1-q"><rect x="295" y="269" width="182" height="91" rx="6" fill="#f5f5f5"/><rect x="295" y="269" width="182" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="386" y="295" class="node-name" text-anchor="middle">TOR 入口队列</text><text x="386" y="317" class="node-detail" text-anchor="middle">同类事务按链表排序</text><text x="386" y="335" class="node-detail" text-anchor="middle">取链表头作为候选</text></g>
+<g id="us12625723b2-fig-1-dep"><rect x="580" y="269" width="175" height="91" rx="6" fill="#f5f5f5"/><rect x="580" y="269" width="175" height="91" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="667.5" y="295" class="node-name" text-anchor="middle">TOR 依赖逻辑</text><text x="667.5" y="317" class="node-detail" text-anchor="middle">保存计数更新指针</text><text x="667.5" y="335" class="node-detail" text-anchor="middle">保存绑定计数器指针</text></g>
+<g id="us12625723b2-fig-1-pool"><rect x="580" y="438" width="175" height="91" rx="6" fill="#f5f5f5"/><rect x="580" y="438" width="175" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="667.5" y="464" class="node-name" text-anchor="middle">计数器池</text><text x="667.5" y="486" class="node-detail" text-anchor="middle">活动、已绑定、空闲</text><text x="667.5" y="504" class="node-detail" text-anchor="middle">可由多个虚通道复用</text></g>
+<text x="46" y="55" class="signal-title" text-anchor="start">I/O agent · 请求进入、计数和重新发出</text>
+<text x="50" y="510" class="legend" text-anchor="start">粗实线：请求路径</text>
+<text x="250" y="510" class="legend" text-anchor="start">虚线：依赖状态与可发出条件</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625723b2-fig-1-initial">首次进入</a> 外设入口先交给流水线仲裁器，初次经过流水线时可分配 TOR 项。</li><li><a href="#us12625723b2-fig-1-q">TOR 入口队列</a> 同类事务由链表排序，TOR 入口可以用多个逻辑链表共享物理队列。</li><li><a href="#us12625723b2-fig-1-dep">TOR 依赖逻辑</a> 保存计数更新指针与绑定计数器指针，从计数器池取值判定是否允许重新仲裁。</li><li><a href="#us12625723b2-fig-1-eligible">满足依赖后再仲裁</a> 成功检测依赖条件只让候选参与仲裁，之后仍走同一个 IOA 流水线。</li></ul>
+  <p class="figure-evidence">原图 2、3、4A、4B；说明书归档段 0035、0039、0042、0052、0055、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12625723B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>外设入口队列</dt><dd>215</dd></div><div><dt>流水线仲裁器</dt><dd>220</dd></div><div><dt>IOA 流水线</dt><dd>230</dd></div><div><dt>请求表（TOR）</dt><dd>260</dd></div><div><dt>SoC 出口队列</dt><dd>245</dd></div><div><dt>TOR 入口队列</dt><dd>410</dd></div><div><dt>TOR 依赖逻辑</dt><dd>430</dd></div><div><dt>TOR 计数器</dt><dd>420</dd></div></dl></details>
+</figure></section><section id="binding"><h2>分配 E 时固定需要等待的 RO 事务</h2><p>看图 2 中 E 的绑定动作。较早分配的 RO A、B 已把 E 的依赖计数器加到 2，各自留下计数更新指针。E 本身留下绑定计数器指针。前一种指针用于事务完成时找到当初加过的计数器，后一种指针用于检查 E 能否发出。</p><p>E 绑定之后，新 RO C 只更新新活动计数器。即使当前活动指针已经换过，A、B 完成仍沿各自保存的更新指针递减旧槽。表 3 给出这一例的值变化。初值取 0 便于读图，说明书 ¶0069 允许等效的计数方式。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　RO A、B 的完成更新同一个已绑定计数器</h3>
+    <p id="fig-2-basis">E 划定跨类型等待范围。之后分配的 C 会更新另一个计数器，A、B 完成仍更新 E 绑定的旧槽。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="RO A、B 的完成更新同一个已绑定计数器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12625723b2-fig-2-svg-title us12625723b2-fig-2-svg-desc">
+<title id="us12625723b2-fig-2-svg-title">RO A、B 的完成更新同一个已绑定计数器</title>
+<desc id="us12625723b2-fig-2-svg-desc">E 划定跨类型等待范围。之后分配的 C 会更新另一个计数器，A、B 完成仍更新 E 绑定的旧槽。</desc>
+<defs><marker id="us12625723b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625723b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625723b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625723b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12625723b2-fig-2-a"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-data)"/><rect x="146" y="96" width="182" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">分配 RO A、B，按序入队</text></g>
+<g id="us12625723b2-fig-2-count"><path d="M 116 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-data)"/><rect x="228.5" y="144" width="260" height="18" fill="#f5f5f5"/><text x="358.5" y="158" class="arrow-label" text-anchor="middle">活动计数器累加到 2，A、B 留更新指针</text></g>
+<g id="us12625723b2-fig-2-e"><path d="M 116 216 L 844 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-data)"/><rect x="363" y="192" width="234" height="18" fill="#f5f5f5"/><text x="480" y="206" class="arrow-label" text-anchor="middle">分配 nRO E，进入 nRO 链表</text></g>
+<g id="us12625723b2-fig-2-assign"><path d="M 844 264 L 601 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-main)"/><rect x="625" y="240" width="195" height="18" fill="#f5f5f5"/><text x="722.5" y="254" class="arrow-label" text-anchor="middle">E 绑定旧计数器，启用新计数器</text></g>
+<g id="us12625723b2-fig-2-c"><path d="M 116 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-data)"/><rect x="159" y="288" width="156" height="18" fill="#f5f5f5"/><text x="237" y="302" class="arrow-label" text-anchor="middle">分配较晚到达的 RO C</text></g>
+<g id="us12625723b2-fig-2-next"><path d="M 116 360 L 601 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-main)"/><rect x="248" y="336" width="221" height="18" fill="#f5f5f5"/><text x="358.5" y="350" class="arrow-label" text-anchor="middle">C 更新新计数器，旧计数器仍为 2</text></g>
+<g id="us12625723b2-fig-2-ab"><path d="M 116 408 L 601 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625723b2-fig-2-arrow-data)"/><rect x="241.5" y="384" width="234" height="18" fill="#f5f5f5"/><text x="358.5" y="398" class="arrow-label" text-anchor="middle">A、B 完成，按各自指针递减旧计数器</text></g>
+<g id="us12625723b2-fig-2-allow"><path d="M 601 456 L 116 456" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-2-arrow-return)"/><rect x="248" y="432" width="221" height="18" fill="#f5f5f5"/><text x="358.5" y="446" class="arrow-label" text-anchor="middle">旧计数器到初值，允许 E 参与仲裁</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">IOA 流水线</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">RO 队列</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">TOR 依赖逻辑</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">nRO 队列</text>
+<text x="28" y="532" class="legend" text-anchor="start">纵向表示事件顺序。示例选 0 为初值，省略不影响因果关系的流水线间隔。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625723b2-fig-2-count">计数更新指针</a> A、B 在分配时记录自己加过的计数器。原文允许一个事务保存多个指针。</li><li><a href="#us12625723b2-fig-2-assign">绑定计数器指针</a> E 留下的是后续发出条件所读取的旧计数器。</li><li><a href="#us12625723b2-fig-2-next">新活动计数器</a> C 分配时加新槽，绑定给 E 的旧槽不再接受新增的先行事务。</li><li><a href="#us12625723b2-fig-2-ab">A、B 完成</a> 即便旧槽早已不是活动槽，完成路径仍可用原更新指针找到它。</li></ul>
+  <p class="figure-evidence">原图 6、10、11；说明书归档段 0057、0064、0065、0066、0067、0068、0082、0087；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12625723B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>RO 队列</dt><dd>410A</dd></div><div><dt>nRO 队列</dt><dd>410B</dd></div><div><dt>TOR 依赖逻辑</dt><dd>430</dd></div><div><dt>计数更新指针</dt><dd>610</dd></div><div><dt>绑定计数器指针</dt><dd>620</dd></div><div><dt>E 的依赖计数器</dt><dd>420A</dd></div><div><dt>F 的依赖计数器</dt><dd>420B</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　以 0 为初值核算 E 等待的事务</h3>
+    <p id="fig-3-basis">只列相对分配与完成事件。用 A、B、C 三个 RO 事务核对完成更新是否落在当初记录的池槽。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">事件</th><th scope="col">E 的依赖计数器</th><th scope="col">随后启用的计数器</th><th scope="col">E 的跨类型依赖</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">A、B 已分配</th><td>2</td><td>—</td><td>E 尚未分配</td></tr><tr id="fig-3-table-row-2"><th scope="row">E 分配</th><td>2，已绑定</td><td>0，活动</td><td>等待 A、B</td></tr><tr id="fig-3-table-row-3"><th scope="row">C 分配</th><td>2</td><td>1</td><td>仍等待 A、B</td></tr><tr id="fig-3-table-row-4"><th scope="row">A 完成</th><td>1</td><td>1</td><td>等待 B</td></tr><tr id="fig-3-table-row-5"><th scope="row">B 完成</th><td>0</td><td>1</td><td>已满足</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">未完成事务数</a> 旧槽的 2 是还未完成的 A、B，初值为 0。C 分配不改变旧槽的值。</li></ul>
+  <p class="figure-evidence">原图 6；说明书归档段 0065、0066、0067、0068、0069；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>E 的依赖计数器</dt><dd>420A</dd></div><div><dt>F 的依赖计数器</dt><dd>420B</dd></div></dl></details>
+</figure></section><section id="lifetime"><h2>计数回到初值与归还池槽是两件事</h2><p>图 4 中的「依赖已清除」状态表示绑定事务可以接受其余发出判定。此时绑定仍有效，计数器槽位要等该事务退休才可回池。多个 nRO 事务都已分配、尚未退休时，对应队列可同时有多个已绑定计数器，另有活动计数器用于接收下一组先行事务。</p><p>进一步区分队列等待与跨类型等待。图 5 对应 ¶0068 的边界场景。RO C 可以比 A、B 更早全部完成，但 F 在 nRO 链表中仍排在 E 后面。F 对较早一组 RO 的依赖由 E 的绑定条件和 nRO 链表顺序共同传递，无须把 A、B 再计入 F 的依赖计数器。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　绑定事务退休后，旧计数器槽位才能回池</h3>
+    <p id="fig-4-basis">把跨类型依赖清除、允许发出与池槽释放放在同一条状态路径上。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="绑定事务退休后，旧计数器槽位才能回池" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 525" role="img" aria-labelledby="us12625723b2-fig-4-svg-title us12625723b2-fig-4-svg-desc">
+<title id="us12625723b2-fig-4-svg-title">绑定事务退休后，旧计数器槽位才能回池</title>
+<desc id="us12625723b2-fig-4-svg-desc">把跨类型依赖清除、允许发出与池槽释放放在同一条状态路径上。</desc>
+<defs><marker id="us12625723b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625723b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625723b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625723b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12625723b2-fig-4-choose" d="M 234 154 L 379 154" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-4-arrow-main)"/>
+<path id="us12625723b2-fig-4-bind" d="M 564 154 L 704 154" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-4-arrow-main)"/>
+<path id="us12625723b2-fig-4-drain" d="M 803 205 L 803 322" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-4-arrow-control)"/>
+<path id="us12625723b2-fig-4-issue" d="M 704 368 L 564 368" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-4-arrow-main)"/>
+<path id="us12625723b2-fig-4-retire" d="M 379 368 L 234 368" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625723b2-fig-4-arrow-main)"/>
+<path id="us12625723b2-fig-4-reuse" d="M 141 322 L 141 205" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-4-arrow-return)"/>
+<path id="us12625723b2-fig-4-new" d="M 741 205 L 741 223 Q 741 231 733 231 L 476 231 Q 468 231 468 223 L 468 205" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625723b2-fig-4-arrow-control)"/>
+<rect x="236.5" y="129" width="139" height="18" fill="#f5f5f5"/><text x="306" y="143" class="arrow-label" text-anchor="middle">分配并设为初值</text>
+<rect x="569" y="129" width="130" height="18" fill="#f5f5f5"/><text x="634" y="143" class="arrow-label" text-anchor="middle">等待事务到达</text>
+<rect x="804" y="247" width="150" height="18" fill="#f5f5f5"/><text x="879" y="261" class="arrow-label" text-anchor="middle">先行事务陆续完成</text>
+<rect x="579" y="342" width="106" height="18" fill="#f5f5f5"/><text x="632" y="356" class="arrow-label" text-anchor="middle">获准发出</text>
+<rect x="246" y="342" width="116" height="18" fill="#f5f5f5"/><text x="304" y="356" class="arrow-label" text-anchor="middle">完成并退休</text>
+<rect x="151.5" y="250" width="139" height="18" fill="#f5f5f5"/><text x="221" y="264" class="arrow-label" text-anchor="middle">归还计数器池</text>
+<rect x="482" y="234" width="240" height="18" fill="#f5f5f5"/><text x="602" y="248" class="arrow-label" text-anchor="middle">另取空闲槽，接替活动计数器</text>
+<g id="us12625723b2-fig-4-free"><rect x="53" y="107" width="181" height="98" rx="6" fill="#f5f5f5"/><rect x="53" y="107" width="181" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="143.5" y="133" class="node-name" text-anchor="middle">空闲槽</text><text x="143.5" y="155" class="node-detail" text-anchor="middle">已回到计数器池</text><text x="143.5" y="173" class="node-detail" text-anchor="middle">可选择并重新初始化</text></g>
+<g id="us12625723b2-fig-4-active"><rect x="379" y="107" width="185" height="98" rx="6" fill="#f5f5f5"/><rect x="379" y="107" width="185" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="471.5" y="133" class="node-name" text-anchor="middle">活动计数器</text><text x="471.5" y="155" class="node-detail" text-anchor="middle">新分配的先行事务计入</text><text x="471.5" y="173" class="node-detail" text-anchor="middle">先行事务完成可递减</text></g>
+<g id="us12625723b2-fig-4-bound"><rect x="704" y="107" width="199" height="98" rx="6" fill="#f5f5f5"/><rect x="704" y="107" width="199" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803.5" y="133" class="node-name" text-anchor="middle">已绑定计数器</text><text x="803.5" y="155" class="node-detail" text-anchor="middle">由一个等待事务持有</text><text x="803.5" y="173" class="node-detail" text-anchor="middle">只递减已有依赖</text></g>
+<g id="us12625723b2-fig-4-zero"><rect x="704" y="322" width="199" height="94" rx="6" fill="#f5f5f5"/><rect x="704" y="322" width="199" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="348" class="node-name" text-anchor="middle">依赖已清除</text><text x="803.5" y="370" class="node-detail" text-anchor="middle">匹配初值</text><text x="803.5" y="388" class="node-detail" text-anchor="middle">仍由绑定事务持有</text></g>
+<g id="us12625723b2-fig-4-issued"><rect x="379" y="322" width="185" height="94" rx="6" fill="#f5f5f5"/><rect x="379" y="322" width="185" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="471.5" y="348" class="node-name" text-anchor="middle">绑定事务运行</text><text x="471.5" y="370" class="node-detail" text-anchor="middle">通过所需排队条件</text><text x="471.5" y="388" class="node-detail" text-anchor="middle">再进入 IOA 流水线</text></g>
+<g id="us12625723b2-fig-4-retired"><rect x="53" y="322" width="181" height="94" rx="6" fill="#f5f5f5"/><rect x="53" y="322" width="181" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="143.5" y="348" class="node-name" text-anchor="middle">绑定事务退休</text><text x="143.5" y="370" class="node-detail" text-anchor="middle">此时槽位可以释放</text></g>
+<text x="55" y="59" class="signal-title" text-anchor="start">同一计数器槽位从分配到回收</text>
+<text x="55" y="472" class="legend" text-anchor="start">虚线中的新活动计数器属于另一槽位，旧槽仍被等待事务持有。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625723b2-fig-4-bound">已绑定计数器</a> 绑定之后只接受此前已计入事务的完成更新，本槽无法被另一个等待事务重新绑定。</li><li><a href="#us12625723b2-fig-4-zero">依赖已清除</a> 回到初值只清除跨类型依赖，尚需队首等发出条件。</li><li><a href="#us12625723b2-fig-4-new">接替活动计数器</a> 从池中另取空闲槽，承接随后分配的先行型事务。</li><li><a href="#us12625723b2-fig-4-reuse">归还计数器池</a> 旧槽随绑定事务退休而回收。这里把专利中的可选回收实现画成具体路径。</li></ul>
+  <p class="figure-evidence">原图 7、10；说明书归档段 0067、0070、0082、0083；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12625723B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>TOR 计数器</dt><dd>420</dd></div><div><dt>TOR 入口队列</dt><dd>410</dd></div><div><dt>TOR 依赖逻辑</dt><dd>430</dd></div><div><dt>绑定计数器指针</dt><dd>620</dd></div><div><dt>检查初值并发出绑定事务</dt><dd>1050</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　F 的计数器先归零，E 仍先发出</h3>
+    <p id="fig-5-basis">C 先完成时，F 的局部跨类型依赖已清除。依靠 nRO 链表，F 在 E 获准发出之前仍被阻挡。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="F 的计数器先归零，E 仍先发出" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12625723b2-fig-5-svg-title us12625723b2-fig-5-svg-desc">
+<title id="us12625723b2-fig-5-svg-title">F 的计数器先归零，E 仍先发出</title>
+<desc id="us12625723b2-fig-5-svg-desc">C 先完成时，F 的局部跨类型依赖已清除。依靠 nRO 链表，F 在 E 获准发出之前仍被阻挡。</desc>
+<defs><marker id="us12625723b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625723b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625723b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625723b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12625723b2-fig-5-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">C 完成</text>
+<line x1="321.6" y1="76" x2="321.6" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">F 等待</text>
+<line x1="451.2" y1="76" x2="451.2" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">A、B 均完成</text>
+<line x1="580.8" y1="76" x2="580.8" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">E 发出</text>
+<line x1="710.4" y1="76" x2="710.4" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">F 成为头项</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">F 可发出</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us12625723b2-fig-5-ro_c"><text x="24" y="136" class="node-name" text-anchor="start">F 的依赖计数器</text>
+<rect x="192" y="112" width="648" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">值已回初值，C 已完成</text>
+<circle cx="192" cy="131" r="5" fill="#4f5d75"/>
+<text x="192" y="171" class="arrow-label" text-anchor="end">C 已完成</text></g>
+<g id="us12625723b2-fig-5-ro_ab"><text x="24" y="228" class="node-name" text-anchor="start">E 的依赖计数器</text>
+<rect x="192" y="204" width="259.2" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="321.6" y="228" class="arrow-label" text-anchor="middle">仍有 A 或 B 未完成</text>
+<rect x="451.2" y="204" width="388.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="228" class="arrow-label" text-anchor="middle">值已回初值</text>
+<circle cx="451.2" cy="223" r="5" fill="#4f5d75"/>
+<text x="451.2" y="263" class="arrow-label" text-anchor="end">A、B 均完成</text></g>
+<g id="us12625723b2-fig-5-queue_e"><text x="24" y="320" class="node-name" text-anchor="start">nRO 队首</text>
+<rect x="192" y="296" width="388.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="320" class="arrow-label" text-anchor="middle">E 在队首</text>
+<rect x="580.8" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="320" class="arrow-label" text-anchor="middle">E 发出</text>
+<rect x="710.4" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="320" class="arrow-label" text-anchor="middle">F 在队首</text>
+<circle cx="580.8" cy="315" r="5" fill="#4f5d75"/>
+<text x="580.8" y="355" class="arrow-label" text-anchor="end">E 先发出</text></g>
+<g id="us12625723b2-fig-5-wait_f"><text x="24" y="412" class="node-name" text-anchor="start">nRO F</text>
+<rect x="192" y="388" width="518.4" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="451.2" y="412" class="arrow-label" text-anchor="middle">仍在 E 后方</text>
+<rect x="710.4" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="412" class="arrow-label" text-anchor="middle">可仲裁</text>
+<circle cx="710.4" cy="407" r="5" fill="#bf4520"/>
+<text x="710.4" y="447" class="arrow-label" text-anchor="end">F 到队首</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">阶段间隔无周期含义。E 发出后，F 仍须满足队首及仲裁条件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625723b2-fig-5-ro_c">F 的依赖计数器</a> 该槽只跟踪 E 与 F 分配之间计入的 RO C，C 先完成时先回初值。</li><li><a href="#us12625723b2-fig-5-ro_ab">E 的依赖计数器</a> 早一组先行事务 A、B 由 E 的计数器跟踪，直到两者均完成。</li><li><a href="#us12625723b2-fig-5-queue_e">nRO 队首</a> E 在链表头，F 不能越过它提交给仲裁器。</li><li><a href="#us12625723b2-fig-5-wait_f">nRO F</a> 自身计数已就绪后仍需等到队首，局部计数和同类链表的共同结果才是可发出。</li></ul>
+  <p class="figure-evidence">原图 6、11；说明书归档段 0067、0068、0083、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12625723B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>nRO 队列</dt><dd>410B</dd></div><div><dt>E 的依赖计数器</dt><dd>420A</dd></div><div><dt>F 的依赖计数器</dt><dd>420B</dd></div><div><dt>绑定计数器指针</dt><dd>620</dd></div></dl></details>
+</figure></section><section id="scope"><h2>独立权利要求和实现边界</h2><p>权利要求 1 把外设互连、I/O agent、内存控制器互连、绑定指针和计数检查写入装置组合。权利要求 8 从两个不同类型事务的分配与完成描述依赖，权利要求 16 对形成集成电路的设计信息列出同一类约束。第 7、11、20 项再限定队首或最早待处理事务。第 5、19 项涉及等待事务退休时回收计数器。</p><p>FIG. 5A、5B 另外披露了同一链表中较早事务被流水线拒绝时的重新入队路径，例如目标缓存行尚未回填的 snoop。这条路径用于保持退回时的顺序，属于说明书中的另一机制。计数器方案的工程量取决于同时等待的事务数、每次分配更新的计数器个数及回收速度。本文现有原型是排序模型。调度性能需要另测 I/O agent 的候选等待时间和池槽占用。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US12625723B2</code><span>美国授权专利</span><time datetime="2026-05-12">2026-05-12</time></p>
-  <h1>I/O 代理用分类型计数器约束事务发出</h1>
-  <p class="english-title" lang="en">Counters for ensuring transactional ordering in I/O agent</p>
-  <p class="document-question">来自同一外设的不同类型事务，怎样在进入流水线前等待所依赖的事务完成？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">I/O 代理分配和完成较老事务时分别递增、递减受影响的类型计数器，计数器回到初值才解除年轻事务的发出依赖。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>只有建立了跨类型依赖的事务会被对应的计数器阻塞，发出资格确立后仍需等待流水线仲裁。</dd></div><div><dt>验证方法</dt><dd>固定年轻事务的到达周期，分别注入有依赖和无依赖的较老事务。记录计数器更新、依赖解除和年轻事务进入流水线的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12625723B2/en#CLM-00008">原文权利要求 8</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">I/O 代理接收不同种类的事务。一项较年轻的请求何时能进入流水线，可能取决于较老的其他类型事务是否完成。硬件可以把等待条件编码为计数器值。</p>
-    <p>代理为事务类型分配计数器。分配会阻塞该类型的较老异类事务时递增，完成时按所保存的指针递减。较年轻的等待事务绑定该计数器。图 6 的绑定同时切换到一个新的活动计数器，后到事务只递增新的计数器。</p>
-    <ol class="walkthrough"><li><h3>初始化分类型计数器</h3><p>I/O 代理为事务类型定义初值及其计数关系。</p></li><li><h3>分配会造成依赖的事务</h3><p>较老事务进入处理结构时，影响的其他类型计数器递增。</p></li><li><h3>绑定较年轻事务</h3><p>其请求项保存所需计数器的指针，并留在入口等待。</p></li><li><h3>较老事务完成并放行</h3><p>对应计数器递减。计数值返回初始状态之后，等待事务才满足发出条件。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 共同限定一次绑定的计数窗口。当前事务绑定后，较年轻的异类事务增加新计数器。较老事务在退休时按分配时保存的指针递减原计数器。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>计数窗口</dt><dd>某次绑定前已累计、且必须完成的一组异类事务。</dd></div><div><dt>RO 与 nRO</dt><dd>原图 6 的宽松有序与非宽松有序事务分类。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">E 绑定 A、B 的计数窗口，后到 C 进入新窗口</a></li><li><a href="#fig-1">事务入口读计数器决定何时发出</a></li><li><a href="#fig-3">计数器从分配到完成的变化</a></li><li><a href="#fig-4">活动计数器、已绑定计数器和池槽回收</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">E 绑定 A、B 的计数窗口，后到 C 进入新窗口</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625723B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="E 绑定 A、B 的计数窗口，后到 C 进入新窗口">
-    <img class="paper-image native-image" src="../mechanisms/US12625723B2/fig-2/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="E 绑定 A、B 的计数窗口，后到 C 进入新窗口。原图 6 中，E 等待在它之前分配的 A、B。后来分配的 C 更新新计数器，不再加入 E 的未完成集合。">
-  </div>
-  <figcaption>
-    <span>原图 6 中，E 等待在它之前分配的 A、B。后来分配的 C 更新新计数器，不再加入 E 的未完成集合。</span>
-    <span class="figure-evidence">原图 10–11，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">事务入口读计数器决定何时发出</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625723B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="事务入口读计数器决定何时发出">
-    <img class="paper-image native-image" src="../mechanisms/US12625723B2/fig-1/diagram.svg" width="1074" height="346"
-         style="--paper-width:1074px" alt="事务入口读计数器决定何时发出。计数器的更新来自分配和完成事件，等待请求在入口查看条件。">
-  </div>
-  <figcaption>
-    <span>计数器的更新来自分配和完成事件，等待请求在入口查看条件。</span>
-    <span class="figure-evidence">原图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">计数器从分配到完成的变化</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">事件</th><th scope="col">计数器 420A</th><th scope="col">计数器 420B</th><th scope="col">E 状态</th></tr></thead><tbody><tr><th scope="row">A、B 已分配</th><td>2</td><td>未打开</td><td>尚未分配</td></tr><tr><th scope="row">E 绑定 A，打开 B</th><td>2</td><td>0</td><td>等 A、B</td></tr><tr><th scope="row">C 增加 B</th><td>2</td><td>1</td><td>仍只等 A、B</td></tr><tr><th scope="row">A 完成</th><td>1</td><td>1</td><td>继续等待</td></tr><tr><th scope="row">B 完成</th><td class="emphasis">0</td><td>1</td><td>入口依赖解除</td></tr></tbody></table>
-  <figcaption>
-    <span>以原图 6 的初值 0 展开。RO C 可以尚未完成，但已绑定给 E 的计数器只反映较老 A、B。</span>
-    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。教学例。</span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">活动计数器、已绑定计数器和池槽回收</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">槽位状态</th><th scope="col">允许更新</th><th scope="col">何时离开该状态</th></tr></thead><tbody><tr><th scope="row">活动</th><td>计入新分配的关联异类事务</td><td>收到本类型的请求并绑定</td></tr><tr><th scope="row">已绑定</th><td>等原集合中的事务完成并减计数</td><td>归初值后解除发出依赖</td></tr><tr><th scope="row">等待回收</th><td>不再累计新依赖</td><td>绑定的事务退休后释放到池</td></tr></tbody></table>
-  <figcaption>
-    <span>绑定后，较新的事务使用新的活动计数器。老计数器仍等已计入的事务完成，并在其绑定事务退休后回收。</span>
-    <span class="figure-evidence">原图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>绑定固定计数窗口</dt><dd>隔离后到异类操作 <span class="subdued">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></span></dd></div><div><dt>完成时按指针递减</dt><dd>以初值解除入口等待 <span class="subdued">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>固定计数窗口使后到请求无法延长已注册的依赖。每个未完成的窗口需要占用池中一个计数器。可按窗口记录最后一次递减、等待项发出和计数槽释放三个事件。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>即使计数器回到初值，权利要求 7 的同类型事务还须到达队首。可让队首卡在另一个计数器上，比较后项的依赖解除与实际发出时刻。两者的间隔属于队列约束。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学例中 T2 的初值为 0，有两个尚未完成的较老 T1 事务需要阻塞 T2。</dd></div><div><dt>处理结果</dt><dd>分配两个 T1 后计数为 2。T2 绑定计数器，直到两个 T1 都完成后才可发出。</dd></div><div><dt>结果解读</dt><dd>数值展示依赖关系，实际计数宽度与事务类型按实现确定。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -134,50 +202,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=design%20information%20that%20specifies%20a%20circuit%20design%20in%20a%20format%20recognized%20by%20a%20fabrication%20system">F10</a></th><td>以制造系统可识别的设计信息描述电路。</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=assign%20a%20first%20counter%20of%20the%20one%20or%20more%20counters%20to%20a%20specific%20transaction%20type">F11</a></th><td>为目标类型设置一个计数器。</td><td><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=For%20this%20discussion%2C%20initially%20a%20counter%20420%20A%20is%20instantiated%20with%20an%20initial%20counter%20value%20of">说明书 0065</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=increment%20the%20first%20counter%20assigned%20to%20the%20specific%20transaction%20type%20in%20response%20to%20allocating%20one%20or">F12</a></th><td>分配异类旧事务时递增目标类型计数器。</td><td><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=For%20this%20discussion%2C%20initially%20a%20counter%20420%20A%20is%20instantiated%20with%20an%20initial%20counter%20value%20of">说明书 0065</a> · <a href="https://patents.google.com/patent/US12625723B2/en#:~:text=After%20RO%20transaction%20450%20A%20is%20allocated%2C%20an%20RO%20transaction%20450%20B%20is%20allocated%20and%20stored">说明书 0066</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=bind%20the%20transaction%20to%20the%20first%20counter%20such%20that%20the%20transaction%20is%20prevented%20from%20issuing%20to">F13</a></th><td>年轻事务绑定该窗口，等旧事务处理完成。</td><td><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=After%20RO%20transaction%20450%20A%20is%20allocated%2C%20an%20RO%20transaction%20450%20B%20is%20allocated%20and%20stored">说明书 0066</a> · <a href="https://patents.google.com/patent/US12625723B2/en#:~:text=At%20some%20point%2C%20RO%20transactions%20450%20A-B%20complete%20and%20in%20response%20to%20each%20completion%2C%20counter%20420">说明书 0068</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=issue%20the%20transaction%20to%20the%20transaction%20pipeline%20subsequent%20to%20detecting%2C%20based%20on%20the%20first%20counter%2C%20that">F14</a></th><td>计数器表明相关事务均完成后，允许绑定事务向流水线发出。</td><td><a href="https://patents.google.com/patent/US12625723B2/en#:~:text=At%20some%20point%2C%20RO%20transactions%20450%20A-B%20complete%20and%20in%20response%20to%20each%20completion%2C%20counter%20420">说明书 0068</a> · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 6–7。装置用计数池和指针绑定跨类型等待，计数归初值才允许发出。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>绑定现有计数器时另开新计数器，之后的异类分配递增新计数器。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>分配等待事务时还可增加其他受它影响的计数器，并保存相应指针。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>该事务退休时按所保存的指针递减此前增加的计数器。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>该事务退休后释放计数器供后续事务重用。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>计数器绑定期间停止把新事务计入这一计数器。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>每种事务入各自队列，等待请求到达对应队首才允许发出。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>原图 6、10–11。方法项包括较老异类事务分配递增、绑定、完成递减。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>绑定位指出所有导致递增的事务都完成后，才发年轻事务。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>保存当初增加过的计数器指针，完成时据此递减。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-8">8</a></td><td>同类型事务维护链表，目标不是队首时不得发出。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>链表中至少两个事务分别绑定不同计数器。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>链表属于共享计数池的多个虚拟通道之一。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>首次绑定期间该计数器不能另绑一笔事务。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-8">8</a></td><td>较老事务是 posted，较年轻事务是 non-posted。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>设计描述 I/O 代理按类型分配计数器，根据绑定计数判断旧事务完成以发出年轻事务。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>一笔事务至少两次进入流水线，首轮递增，后轮递减。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>等待事务绑定后新建第二计数器，并停止递增第一计数器。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>等待事务退休后释放第一计数器供复用。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>还要求等待事务是本类型最老的待处理事务。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>指针把请求与对应类型计数器关联，匹配初值才允许发出。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>同时覆盖较老事务分配递增与完成递减。</dd></div><div><dt>原图 6–7、图 10–11</dt><dd>给出计数器与入口队列对应关系及执行流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12625723B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12632384B2.html#engineering">I/O 代理可乱序取得独占读权限</a>
-<p>US12632384B2 权 1 允许先取得较晚发出请求的独占读所有权，权 2 另规定先完成较早的外设读。US12625723B2 权 8 用类型计数器控制较年轻的异类事务何时可发入流水线。对照时分别记录发出、所有权到达及外设端完成。</p></li><li><a href="US11893413B2.html#engineering">写表让写事务提前释放待处理请求缓冲</a>
-<p>US11893413B2 的源端向桥发送写事务且成功登记写表后，释放通用请求缓冲项；权 3 另规定收到写完成响应后回收写表项。US12625723B2 则用分类型计数器记录较老异类事务的完成，完成后才解除新事务的发出限制。两件分别对应源端缓冲释放和跨类型次序依赖解除。</p></li><li><a href="US12067275B1.html#engineering">I/O 代理在同一请求存储体中划分顺序子域</a>
-<p>US12067275B1 在同一个请求存储体中把外设事务划分为顺序子域，允许不同子域的事务各自推进，外部管理电路仍可将其视为单个一致性代理。US12625723B2 用计数器表达 I/O 事务类型之间的排序依赖，较老的阻塞事务完成后才允许新的异类事务发出。观测时可以分别区分子域队首阻塞和事务类型造成的等待。</p></li></ul>
-    <p><a href="../index.html?patent=US12625723B2#knowledge">在全量关系图上定位 US12625723B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-04-16</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-03-31</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-05-12</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/657,524</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sagi Lahav、Lital Levy-Rubin、Gaurav Garg、Gerard R. Williams, III、Samer Nassar、Per H. Hammarlund、Harshavardhan Kaushikkar、Srinivasa Rangan Sridharan、Jeff Gonion</dd></div><div><dt>分类号</dt><dd>G06F9/467、G06F9/30079、G06F9/321、G06F9/5016、G06F9/52</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12625723B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12625723B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 146 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14、15、16、17、18。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12625723B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

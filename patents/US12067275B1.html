@@ -1,116 +1,152 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12067275B1 I/O 代理在同一请求存储体中划分顺序子域 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一个 TOR bank 如何保留多个独立的 I/O 顺序子域 · US12067275B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12067275B1</code> · <a href="https://patents.google.com/patent/US12067275B1/en">专利全文</a></p>
+<h1>一个 TOR bank 如何保留多个独立的 I/O 顺序子域</h1><p class="reading-question">I/O agent 能否让多个接口共用请求表容量，同时避免一个接口的队首等待阻塞另一个接口？</p>
+<p class="reading-answer">可以共用一个请求表 bank。事务先记录顺序子域和虚通道，再接到对应顺序链表。各链表独立判断本域待执行请求，合资格事务再竞争同一条 IOA 流水线。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-08-20</dd></div><div><dt>申请号</dt><dd>US17/810,275</dd></div><div><dt>最早优先权</dt><dd>2022-06-30</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Samer Nassar、Sagi Lahav、Lital Levy-Rubin、Roey Grinvald</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#bank">物理 TOR 项与发出顺序由不同结构表示</a></li><li><a href="#parallel">A 等自己的回填时，B 为什么仍可选</a></li><li><a href="#reconfigure">旧 TOR 条目退出后再改子域数量</a></li><li><a href="#vc-map">同一接口可共享子域，子域内仍能使用多个虚通道</a></li><li><a href="#scope">独立权利要求怎样描述同一机制</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="bank"><h2>物理 TOR 项与发出顺序由不同结构表示</h2><p>在图 1 的上半部，外设入口、SoC 入口以及 TOR 都可给流水线仲裁器提交事务。事务第一次经过 IOA 流水线时可以分配请求表（Table of Requests，TOR）条目。说明书 FIG. 4 列出命令、数据、虚通道和顺序子域等字段。这里的 bank 是 I/O agent 的请求表存储。</p><p>待后续处理的事务按子域等属性进入 TOR 顺序链表，能否重发由条件记录与依赖逻辑判断。链表头获得资格后回到流水线仲裁器。多个子域可以共享同一份物理容量，仍各自维护顺序约束。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　I/O agent 的 TOR 条目物理共享，顺序链按域组织</h3>
+    <p id="fig-1-basis">区分初次分配、物理存储、待重发顺序链和重新参加仲裁。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="I/O agent 的 TOR 条目物理共享，顺序链按域组织" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 642" role="img" aria-labelledby="us12067275b1-fig-1-svg-title us12067275b1-fig-1-svg-desc">
+<title id="us12067275b1-fig-1-svg-title">I/O agent 的 TOR 条目物理共享，顺序链按域组织</title>
+<desc id="us12067275b1-fig-1-svg-desc">区分初次分配、物理存储、待重发顺序链和重新参加仲裁。</desc>
+<defs><marker id="us12067275b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12067275b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12067275b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12067275b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12067275b1-fig-1-p-a" d="M 209 139 L 294 139" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-1-arrow-main)"/>
+<path id="us12067275b1-fig-1-a-pass" d="M 467 139 L 572 139" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-1-arrow-main)"/>
+<path id="us12067275b1-fig-1-out-bound" d="M 759 139 L 814 139" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-1-arrow-data)"/>
+<path id="us12067275b1-fig-1-alloc" d="M 664 193 L 664 319" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-1-arrow-main)"/>
+<path id="us12067275b1-fig-1-membership" d="M 572 369 L 467 369" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-1-arrow-control)"/>
+<path id="us12067275b1-fig-1-reissue" d="M 295 370 L 256 370 Q 248 370 248 362 L 248 174 Q 248 166 256 166 L 294 166" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-1-arrow-return)"/>
+<path id="us12067275b1-fig-1-track" d="M 663 429 L 663 511" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-1-arrow-control)"/>
+<path id="us12067275b1-fig-1-wake" d="M 209 558 L 572 558" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-1-arrow-data)"/>
+<path id="us12067275b1-fig-1-snoop" d="M 42 556 L 31 556 Q 23 556 23 548 L 23 87 Q 23 79 31 79 L 359 79 Q 367 79 367 87 L 367 101" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-1-arrow-control)"/>
+<rect x="213.5" y="112" width="77" height="18" fill="#f5f5f5"/><text x="252" y="126" class="arrow-label" text-anchor="middle">新事务</text>
+<rect x="468" y="112" width="106" height="18" fill="#f5f5f5"/><text x="521" y="126" class="arrow-label" text-anchor="middle">首轮或重发</text>
+<rect x="784" y="111" width="0" height="18" fill="#f5f5f5"/><text x="784" y="125" class="arrow-label" text-anchor="middle"></text>
+<rect x="671.5" y="231" width="137" height="18" fill="#f5f5f5"/><text x="740" y="245" class="arrow-label" text-anchor="middle">首次分配／更新</text>
+<rect x="469" y="341" width="102" height="18" fill="#f5f5f5"/><text x="520" y="355" class="arrow-label" text-anchor="middle">建立顺序链</text>
+<rect x="126" y="259" width="148" height="18" fill="#f5f5f5"/><text x="200" y="273" class="arrow-label" text-anchor="middle">满足依赖再仲裁</text>
+<rect x="681" y="454" width="118" height="18" fill="#f5f5f5"/><text x="740" y="468" class="arrow-label" text-anchor="middle">跟踪触发条件</text>
+<rect x="298" y="530" width="162" height="18" fill="#f5f5f5"/><text x="379" y="544" class="arrow-label" text-anchor="middle">数据回填可解除等待</text>
+<rect x="241.5" y="80" width="111" height="18" fill="#f5f5f5"/><text x="297" y="94" class="arrow-label" text-anchor="middle">snoop 候选</text>
+<g id="us12067275b1-fig-1-p"><rect x="42" y="101" width="167" height="92" rx="6" fill="#f5f5f5"/><rect x="42" y="101" width="167" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="125.5" y="127" class="node-name" text-anchor="middle">外设入口</text><text x="125.5" y="149" class="node-detail" text-anchor="middle">接收本地请求</text></g>
+<g id="us12067275b1-fig-1-a"><rect x="294" y="101" width="173" height="92" rx="6" fill="#f5f5f5"/><rect x="294" y="101" width="173" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="380.5" y="127" class="node-name" text-anchor="middle">流水线仲裁器</text><text x="380.5" y="149" class="node-detail" text-anchor="middle">选出待发事务</text></g>
+<g id="us12067275b1-fig-1-pipe"><rect x="572" y="101" width="187" height="92" rx="6" fill="#f5f5f5"/><rect x="572" y="101" width="187" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="665.5" y="127" class="node-name" text-anchor="middle">IOA 流水线</text><text x="665.5" y="149" class="node-detail" text-anchor="middle">解析、匹配及执行</text></g>
+<g id="us12067275b1-fig-1-out"><rect x="814" y="101" width="116" height="92" rx="6" fill="#f5f5f5"/><rect x="814" y="101" width="116" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="872" y="127" class="node-name" text-anchor="middle">SoC 出口</text><text x="872" y="149" class="node-detail" text-anchor="middle">发互连消息</text></g>
+<g id="us12067275b1-fig-1-list"><rect x="295" y="319" width="172" height="110" rx="6" fill="#f5f5f5"/><rect x="295" y="319" width="172" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="381" y="345" class="node-name" text-anchor="middle">TOR 重发队列</text><text x="381" y="367" class="node-detail" text-anchor="middle">按子域等建链表</text><text x="381" y="385" class="node-detail" text-anchor="middle">分别取各链表头</text></g>
+<g id="us12067275b1-fig-1-bank"><rect x="572" y="319" width="187" height="110" rx="6" fill="#f5f5f5"/><rect x="572" y="319" width="187" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="665.5" y="345" class="node-name" text-anchor="middle">共享 TOR bank</text><text x="665.5" y="367" class="node-detail" text-anchor="middle">命令、数据</text><text x="665.5" y="385" class="node-detail" text-anchor="middle">虚通道、顺序子域</text></g>
+<g id="us12067275b1-fig-1-dep"><rect x="572" y="511" width="187" height="87" rx="6" fill="#f5f5f5"/><rect x="572" y="511" width="187" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="665.5" y="537" class="node-name" text-anchor="middle">TOR 依赖逻辑</text><text x="665.5" y="559" class="node-detail" text-anchor="middle">跟踪再派发的条件</text></g>
+<g id="us12067275b1-fig-1-s"><rect x="42" y="516" width="167" height="82" rx="6" fill="#f5f5f5"/><rect x="42" y="516" width="167" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="125.5" y="542" class="node-name" text-anchor="middle">SoC 入口</text><text x="125.5" y="564" class="node-detail" text-anchor="middle">数据填充与 snoop</text></g>
+<text x="43" y="57" class="signal-title" text-anchor="start">I/O agent 将重发顺序与待处理事务的物理存储分开</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12067275b1-fig-1-alloc">首次分配／更新</a> 事务的命令、数据、虚通道和子域可以保留在共享 TOR 条目。</li><li><a href="#us12067275b1-fig-1-membership">建立顺序链</a> 初次分配使请求的逻辑次序按子域及其它属性组织。</li><li><a href="#us12067275b1-fig-1-wake">SoC 回填数据</a> 从互连接收数据可使相关条目满足一次重发条件。</li><li><a href="#us12067275b1-fig-1-reissue">满足条件后参加仲裁</a> 独立链表头可以向同一仲裁器提供候选。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5A、5B；说明书归档段 0031、0032、0035、0036、0038、0039、0041、0042、0043、0044、0045、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a> <a href="../diagrams/US12067275B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>I/O agent</dt><dd>142</dd></div><div><dt>外设入口</dt><dd>210</dd></div><div><dt>外设入口队列</dt><dd>215</dd></div><div><dt>SoC 入口</dt><dd>250</dd></div><div><dt>SoC 出口</dt><dd>240</dd></div><div><dt>共享请求表（TOR）bank</dt><dd>260</dd></div><div><dt>TOR 事务条目</dt><dd>310</dd></div><div><dt>TOR 重发入口队列</dt><dd>320</dd></div><div><dt>TOR 顺序链表</dt><dd>325</dd></div><div><dt>TOR 依赖逻辑</dt><dd>330</dd></div><div><dt>IOA 流水线</dt><dd>230</dd></div><div><dt>流水线仲裁器</dt><dd>220</dd></div><div><dt>事务命令字段</dt><dd>410</dd></div><div><dt>事务数据字段</dt><dd>420</dd></div><div><dt>虚通道字段</dt><dd>430</dd></div><div><dt>顺序子域字段</dt><dd>440</dd></div></dl></details>
+</figure></section><section id="parallel"><h2>A 等自己的回填时，B 为什么仍可选</h2><p>图 2 用 A、B 两笔读展示机制。二者首次分配进同一 TOR，链表属于不同顺序子域。B 的数据先经 SoC 入口到达。TOR 可以单独让 B 参加仲裁，A 继续保留在自己的链表。图中显示的是发出资格，实际发出仍须赢得仲裁。</p><p>表 3 区分物理条目、顺序链和虚通道各自约束。分域解除的是跨域的顺序等待。资源本身仍共享，例如两个子域可能同时竞争管线槽或外发带宽。具体地址的一致性仍由相应协议处理。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　A 等待数据期间，B 可由自己的链表重发</h3>
+    <p id="fig-2-basis">A、B 同用物理请求表。当 B 的重发依赖满足，只检查自己的队首和仲裁。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="A 等待数据期间，B 可由自己的链表重发" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 503" role="img" aria-labelledby="us12067275b1-fig-2-svg-title us12067275b1-fig-2-svg-desc">
+<title id="us12067275b1-fig-2-svg-title">A 等待数据期间，B 可由自己的链表重发</title>
+<desc id="us12067275b1-fig-2-svg-desc">A、B 同用物理请求表。当 B 的重发依赖满足，只检查自己的队首和仲裁。</desc>
+<defs><marker id="us12067275b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12067275b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12067275b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12067275b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12067275b1-fig-2-alloc"><path d="M 844 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-2-arrow-data)"/><rect x="471" y="96" width="260" height="18" fill="#f5f5f5"/><text x="601" y="110" class="arrow-label" text-anchor="middle">首次通过：事务 A、B 存入同一 TOR</text></g>
+<g id="us12067275b1-fig-2-different"><path d="M 358 162 L 382 162 Q 390 162 390 170 L 390 172 Q 390 180 382 180 L 358 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12067275b1-fig-2-arrow-control)"/><rect x="381" y="138" width="182" height="18" fill="#f5f5f5"/><text x="472" y="152" class="arrow-label" text-anchor="middle">分别关联 A、B 的顺序链表</text></g>
+<g id="us12067275b1-fig-2-ready"><path d="M 116 216 L 358 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-2-arrow-main)"/><rect x="139.5" y="192" width="195" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">B 的数据经 SoC 入口就绪</text></g>
+<g id="us12067275b1-fig-2-b"><path d="M 358 264 L 601 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-2-arrow-main)"/><rect x="362.5" y="240" width="234" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">B 合资格，A 因自己的条件仍在等待</text></g>
+<g id="us12067275b1-fig-2-issue"><path d="M 601 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-2-arrow-data)"/><rect x="631.5" y="288" width="182" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">本轮可选 B 进入后续流水线</text></g>
+<g id="us12067275b1-fig-2-a-fill"><path d="M 116 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-2-arrow-return)"/><rect x="172" y="336" width="130" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">随后 A 的数据可用</text></g>
+<g id="us12067275b1-fig-2-a"><path d="M 358 408 L 601 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-2-arrow-return)"/><rect x="388.5" y="384" width="182" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">A 满足自身条件后再参加仲裁</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">内存控制器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">共享 TOR bank</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">流水线仲裁器</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">IOA 流水线</text>
+<text x="28" y="484" class="legend" text-anchor="start">按原图 2、3 和 5 的结构展开一条示例进度。未画可能由同地址或共享资源引起的等待。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12067275b1-fig-2-alloc">分配在同一个 TOR bank</a> 两个事务用同一存储结构，不要求同一条顺序链。</li><li><a href="#us12067275b1-fig-2-ready">B 的数据条件解除</a> 图示以 B 先收到回填作为可再次发出的触发条件。</li><li><a href="#us12067275b1-fig-2-b">B 参加仲裁</a> 不同子域没有彼此的头部次序关系。A 仍等数据，B 可推进。</li><li><a href="#us12067275b1-fig-2-a">A 的后续处理</a> A 的条件也满足后，可按自己的子域规则进入仲裁。</li></ul>
+  <p class="figure-evidence">原图 2、3、5A、5B、6、7；说明书归档段 0035、0036、0038、0039、0043、0044、0050、0053、0059、0063；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a> <a href="../diagrams/US12067275B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共享请求表（TOR）bank</dt><dd>260</dd></div><div><dt>流水线仲裁器</dt><dd>220</dd></div><div><dt>IOA 流水线</dt><dd>230</dd></div><div><dt>SoC 入口</dt><dd>250</dd></div><div><dt>内存控制器</dt><dd>120</dd></div><div><dt>顺序子域 A</dt><dd>530A</dd></div><div><dt>顺序子域 B</dt><dd>530B</dd></div><div><dt>顺序子域 A 的链表</dt><dd>325A</dd></div><div><dt>顺序子域 B 的链表</dt><dd>325B–325C</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　三个硬件位置各自保留什么状态</h3>
+    <p id="fig-3-basis">查清一个事务的物理位置、顺序范围和传输资源各受哪个字段控制。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">对象</th><th scope="col">它约束什么</th><th scope="col">它影响哪个环节</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">共享 TOR bank</th><td>在途请求的物理条目容量</td><td>分配及保存</td></tr><tr id="fig-3-table-row-2"><th scope="row">顺序子域</th><td>与哪些先行事务建立顺序约束</td><td>TOR 链表与重发条件</td></tr><tr id="fig-3-table-row-3"><th scope="row">虚通道</th><td>与哪些流量一起排队和仲裁</td><td>传输资源及 TOR 链表选择</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">硬件分工</a> 多个子域一起使用 TOR 物理条目，各域的顺序状态及虚通道可独立表示。</li></ul>
+  <p class="figure-evidence">原图 3、4、5A、5B；说明书归档段 0042、0044、0045、0048、0049、0050、0052、0055；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共享请求表（TOR）bank</dt><dd>260</dd></div><div><dt>TOR 事务条目</dt><dd>310</dd></div><div><dt>虚通道字段</dt><dd>430</dd></div><div><dt>顺序子域字段</dt><dd>440</dd></div></dl></details>
+</figure></section><section id="reconfigure"><h2>旧 TOR 条目退出后再改子域数量</h2><p>图 4 展开第 9 项。I/O agent 收到改变数量的请求后，让现有 TOR 条目处理并退休，表排空才写入新配置。这样可避免在途事务还按旧顺序子域解释时更换子域划分。</p><p>说明书还允许启动时配置，也可按接口关联的带宽配置子域数量。例如一个 x16 接口对应一个子域，两组 x8 接口可对应两个子域。这只是配置示例。运行时排空须等待尚未完成事务，若有长尾，不宜只按写配置寄存器的时间估算切换。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　重新配置子域前，旧请求表必须排空</h3>
+    <p id="fig-4-basis">具体看到配置请求、等待旧事务和最后写入新配置发生的先后。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="重新配置子域前，旧请求表必须排空" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 577" role="img" aria-labelledby="us12067275b1-fig-4-svg-title us12067275b1-fig-4-svg-desc">
+<title id="us12067275b1-fig-4-svg-title">重新配置子域前，旧请求表必须排空</title>
+<desc id="us12067275b1-fig-4-svg-desc">具体看到配置请求、等待旧事务和最后写入新配置发生的先后。</desc>
+<defs><marker id="us12067275b1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12067275b1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12067275b1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12067275b1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12067275b1-fig-4-start" d="M 226 155 L 370 155" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-4-arrow-main)"/>
+<path id="us12067275b1-fig-4-query" d="M 571 157 L 643.25 157 Q 644 157 644 157.75 L 644 157.75 Q 644 158.5 644.75 158.5 L 704 158.5" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-4-arrow-main)"/>
+<path id="us12067275b1-fig-4-busy" d="M 814.5 102 L 814.5 88 Q 814.5 80 806.5 80 L 478 80 Q 470 80 470 88 L 470 111" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12067275b1-fig-4-arrow-return)"/>
+<path id="us12067275b1-fig-4-empty" d="M 814.5 215 L 814.5 368" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-4-arrow-main)"/>
+<path id="us12067275b1-fig-4-cfg" d="M 704 420 L 571 420" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-4-arrow-main)"/>
+<rect x="249.5" y="127" width="101" height="18" fill="#f5f5f5"/><text x="300" y="141" class="arrow-label" text-anchor="middle">收到请求</text>
+<rect x="584" y="128" width="102" height="18" fill="#f5f5f5"/><text x="635" y="142" class="arrow-label" text-anchor="middle">检查旧表</text>
+<rect x="569.5" y="56" width="171" height="18" fill="#f5f5f5"/><text x="655" y="70" class="arrow-label" text-anchor="middle">有，等旧事务结束</text>
+<rect x="810" y="279" width="128" height="18" fill="#f5f5f5"/><text x="874" y="293" class="arrow-label" text-anchor="middle">无，允许修改</text>
+<rect x="581.5" y="391" width="111" height="18" fill="#f5f5f5"/><text x="637" y="405" class="arrow-label" text-anchor="middle">配置更新后</text>
+<g id="us12067275b1-fig-4-req"><rect x="42" y="111" width="184" height="92" rx="6" fill="#f5f5f5"/><rect x="42" y="111" width="184" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="137" class="node-name" text-anchor="middle">重配请求到达</text><text x="134" y="159" class="node-detail" text-anchor="middle">给出新的子域数量</text></g>
+<g id="us12067275b1-fig-4-drain"><rect x="370" y="111" width="201" height="92" rx="6" fill="#f5f5f5"/><rect x="370" y="111" width="201" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="470.5" y="137" class="node-name" text-anchor="middle">排空共享 TOR bank</text><text x="470.5" y="159" class="node-detail" text-anchor="middle">旧配置下的事务继续退休</text></g>
+<g id="us12067275b1-fig-4-test"><polygon points="814.5,102 925,158.5 814.5,215 704,158.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="814.5" y="155.5" class="node-name" text-anchor="middle">旧表还有事务？</text><text x="814.5" y="176.5" class="node-detail" text-anchor="middle">占用检查</text></g>
+<g id="us12067275b1-fig-4-switch"><rect x="704" y="368" width="221" height="105" rx="6" fill="#f5f5f5"/><rect x="704" y="368" width="221" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="814.5" y="394" class="node-name" text-anchor="middle">生效新的子域数量</text><text x="814.5" y="416" class="node-detail" text-anchor="middle">更新对应的配置寄存器</text></g>
+<g id="us12067275b1-fig-4-resume"><rect x="370" y="368" width="201" height="105" rx="6" fill="#f5f5f5"/><rect x="370" y="368" width="201" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="470.5" y="394" class="node-name" text-anchor="middle">按新配置分派</text><text x="470.5" y="416" class="node-detail" text-anchor="middle">新事务使用更新的子域关系</text></g>
+<text x="42" y="42" class="signal-title" text-anchor="start">运行时改子域数量前，先让旧 TOR 项退休</text>
+<text x="44" y="535" class="legend" text-anchor="start">专利权 9 规定重配置的顺序。具体入口限流及链表恢复时序由实现决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12067275b1-fig-4-req">重配请求</a> 说明书允许启动时配，也允许在运行时改为新的子域数量。</li><li><a href="#us12067275b1-fig-4-busy">旧事务尚未全部退休</a> 继续依据旧配置处理在途事务。</li><li><a href="#us12067275b1-fig-4-empty">TOR 已排空</a> 第 9 项把排空作为设置新数量之前的操作。</li><li><a href="#us12067275b1-fig-4-switch">新数量生效</a> 以新的配置关系分派随后事务，各状态的切换成本取决于排空。</li></ul>
+  <p class="figure-evidence">原图 6；说明书归档段 0051、0056、0057、0059；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US12067275B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共享请求表（TOR）bank</dt><dd>260</dd></div><div><dt>配置设备的顺序子域</dt><dd>610</dd></div><div><dt>按子域执行并处理重配置</dt><dd>630</dd></div></dl></details>
+</figure></section><section id="vc-map"><h2>同一接口可共享子域，子域内仍能使用多个虚通道</h2><p>图 5 上方的接口 A 使用子域 A。下方两设备共享接口 B，可以使用同一个子域 B。此后 B 里的请求依然能按事务用途选择 low latency 或 bulk 等虚通道并分别排入顺序链。原文允许多个设备共享子域，配置可以少于设备数。</p><p>虚通道反映的是传输服务类型及其排队关系，顺序子域反映事务来源和顺序规则。第 3、11、16、18 项覆盖两者并存的情况，第 12 项涉及共享接口。第 5、20、23 项另涉及从内存管理电路看将该 bank 视作单个缓存代理。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　同一子域下，多个设备的事务仍可分到不同 VC</h3>
+    <p id="fig-5-basis">分别看到接口归域与按虚通道选择两条链表，解释共享接口和共享 VC 的区别。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一子域下，多个设备的事务仍可分到不同 VC" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 618" role="img" aria-labelledby="us12067275b1-fig-5-svg-title us12067275b1-fig-5-svg-desc">
+<title id="us12067275b1-fig-5-svg-title">同一子域下，多个设备的事务仍可分到不同 VC</title>
+<desc id="us12067275b1-fig-5-svg-desc">分别看到接口归域与按虚通道选择两条链表，解释共享接口和共享 VC 的区别。</desc>
+<defs><marker id="us12067275b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12067275b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12067275b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12067275b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12067275b1-fig-5-idA" d="M 215 157 L 375 157" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-5-arrow-main)"/>
+<path id="us12067275b1-fig-5-idB1" d="M 215 321 L 283 321 Q 291 321 291 329 L 291 352 Q 291 360 299 360 L 375 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-5-arrow-main)"/>
+<path id="us12067275b1-fig-5-idB2" d="M 215 477 L 280 477 Q 288 477 288 469 L 288 405 Q 288 397 296 397 L 375 397" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12067275b1-fig-5-arrow-main)"/>
+<path id="us12067275b1-fig-5-first" d="M 551 357 L 621 357 Q 629 357 629 349 L 629 324 Q 629 316 637 316 L 710 316" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-5-arrow-data)"/>
+<path id="us12067275b1-fig-5-second" d="M 551 397 L 621 397 Q 629 397 629 405 L 629 492 Q 629 500 637 500 L 710 500" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12067275b1-fig-5-arrow-data)"/>
+<rect x="225" y="129" width="144" height="18" fill="#f5f5f5"/><text x="297" y="143" class="arrow-label" text-anchor="middle">用接口 ID 归域</text>
+<rect x="228.5" y="294" width="111" height="18" fill="#f5f5f5"/><text x="284" y="308" class="arrow-label" text-anchor="middle">接口 B ID</text>
+<rect x="230.5" y="449" width="123" height="18" fill="#f5f5f5"/><text x="292" y="463" class="arrow-label" text-anchor="middle">同一个接口 ID</text>
+<rect x="547.5" y="286" width="157" height="18" fill="#f5f5f5"/><text x="626" y="300" class="arrow-label" text-anchor="middle">虚通道：low latency</text>
+<rect x="564.5" y="472" width="131" height="18" fill="#f5f5f5"/><text x="630" y="486" class="arrow-label" text-anchor="middle">虚通道：bulk</text>
+<g id="us12067275b1-fig-5-a"><rect x="44" y="114" width="171" height="89" rx="6" fill="#f5f5f5"/><rect x="44" y="114" width="171" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="140" class="node-name" text-anchor="middle">接口 A 的外设</text><text x="129.5" y="162" class="node-detail" text-anchor="middle">分配顺序子域 A</text></g>
+<g id="us12067275b1-fig-5-b"><rect x="44" y="274" width="171" height="89" rx="6" fill="#f5f5f5"/><rect x="44" y="274" width="171" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="300" class="node-name" text-anchor="middle">共享接口 B · 外设 1</text><text x="129.5" y="322" class="node-detail" text-anchor="middle">分配顺序子域 B</text></g>
+<g id="us12067275b1-fig-5-c"><rect x="44" y="428" width="171" height="89" rx="6" fill="#f5f5f5"/><rect x="44" y="428" width="171" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="454" class="node-name" text-anchor="middle">共享接口 B · 外设 2</text><text x="129.5" y="476" class="node-detail" text-anchor="middle">同样分配子域 B</text></g>
+<g id="us12067275b1-fig-5-da"><rect x="375" y="114" width="176" height="89" rx="6" fill="#f5f5f5"/><rect x="375" y="114" width="176" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="463" y="140" class="node-name" text-anchor="middle">顺序子域 A</text><text x="463" y="162" class="node-detail" text-anchor="middle">使用自己的顺序链</text></g>
+<g id="us12067275b1-fig-5-db"><rect x="375" y="331" width="176" height="89" rx="6" fill="#f5f5f5"/><rect x="375" y="331" width="176" height="89" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="463" y="357" class="node-name" text-anchor="middle">顺序子域 B</text><text x="463" y="379" class="node-detail" text-anchor="middle">同接口可收多个设备</text></g>
+<g id="us12067275b1-fig-5-ll"><rect x="710" y="271" width="198" height="89" rx="6" fill="#f5f5f5"/><rect x="710" y="271" width="198" height="89" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="809" y="297" class="node-name" text-anchor="middle">子域 B 的低延迟链表</text><text x="809" y="319" class="node-detail" text-anchor="middle">按所选虚通道记录</text></g>
+<g id="us12067275b1-fig-5-bu"><rect x="710" y="454" width="198" height="89" rx="6" fill="#f5f5f5"/><rect x="710" y="454" width="198" height="89" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="809" y="480" class="node-name" text-anchor="middle">子域 B 的 bulk 链表</text><text x="809" y="502" class="node-detail" text-anchor="middle">按所选虚通道记录</text></g>
+<text x="44" y="63" class="signal-title" text-anchor="start">用接口标识划顺序子域，再按事务虚通道选链表</text>
+<text x="45" y="572" class="legend" text-anchor="start">根据原图 5A–5B 组合示意。链表还可细分事务类型，配置也可允许一条链表管理多个 VC。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12067275b1-fig-5-idB1">接口 B 的设备使用同一子域</a> 可按共同的接口标识配置多个设备进入同一个顺序子域。</li><li><a href="#us12067275b1-fig-5-db">顺序子域 B</a> 它用于保留来源与顺序约束，同一设备也可能发出不同虚通道的事务。</li><li><a href="#us12067275b1-fig-5-first">低延迟 VC 链表</a> 此例将 low latency 作为一个 VC 原文名称，不约束必须只有两种类型。</li><li><a href="#us12067275b1-fig-5-second">bulk VC 链表</a> 可以用另一条链为同一子域内的不同 VC 保存顺序。</li></ul>
+  <p class="figure-evidence">原图 4、5A、5B、8；说明书归档段 0048、0049、0050、0052、0053、0054、0055、0065、0066；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12067275B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>虚通道字段</dt><dd>430</dd></div><div><dt>顺序子域字段</dt><dd>440</dd></div><div><dt>顺序子域 A</dt><dd>530A</dd></div><div><dt>顺序子域 B</dt><dd>530B</dd></div><div><dt>顺序子域 A 的链表</dt><dd>325A</dd></div><div><dt>顺序子域 B 的链表</dt><dd>325B–325C</dd></div><div><dt>子域 B 的两类虚通道</dt><dd>520A–520B</dd></div><div><dt>外设</dt><dd>144</dd></div></dl></details>
+</figure></section><section id="scope"><h2>独立权利要求怎样描述同一机制</h2><p>第 1 项要求给设备分配子域并使用同一 bank 发出事务。第 14 项另把子域数量与带宽信息关联。第 18 项在多个 I/O cluster、独立网络和本地总线的系统中限定同域多虚通道及异域独立推进。第 23 项明确内存侧的单缓存代理视角。</p><p>可分别观察每个子域从入表到再次发出的等待、链表头等待具体条件的时间和共享 TOR 占用。若一类来源已经填满 TOR，逻辑顺序域未必给另一类保留可用条目。说明书没有为各子域规定容量配额。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US12067275B1</code><span>美国授权专利</span><time datetime="2024-08-20">2024-08-20</time></p>
-  <h1>I/O 代理在同一请求存储体中划分顺序子域</h1>
-  <p class="english-title" lang="en">Memory bank with subdomains</p>
-  <p class="document-question">多个外设共用 I/O 代理的请求存储体时，一个外设的未完成事务会阻塞另一个外设吗？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">I/O 代理把不同外设的事务分到同一个请求存储体中的独立顺序子域，对外仍由一致性管理电路作为一个代理处理。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>子域隔离内部顺序依赖，存储容量和外部一致性资源仍共享。</dd></div><div><dt>验证方法</dt><dd>在相同外设负载中阻塞 A 的队首，比较 A、B 分属同一子域和不同子域。记录两个子域的队首、B 请求发出周期和共享存储占用。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12067275B1/en#CLM-00023">原文权利要求 23</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">多个逻辑流共享一个请求存储体可以节省物理资源。如果所有请求合到同一顺序链上，外设 A 的阻塞可能拖延外设 B。</p>
-    <p>I/O 代理用设备的接口标识分配顺序子域，同一请求表（TOR）存储体承载多个子域。事务分别按子域或子域与虚拟通道组织。部分权项还要求外部一致性管理电路将该存储体视作单一代理。</p>
-    <ol class="walkthrough"><li><h3>按接口分配顺序子域</h3><p>I/O 代理可以读取设备的接口标识来设置子域。共用一个接口的多个外设可以进入同一子域。</p></li><li><h3>在同一 TOR 存储体登记事务</h3><p>事务条目分别记下虚拟通道和子域。首轮经过 I/O 流水线时，会把需重复处理的事务登记到请求表。</p></li><li><h3>按子域或子域与虚拟通道维护顺序</h3><p>原图 5A–5B 为各子域维护顺序链。对于同一子域里分不同虚拟通道的事务，也可用独立链表。</p></li><li><h3>向一致性管理电路呈现一个代理</h3><p>按权利要求 23，子域从属于同一请求存储体。外部一致性管理电路对整个存储体使用一个缓存代理身份。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a> 规定动态调整顺序子域数量时，I/O 代理先排空共享请求存储体再切换配置。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00012" aria-label="原文权利要求 12">12</a> 允许共享一个外设接口的两个设备映射到同一子域。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>TOR</dt><dd>Table of Requests。保存 I/O 代理在途事务及来源、通道、子域等属性。</dd></div><div><dt>顺序子域</dt><dd>让共享请求表里的不同逻辑流按各自顺序规则推进的一组事务。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">I/O 请求表物理共享、顺序链按子域划分</a></li><li><a href="#fig-2">A 等待时 B 可发出</a></li><li><a href="#fig-3">三种约束由不同结构负责</a></li><li><a href="#fig-4">修改子域数量前先排空请求表</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">I/O 请求表物理共享、顺序链按子域划分</h3></div>
-    <a class="paper-open" href="../mechanisms/US12067275B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="I/O 请求表物理共享、顺序链按子域划分">
-    <img class="paper-image native-image" src="../mechanisms/US12067275B1/fig-1/diagram.svg" width="934" height="332"
-         style="--paper-width:934px" alt="I/O 请求表物理共享、顺序链按子域划分。I/O 代理向外维持一致性代理身份，内部将事务关联不同子域。">
-  </div>
-  <figcaption>
-    <span>I/O 代理向外维持一致性代理身份，内部将事务关联不同子域。</span>
-    <span class="figure-evidence">原图 2–5B，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/67/d8/be/0bf0750df416f9/US12067275.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">A 等待时 B 可发出</h3></div>
-    <a class="paper-open" href="../mechanisms/US12067275B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="A 等待时 B 可发出">
-    <img class="paper-image native-image" src="../mechanisms/US12067275B1/fig-2/diagram.svg" width="920" height="474"
-         style="--paper-width:920px" alt="A 等待时 B 可发出。A、B 的事务写入同一请求表。A 等本域的响应时，B 只要满足本域定序，即可申请共享发出端口。">
-  </div>
-  <figcaption>
-    <span>A、B 的事务写入同一请求表。A 等本域的响应时，B 只要满足本域定序，即可申请共享发出端口。</span>
-    <span class="figure-evidence">原图 5A–5B、图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/67/d8/be/0bf0750df416f9/US12067275.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">三种约束由不同结构负责</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">约束</th><th scope="col">实现位置</th><th scope="col">结果</th></tr></thead><tbody><tr><th scope="row">容量</th><td>同一 TOR 存储体</td><td>各子域共享物理条目</td></tr><tr><th scope="row">执行顺序</th><td>按子域或子域／虚拟通道维护顺序链</td><td>组内规则可独立判定</td></tr><tr><th scope="row">一致性代理身份</th><td>外部内存管理电路</td><td>按整个存储体一个代理跟踪</td></tr></tbody></table>
-  <figcaption>
-    <span>区分物理共享、域内顺序和外部的一致性关系。</span>
-    <span class="figure-evidence">原图 2–5B，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a>。 · <a href="https://patentimages.storage.googleapis.com/67/d8/be/0bf0750df416f9/US12067275.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">修改子域数量前先排空请求表</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">阶段</th><th scope="col">TOR 状态</th><th scope="col">I/O 代理动作</th></tr></thead><tbody><tr><th scope="row">收到调整请求</th><td>仍按原域配置跟踪旧事务</td><td>暂缓设置新域数量</td></tr><tr><th scope="row">等待排空</th><td class="emphasis">旧事务逐笔完成</td><td>等待最后一个表项释放</td></tr><tr><th scope="row">已排空</th><td>没有旧配置下的在途事务</td><td class="emphasis">设置请求的新域数量</td></tr></tbody></table>
-  <figcaption>
-    <span>动态调整以请求表排空为配置生效条件。旧域仍有在途事务时，代理须等它处理完。</span>
-    <span class="figure-evidence">原图 6，说明书 0051、0059，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="https://patentimages.storage.googleapis.com/67/d8/be/0bf0750df416f9/US12067275.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按设备划分顺序子域</dt><dd>解除跨域顺序等待 <span class="subdued">原图 5A–6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>子域共用事务存储</dt><dd>复用物理表项容量 <span class="subdued">原图 3–5B，说明书 0050</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>排空使旧子域中的事务在映射变化前结束，代价是重配置要等存储体内最后一笔事务离开。可以同时观测在途表项、最后一笔旧事务的完成、配置生效和新事务的首次分配。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若一笔外设事务在重配置前长期等待下游响应，切换时间将由该事务决定。持续接入流量时可对照静态配置，短时拆分子域节省的后续等待可能抵不过本次排空。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>外设 A 的一个请求在等待响应。外设 B 也已在同一 TOR 存储体登记可执行请求。</dd></div><div><dt>处理结果</dt><dd>由于 A、B 关联不同子域，A 的顺序依赖不会阻塞 B。</dd></div><div><dt>结果解读</dt><dd>这项独立性针对域间顺序，不保证物理端口、互连信用或内存带宽无限。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、14、18、23 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -128,7 +164,7 @@
   </table>
 </section><section class="independent-claim" id="independent-18" aria-labelledby="independent-18-title">
   <h4 id="independent-18-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></h4>
-  <p>原图 1–5B、8。系统项含多协议全局互连与 I/O 簇，还限定不同虚拟通道可属同一域。</p>
+  <p>原图 1–5B、8。系统项含多协议全局互连与 I/O cluster，还限定不同虚拟通道可属同一域。</p>
   <table class="comparison-table" aria-labelledby="independent-18-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=a%20global%20communication%20fabric%20that%20includes%20multiple%20independent%20networks%20having%20different%20communication%20and%20coherency%20protocols">F9</a></th><td>全局互连含通信与一致性协议不同的独立网络。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=configured%20to%20bridge%20transactions%20between%20the%20set%20of%20local%20functional%20circuits%20and%20the%20global%20communication%20fabric">F10</a></th><td>I/O 代理在本地功能电路和全局互连间桥接事务。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Turning%20now%20to%20FIG.%208%20%2C%20a%20flow%20diagram%20of%20a%20method%20800%20is%20shown.%20Method">说明书 0064</a> · 原图 2 · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=different%20virtual%20channels%20in%20a%20same%20subdomain%20of%20a%20plurality%20of%20subdomains%20implemented%20for%20the%20memory">F11</a></th><td>同一子域可以容纳不同虚拟通道的事务。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Virtual%20channel%20attribute%20430%20%2C%20in%20various%20embodiments%2C%20specifies%20the%20virtual%20channel%20that%20is%20associated%20with">说明书 0048</a> · <a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Turning%20now%20to%20FIG.%205%20A%20%2C%20a%20block%20diagram%20of%20example%20TOR%20linked%20lists%20325">说明书 0052</a> · 原图 4 · 原图 5A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=different%20local%20functional%20circuits%20in%20different%20subdomains%20of%20the%20plurality%20of%20subdomains">F12</a></th><td>可让不同功能电路使用不同子域。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Turning%20now%20to%20FIG.%205%20B%20%2C%20a%20block%20diagram%20of%20a%20different%20set%20of%20example">说明书 0054</a> · <a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Method%20800%20begins%20in%20step%20810%20with%20the%20I%2FO%20agent%20circuit%20receiving%20requests%20from%20a%20set">说明书 0065</a> · 原图 5B · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=transactions%20stored%20in%20association%20with%20a%20first%20subdomain%20of%20the%20plurality%20of%20subdomains%20do%20not%20block">F13</a></th><td>事务定序不在两个子域之间相互阻塞。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20step%20630%20%2C%20the%20I%2FO%20agent%20circuit%20executes%20the%20set%20of%20transactions%20such%20that%20transactions">说明书 0059</a> · <a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20step%20830%20%2C%20the%20I%2FO%20agent%20circuit%20executes%20the%20set%20of%20transactions%20such%20that%20transactions">说明书 0066</a> · 原图 6 · 原图 8</td></tr></tbody>
@@ -141,48 +177,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=assign%20a%20device%20of%20the%20set%20of%20devices%20to%20a%20subdomain%20of%20a%20plurality%20of%20subdomains">F14</a></th><td>在共享存储体上为设备选择子域。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Subdomain%20attribute%20440%20%2C%20in%20various%20embodiments%2C%20specifies%20the%20subdomain%20associated%20with%20a%20transaction%20405%20.">说明书 0049</a> · <a href="https://patents.google.com/patent/US12067275B1/en#:~:text=Method%20600%20begins%20in%20step%20610%20with%20the%20I%2FO%20agent%20circuit%20assigning%20a%20device%20of%20a">说明书 0057</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=store%2C%20in%20the%20memory%20bank%2C%20a%20set%20of%20transactions%20of%20the%20device%20in%20association%20with%20the">F15</a></th><td>将带设备子域的事务写入同一请求表。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20various%20embodiments%2C%20transactions%20that%20are%20associated%20with%20different%20subdomains%20are%20stored%20as%20entries%20310%20in">说明书 0050</a> · 原图 5A · 原图 5B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=do%20not%20block%20execution%20of%20the%20set%20of%20transactions">F16</a></th><td>另一子域的事务不阻塞本设备事务。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20step%20630%20%2C%20the%20I%2FO%20agent%20circuit%20executes%20the%20set%20of%20transactions%20such%20that%20transactions">说明书 0059</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=manage%20the%20memory%20bank%20as%20a%20single%20caching%20agent%20for%20the%20set%20of%20devices">F17</a></th><td>外部一致性管理电路按单一代理跟踪整个存储体。</td><td><a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20various%20embodiments%2C%20a%20system%20%28e.g.%2C%20SOC%20100%20%29%20having%20the%20I%2FO%20agent%20circuit%20includes%20a">说明书 0060</a> · <a href="https://patents.google.com/patent/US12067275B1/en#:~:text=In%20various%20embodiments%2C%20the%20system%20that%20includes%20the%20I%2FO%20agent%20circuit%20further%20includes%20a%20set%20of">说明书 0067</a> · 原图 2 · 原图 6 · 原图 8</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–6。片上 I/O 代理连接外设，按子域组织共享存储；其他域的事务不阻塞本域。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>另一 I/O 代理可以将自己的事务存入单个顺序域。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>事务可来自不同虚拟通道，同时关联同一个顺序子域。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>按接口标识把设备归入某顺序子域。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>外部内存管理电路按整个存储体作为单一缓存代理。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>允许另一个设备共用同一子域。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>根据设备的带宽信息设置子域数量。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>在 I/O 代理初始化期间设置子域数量。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>运行时改数量前，先排空存储体中的在途事务。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>按指定子域对应的规则执行其中事务。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>区分同域内的多个虚拟通道，令一个通道上的事务不阻塞另一个通道。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-1">1</a></td><td>两个设备共用接口时，可以据此分配到同一子域。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>子域总数可以少于设备数。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>按带宽配置域数量，将两个设备的事务登记到同一存储体的不同域并独立推进。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>用保存设备接口标识的寄存器实现子域分配。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>同域可登记分属不同虚拟通道的至少两笔事务。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>这两笔来自不同虚拟通道的事务都从第一个设备收到。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>多个网络协议由 I/O 簇桥接，共用存储体内部区分虚拟通道和顺序子域。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>不同本地功能电路的事务也可以关联同一子域。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>维持缓存一致性的内存管理电路把整个存储体作为一个代理。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-18">18</a></td><td>第二个 I/O 代理用单一顺序域存放另一组功能电路的事务。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-18">18</a></td><td>按第一子域的定序规则执行第一子域内的事务。</td></tr><tr id="claim-23"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a></th><td>独立项</td><td>多个域共用请求存储体且跨域独立，外部保持单一缓存代理身份。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–6。片上 I/O 代理连接外设，按子域组织共享存储；其他域的事务不阻塞本域。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>另一 I/O 代理可以将自己的事务存入单个顺序域。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>事务可来自不同虚拟通道，同时关联同一个顺序子域。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>按接口标识把设备归入某顺序子域。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>外部内存管理电路按整个存储体作为单一缓存代理。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>允许另一个设备共用同一子域。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>根据设备的带宽信息设置子域数量。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>在 I/O 代理初始化期间设置子域数量。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>运行时改数量前，先排空存储体中的在途事务。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>按指定子域对应的规则执行其中事务。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>区分同域内的多个虚拟通道，令一个通道上的事务不阻塞另一个通道。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-1">1</a></td><td>两个设备共用接口时，可以据此分配到同一子域。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>子域总数可以少于设备数。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>按带宽配置域数量，将两个设备的事务登记到同一存储体的不同域并独立推进。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>用保存设备接口标识的寄存器实现子域分配。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>同域可登记分属不同虚拟通道的至少两笔事务。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>这两笔来自不同虚拟通道的事务都从第一个设备收到。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>多个网络协议由 I/O cluster桥接，共用存储体内部区分虚拟通道和顺序子域。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>不同本地功能电路的事务也可以关联同一子域。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>维持缓存一致性的内存管理电路把整个存储体作为一个代理。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-18">18</a></td><td>第二个 I/O 代理用单一顺序域存放另一组功能电路的事务。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-18">18</a></td><td>按第一子域的定序规则执行第一子域内的事务。</td></tr><tr id="claim-23"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a></th><td>独立项</td><td>多个域共用请求存储体且跨域独立，外部保持单一缓存代理身份。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>一个物理存储体承载多个子域，域规模可由带宽输入确定。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12067275B1/en#CLM-00023" aria-label="原文权利要求 23">23</a></dt><dd>给出虚拟通道上下文和单一一致性代理身份。</dd></div><div><dt>原图 2–5B、图 6–8</dt><dd>给出请求表、域相关链表和各域处理流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12067275B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12625723B2.html#engineering">I/O 代理用分类型计数器约束事务发出</a>
-<p>US12067275B1 在同一个请求存储体中把外设事务划分为顺序子域，允许不同子域的事务各自推进，外部管理电路仍可将其视为单个一致性代理。US12625723B2 用计数器表达 I/O 事务类型之间的排序依赖，较老的阻塞事务完成后才允许新的异类事务发出。观测时可以分别区分子域队首阻塞和事务类型造成的等待。</p></li></ul>
-    <p><a href="../index.html?patent=US12067275B1#knowledge">在全量关系图上定位 US12067275B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-06-30</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-06-30</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-08-20</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/810,275</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Samer Nassar、Sagi Lahav、Lital Levy-Rubin、Roey Grinvald</dd></div><div><dt>分类号</dt><dd>G06F3/061、G06F3/0604、G06F3/0644、G06F3/0676、G06F3/0679</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12067275B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12067275B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 126 个说明书段落、23 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14、15、16。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12067275B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

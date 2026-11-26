@@ -1,116 +1,156 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11586552B2 部分有效缓存行的读补齐 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US11586552B2</code><span>美国授权专利</span><time datetime="2023-02-21">2023-02-21</time></p>
-  <h1>部分有效缓存行的读补齐</h1>
-  <p class="english-title" lang="en">Memory cache with partial cache line valid states</p>
-  <p class="document-question">读到一条部分有效的缓存行时，怎样补齐空缺并保留缓存里的新值？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">回填逻辑用有效位掩码逐项选源，从内存数据补齐无效部分，并保留缓存中的本地修改。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>触发条件是读区段同时包含无效部分和已修改部分。内存返回不能覆盖已经有效的本地字段。</dd></div><div><dt>验证方法</dt><dd>给下层内存与本地修改填入可区分的值，重放跨有效和无效字的同一读取。逐字检查应答来源、缓存有效位及回填写使能。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11586552B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-4">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">代理可以只改写缓存行的一部分。此时内存有缺失条目的值，缓存则保存某些位置的新值。整行都从内存复制会盖掉缓存中的修改。</p>
-    <p>读到同时含无效字段和已修改字段的缓存行区段时，控制器取回内存数据。它只用返回值补无效字段，保留已有修改，再以合并结果应答。原图 3 例用有效掩码选择写入位置。</p>
-    <ol class="walkthrough"><li><h3>从 tag 识别部分有效状态</h3><p>读请求命中处于 partial 状态的区段。这个区段至少有一个无效部分，以及一个相对内存已修改的部分。</p></li><li><h3>读取条目掩码</h3><p>掩码标出哪些位置要补齐、哪些位置可沿用缓存中的值。有效位表示本地条目可用，写回状态另行处理。</p></li><li><h3>用下层数据补齐</h3><p>控制器向内存取回对应内容。下层返回值只填进掩码标出的无效位置，已有效且修改过的值继续保留。</p></li><li><h3>返回合并后的值</h3><p>控制器用合并结果应答。需要写回时可另发下行请求，读合并的独立权项允许先返回结果。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 允许部分修改、部分无效的区段边补齐边保留本地修改值。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 在此基础上进一步要求把更新后的区段发送给内存控制器，两种权项的数据路径不同。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>部分有效区段</dt><dd>本件的 partial 状态表示区段里同时存在无效值和相对内存修改的值。</dd></div><div><dt>有效掩码</dt><dd>逐位置标识本地数据是否有效，合并时只用内存数据补无效项。</dd></div><div><dt>partial clean</dt><dd>区段有无效位置，但本地有效位置均未相对内存修改。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">掩码控制读合并</a></li><li><a href="#fig-2">下层取数和片内合并</a></li><li><a href="#fig-3">不同事务怎样改变有效位</a></li><li><a href="#fig-4">合并器逐字选择数据来源</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">掩码控制读合并</h3></div>
-    <a class="paper-open" href="../mechanisms/US11586552B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="掩码控制读合并">
-    <img class="paper-image native-image" src="../mechanisms/US11586552B2/fig-1/diagram.svg" width="670" height="488"
-         style="--paper-width:670px" alt="掩码控制读合并。处于部分有效状态时，控制器并行取内存及片上缓存数据。有效掩码决定哪些位置使用内存返回值。">
-  </div>
-  <figcaption>
-    <span>处于部分有效状态时，控制器并行取内存及片上缓存数据。有效掩码决定哪些位置使用内存返回值。</span>
-    <span class="figure-evidence">图 1、图 2、图 3，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">下层取数和片内合并</h3></div>
-    <a class="paper-open" href="../mechanisms/US11586552B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="下层取数和片内合并">
-    <img class="paper-image native-image" src="../mechanisms/US11586552B2/fig-2/diagram.svg" width="920" height="494"
-         style="--paper-width:920px" alt="下层取数和片内合并。内存可以返回完整区段。控制器仅补无效位置，保留片内修改，更新区段状态后应答读请求。">
-  </div>
-  <figcaption>
-    <span>内存可以返回完整区段。控制器仅补无效位置，保留片内修改，更新区段状态后应答读请求。</span>
-    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同事务怎样改变有效位</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">事件</th><th scope="col">条目有效性</th><th scope="col">可能的区段状态</th></tr></thead><tbody><tr><th scope="row">本地部分写</th><td>覆盖位置变为有效</td><td>可能仍部分有效，也可能无无效字段</td></tr><tr><th scope="row">有修改值的部分有效区段按读补齐</th><td>补齐原无效位置</td><td class="emphasis">全有效但仍有修改值</td></tr><tr><th scope="row">收到外部修改通知</th><td>受影响位置变为无效</td><td class="emphasis">保留修改值时为 partial，否则为 partial clean</td></tr></tbody></table>
-  <figcaption>
-    <span>局部写入可以增加有效位。外部通知按对应位置更新有效性。</span>
-    <span class="figure-evidence">图 4、图 5、图 7、图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">合并器逐字选择数据来源</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">同一缓存行</th><th scope="col">字 0</th><th scope="col">字 1</th><th scope="col">字 2</th><th scope="col">字 3</th></tr></thead><tbody><tr><th scope="row">有效位 V</th><td>1</td><td>0</td><td>1</td><td>0</td></tr><tr><th scope="row">缓存阵列</th><td class="emphasis">9（已改）</td><td>无效</td><td class="emphasis">8（已改）</td><td>无效</td></tr><tr><th scope="row">下层返回</th><td>7（旧）</td><td class="emphasis">2</td><td>6（旧）</td><td class="emphasis">4</td></tr><tr><th scope="row">数据来源</th><td>采用缓存值</td><td>采用下层值</td><td>采用缓存值</td><td>采用下层值</td></tr><tr><th scope="row">送请求者</th><td class="emphasis">9</td><td class="emphasis">2</td><td class="emphasis">8</td><td class="emphasis">4</td></tr></tbody></table>
-  <figcaption>
-    <span>缓存行的四项从左到右排列。第 0、2 项有效且已修改，响应沿用缓存里的 9 和 8。第 1、3 项无效，分别取下层返回的 2 和 4。蓝色标出被选中的输入及对应输出。</span>
-    <span class="figure-evidence">图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>；数值为自造教学输入。 · <a href="https://patentimages.storage.googleapis.com/16/15/17/286e40a8a1c041/US11586552B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>掩码限定回填位置</dt><dd>保留本地修改值 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>；原图 3、6</span></dd></div><div><dt>全有效区段可直接读</dt><dd>省去重复内存取数 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>；原图 3、8</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>合并逻辑承担逐字段选择新旧数据的成本。若实施方式随后写回合并结果，额外流量出现在内存写侧。仅用下层读事务数会漏计这一部分。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若返回侧以整个区段传输，而实施方式还请求回送合并结果，一次补齐可能同时消耗整段下层读和写带宽。这是具体总线粒度下的后果，权利要求没有规定传输宽度。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设缓存行有四个条目，缓存里是 [9, 未知, 8, 未知]，有效位为 [1,0,1,0]。内存内容是 [7, 2, 6, 4]，第 0、2 项已在片内改为 9 和 8。</dd></div><div><dt>处理结果</dt><dd>内存结果到达后，控制器只填第 1、3 项，返回 [9, 2, 8, 4]。若把整段内存结果覆盖进来，第 0、2 项会退回 7 和 6。</dd></div><div><dt>结果解读</dt><dd>实际总线仍可能返回整段。片内只填两个位置，片外传输了多少字节还要看下层事务。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#partial-line">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>部分无效的缓存区段如何读出最新数据 · US11586552B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11586552B2</code> · <a href="https://patents.google.com/patent/US11586552B2/en">专利全文</a></p>
+<h1>部分无效的缓存区段如何读出最新数据</h1><p class="reading-question">目标区段里有无效条目，也有尚未写入内存的修改值。一次读取怎样补齐缺失又保住新数据？</p>
+<p class="reading-answer">控制器从下层取数，并用有效掩码确定哪些位置需要更新。本地下层尚未见到的修改值从缓存读出并保留。更新后的区段可返回给处理器，接下来的读在仍有效时可直接命中缓存。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-02-21</dd></div><div><dt>申请号</dt><dd>US17/320,172</dd></div><div><dt>最早优先权</dt><dd>2021-05-13</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Tom Greenshtein</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#data-sources">标签识别区段状态，掩码指定具体数据来源</a></li><li><a href="#completion">并行取数以后，合并才能让请求完成</a></li><li><a href="#updates">本地写和外部通知都会改变有效图样</a></li><li><a href="#claim-scope">权项聚焦数据选择，各种编码及粒度另作限定</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="data-sources"><h2>标签识别区段状态，掩码指定具体数据来源</h2><p>原图 2 为缓存行的各区段保留独立状态。读命中 partial 区段时，区段标签（tag）指出有无效项也有修改项，但不能说明具体位置。有效掩码补上这一层信息。披露的实现可把掩码放在一个无效数据槽里。</p><p>在原图 3 的被访问区段中，d、g、h 槽缺少有效数据，c、e 槽本地更新过。下层取数可以返回整区段，合并时只把 d、g、h 从下层写回。c、e 保留新值。其余未改的有效项和下层一致，可直接采用缓存值。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　合并器按有效掩码选择区段内各槽数据</h3>
+    <p id="fig-1-basis">掩码控制哪些位置采用下层的当前值。现有修改值留在缓存路径，合并后与补入的数据共同交付。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="合并器按有效掩码选择区段内各槽数据" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 523" role="img" aria-labelledby="us11586552b2-fig-1-svg-title us11586552b2-fig-1-svg-desc">
+<title id="us11586552b2-fig-1-svg-title">合并器按有效掩码选择区段内各槽数据</title>
+<desc id="us11586552b2-fig-1-svg-desc">掩码控制哪些位置采用下层的当前值。现有修改值留在缓存路径，合并后与补入的数据共同交付。</desc>
+<defs><marker id="us11586552b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11586552b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11586552b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11586552b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11586552b2-fig-1-request" d="M 159 261 L 229 261" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-1-arrow-control)"/>
+<path id="us11586552b2-fig-1-to-cache" d="M 412 245 L 444 245 Q 452 245 452 237 L 452 150 Q 452 142 460 142 L 492 142" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-1-arrow-control)"/>
+<path id="us11586552b2-fig-1-to-lower" d="M 412 279 L 452 279 Q 460 279 460 287 L 460 362 Q 460 370 468 370 L 492 370" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-1-arrow-control)"/>
+<path id="us11586552b2-fig-1-mask-edge" d="M 669 120 L 871 120 Q 879 120 879 128 L 879 218" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-1-arrow-control)"/>
+<path id="us11586552b2-fig-1-cache-data" d="M 669 163 L 794 163 Q 802 163 802 171 L 802 218" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11586552b2-fig-1-arrow-main)"/>
+<path id="us11586552b2-fig-1-memory-data" d="M 669 364 L 705 364 Q 713 364 713 356 L 713 286 Q 713 278 721 278 L 753 278" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11586552b2-fig-1-arrow-data)"/>
+<path id="us11586552b2-fig-1-commit" d="M 840 312 L 840 381" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11586552b2-fig-1-arrow-main)"/>
+<rect x="166" y="234" width="56" height="18" fill="#f5f5f5"/><text x="194" y="248" class="arrow-label" text-anchor="middle">查标签</text>
+<rect x="354" y="163" width="92" height="18" fill="#f5f5f5"/><text x="400" y="177" class="arrow-label" text-anchor="middle">读片内数据</text>
+<rect x="358.5" y="333" width="95" height="18" fill="#f5f5f5"/><text x="406" y="347" class="arrow-label" text-anchor="middle">读下层内存</text>
+<rect x="731" y="95" width="84" height="18" fill="#f5f5f5"/><text x="773" y="109" class="arrow-label" text-anchor="middle">有效掩码</text>
+<rect x="703" y="137" width="64" height="18" fill="#f5f5f5"/><text x="735" y="151" class="arrow-label" text-anchor="middle">本地值</text>
+<rect x="675.5" y="380" width="65" height="18" fill="#f5f5f5"/><text x="708" y="394" class="arrow-label" text-anchor="middle">下层值</text>
+<rect x="844" y="340" width="112" height="18" fill="#f5f5f5"/><text x="900" y="354" class="arrow-label" text-anchor="middle">合并后的区段</text>
+<g id="us11586552b2-fig-1-cpu"><rect x="26" y="222" width="133" height="79" rx="6" fill="#f5f5f5"/><rect x="26" y="222" width="133" height="79" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="92.5" y="248" class="node-name" text-anchor="middle">处理器</text><text x="92.5" y="270" class="node-detail" text-anchor="middle">读取指定地址</text></g>
+<g id="us11586552b2-fig-1-tag"><rect x="229" y="222" width="183" height="80" rx="6" fill="#f5f5f5"/><rect x="229" y="222" width="183" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="320.5" y="248" class="node-name" text-anchor="middle">区段标签表</text><text x="320.5" y="270" class="node-detail" text-anchor="middle">命中部分有效区段</text></g>
+<g id="us11586552b2-fig-1-cache"><rect x="492" y="97" width="177" height="91" rx="6" fill="#f5f5f5"/><rect x="492" y="97" width="177" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="580.5" y="123" class="node-name" text-anchor="middle">缓存数据阵列</text><text x="580.5" y="145" class="node-detail" text-anchor="middle">带修改值和有效掩码</text></g>
+<g id="us11586552b2-fig-1-lower"><rect x="492" y="330" width="177" height="81" rx="6" fill="#f5f5f5"/><rect x="492" y="330" width="177" height="81" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="580.5" y="356" class="node-name" text-anchor="middle">下层内存</text><text x="580.5" y="378" class="node-detail" text-anchor="middle">返回区段对应地址</text></g>
+<g id="us11586552b2-fig-1-merge"><rect x="753" y="218" width="179" height="94" rx="6" fill="#f5f5f5"/><rect x="753" y="218" width="179" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="842.5" y="244" class="node-name" text-anchor="middle">按槽合并</text><text x="842.5" y="266" class="node-detail" text-anchor="middle">无效槽取下层</text><text x="842.5" y="284" class="node-detail" text-anchor="middle">保留已修改的缓存值</text></g>
+<g id="us11586552b2-fig-1-response"><rect x="753" y="381" width="179" height="81" rx="6" fill="#f5f5f5"/><rect x="753" y="381" width="179" height="81" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="842.5" y="407" class="node-name" text-anchor="middle">区段更新与读响应</text><text x="842.5" y="429" class="node-detail" text-anchor="middle">保留 c、e，补 d、g、h</text></g>
+<text x="26" y="52" class="signal-title" text-anchor="start">片内数据与下层数据按掩码合并</text>
+<text x="26" y="492" class="legend" text-anchor="start">两路取数可重叠。标签表示区段状态，区段内掩码标识数据槽是否有效。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11586552b2-fig-1-mask-edge">区段有效掩码</a> 掩码先指明无效位置。其物理槽在此次合并后恢复为普通数据。</li><li><a href="#us11586552b2-fig-1-cache-data">区段内已有的数据</a> c、e 槽 比内存新，选择器必须从缓存保留它们。</li><li><a href="#us11586552b2-fig-1-commit">更新及返回</a> 合并值既更新区段又组成读响应。旧值只在无效位置被替换。</li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0027、0031、0033、0034、0043、0044、0045、0051、0052、0053；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11586552B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理器</dt><dd>160</dd></div><div><dt>缓存控制器</dt><dd>101</dd></div><div><dt>区段标签表</dt><dd>240</dd></div><div><dt>区段状态字段</dt><dd>246</dd></div><div><dt>缓存数据阵列</dt><dd>110</dd></div><div><dt>被访问区段</dt><dd>120a</dd></div><div><dt>下层内存</dt><dd>145</dd></div><div><dt>区段有效掩码</dt><dd>365</dd></div><div><dt>暂存掩码的 h 槽</dt><dd>230h</dd></div><div><dt>保留本地修改值的 c、e 槽</dt><dd>230c/230e</dd></div><div><dt>从下层补齐的 d、g 槽</dt><dd>230d/230g</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　四个槽中每个返回值来自哪一路</h3>
+    <p id="fig-4-basis">原图 3 的合并规则用四项算例展开，来源在行间固定对齐，可逐项复算。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">对应位置</th><th scope="col">0</th><th scope="col">1</th><th scope="col">2</th><th scope="col">3</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">掩码</th><td>1</td><td>0</td><td>1</td><td>0</td></tr><tr id="fig-4-table-row-2"><th scope="row">缓存内容</th><td>9（已修改）</td><td>无效</td><td>8（已修改）</td><td>无效</td></tr><tr id="fig-4-table-row-3"><th scope="row">下层返回</th><td>7（较旧）</td><td>2</td><td>6（较旧）</td><td>4</td></tr><tr id="fig-4-table-row-4"><th scope="row">选哪一路</th><td>本地</td><td>下层</td><td>本地</td><td>下层</td></tr><tr id="fig-4-table-row-5"><th scope="row">合并结果</th><td>9</td><td>2</td><td>8</td><td>4</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-table-row-4">选择依据是位置有效性</a> 0 和 2 为本地修改值，片内值优先。1 和 3 无效，改用从内存回来的值。</li><li><a href="#fig-4-table-row-5">合并结果</a> 四个槽组成一个响应，不对本地较新的 9 和 8 作覆盖。</li></ul>
+  <p class="figure-evidence">原图 3、6；说明书归档段 0051、0052、0053、0068、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>区段有效掩码</dt><dd>365</dd></div></dl></details>
+</figure></section><section id="completion"><h2>并行取数以后，合并才能让请求完成</h2><p>原图 3 的内存取数与片内区段读取可以并行。内存返回后，控制器按掩码补齐无效槽，并用补来的数据覆盖原先保存掩码的槽。区段现在全有效，原修改项依然比内存副本新，因此标签可以转为 modified/full。</p><p>下次读取若仍命中有效区段，可以直接从缓存响应。若初始区段有无效项但没有修改项，说明书举例按缺失从内存取数并置为 clean，可省掉保留修改值所需的两路合并。</p><p>图 6 展开补齐时的按槽选择。按原图 6 的四槽实例，内存返回值只补原先无效的 a、d，缓存中尚未回填的 b 继续从本地数据路径进入读响应。有效且干净的 c 允许保留或替换成相同的内存值。区段变为全有效之后，b 的数据仍可能比内存新。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　两路读取可以重叠，合并以后才应答</h3>
+    <p id="fig-2-basis">下层内存提供无效位置的数据，缓存保留修改值并提供有效掩码。补齐后区段全有效，标签为 modified。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两路读取可以重叠，合并以后才应答" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us11586552b2-fig-2-svg-title us11586552b2-fig-2-svg-desc">
+<title id="us11586552b2-fig-2-svg-title">两路读取可以重叠，合并以后才应答</title>
+<desc id="us11586552b2-fig-2-svg-desc">下层内存提供无效位置的数据，缓存保留修改值并提供有效掩码。补齐后区段全有效，标签为 modified。</desc>
+<defs><marker id="us11586552b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11586552b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11586552b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11586552b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="322" y="130" width="558" height="106" rx="4" fill="rgba(45,49,66,.02)" style="stroke:rgba(45,49,66,.22)"/>
+<rect x="329" y="124" width="94" height="18" fill="#f5f5f5"/><text x="376" y="138" class="arrow-label" text-anchor="middle">PAR · 可并行</text>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11586552b2-fig-2-ask"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-data)"/><rect x="172" y="96" width="130" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">读 d 槽对应的地址</text></g>
+<g id="us11586552b2-fig-2-mem-fetch"><path d="M 358 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-data)"/><rect x="562" y="144" width="78" height="18" fill="#f5f5f5"/><text x="601" y="158" class="arrow-label" text-anchor="middle">请求下层区段</text></g>
+<g id="us11586552b2-fig-2-line-fetch"><path d="M 358 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-data)"/><rect x="440.5" y="192" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">读取片内区段</text></g>
+<g id="us11586552b2-fig-2-old"><path d="M 601 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-2-arrow-return)"/><rect x="414.5" y="240" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">本地值＋区段有效掩码</text></g>
+<g id="us11586552b2-fig-2-new"><path d="M 844 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11586552b2-fig-2-arrow-return)"/><rect x="555.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">对应地址返回值</text></g>
+<g id="us11586552b2-fig-2-combine"><path d="M 358 354 L 382 354 Q 390 354 390 362 L 390 364 Q 390 372 382 372 L 358 372" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-control)"/><rect x="407" y="330" width="130" height="18" fill="#f5f5f5"/><text x="472" y="344" class="arrow-label" text-anchor="middle">补无效槽，保留修改值</text></g>
+<g id="us11586552b2-fig-2-updated"><path d="M 358 408 L 601 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-data)"/><rect x="375.5" y="384" width="208" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">写入合并值，置 modified</text></g>
+<g id="us11586552b2-fig-2-answer"><path d="M 358 456 L 116 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11586552b2-fig-2-arrow-main)"/><rect x="211" y="432" width="52" height="18" fill="#f5f5f5"/><text x="237" y="446" class="arrow-label" text-anchor="middle">合并结果</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">处理器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">缓存控制器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">缓存数据阵列</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">下层内存</text>
+<text x="28" y="532" class="legend" text-anchor="start">片内和下层读取可以并行提交。箭头展示其中一种返回顺序，合并等两份数据可用。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11586552b2-fig-2-mem-fetch">下层取数与片内区段读取</a> 两个取数动作可并行提交。示意图不规定返数先后。</li><li><a href="#us11586552b2-fig-2-combine">按掩码完成合并</a> 内存补 d、g、h，区段仍含 c、e 的修改数据；标签按原图 3 转为 modified。</li><li><a href="#us11586552b2-fig-2-answer">回读响应</a> 处理器收到合并后的值。只要区段保持有效，后续命中无需重复向下层取数。</li></ul>
+  <p class="figure-evidence">原图 3、6；说明书归档段 0050、0051、0052、0053、0054、0067、0068、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11586552B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理器</dt><dd>160</dd></div><div><dt>缓存控制器</dt><dd>101</dd></div><div><dt>缓存数据阵列</dt><dd>110</dd></div><div><dt>下层内存</dt><dd>145</dd></div><div><dt>d 槽地址</dt><dd>350d</dd></div><div><dt>处理器读请求</dt><dd>370</dd></div><div><dt>下层取数</dt><dd>371</dd></div><div><dt>片内区段读取</dt><dd>372</dd></div><div><dt>区段有效掩码</dt><dd>365</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">图 6　读补齐时，有效掩码同时控制数据选择和写入</h3>
+    <p id="fig-6-basis">原图 6 的读会补上无效槽，缓存中仍有效且已修改的槽必须禁止被内存旧值覆盖。所有槽恢复有效后，区段状态可转为 full。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="读补齐时，有效掩码同时控制数据选择和写入" style="--figure-width:1100px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 513" role="img" aria-labelledby="fig-6-svg-title fig-6-svg-desc">
+<title id="fig-6-svg-title">读补齐时，有效掩码同时控制数据选择和写入</title>
+<desc id="fig-6-svg-desc">原图 6 的读会补上无效槽，缓存中仍有效且已修改的槽必须禁止被内存旧值覆盖。所有槽恢复有效后，区段状态可转为 full。</desc>
+<defs><marker id="fig-6-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-6-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-6-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-6-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-6-enable" d="M 277 97 L 550 97 Q 558 97 558 105 L 558 186" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-6-arrow-control)"/>
+<path id="fig-6-candidate" d="M 277 241 L 417 241" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-6-arrow-data)"/>
+<path id="fig-6-selected" d="M 658 241 L 800 241" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-6-arrow-main)"/>
+<path id="fig-6-preserve" d="M 277 385 L 549 385 Q 557 385 557 377 L 557 332 Q 557 324 565 324 L 926 324 Q 934 324 934 316 L 934 299" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-6-arrow-main)"/>
+<path id="fig-6-response-data" d="M 985 299 L 985 350" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-6-arrow-data)"/>
+<rect x="356.5" y="69" width="135" height="18" fill="#f5f5f5"/><text x="424" y="83" class="arrow-label" text-anchor="middle">按槽控制写入</text>
+<rect x="296" y="213" width="98" height="18" fill="#f5f5f5"/><text x="345" y="227" class="arrow-label" text-anchor="middle">候选数据</text>
+<rect x="672.5" y="213" width="113" height="18" fill="#f5f5f5"/><text x="729" y="227" class="arrow-label" text-anchor="middle">补入无效槽</text>
+<rect x="653.5" y="297" width="151" height="18" fill="#f5f5f5"/><text x="729" y="311" class="arrow-label" text-anchor="middle">保留本地修改值</text>
+<rect x="1082" y="319" width="0" height="18" fill="#f5f5f5"/><text x="1082" y="333" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-6-policy"><rect x="33" y="51" width="244" height="92" rx="6" fill="#f5f5f5"/><rect x="33" y="51" width="244" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="155" y="77" class="node-name" text-anchor="middle">原区段有效掩码</text><text x="155" y="99" class="node-detail" text-anchor="middle">对各逻辑槽产生更新条件</text><text x="155" y="117" class="node-detail" text-anchor="middle">无效：补入内存值</text></g>
+<g id="fig-6-mem"><rect x="33" y="196" width="244" height="93" rx="6" fill="#f5f5f5"/><rect x="33" y="196" width="244" height="93" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="155" y="222" class="node-name" text-anchor="middle">内存读取结果</text><text x="155" y="244" class="node-detail" text-anchor="middle">可回送整个区段</text><text x="155" y="262" class="node-detail" text-anchor="middle">其中也可能含过时数据</text></g>
+<g id="fig-6-cache"><rect x="33" y="343" width="244" height="91" rx="6" fill="#f5f5f5"/><rect x="33" y="343" width="244" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="155" y="369" class="node-name" text-anchor="middle">缓存中需要保留的值</text><text x="155" y="391" class="node-detail" text-anchor="middle">例如尚未回填的修改槽 b</text></g>
+<g id="fig-6-gate"><rect x="417" y="186" width="241" height="113" rx="6" fill="#f5f5f5"/><rect x="417" y="186" width="241" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="537.5" y="212" class="node-name" text-anchor="middle">按槽允许覆盖</text><text x="537.5" y="234" class="node-detail" text-anchor="middle">只更新原先无效的 a、d</text><text x="537.5" y="252" class="node-detail" text-anchor="middle">禁止旧值覆盖修改的 b</text></g>
+<g id="fig-6-written"><rect x="800" y="186" width="269" height="113" rx="6" fill="#f5f5f5"/><rect x="800" y="186" width="269" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="934.5" y="212" class="node-name" text-anchor="middle">更新后的缓存区段</text><text x="934.5" y="234" class="node-detail" text-anchor="middle">a、d 有效且干净</text><text x="934.5" y="252" class="node-detail" text-anchor="middle">b 原修改值仍有效</text><text x="934.5" y="270" class="node-detail" text-anchor="middle">无无效槽，可转 full</text></g>
+<g id="fig-6-response"><rect x="800" y="350" width="269" height="86" rx="6" fill="#f5f5f5"/><rect x="800" y="350" width="269" height="86" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="934.5" y="376" class="node-name" text-anchor="middle">返回处理器</text><text x="934.5" y="398" class="node-detail" text-anchor="middle">合并后的新填值和保留值</text></g>
+<text x="33" y="489" class="legend" text-anchor="start">图 2 跟踪两路数据到齐的先后。本图展开数据到齐以后的覆盖条件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-6-policy">用当前掩码确定每个逻辑槽的写使能</a> 这图按原图 6 实施例，补的对象是原来无效的槽。写使能是对数据更新规则的抽象，专利没有限定具体门电路。</li><li><a href="#fig-6-mem">内存结果可以覆盖整个取数范围</a> 即使下层回送了本地修改槽对应的地址和值，也只能用其中的无效位置数据覆盖缓存。</li><li><a href="#fig-6-preserve">有效而被修改的本地值绕过补齐</a> 例如槽 b 中的新值尚未回填，来自内存的 b 必须被舍弃。干净有效槽 c 可直接保留，或按说明书用相同内存值替换。</li><li><a href="#fig-6-written">补入的槽成为有效且干净</a> 切到 full 的条件是这一轮补齐后没有无效槽。缓存仍含早先修改的值时，full 并不表示 clean。</li><li><a href="#fig-6-response">读响应来自已合并的有效值</a> 原图 6 所示顺序在补好无效槽后，向请求方返回新填数据和保留数据。</li></ul>
+  <p class="figure-evidence">原图 1、3、6；说明书归档段 0051、0052、0053、0068、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11586552B2/fig-6.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原先无效、由内存补齐的槽</dt><dd>132a、132d</dd></div><div><dt>保留本地修改值的槽</dt><dd>132b</dd></div><div><dt>本地干净有效的槽</dt><dd>132c</dd></div><div><dt>发给处理器的响应</dt><dd>175</dd></div><div><dt>按有效性更新缓存槽</dt><dd>640（原图 6）</dd></div></dl></details>
+</figure></section><section id="updates"><h2>本地写和外部通知都会改变有效图样</h2><p>部分写可以用新值覆盖无效位置。若覆盖后没有无效项，控制器可以弃用这一掩码并以全有效状态返回读请求。保留未回写的修改值时，全部有效仍和干净不同。</p><p>外部修改通知让对应的旧值失效。控制器检查余下的有效项是否含修改值。存在修改值则用 partial 保留它们；没有修改值时可用 partial clean 或按缺失处理。是否锁住整个缓存行等待逐出，取决于其他区段也可安全逐出的条件。</p><p>图 5 将同一条外部写通知下的两种结果放在一起。原图 5 的 p 仍存修改值，j、k、l 失效后须保留 p 和有效掩码。若 p 原先已经是干净值，说明书的另一分支可按区段缺失处理，从内存重新取数。在决定逐出整行前还需检查其他区段。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　局部写入、读补齐和外部通知的区段状态</h3>
+    <p id="fig-3-basis">新写和读补齐都会减少无效槽。外部通知会新增无效槽，余下是否还有修改值决定后续读的策略。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">事件</th><th scope="col">掩码变化</th><th scope="col">区段结果</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">本地部分写</th><td>所写位置标有效</td><td>未写全时仍可为 partial，补齐则全有效</td></tr><tr id="fig-3-table-row-2"><th scope="row">读命中混有无效与修改值</th><td>补齐所有本次更新的无效位置</td><td>全有效但有修改项</td></tr><tr id="fig-3-table-row-3"><th scope="row">外部修改通知</th><td>受影响位置作废</td><td>还有修改值则 partial，否则可 partial clean</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-table-row-1">局部写只覆盖所写位置</a> 没有覆盖的无效位置仍无效。若全部补齐，区段可全有效但保留修改值。</li><li><a href="#fig-3-table-row-3">通知后判断其余是否仍有修改值</a> 若有则要保留，若无则可当作缺失读取。是否逐出还需考虑其他区段。</li></ul>
+  <p class="figure-evidence">原图 4、5、6、7、8；说明书归档段 0053、0055、0056、0057、0058、0061、0062、0063、0064、0078、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>区段状态字段</dt><dd>246</dd></div><div><dt>区段有效掩码</dt><dd>365</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　外部更新之后，哪些数据不能用内存副本替代</h3>
+    <p id="fig-5-basis">通知只让对应槽失效。剩余槽仍有修改值时必须保留局部缓存，后续读合并两路数据。所有剩余槽都干净时，可把该区段当作缺失重新取数。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="外部更新之后，哪些数据不能用内存副本替代" style="--figure-width:1055px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1055 523" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
+<title id="fig-5-svg-title">外部更新之后，哪些数据不能用内存副本替代</title>
+<desc id="fig-5-svg-desc">通知只让对应槽失效。剩余槽仍有修改值时必须保留局部缓存，后续读合并两路数据。所有剩余槽都干净时，可把该区段当作缺失重新取数。</desc>
+<defs><marker id="fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-5-remaining" d="M 260 206 L 321 206" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<path id="fig-5-dirty-found" d="M 657 206 L 675 206 Q 683 206 683 198 L 683 118 Q 683 110 691 110 L 734 110" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-dirty-read" d="M 876 164 L 876 193" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-nothing-dirty" d="M 489 269 L 489 339 Q 489 347 497 347 L 734 347" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-fetch-clean" d="M 876 401 L 876 427" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<rect x="290" y="180" width="0" height="18" fill="#f5f5f5"/><text x="290" y="194" class="arrow-label" text-anchor="middle"></text>
+<rect x="690.5" y="85" width="31" height="18" fill="#f5f5f5"/><text x="706" y="99" class="arrow-label" text-anchor="middle">有</text>
+<rect x="897" y="169" width="0" height="18" fill="#f5f5f5"/><text x="897" y="183" class="arrow-label" text-anchor="middle"></text>
+<rect x="594.5" y="320" width="31" height="18" fill="#f5f5f5"/><text x="610" y="334" class="arrow-label" text-anchor="middle">无</text>
+<rect x="897" y="403" width="0" height="18" fill="#f5f5f5"/><text x="897" y="417" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-5-notice"><rect x="41" y="155" width="219" height="102" rx="6" fill="#f5f5f5"/><rect x="41" y="155" width="219" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150.5" y="181" class="node-name" text-anchor="middle">收到外部修改通知</text><text x="150.5" y="203" class="node-detail" text-anchor="middle">清除 j、k、l 的有效性</text><text x="150.5" y="221" class="node-detail" text-anchor="middle">其余有效值仍可使用</text></g>
+<g id="fig-5-test"><polygon points="489,143 657,206 489,269 321,206" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="489" y="203" class="node-name" text-anchor="middle">剩余有效槽含修改值？</text><text x="489" y="224" class="node-detail" text-anchor="middle">检查尚未回填的槽</text></g>
+<g id="fig-5-mixed"><rect x="734" y="57" width="285" height="107" rx="6" fill="#f5f5f5"/><rect x="734" y="57" width="285" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="876.5" y="83" class="node-name" text-anchor="middle">标记 partial</text><text x="876.5" y="105" class="node-detail" text-anchor="middle">生成有效掩码</text><text x="876.5" y="123" class="node-detail" text-anchor="middle">保留修改值，例如 p</text></g>
+<g id="fig-5-cold"><rect x="734" y="294" width="285" height="107" rx="6" fill="#f5f5f5"/><rect x="734" y="294" width="285" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="876.5" y="320" class="node-name" text-anchor="middle">标记 partial clean</text><text x="876.5" y="342" class="node-detail" text-anchor="middle">本实施例按缺失处理</text><text x="876.5" y="360" class="node-detail" text-anchor="middle">剩余有效值可从内存找回</text></g>
+<g id="fig-5-read-mix"><rect x="734" y="193" width="285" height="75" rx="6" fill="#f5f5f5"/><rect x="734" y="193" width="285" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="876.5" y="219" class="node-name" text-anchor="middle">后续读从两路合并</text><text x="876.5" y="241" class="node-detail" text-anchor="middle">补无效槽，保留本地修改值</text></g>
+<g id="fig-5-read-miss"><rect x="734" y="427" width="285" height="75" rx="6" fill="#f5f5f5"/><rect x="734" y="427" width="285" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="876.5" y="453" class="node-name" text-anchor="middle">后续读从内存取数</text><text x="876.5" y="475" class="node-detail" text-anchor="middle">可用内存值补齐并转 clean</text></g>
+<text x="41" y="50" class="signal-title" text-anchor="start">外部修改后，检测是否仍需保留片内数据</text>
+<text x="41" y="474" class="legend" text-anchor="start">缓存行的其他区段也可安全逐出时，控制器还可将整行置为待逐出。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-5-notice">先找出外部更改影响的逻辑槽</a> 原图 5 的通知让 j–l 失效。标志只表示这些本地值不再最新，不会自动删除不受影响的有效值。</li><li><a href="#fig-5-test">检查剩余有效槽是否还有修改值</a> 原图 5 的 p 还含有新于内存的数据。把 p 改为干净便得到原说明书讨论的另一分支。</li><li><a href="#fig-5-mixed">保留 partial，编码无效槽</a> 生成区段有效掩码并保存必要的数据。后续读需要从内存补缺，同时沿用 p 等本地有效值。</li><li><a href="#fig-5-cold">没有修改值时可按缺失取数</a> 实施例可把 partial clean 当作 invalid。所有仍有效的值都能从内存重新获得，无需保留一份修改数据。</li></ul>
+  <p class="figure-evidence">原图 5、8；说明书归档段 0060、0061、0062、0063、0064、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11586552B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>外部修改通知</dt><dd>570</dd></div><div><dt>区段有效掩码</dt><dd>565</dd></div><div><dt>区段标签状态</dt><dd>246</dd></div><div><dt>收到外部通知的区段</dt><dd>120b</dd></div></dl></details>
+</figure></section><section id="claim-scope"><h2>权项聚焦数据选择，各种编码及粒度另作限定</h2><p>独立权利要求 1、9 与 15 共同限定在无效和修改部分混存时，只用下层值更新无效部分，并返回合并结果。权利要求 8 与 16 写明可细至字节，有区段标签；权利要求 12 写明有效条目信息占用无效槽。</p><p>权利要求 11、17 用 modified 描述读补齐后仍有修改值的区段。权利要求 14 另有回写后 no-invalid、no-modified 的 full 表述。图 3 的状态编码 010 与权利要求 14 的 full 分别按各自定义解读。</p><p class="subdued"><a href="#fig-1">对照图 1　合并器按有效掩码选择区段内各槽数据</a></p><p class="subdued"><a href="#fig-3">对照表 3　局部写入、读补齐和外部通知的区段状态</a></p><p class="subdued"><a href="#fig-4">对照表 4　四个槽中每个返回值来自哪一路</a></p></section></div>
+<p><a class="lab-link" href="../lab.html#partial-line">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -134,50 +174,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=a%20processor%20circuit%20configured%20to%20generate%20read%20and%20write%20requests%20for%20addresses%20in%20the%20memory">F13</a></th><td>处理器生成针对内存地址的读写请求。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=cache%2C%20in%20portions%20of%20cache%20lines%2C%20values%20associated%20with%20the%20read%20and%20write%20requests%20generated%20by">F14</a></th><td>缓存系统在缓存行的各区段保存访存值。</td><td>原图 1–2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=a%20first%20sub-portion%20that%20is%20invalid%20and%20a%20second%20sub-portion%20that%20is%20modified%20relative%20to%20a">F15</a></th><td>第一子段无效、第二子段有相对内存的新修改，控制器进入部分有效处理。</td><td><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=At%20time%20t%201%20%2C%20as%20illustrated%2C%20read%20request%20370%20is%20received%20from%20processor%20circuit%20160">说明书 0052</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=in%20response%20to%20receiving%2C%20from%20the%20processor%20circuit%2C%20a%20read%20request%20for%20an%20address%20associated%20with">F16</a></th><td>从内存取回请求地址对应的值。</td><td><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=At%20time%20t%201%20%2C%20as%20illustrated%2C%20read%20request%20370%20is%20received%20from%20processor%20circuit%20160">说明书 0052</a> · <a href="https://patents.google.com/patent/US11586552B2/en#:~:text=As%20illustrated%2C%20all%20values%20corresponding%20to%20a%20portion%20of%20a%20cache%20line%20are%20returned%20in%20response">说明书 0053</a> · 原图 3、6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=update%2C%20using%20the%20fetched%20values%2C%20values%20of%20the%20first%20sub-portion%2C%20while%20values%20of%20the%20second%20sub-portion">F17</a></th><td>从内存返回值补无效子段；本地已修改子段保持原值。</td><td><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=As%20illustrated%2C%20all%20values%20corresponding%20to%20a%20portion%20of%20a%20cache%20line%20are%20returned%20in%20response">说明书 0053</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=respond%20to%20the%20read%20request%20using%20the%20updated%20values%20of%20first%20sub-portion%20and%20the%20unchanged%20values">F18</a></th><td>用补齐的值及未改变的值回复读取。</td><td><a href="https://patents.google.com/patent/US11586552B2/en#:~:text=As%20illustrated%2C%20all%20values%20corresponding%20to%20a%20portion%20of%20a%20cache%20line%20are%20returned%20in%20response">说明书 0053</a> · 原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置在读到同时含无效和已修改部分的缓存行区段时，用内存数据补无效部分，保留修改后应答。见原图 3、6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>标签先记录部分有效状态，补齐无效位置后将该区段标为全有效。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>不同缓存行处于部分状态时，部分写只更新请求给定的位置。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>部分写已覆盖全部无效位置时，将区段标签置为 full。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>再次读同地址且相应区段已有效时，直接用缓存区段应答。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>另一读取遇到无效及未修改子段时，从内存取数、应答并更新缓存。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>请求内存控制器把合并后的更新区段写到对应内存位置。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>逐字节跟踪有效性，并为缓存行的两个半区维护各自标签。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先指出 partial 状态，再由控制器取数、仅补无效位置，并组合新旧值应答。见原图 6。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>用区段的缓存标签字段存储 partial 状态。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>补齐后用标签置 modified 状态，可按区段直接响应后续读。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>维护表示第二子段位置的有效掩码，并放在第一子段的一个位置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>已修改区段收到外部修改通知后，将对应区段置 partial。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>请求下层存储已合并区段，并标为既无无效也无修改值的 full。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统含处理器、内存及按区段工作的缓存系统。缓存系统指示部分状态，处理器的读到达后按两种数据来源合并应答。见原图 1、3。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>按字节跟踪有效性，并在区段标签存储 partial 标志。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>补齐后置 modified 标志，表示无无效值但仍有修改值。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>外部修改后，按是否还留有本地修改值选 partial 或 partial clean。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>缓存行区段可覆盖整条缓存行。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>决定失效时锁定区段，直到缓存行逐出前禁止进一步修改。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置在读到同时含无效和已修改部分的缓存行区段时，用内存数据补无效部分，保留修改后应答。见原图 3、6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>标签先记录部分有效状态，补齐无效位置后将该区段标为全有效。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>不同缓存行处于部分状态时，部分写只更新请求给定的位置。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>部分写已覆盖全部无效位置时，将区段标签置为 full。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>再次读同地址且相应区段已有效时，直接用缓存区段应答。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>另一读取遇到无效及未修改子段时，从内存取数、应答并更新缓存。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>请求内存控制器把合并后的更新区段写到对应内存位置。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>逐字节跟踪有效性，并为缓存行的两个半区维护各自标签。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先指出 partial 状态，再由控制器取数、仅补无效位置，并组合新旧值应答。见原图 6。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>用区段的区段标签（tag）字段存储 partial 状态。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>补齐后用标签置 modified 状态，可按区段直接响应后续读。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>维护表示第二子段位置的有效掩码，并放在第一子段的一个位置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>已修改区段收到外部修改通知后，将对应区段置 partial。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>请求下层存储已合并区段，并标为既无无效也无修改值的 full。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统含处理器、内存及按区段工作的缓存系统。缓存系统指示部分状态，处理器的读到达后按两种数据来源合并应答。见原图 1、3。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>按字节跟踪有效性，并在区段标签存储 partial 标志。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>补齐后置 modified 标志，表示无无效值但仍有修改值。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>外部修改后，按是否还留有本地修改值选 partial 或 partial clean。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>缓存行区段可覆盖整条缓存行。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>决定失效时锁定区段，直到缓存行逐出前禁止进一步修改。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>取回内存中的值后，控制器只更新无效位置，再连同片内已修改部分一起返回。</dd></div><div><dt>图 2、图 3、图 6</dt><dd>图 2 标出有效性元数据，图 3 显示读前后的状态，图 6 给出处理流程。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US11586552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>从属权 8 涉及单字节有效性和分别维护两部分 tag。独立权项保留了选择实现粒度的空间。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11586552B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US9218286B2.html#engineering">部分写缺失时用 ECC 位记录有效字</a>
-<p>同一缺失片段和本地脏片段并存时，两件给出不同的读补齐顺序。US9218286B2 的权 14 将 ECC 位暂用作有效位置，先把有效片段写回再从内存读行。US11586552B2 的权 1 先读下层，仅用返回值补无效片段，保留本地修改后合并应答。</p></li><li><a href="US12007901B2.html#engineering">部分写入、有效掩码与回送内存</a>
-<p>母案权 1 用部分有效状态处理读取，按掩码补无效片段，保住本地修改。继续申请权 1 处理对同一类状态的部分写入，将新值写入本地相应位置、向内存控制器发出这些位置的写请求，并更新掩码。两件合起来解释了后来一次读取为何能够区分可从内存补齐的片段和本地应保留的片段。</p></li><li><a href="US20250013568A1.html#engineering">匹配数据模式时跳过写入</a>
-<p>US11586552B2 从下层补齐缓存行区段中无效的数据片段，片内合并时保留本地修改。US20250013568A1 比较待写值与预设模式，并绕过匹配值的数据写。有效掩码用于辨认数据来源，模式比较信号用于决定是否发起数据写。</p></li></ul>
-    <p><a href="../index.html?patent=US11586552B2#knowledge">在全量关系图上定位 US11586552B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-05-13</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-05-13</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2023-02-21</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/320,172</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Tom Greenshtein</dd></div><div><dt>分类号</dt><dd>G06F12/0895、G06F12/0238、G06F12/0646、G06F12/0862、G06F12/0864、G06F12/0888、G06F12/0846、G06F12/0879、G06F12/0891、G06F2212/1016</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11586552B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11586552B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 123 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US12007901B2.html"><code>US12007901B2</code> 部分写入、有效掩码与回送内存</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11586552B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

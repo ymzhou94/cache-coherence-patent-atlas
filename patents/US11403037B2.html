@@ -1,119 +1,174 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11403037B2 根据内存总线活动调整连续读写轮次 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按已完成轮次的总线活动调整下一轮读写请求数 · US11403037B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11403037B2</code> · <a href="https://patents.google.com/patent/US11403037B2/en">专利全文</a></p>
+<h1>按已完成轮次的总线活动调整下一轮读写请求数</h1><p class="reading-question">内存控制器怎样在读延迟与总线转向成本之间调整轮次？放在读写轮之间的 RMW 何时能共用一次转向？</p>
+<p class="reading-answer">仲裁器先把读写请求分别组织到指定轮次，用一组读轮和写轮的命令活动周期占比调整后续轮次。写请求先入独立队列，可以按占用触发写轮。RMW 的读写两段可放到既有读转写边界。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2022-08-02</dd></div><div><dt>申请号</dt><dd>US16/896,027</dd></div><div><dt>最早优先权</dt><dd>2018-08-24</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Shane J. Keil、Gregory S. Mathews、Lakshmi Narasimha Murthy Nukala、Thejasvi Magudilu Vijayaraj、Kai Lun Hsiung、Yanzhe Liu、Sukalpa Biswas</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#flow">读先进入调度队列，写经写请求队列等待</a></li><li><a href="#measure">测量同一组读轮和写轮，再使用反馈</a></li><li><a href="#partial">让 RMW 的读写两段共用原来的读转写</a></li><li><a href="#threshold">门限决定从写队列搬零笔、部分或全部</a></li><li><a href="#scope">三种独立权项从轮次反馈、方法和队列接口写起</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="flow"><h2>读先进入调度队列，写经写请求队列等待</h2><p>图 1 的系统接口把内存请求交给仲裁器。读请求可编入命令调度队列。同一内存页的多次读可共享 ACT，独立 bank 或器件也可以重叠执行。写请求先进入写请求队列，仲裁器在形成写轮时才抽取一批。</p><p>授权第 14 项明确区分写请求队列、命令调度队列和用于观测的通信总线。第 5、15 项允许以写队列占用作为调度触发。读写同用数据路径时，方向切换会占用无新命令发出的周期。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　独立写请求队列经仲裁进入统一命令队列</h3>
+    <p id="fig-1-basis">标注入口、待写队列、执行路径和由总线返回的效率观测。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="独立写请求队列经仲裁进入统一命令队列" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 609" role="img" aria-labelledby="us11403037b2-fig-1-svg-title us11403037b2-fig-1-svg-desc">
+<title id="us11403037b2-fig-1-svg-title">独立写请求队列经仲裁进入统一命令队列</title>
+<desc id="us11403037b2-fig-1-svg-desc">标注入口、待写队列、执行路径和由总线返回的效率观测。</desc>
+<defs><marker id="us11403037b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11403037b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11403037b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11403037b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11403037b2-fig-1-route" d="M 224 153 L 365 153" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-1-arrow-main)"/>
+<path id="us11403037b2-fig-1-hold" d="M 418 209 L 418 261 Q 418 269 410 269 L 122 269 Q 114 269 114 277 L 114 374" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11403037b2-fig-1-arrow-data)"/>
+<path id="us11403037b2-fig-1-release" d="M 249 425 L 269 425 Q 277 425 277 417 L 277 318 Q 277 310 285 310 L 459 310 Q 467 310 467 302 L 467 209" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11403037b2-fig-1-arrow-control)"/>
+<path id="us11403037b2-fig-1-read-write" d="M 580 156 L 704 156" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-1-arrow-main)"/>
+<path id="us11403037b2-fig-1-launch" d="M 807 214 L 807 401" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-1-arrow-main)"/>
+<path id="us11403037b2-fig-1-observe" d="M 706 460 L 587 460" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11403037b2-fig-1-arrow-data)"/>
+<path id="us11403037b2-fig-1-measure" d="M 505 415 L 505 209" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11403037b2-fig-1-arrow-control)"/>
+<rect x="222" y="124" width="140" height="18" fill="#f5f5f5"/><text x="292" y="138" class="arrow-label" text-anchor="middle">收到读／写请求</text>
+<rect x="183.5" y="240" width="139" height="18" fill="#f5f5f5"/><text x="253" y="254" class="arrow-label" text-anchor="middle">写请求先入队</text>
+<rect x="300.5" y="281" width="141" height="18" fill="#f5f5f5"/><text x="371" y="295" class="arrow-label" text-anchor="middle">调度时抽取一批写</text>
+<rect x="579" y="128" width="126" height="18" fill="#f5f5f5"/><text x="642" y="142" class="arrow-label" text-anchor="middle">写入已排序请求</text>
+<rect x="733" y="295" width="144" height="18" fill="#f5f5f5"/><text x="805" y="309" class="arrow-label" text-anchor="middle">发送实际内存命令</text>
+<rect x="591.5" y="431" width="111" height="18" fill="#f5f5f5"/><text x="647" y="445" class="arrow-label" text-anchor="middle">活动时钟样本</text>
+<rect x="411" y="328" width="180" height="18" fill="#f5f5f5"/><text x="501" y="342" class="arrow-label" text-anchor="middle">反馈到后续读轮／写轮</text>
+<g id="us11403037b2-fig-1-src"><rect x="40" y="105" width="184" height="88" rx="6" fill="#f5f5f5"/><rect x="40" y="105" width="184" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="132" y="131" class="node-name" text-anchor="middle">系统接口</text><text x="132" y="153" class="node-detail" text-anchor="middle">接收内存请求</text></g>
+<g id="us11403037b2-fig-1-arb"><rect x="365" y="102" width="215" height="107" rx="6" fill="#f5f5f5"/><rect x="365" y="102" width="215" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="472.5" y="128" class="node-name" text-anchor="middle">控制器仲裁电路</text><text x="472.5" y="150" class="node-detail" text-anchor="middle">按读写类型组织请求</text><text x="472.5" y="168" class="node-detail" text-anchor="middle">用效率决定两轮数量</text></g>
+<g id="us11403037b2-fig-1-iq"><rect x="704" y="105" width="218" height="109" rx="6" fill="#f5f5f5"/><rect x="704" y="105" width="218" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="813" y="131" class="node-name" text-anchor="middle">命令调度队列</text><text x="813" y="153" class="node-detail" text-anchor="middle">先读轮、后写轮</text></g>
+<g id="us11403037b2-fig-1-wq"><rect x="44" y="374" width="205" height="112" rx="6" fill="#f5f5f5"/><rect x="44" y="374" width="205" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146.5" y="400" class="node-name" text-anchor="middle">写请求队列</text><text x="146.5" y="422" class="node-detail" text-anchor="middle">在此等待调度</text><text x="146.5" y="440" class="node-detail" text-anchor="middle">可按占用判断启写轮</text></g>
+<g id="us11403037b2-fig-1-stat"><rect x="362" y="415" width="225" height="105" rx="6" fill="#f5f5f5"/><rect x="362" y="415" width="225" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="474.5" y="441" class="node-name" text-anchor="middle">内存访问效率统计</text><text x="474.5" y="463" class="node-detail" text-anchor="middle">读取总线时钟和命令活动</text></g>
+<g id="us11403037b2-fig-1-dram"><rect x="706" y="401" width="216" height="119" rx="6" fill="#f5f5f5"/><rect x="706" y="401" width="216" height="119" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814" y="427" class="node-name" text-anchor="middle">内存器件集合</text><text x="814" y="449" class="node-detail" text-anchor="middle">读写方向共用传输路径</text><text x="814" y="467" class="node-detail" text-anchor="middle">bank 之间可重叠执行</text></g>
+<text x="40" y="55" class="signal-title" text-anchor="start">写请求先在独立队列等待，仲裁器再把它们移入当轮调度</text>
+<text x="40" y="573" class="legend" text-anchor="start">效率观测来自控制器的命令活动。写请求队列门限只控制是否取出写，命令调度队列控制实际执行顺序。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11403037b2-fig-1-hold">写请求入队</a> 先保存，等待仲裁器编入写轮。</li><li><a href="#us11403037b2-fig-1-release">在调度时搬动写请求</a> 搬进命令调度队列后才能依序执行。</li><li><a href="#us11403037b2-fig-1-launch">控制器发出 ACT、读、写等命令</a> 器件和 bank 的重叠由实现决定。</li><li><a href="#us11403037b2-fig-1-measure">命令活动反馈</a> 更新后续读写轮的请求数。</li></ul>
+  <p class="figure-evidence">原图 1、2、7；说明书归档段 0033、0035、0037、0038、0039、0040、0043、0046、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11403037B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>210</dd></div><div><dt>系统接口</dt><dd>211</dd></div><div><dt>仲裁电路</dt><dd>212</dd></div><div><dt>命令调度队列</dt><dd>230</dd></div><div><dt>写请求队列</dt><dd>240</dd></div><div><dt>写请求队列门限</dt><dd>241</dd></div><div><dt>内存器件集合</dt><dd>220</dd></div><div><dt>控制器与内存通信总线</dt><dd>280</dd></div><div><dt>总线时钟</dt><dd>282</dd></div></dl></details>
+</figure></section><section id="measure"><h2>测量同一组读轮和写轮，再使用反馈</h2><p>图 2 从读轮第一笔执行开始计数，结束于写轮最后一笔完成。ACT、读、写命令的活跃周期进入分子。从起点到终点的总线时钟进入分母，含命令空闲和读转写。表 4 的说明书例子是 45／150 = 30%。单笔请求在队列里等待多久需要另计。</p><p>原图 4 用 32 读、32 写的当前配置展示两种反馈。以 85% 为目标，观测效率为 60% 时，下一组示例排入 20 个读请求和 40 个写请求；高效率为 95% 时，示例下一组 48 读、16 写。幅度是现有地址和请求分布下的示例，说明书没有通用固定控制律。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　一组读写轮完成后才更新下一组数量</h3>
+    <p id="fig-2-basis">定位效率的两个时点与后续调度反馈关系。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一组读写轮完成后才更新下一组数量" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 556" role="img" aria-labelledby="us11403037b2-fig-2-svg-title us11403037b2-fig-2-svg-desc">
+<title id="us11403037b2-fig-2-svg-title">一组读写轮完成后才更新下一组数量</title>
+<desc id="us11403037b2-fig-2-svg-desc">定位效率的两个时点与后续调度反馈关系。</desc>
+<defs><marker id="us11403037b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11403037b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11403037b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11403037b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11403037b2-fig-2-numbers"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-data)"/><rect x="146" y="96" width="182" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">写入本组读写轮的请求数和顺序</text></g>
+<g id="us11403037b2-fig-2-start"><path d="M 601 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-data)"/><rect x="651" y="144" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="158" class="arrow-label" text-anchor="middle">将统计起点对齐第一笔读</text></g>
+<g id="us11403037b2-fig-2-r"><path d="M 358 216 L 601 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-main)"/><rect x="414.5" y="192" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">发出连续读请求的命令</text></g>
+<g id="us11403037b2-fig-2-turn"><path d="M 358 264 L 601 264" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-control)"/><rect x="401.5" y="240" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">读转写，等待总线方向转换</text></g>
+<g id="us11403037b2-fig-2-w"><path d="M 358 312 L 601 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-main)"/><rect x="421" y="288" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">继续发出该组写命令</text></g>
+<g id="us11403037b2-fig-2-stop"><path d="M 601 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-main)"/><rect x="644.5" y="336" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">完成最后一笔写时结束计数</text></g>
+<g id="us11403037b2-fig-2-ratio"><path d="M 844 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11403037b2-fig-2-arrow-return)"/><rect x="395.5" y="384" width="169" height="18" fill="#f5f5f5"/><text x="480" y="398" class="arrow-label" text-anchor="middle">给出活动周期占总周期的比例</text></g>
+<g id="us11403037b2-fig-2-next"><path d="M 116 456 L 358 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-2-arrow-main)"/><rect x="146" y="432" width="182" height="18" fill="#f5f5f5"/><text x="237" y="446" class="arrow-label" text-anchor="middle">调整并应用到下一组读轮、写轮</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">仲裁电路</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">命令调度队列</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">内存命令接口</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">周期计数器</text>
+<text x="28" y="532" class="legend" text-anchor="start">原图 3、7 的合成读法。统计起点与读轮第一笔执行对齐，方向切换包含在统计窗中。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11403037b2-fig-2-start">观测窗起点</a> 读轮第一笔请求开始执行。</li><li><a href="#us11403037b2-fig-2-turn">方向切换</a> 执行信号可为低，但内部仍可能处理现有请求。</li><li><a href="#us11403037b2-fig-2-stop">观测窗终点</a> 本组写轮最后一笔完成。</li><li><a href="#us11403037b2-fig-2-next">更新后续轮次</a> 新数量只对后续组的排序和执行生效。</li></ul>
+  <p class="figure-evidence">原图 3、4、6、7；说明书归档段 0050、0052、0054、0057、0058、0059、0075、0076、0077、0078、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11403037B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>总线时钟</dt><dd>282</dd></div><div><dt>命令活动信号</dt><dd>317</dd></div><div><dt>按当前读写轮统计效率</dt><dd>706</dd></div><div><dt>调整后续读轮和写轮的数量</dt><dd>708</dd></div><div><dt>观测到的内存访问效率</dt><dd>431b／431c</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　效率的分子、分母和请求等待分别怎样测量</h3>
+    <p id="fig-4-basis">同一读写轮给出数量、时点与单位，明确比较对象。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">观测量</th><th scope="col">计数／时间点</th><th scope="col">原图或工程意义</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">总周期</th><td>第一笔读开始 → 最后一笔写完成</td><td>例为 150 个总线周期，包含读转写和命令空闲</td></tr><tr id="fig-4-table-row-2"><th scope="row">活动周期</th><td>同一窗口，命令活动信号表示实际执行的周期</td><td>例为 45 个周期</td></tr><tr id="fig-4-table-row-3"><th scope="row">内存访问效率</th><td>45 / 150 = 30%</td><td>用于后续调度，和指定效率目标比较</td></tr><tr id="fig-4-table-row-4"><th scope="row">单笔排队延迟</th><td>请求进入控制器 → 第一个对应命令获准</td><td>需要另外观测，响应延迟还包含之后的执行</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-basis">执行与等待分开观测</a> 45 和 150 是总线周期，并非发出的命令数或字节数。</li></ul>
+  <p class="figure-evidence">原图 3、7；说明书归档段 0050、0054、0077、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>总线时钟</dt><dd>282</dd></div><div><dt>命令活动信号</dt><dd>317</dd></div><div><dt>按当前读写轮统计效率</dt><dd>706</dd></div></dl></details>
+</figure></section><section id="partial"><h2>让 RMW 的读写两段共用原来的读转写</h2><p>图 3 保留原图 5 的 p1、p3、p4。先完成读轮末笔 p1 读，再读 p3。控制器可在 t₃–t₄ 的读转写期间修改 p3 数据。之后完成 p3 的写，并保持写方向去处理下一写轮的首笔 p4 写。</p><p>按同一轮内读写方向序列复算。放在边界的 RMW 有一次读转写，和读写轮本就需要的一次重合。如果放进读轮内部，RMW 写完后还要回到读方向，进入写轮又要转回写方向，模型的总转向次数由 1 变 3。这里没有把示意阶段的长度换算为固定周期。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　RMW 跨读写轮边界时，共用同一次方向切换</h3>
+    <p id="fig-3-basis">对齐末读、RMW 读写两段和首写对应的方向区间。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="RMW 跨读写轮边界时，共用同一次方向切换" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 451" role="img" aria-labelledby="us11403037b2-fig-3-svg-title us11403037b2-fig-3-svg-desc">
+<title id="us11403037b2-fig-3-svg-title">RMW 跨读写轮边界时，共用同一次方向切换</title>
+<desc id="us11403037b2-fig-3-svg-desc">对齐末读、RMW 读写两段和首写对应的方向区间。</desc>
+<defs><marker id="us11403037b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11403037b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11403037b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11403037b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us11403037b2-fig-3-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">t₁</text>
+<line x1="321.6" y1="76" x2="321.6" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">t₂</text>
+<line x1="451.2" y1="76" x2="451.2" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">t₃</text>
+<line x1="580.8" y1="76" x2="580.8" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">t₄</text>
+<line x1="710.4" y1="76" x2="710.4" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">t₅</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">后续</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us11403037b2-fig-3-parts"><text x="24" y="136" class="node-name" text-anchor="start">原图 5 的请求</text>
+<rect x="192" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="136" class="arrow-label" text-anchor="middle">末笔读 p1</text>
+<rect x="321.6" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="136" class="arrow-label" text-anchor="middle">RMW 读 p3</text>
+<rect x="451.2" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">修改 p3 数据</text>
+<rect x="580.8" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="136" class="arrow-label" text-anchor="middle">RMW 写 p3</text>
+<rect x="710.4" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="136" class="arrow-label" text-anchor="middle">首笔写 p4</text>
+<circle cx="451.2" cy="131" r="5" fill="#4f5d75"/>
+<text x="451.2" y="171" class="arrow-label" text-anchor="end">数据返回后修改</text></g>
+<g id="us11403037b2-fig-3-direction"><text x="24" y="228" class="node-name" text-anchor="start">共享总线方向</text>
+<rect x="192" y="204" width="259.2" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="321.6" y="228" class="arrow-label" text-anchor="middle">读方向</text>
+<rect x="451.2" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="228" class="arrow-label" text-anchor="middle">R→W 转向</text>
+<rect x="580.8" y="204" width="259.2" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="710.4" y="228" class="arrow-label" text-anchor="middle">写方向</text>
+<circle cx="580.8" cy="223" r="5" fill="#bf4520"/>
+<text x="580.8" y="263" class="arrow-label" text-anchor="end">此后维持写方向</text></g>
+<g id="us11403037b2-fig-3-boundary"><text x="24" y="320" class="node-name" text-anchor="start">完整请求边界</text>
+<rect x="192" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="320" class="arrow-label" text-anchor="middle">读轮尾部</text>
+<rect x="321.6" y="296" width="388.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="320" class="arrow-label" text-anchor="middle">轮间 RMW</text>
+<rect x="710.4" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="320" class="arrow-label" text-anchor="middle">写轮开头</text>
+<circle cx="710.4" cy="315" r="5" fill="#4f5d75"/>
+<text x="710.4" y="355" class="arrow-label" text-anchor="end">首写无需再次转向</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">阶段间距不对应硬件周期。p1、p3、p4 是原图的内存页标识，RMW 表示 read-modify-write。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11403037b2-fig-3-parts">p3 的 RMW 分段执行</a> 读 p3，转向期间可修改内容，再写 p3。</li><li><a href="#us11403037b2-fig-3-direction">只出现一次读转写</a> 与相邻读写轮需要的方向变化重合。</li><li><a href="#us11403037b2-fig-3-boundary">写轮首笔 p4 无需再转向</a> RMW 写结束时接口已在写状态。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0061、0062、0063、0064、0065、0066；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> <a href="../diagrams/US11403037B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>读轮最后一笔读</dt><dd>531</dd></div><div><dt>轮间部分写（read-modify-write）</dt><dd>532</dd></div><div><dt>写轮第一笔写</dt><dd>533</dd></div></dl></details>
+</figure></section><section id="threshold"><h2>门限决定从写队列搬零笔、部分或全部</h2><p>图 5 从当前队列占用走两条分支。到达门限，仲裁器按调度策略选择本轮写请求数，这个值可小于当前队列积压。第 18 项允许未达到门限时本轮取零笔写。第 17 项允许根据新效率更新门限。</p><p>在此控制器中，减少读写转向与推迟写完成是两项不同影响。评估应并列记录写队列等待、读尾延迟、方向切换间隔和每轮效率。输入中访问相同页的比例、不同 bank 的并行度会影响所选批量。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　写队列占用跨过门限时，才抽取本轮写请求</h3>
+    <p id="fig-5-basis">对照达到门限和未达到门限的行为，区分何时抽取、抽取多少。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="写队列占用跨过门限时，才抽取本轮写请求" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 586" role="img" aria-labelledby="us11403037b2-fig-5-svg-title us11403037b2-fig-5-svg-desc">
+<title id="us11403037b2-fig-5-svg-title">写队列占用跨过门限时，才抽取本轮写请求</title>
+<desc id="us11403037b2-fig-5-svg-desc">对照达到门限和未达到门限的行为，区分何时抽取、抽取多少。</desc>
+<defs><marker id="us11403037b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11403037b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11403037b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11403037b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11403037b2-fig-5-pending" d="M 231 170 L 350 170" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11403037b2-fig-5-arrow-data)"/>
+<path id="us11403037b2-fig-5-enough" d="M 568 170 L 710 170" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11403037b2-fig-5-arrow-main)"/>
+<path id="us11403037b2-fig-5-not-enough" d="M 459 226 L 459 437 Q 459 445 467 445 L 711 445" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11403037b2-fig-5-arrow-control)"/>
+<path id="us11403037b2-fig-5-change" d="M 146 393 L 146 291 Q 146 283 154 283 L 396.5 283 Q 404.5 283 404.5 275 L 404.5 198" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11403037b2-fig-5-arrow-return)"/>
+<rect x="226" y="140" width="124" height="18" fill="#f5f5f5"/><text x="288" y="154" class="arrow-label" text-anchor="middle">读取队列占用</text>
+<rect x="586.5" y="142" width="103" height="18" fill="#f5f5f5"/><text x="638" y="156" class="arrow-label" text-anchor="middle">达到门限</text>
+<rect x="522.5" y="413" width="123" height="18" fill="#f5f5f5"/><text x="584" y="427" class="arrow-label" text-anchor="middle">未达到门限</text>
+<rect x="223" y="254" width="112" height="18" fill="#f5f5f5"/><text x="279" y="268" class="arrow-label" text-anchor="middle">可更新门限</text>
+<g id="us11403037b2-fig-5-wq"><rect x="38" y="113" width="193" height="102" rx="6" fill="#f5f5f5"/><rect x="38" y="113" width="193" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134.5" y="139" class="node-name" text-anchor="middle">写请求队列</text><text x="134.5" y="161" class="node-detail" text-anchor="middle">读出当前待写数量</text></g>
+<g id="us11403037b2-fig-5-cmp"><polygon points="459,114 568,170 459,226 350,170" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="459" y="167" class="node-name" text-anchor="middle">达到写队列门限？</text><text x="459" y="188" class="node-detail" text-anchor="middle">比较当前占用</text></g>
+<g id="us11403037b2-fig-5-yes"><rect x="710" y="112" width="212" height="113" rx="6" fill="#f5f5f5"/><rect x="710" y="112" width="212" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="816" y="138" class="node-name" text-anchor="middle">抽取本轮写请求</text><text x="816" y="160" class="node-detail" text-anchor="middle">数量由效率策略计算</text><text x="816" y="178" class="node-detail" text-anchor="middle">可小于队列存量</text></g>
+<g id="us11403037b2-fig-5-no"><rect x="711" y="392" width="212" height="105" rx="6" fill="#f5f5f5"/><rect x="711" y="392" width="212" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="817" y="418" class="node-name" text-anchor="middle">本轮取零笔写</text><text x="817" y="440" class="node-detail" text-anchor="middle">原写请求留在队列</text></g>
+<g id="us11403037b2-fig-5-policy"><rect x="39" y="393" width="211" height="113" rx="6" fill="#f5f5f5"/><rect x="39" y="393" width="211" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144.5" y="419" class="node-name" text-anchor="middle">访问效率反馈</text><text x="144.5" y="441" class="node-detail" text-anchor="middle">可调各轮请求数</text><text x="144.5" y="459" class="node-detail" text-anchor="middle">也可调整门限</text></g>
+<text x="38" y="56" class="signal-title" text-anchor="start">写队列门限决定本轮是否从等待队列取出写请求</text>
+<text x="38" y="549" class="legend" text-anchor="start">对应从属项 15–18。达到门限后移出的数量并不等于队列容量，也不一定等于当前全部写请求。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11403037b2-fig-5-cmp">写请求队列门限</a> 决定是否从当前等待队列选取写请求。</li><li><a href="#us11403037b2-fig-5-yes">取出由策略选定的一批</a> 可小于当前待写数量。</li><li><a href="#us11403037b2-fig-5-no">本轮搬入零笔写</a> 不是清除积压，仍可在下一轮重新判断。</li><li><a href="#us11403037b2-fig-5-policy">效率用于调整数量或门限</a> 后续轮次才使用新的配置。</li></ul>
+  <p class="figure-evidence">原图 1、2、4；说明书归档段 0039、0040、0042、0043、0044、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11403037B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>写请求队列</dt><dd>240</dd></div><div><dt>写请求队列门限</dt><dd>241</dd></div><div><dt>命令调度队列</dt><dd>230</dd></div><div><dt>调整后续读轮和写轮的数量</dt><dd>708</dd></div></dl></details>
+</figure></section><section id="scope"><h2>三种独立权项从轮次反馈、方法和队列接口写起</h2><p>授权第 1、8 项要求从一组读写轮的活动计算效率，并调整后续两类请求数量。第 14 项另外落到系统接口内部的写队列和命令调度队列。第 6 项的轮间部分写和第 7 项的按写入大小选请求是额外约束。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US11403037B2</code><span>美国授权专利</span><time datetime="2022-08-02">2022-08-02</time></p>
-  <h1>根据内存总线活动调整连续读写轮次</h1>
-  <p class="english-title" lang="en">Ordering memory requests based on access efficiency</p>
-  <p class="document-question">内存控制器怎样利用已完成轮次的活动信息，决定下一轮连续发多少个读和写？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">内存控制器用已完成读写轮次的总线活动更新效率估计，再调整下一组连续读写的长度。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>反馈只影响后续轮次，增加同向批量也可能延长反向请求的等待。</dd></div><div><dt>验证方法</dt><dd>以同一读写流比较固定批量与动态批量。按轮次记录总线活动周期、实际批量、读写转向和反向队列等待。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11403037B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">连续同方向传输可减少总线方向切换，但写轮次太长时，后续读请求需要等待。方案通过完成的轮次反馈总线活动，以更新接下来的读写批量。</p>
-    <p>内存控制器依当前内存访问效率安排一对读轮次和写轮次。完成后，根据两轮中的总线命令活动更新效率，调整后续两轮各包含的请求数。</p>
-    <ol class="walkthrough"><li><h3>写请求入队</h3><p>保留收到的写请求，等待已调度写轮次。</p></li><li><h3>调度一对读写轮次</h3><p>当前效率值约束连续读与连续写各自的数量。</p></li><li><h3>在轮次完成后采样</h3><p>记录总线活动用于更新内存访问效率。</p></li><li><h3>调整下一对轮次的批量</h3><p>按新的效率值改变可连续执行的读请求和写请求数。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 和原图 5 允许把部分写的读改写放在读轮次与写轮次交界。控制器先从指定页读出原数据，再修改并写回，复用轮次原有的读转写。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>读轮次、写轮次</dt><dd>分别执行一组同方向读或写请求的时间段。不同 bank 或器件的同方向请求可以并行。</dd></div><div><dt>内存访问效率</dt><dd>本件示例用两轮内执行相关命令的时钟周期数除以首读到末写的总周期数。</dd></div><div><dt>部分写</dt><dd>图 5 的读改写流程先读取旧数据、修改目标部分，再把修改后的数据写回。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">已完成轮次产生下一轮的调度输入</a></li><li><a href="#fig-1">活动采样反馈到下一对读写轮次</a></li><li><a href="#fig-3">部分写跨越同一轮次交界</a></li><li><a href="#fig-4">命令活动和请求等待的计算口径</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">已完成轮次产生下一轮的调度输入</h3></div>
-    <a class="paper-open" href="../mechanisms/US11403037B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="已完成轮次产生下一轮的调度输入">
-    <img class="paper-image native-image" src="../mechanisms/US11403037B2/fig-2/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="已完成轮次产生下一轮的调度输入。控制器根据当前效率安排一对轮次。两轮完成以后，按已发生的命令活动更新效率，再调整后续批量。">
-  </div>
-  <figcaption>
-    <span>控制器根据当前效率安排一对轮次。两轮完成以后，按已发生的命令活动更新效率，再调整后续批量。</span>
-    <span class="figure-evidence">原图 3、图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/94/50/79b5c3b275c8aa/US11403037.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">活动采样反馈到下一对读写轮次</h3></div>
-    <a class="paper-open" href="../mechanisms/US11403037B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="活动采样反馈到下一对读写轮次">
-    <img class="paper-image native-image" src="../mechanisms/US11403037B2/fig-1/diagram.svg" width="1100" height="203"
-         style="--paper-width:1100px" alt="活动采样反馈到下一对读写轮次。写请求先存入写队列，排入写轮次才移动到指令队列。命令活动反馈经效率逻辑回到仲裁器。">
-  </div>
-  <figcaption>
-    <span>写请求先存入写队列，排入写轮次才移动到指令队列。命令活动反馈经效率逻辑回到仲裁器。</span>
-    <span class="figure-evidence">原图 1–2、图 7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/94/50/79b5c3b275c8aa/US11403037.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-3-title">部分写跨越同一轮次交界</h3></div>
-    <a class="paper-open" href="../mechanisms/US11403037B2/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="部分写跨越同一轮次交界">
-    <img class="paper-image native-image" src="../mechanisms/US11403037B2/fig-3/diagram.svg" width="838" height="404"
-         style="--paper-width:838px" alt="部分写跨越同一轮次交界。最后一笔普通读之后做部分写的读半段，正常读转写期间可修改读回数据。完成部分写的写半段后可继续普通写。时点按原图排序，间距只表示顺序。">
-  </div>
-  <figcaption>
-    <span>最后一笔普通读之后做部分写的读半段，正常读转写期间可修改读回数据。完成部分写的写半段后可继续普通写。时点按原图排序，间距只表示顺序。</span>
-    <span class="figure-evidence">原图 5，说明书 0061–0065，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/94/50/79b5c3b275c8aa/US11403037.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">命令活动和请求等待的计算口径</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">量</th><th scope="col">起止或分子</th><th scope="col">单位或分母</th></tr></thead><tbody><tr><th scope="row">内存访问效率</th><td>两轮内执行相关命令的周期数</td><td>首读开始到末写完成的总周期数</td></tr><tr><th scope="row">读排队</th><td>读请求进控制器到首条相关命令发出</td><td>总线周期</td></tr><tr><th scope="row">写排队</th><td>写请求进入写队列到该请求首条命令发出</td><td>总线周期</td></tr><tr><th scope="row">数据通路活动</th><td>实际读写数据所占总线周期</td><td>按数据总线观察窗口统计</td></tr></tbody></table>
-  <figcaption>
-    <span>访问效率的例示口径使用命令周期。数据总线占用及每笔请求排队延迟单独统计。</span>
-    <span class="figure-evidence">原图 3、图 7，工程观测口径。 · <a href="https://patentimages.storage.googleapis.com/1c/94/50/79b5c3b275c8aa/US11403037.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>采样成对读写活动</dt><dd>更新后续读写批量 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>；原图 7</span></dd></div><div><dt>部分写跨读写边界</dt><dd>共用读转写间隔 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>；原图 5</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>交界调度可能省掉为读改写单独插入的总线方向切换。其读和写仍消耗数据总线周期。分别计数每次读转写的空闲周期、被合并的方向切换，以及普通写请求从入队到下发的等待。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>如果部分写所需的读数据在轮次交界仍未就绪，首个普通写也可能被推迟。可固定读写数量，改变部分写目标行的就绪时刻，检查省下的切换周期是否被等待抵消。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设一对轮次从第一笔读开始执行到最后一笔写完成共 40 个总线周期，其中 28 周期在执行这些请求的内存命令。</dd></div><div><dt>处理结果</dt><dd>以原图 7 的效率定义，当前效率为 28 ÷ 40 = 70%。控制器可用这一数值决定下一对轮次的读写批量。</dd></div><div><dt>结果解读</dt><dd>命令接口不活动的周期可包含器件内部工作或读写方向切换。仅凭 70% 无法判断应提高哪一类请求的数量。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、14 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,49 +192,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=a%20write%20request%20queue%3B%20an%20instruction%20queue%3B%20a%20communication%20bus%20configured%20to%20send%20memory%20requests%20to">F11</a></th><td>仲裁电路使用写请求队列、指令队列及送往内存电路的通信总线。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=Chart%20300%20%2C%20as%20illustrated%2C%20depicts%20a%20timeline%20for%20executing%20memory%20commands%20corresponding%20to%20memory%20requests">说明书 0050</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=store%20received%20write%20requests%20into%20the%20write%20request%20queue">F12</a></th><td>收到的写请求先存入写队列。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=The%20memory%20controller%20completes%20a%20write%20turn%20by%20executing%20a%20scheduled%20number%20of%20consecutive%20write%20requests">说明书 0077</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=schedule%20a%20read%20turn%20by%20placing%20a%20first%20consecutive%20number%20of%20received%20read%20requests%20into%20the">F13</a></th><td>按当前效率在指令队列排入一定数量的连续读。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=A%20memory%20controller%20completes%20a%20read%20turn%20by%20executing%20a%20scheduled%20number%20of%20consecutive%20read%20requests">说明书 0076</a> · 原图 2、7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=schedule%20a%20write%20turn%20by%20moving%20a%20second%20number%20of%20consecutive%20write%20requests%20from%20the%20write">F14</a></th><td>从写队列把选中的连续写请求移入指令队列。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=The%20memory%20controller%20completes%20a%20write%20turn%20by%20executing%20a%20scheduled%20number%20of%20consecutive%20write%20requests">说明书 0077</a> · 原图 2、7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=determine%20an%20updated%20value%20of%20the%20memory%20access%20efficiency%20based%20on%20an%20activity%20of%20the%20communication">F15</a></th><td>根据两轮的总线活动更新内存访问效率。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=In%20response%20to%20completing%20a%20read%20turn%20and%20a%20write%20turn%2C%20the%20memory%20controller%20determines%20the">说明书 0078</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=adjust%20the%20first%20and%20second%20numbers%20to%20be%20scheduled%20in%20subsequent%20read%20and%20write%20turns%20based">F16</a></th><td>用更新值调整未来读写轮次各自的请求数。</td><td><a href="https://patents.google.com/patent/US11403037B2/en#:~:text=In%20response%20to%20completing%20a%20read%20turn%20and%20a%20write%20turn%2C%20the%20memory%20controller%20determines%20the">说明书 0078</a> · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置含内存与带写请求队列的控制器。控制器按访问效率排一对连续读写轮次，根据实际活动更新效率，调整下一对轮次的读写数量。见原图 1–4、7。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>增大读请求数、缩小写请求数，以提高内存访问效率。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>将多个对同一内存页的读取排在一起，以提高访问效率。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>从读轮次和写轮次中用于处理请求的总线时钟周期数计算更新的效率。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>写队列中的请求总数达到阈值条件时安排写轮次。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>安排至少一笔部分写在读轮次和写轮次之间执行。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>在两个写候选之间优先选择待写数据量更大的请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>方法完成一对读写轮次，用执行内存请求的活动时间确定效率，调整后续两轮请求数。见原图 7。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>确定完成读写轮次期间的空闲总线时钟周期数。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>把当前效率与指定效率值比较，并按比较结果调整读写数量。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>基于与目标效率的比较，增加读数量、减少写数量来提高效率。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>基于比较减少读数量并增加写数量，以降低写队列积压。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>依据当前处理需求调整指定效率值。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>仲裁器把写请求先存入写队列。按当前效率把读请求和选中的写请求分别排进指令队列，随后用总线活动调整后续批量。见原图 2、7。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>写队列请求总数达到阈值条件时才调度写轮次。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>每轮调度的写请求数小于当时写队列的请求总数。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>用更新后的访问效率调整写轮次触发阈值。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>写队列未满足阈值时，后续写轮次移动零笔请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>用读写轮次内的空闲总线时钟周期数确定更新效率。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>通过增加读轮次请求数并减少写轮次请求数提高效率。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>强调效率更新发生在已完成读写轮次之后，并作用于未来轮次。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11403037B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>具体限定写请求队列、指令队列与通信总线活动反馈。</dd></div><div><dt>原图 2–7</dt><dd>涵盖队列、命令顺序、轮次时序和效率计算流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11403037B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12730763B2.html#engineering">关键读触发提前结束写服务轮次</a>
-<p>US11403037B2 在一对读写轮次完成后测量活动时间，再调整后续轮次的读写批量。US12730763B2 把关键读带入当前写轮次的切换判断，同时检查写队列空位等条件。前者的观察窗口是一对轮次，后者的触发点是关键读进入后的当轮边界。</p></li><li><a href="US12216594B2.html#engineering">双 rank 读轮次按请求数分配槽位并按 QoS 切换</a>
-<p>US11403037B2 用测得的内存访问效率调整下一组读写轮次的连续请求数。US12216594B2 在一轮读操作开始时按两个 rank 的请求数分配槽位，再依服务质量要求决定允许的 rank 切换次数。两种仲裁分别改变每轮读写的长度和同一读轮次内的 rank 服务顺序。</p></li></ul>
-    <p><a href="../index.html?patent=US11403037B2#knowledge">在全量关系图上定位 US11403037B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2018-08-24</dd></div>
-    <div><dt>美国申请日</dt><dd>2020-06-08</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2022-08-02</dd></div>
-    <div><dt>美国申请号</dt><dd>US16/896,027</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Shane J. Keil、Gregory S. Mathews、Lakshmi Narasimha Murthy Nukala、Thejasvi Magudilu Vijayaraj、Kai Lun Hsiung、Yanzhe Liu、Sukalpa Biswas</dd></div><div><dt>分类号</dt><dd>G06F13/1626、G06F3/0659、G06F13/1642、G06F13/1673、G06F3/0604、G06F3/0673</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11403037B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11403037B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 97 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11403037B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

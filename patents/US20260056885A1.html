@@ -1,119 +1,149 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20260056885A1 面向物理标签的远程缓存失效 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>远程失效命令携带 PA，协处理器直接比较物理 tag · US20260056885A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20260056885A1</code> · <a href="https://patents.google.com/patent/US20260056885A1/en">专利全文</a></p>
+<h1>远程失效命令携带 PA，协处理器直接比较物理 tag</h1><p class="reading-question">协处理器的常规访问用虚拟地址。主处理器向它发出远程缓存失效时，命令怎样找到正确的设备和缓存行？</p>
+<p class="reading-answer">协处理器 ID 选择互连的目标，缓存 ID 可选设备内的缓存。公开权项把失效地址设为 PA，由缓存失效硬件直接匹配物理 tag。涉及页解除映射和未结束逐出写回时，两道同步屏障分别处理转换和缓存维护的依赖。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-02-26</dd></div><div><dt>申请号</dt><dd>US19/376,473</dd></div><div><dt>最早优先权</dt><dd>2023-09-25</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brett S. Feero、Dennis R. Bradford、Gaurav Garg、Jeff Gonion、Bernard J. Semeria、James Vash、Richard F. Russo</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#address">两个入口都用 PA 比较物理 tag</a></li><li><a href="#dispatch">互连目标、缓存目标与匹配地址是三层选择</a></li><li><a href="#order">第一次屏障等旧转换，第二次屏障等逐出写回</a></li><li><a href="#range">缓存行数由目标硬件展开</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="address"><h2>两个入口都用 PA 比较物理 tag</h2><p>从图 1 上方读协处理器执行普通访存。它支持 VA，地址可经 TLB 或 MMU 翻译，再用 PA 访问物理 tag。下方是远程维护。主处理器执行远程失效指令后发送命令，命令为该路径直接提供 PA。协处理器的失效控制电路触发缓存控制电路查 tag，并使命中行失效。整个维护路径可由目标端硬件执行。</p><p>说明书披露过命令携带 VA 并在目标翻译的变体。公开独立权利要求 1、11、17 具体要求命令携带物理地址、协处理器支持常规 VA 翻译以及缓存按 PA 打 tag。PA 在此路径提供查找的地址，无需目标使用旧 VA 转换。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　普通访问经地址翻译，远程命令直接提供 PA</h3>
+    <p id="fig-1-basis">沿两条线路观察 PA 的来源，以及谁真正查找和使缓存行失效。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="普通访问经地址翻译，远程命令直接提供 PA" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 577" role="img" aria-labelledby="us20260056885a1-fig-1-svg-title us20260056885a1-fig-1-svg-desc">
+<title id="us20260056885a1-fig-1-svg-title">普通访问经地址翻译，远程命令直接提供 PA</title>
+<desc id="us20260056885a1-fig-1-svg-desc">沿两条线路观察 PA 的来源，以及谁真正查找和使缓存行失效。</desc>
+<defs><marker id="us20260056885a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260056885a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260056885a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260056885a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20260056885a1-fig-1-virtual" d="M 226 158 L 333 158" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-1-arrow-data)"/>
+<path id="us20260056885a1-fig-1-translated" d="M 517 158 L 612 158 Q 620 158 620 166 L 620 250 Q 620 258 628 258 L 688 258" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-1-arrow-main)"/>
+<path id="us20260056885a1-fig-1-physical" d="M 226 397 L 333 397" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-1-arrow-main)"/>
+<path id="us20260056885a1-fig-1-direct" d="M 517 394 L 612 394 Q 620 394 620 386 L 620 312 Q 620 304 628 304 L 688 304" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-1-arrow-main)"/>
+<path id="us20260056885a1-fig-1-tag" d="M 755 429 L 755 341" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-1-arrow-control)"/>
+<path id="us20260056885a1-fig-1-invalidate" d="M 831 341 L 831 429" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-1-arrow-return)"/>
+<rect x="253" y="129" width="52" height="18" fill="#f5f5f5"/><text x="279" y="143" class="arrow-label" text-anchor="middle">VA</text>
+<rect x="519.5" y="129" width="121" height="18" fill="#f5f5f5"/><text x="580" y="143" class="arrow-label" text-anchor="middle">翻译得到 PA</text>
+<rect x="215" y="368" width="128" height="18" fill="#f5f5f5"/><text x="279" y="382" class="arrow-label" text-anchor="middle">命令中的 PA</text>
+<rect x="537.5" y="400" width="153" height="18" fill="#f5f5f5"/><text x="614" y="414" class="arrow-label" text-anchor="middle">PA 与失效操作</text>
+<rect x="644.5" y="365" width="103" height="18" fill="#f5f5f5"/><text x="696" y="379" class="arrow-label" text-anchor="middle">读物理 tag</text>
+<rect x="768.5" y="365" width="183" height="18" fill="#f5f5f5"/><text x="860" y="379" class="arrow-label" text-anchor="middle">仅失效命令更新状态</text>
+<g id="us20260056885a1-fig-1-issue"><rect x="41" y="111" width="185" height="100" rx="6" fill="#f5f5f5"/><rect x="41" y="111" width="185" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="133.5" y="137" class="node-name" text-anchor="middle">协处理器普通访问</text><text x="133.5" y="159" class="node-detail" text-anchor="middle">执行 load／store 等指令</text></g>
+<g id="us20260056885a1-fig-1-va"><rect x="333" y="111" width="184" height="100" rx="6" fill="#f5f5f5"/><rect x="333" y="111" width="184" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="425" y="137" class="node-name" text-anchor="middle">TLB／MMU</text><text x="425" y="159" class="node-detail" text-anchor="middle">将 VA 翻译为 PA</text></g>
+<g id="us20260056885a1-fig-1-command"><rect x="41" y="349" width="185" height="103" rx="6" fill="#f5f5f5"/><rect x="41" y="349" width="185" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="133.5" y="375" class="node-name" text-anchor="middle">远程失效互连包</text><text x="133.5" y="397" class="node-detail" text-anchor="middle">公开权项的命令含 PA</text></g>
+<g id="us20260056885a1-fig-1-handler"><rect x="333" y="349" width="184" height="103" rx="6" fill="#f5f5f5"/><rect x="333" y="349" width="184" height="103" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="425" y="375" class="node-name" text-anchor="middle">缓存失效控制电路</text><text x="425" y="397" class="node-detail" text-anchor="middle">提取命令的 PA</text><text x="425" y="415" class="node-detail" text-anchor="middle">直接送缓存控制电路</text></g>
+<g id="us20260056885a1-fig-1-lookup"><rect x="688" y="224" width="208" height="117" rx="6" fill="#f5f5f5"/><rect x="688" y="224" width="208" height="117" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="792" y="250" class="node-name" text-anchor="middle">缓存控制电路</text><text x="792" y="272" class="node-detail" text-anchor="middle">比较 PA 对应的物理 tag</text><text x="792" y="290" class="node-detail" text-anchor="middle">按请求执行访问或失效</text></g>
+<g id="us20260056885a1-fig-1-cache"><rect x="688" y="429" width="208" height="89" rx="6" fill="#f5f5f5"/><rect x="688" y="429" width="208" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="792" y="455" class="node-name" text-anchor="middle">协处理器缓存</text><text x="792" y="477" class="node-detail" text-anchor="middle">存放物理 tag 与有效位</text></g>
+<text x="41" y="64" class="signal-title" text-anchor="start">两条路径在缓存控制器处使用物理 tag，与 VA 翻译分开</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260056885a1-fig-1-va">正常访问的 VA 翻译</a> 协处理器普通 load／store 使用 VA。在 TLB 命中或 MMU 获得翻译后取得 PA。</li><li><a href="#us20260056885a1-fig-1-physical">命令自带 PA</a> 公开权项指定该命令含失效地址的 PA。</li><li><a href="#us20260056885a1-fig-1-direct">直接匹配物理 tag</a> 命令处理器可省去目标端的地址翻译，将地址送缓存控制电路。</li><li><a href="#us20260056885a1-fig-1-invalidate">写入失效状态</a> 缓存控制器使与地址匹配的行失效，目标端执行流水线不参与执行维护指令。</li></ul>
+  <p class="figure-evidence">原图 1、2、4A、5；说明书归档段 0031、0034、0045、0046、0052、0055、0057、0059、0061、0077；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US20260056885A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>协处理器</dt><dd>120</dd></div><div><dt>协处理器执行流水线</dt><dd>170</dd></div><div><dt>协处理器 MMU</dt><dd>240</dd></div><div><dt>协处理器 TLB</dt><dd>230</dd></div><div><dt>缓存失效控制电路</dt><dd>150</dd></div><div><dt>命令处理器</dt><dd>552</dd></div><div><dt>缓存控制电路</dt><dd>570</dd></div><div><dt>协处理器缓存</dt><dd>160</dd></div><div><dt>远程缓存失效命令</dt><dd>190</dd></div></dl></details>
+</figure></section><section id="dispatch"><h2>互连目标、缓存目标与匹配地址是三层选择</h2><p>图 2 将字段标在使用它们的硬件旁。互连根据协处理器 ID 选目标。目标端总线控制将命令送入失效控制电路，后者可用缓存 ID 选指定缓存，用地址和粒度确定需比较的行。公开第 9、15 项还规定互连包包括协处理器标识和失效地址信息。</p><p>表 3 对照当前公开案与母案。当前公开独权强调 PA 和物理 tag。解除页映射由公开权 3、12 加入。母案授权独权 1 用解除映射和远程失效指令的组合表述触发条件。这个对照关系适合判断原图哪些字段属于本案权项，哪些只是实施方式。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　互连先按设备路由，缓存控制再按 PA 查行</h3>
+    <p id="fig-2-basis">把地址选择动作逐个对应到实际字段消费点，区分协处理器 ID、缓存 ID 与 PA。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="互连先按设备路由，缓存控制再按 PA 查行" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 546" role="img" aria-labelledby="us20260056885a1-fig-2-svg-title us20260056885a1-fig-2-svg-desc">
+<title id="us20260056885a1-fig-2-svg-title">互连先按设备路由，缓存控制再按 PA 查行</title>
+<desc id="us20260056885a1-fig-2-svg-desc">把地址选择动作逐个对应到实际字段消费点，区分协处理器 ID、缓存 ID 与 PA。</desc>
+<defs><marker id="us20260056885a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260056885a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260056885a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260056885a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20260056885a1-fig-2-encode" d="M 139 194 L 139 283" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-2-arrow-main)"/>
+<path id="us20260056885a1-fig-2-route" d="M 250 329 L 302 329 Q 310 329 310 321 L 310 157 Q 310 149 318 149 L 369 149" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-2-arrow-main)"/>
+<path id="us20260056885a1-fig-2-recv" d="M 460 194 L 460 283" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-2-arrow-data)"/>
+<path id="us20260056885a1-fig-2-decode" d="M 559 328 L 614 328 Q 622 328 622 320 L 622 158 Q 622 150 630 150 L 693 150" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-2-arrow-main)"/>
+<path id="us20260056885a1-fig-2-physical" d="M 800 194 L 800 283" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-2-arrow-control)"/>
+<rect x="144.5" y="223" width="119" height="18" fill="#f5f5f5"/><text x="204" y="237" class="arrow-label" text-anchor="middle">形成命令包</text>
+<rect x="251.5" y="222" width="141" height="18" fill="#f5f5f5"/><text x="322" y="236" class="arrow-label" text-anchor="middle">按设备 ID 路由</text>
+<rect x="465" y="223" width="148" height="18" fill="#f5f5f5"/><text x="539" y="237" class="arrow-label" text-anchor="middle">到达目标协处理器</text>
+<rect x="564.5" y="199" width="133" height="18" fill="#f5f5f5"/><text x="631" y="213" class="arrow-label" text-anchor="middle">解析命令字段</text>
+<rect x="801" y="224" width="144" height="18" fill="#f5f5f5"/><text x="873" y="238" class="arrow-label" text-anchor="middle">按缓存 ID 选目标</text>
+<g id="us20260056885a1-fig-2-cpu"><rect x="42" y="100" width="208" height="94" rx="6" fill="#f5f5f5"/><rect x="42" y="100" width="208" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146" y="126" class="node-name" text-anchor="middle">主处理器执行流水线</text><text x="146" y="148" class="node-detail" text-anchor="middle">执行远程失效指令</text></g>
+<g id="us20260056885a1-fig-2-pkt"><rect x="42" y="283" width="208" height="135" rx="6" fill="#f5f5f5"/><rect x="42" y="283" width="208" height="135" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="146" y="309" class="node-name" text-anchor="middle">远程失效互连包</text><text x="146" y="331" class="node-detail" text-anchor="middle">协处理器 ID、缓存 ID</text><text x="146" y="349" class="node-detail" text-anchor="middle">PA、失效粒度</text></g>
+<g id="us20260056885a1-fig-2-fab"><rect x="369" y="100" width="190" height="94" rx="6" fill="#f5f5f5"/><rect x="369" y="100" width="190" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="464" y="126" class="node-name" text-anchor="middle">片上互连</text><text x="464" y="148" class="node-detail" text-anchor="middle">根据协处理器 ID 路由</text></g>
+<g id="us20260056885a1-fig-2-bus"><rect x="369" y="283" width="190" height="135" rx="6" fill="#f5f5f5"/><rect x="369" y="283" width="190" height="135" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="464" y="309" class="node-name" text-anchor="middle">协处理器总线控制</text><text x="464" y="331" class="node-detail" text-anchor="middle">转发给本地失效硬件</text></g>
+<g id="us20260056885a1-fig-2-handler"><rect x="693" y="100" width="211" height="94" rx="6" fill="#f5f5f5"/><rect x="693" y="100" width="211" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="798.5" y="126" class="node-name" text-anchor="middle">命令处理器</text><text x="798.5" y="148" class="node-detail" text-anchor="middle">识别缓存 ID 和粒度</text></g>
+<g id="us20260056885a1-fig-2-cache"><rect x="693" y="283" width="211" height="135" rx="6" fill="#f5f5f5"/><rect x="693" y="283" width="211" height="135" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="798.5" y="309" class="node-name" text-anchor="middle">指定的缓存控制器</text><text x="798.5" y="331" class="node-detail" text-anchor="middle">按 PA 对应的物理 tag</text><text x="798.5" y="349" class="node-detail" text-anchor="middle">匹配时失效</text></g>
+<text x="42" y="57" class="signal-title" text-anchor="start">互连先选协处理器，设备内再选缓存，最后按 PA 查行</text>
+<text x="42" y="492" class="legend" text-anchor="start">缓存 ID 与粒度为原图所示字段。公开第 9、15 项明确列出地址信息与协处理器 ID。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260056885a1-fig-2-encode">形成远程失效命令包</a> 命令由主处理器执行远程失效指令后生成。地址与粒度可来自指令。</li><li><a href="#us20260056885a1-fig-2-route">按协处理器 ID 路由</a> 互连将命令送指定协处理器。</li><li><a href="#us20260056885a1-fig-2-handler">命令处理器</a> 目标内可用缓存 ID 选择要执行的缓存层级，并用粒度决定单行或范围。</li><li><a href="#us20260056885a1-fig-2-cache">PA 对应的 tag</a> 缓存控制器对目标缓存执行地址匹配。</li></ul>
+  <p class="figure-evidence">原图 4A、4B、5、7；说明书归档段 0045、0047、0048、0049、0055、0056、0057、0059、0077；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US20260056885A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>主处理器执行流水线</dt><dd>140</dd></div><div><dt>远程失效指令</dt><dd>180</dd></div><div><dt>远程缓存失效命令</dt><dd>190</dd></div><div><dt>片上互连</dt><dd>510</dd></div><div><dt>协处理器总线控制</dt><dd>540</dd></div><div><dt>带远程失效命令的互连包</dt><dd>535</dd></div><div><dt>命令处理器</dt><dd>552</dd></div><div><dt>缓存控制电路</dt><dd>570</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　两个公开文本怎样限定地址和解除映射</h3>
+    <p id="fig-3-basis">按公开号比较当前公开权与母案授权权，读清本案对 PA 和硬件执行的明示要求。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">位置</th><th scope="col">本案 US20260056885A1</th><th scope="col">母案 US12487927B2</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">第 1 项与地址格式</th><td>明确 PA 命令／物理 tag</td><td>明确解除映射触发与定向失效命令</td></tr><tr id="fig-3-table-row-2"><th scope="row">解除映射</th><td>公开第 3、12 项加入</td><td>授权第 1 项的组成部分</td></tr><tr id="fig-3-table-row-3"><th scope="row">缓存失效的执行者</th><td>协处理器缓存失效控制电路</td><td>协处理器缓存失效控制电路</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">公开文本差异</a> 本案第 1、11、17 项有 PA 和物理 tag 限制。母案授权独权 1 写入解除映射作为触发条件。</li></ul>
+  <p class="figure-evidence">原图 4A、4B、5、6；说明书归档段 0045、0046、0053、0055、0057、0077、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>远程缓存失效命令</dt><dd>190</dd></div><div><dt>缓存控制电路</dt><dd>570</dd></div><div><dt>解除页映射</dt><dd>610</dd></div></dl></details>
+</figure></section><section id="order"><h2>第一次屏障等旧转换，第二次屏障等逐出写回</h2><p>图 4 取原图 6 的解除映射实例。主处理器先向协处理器发送远程 TLB 失效命令，然后发第一道同步屏障。在相应实施例中，第一道屏障还等待访问失效地址的旧 load、store 或 prefetch 不再挂起。收到屏障响应后才发缓存失效命令。</p><p>缓存返回失效响应之前可以使匹配缓存行失效。此时同地址原有的逐出写回可能仍在互连上。第二道同步屏障等待这笔逐出写回结束，再响应主处理器。说明书允许先完成失效响应、再通过第二道屏障建立总线顺序，以避免把互连上的依赖连成环。</p><p>公开权利要求 5 与原图 6 把远程 TLB 失效命令的发送方写成主处理器。第 13 项公开方法文句的主语是协处理器。图中沿用原图发送方，权利要求比较保留两者的字面区别。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　远程失效响应可以早于逐出写回，第二道屏障仍要等待</h3>
+    <p id="fig-4-basis">对照两道同步屏障，辨认缓存的本地失效响应与同地址逐出写回的完成边界。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="远程失效响应可以早于逐出写回，第二道屏障仍要等待" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 695" role="img" aria-labelledby="us20260056885a1-fig-4-svg-title us20260056885a1-fig-4-svg-desc">
+<title id="us20260056885a1-fig-4-svg-title">远程失效响应可以早于逐出写回，第二道屏障仍要等待</title>
+<desc id="us20260056885a1-fig-4-svg-desc">对照两道同步屏障，辨认缓存的本地失效响应与同地址逐出写回的完成边界。</desc>
+<defs><marker id="us20260056885a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260056885a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260056885a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260056885a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="644" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="644" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="644" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="644" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us20260056885a1-fig-4-unmap"><path d="M 116 114 L 140 114 Q 148 114 148 122 L 148 124 Q 148 132 140 132 L 116 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-control)"/><rect x="165" y="90" width="130" height="18" fill="#f5f5f5"/><text x="230" y="104" class="arrow-label" text-anchor="middle">解除协处理器的页映射</text></g>
+<g id="us20260056885a1-fig-4-tlb"><path d="M 116 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-data)"/><rect x="159" y="144" width="156" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">发远程 TLB 失效命令</text></g>
+<g id="us20260056885a1-fig-4-first"><path d="M 116 216 L 358 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-main)"/><rect x="120" y="192" width="234" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">第一道同步屏障，等待旧翻译和相关访问</text></g>
+<g id="us20260056885a1-fig-4-first-ack"><path d="M 358 264 L 116 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-4-arrow-return)"/><rect x="191.5" y="240" width="91" height="18" fill="#f5f5f5"/><text x="237" y="254" class="arrow-label" text-anchor="middle">第一道屏障响应</text></g>
+<g id="us20260056885a1-fig-4-inflight"><path d="M 601 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-data)"/><rect x="644.5" y="288" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">同地址的逐出写回仍在处理</text></g>
+<g id="us20260056885a1-fig-4-cache-order"><path d="M 116 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-data)"/><rect x="139.5" y="336" width="195" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">发远程缓存失效命令，携带 PA</text></g>
+<g id="us20260056885a1-fig-4-ops"><path d="M 358 408 L 601 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-data)"/><rect x="414.5" y="384" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">对匹配行执行缓存失效</text></g>
+<g id="us20260056885a1-fig-4-local"><path d="M 601 456 L 358 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-main)"/><rect x="414.5" y="432" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="446" class="arrow-label" text-anchor="middle">缓存失效响应可以先发</text></g>
+<g id="us20260056885a1-fig-4-second"><path d="M 116 504 L 358 504" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-data)"/><rect x="178.5" y="480" width="117" height="18" fill="#f5f5f5"/><text x="237" y="494" class="arrow-label" text-anchor="middle">第二道同步屏障命令</text></g>
+<g id="us20260056885a1-fig-4-drain"><path d="M 844 552 L 358 552" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-4-arrow-return)"/><rect x="529.5" y="528" width="143" height="18" fill="#f5f5f5"/><text x="601" y="542" class="arrow-label" text-anchor="middle">等待同地址逐出写回完成</text></g>
+<g id="us20260056885a1-fig-4-second-ack"><path d="M 358 600 L 116 600" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-4-arrow-main)"/><rect x="191.5" y="576" width="91" height="18" fill="#f5f5f5"/><text x="237" y="590" class="arrow-label" text-anchor="middle">第二道屏障响应</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">主处理器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">协处理器控制逻辑</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">协处理器缓存</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">互连／内存端</text>
+<text x="28" y="676" class="legend" text-anchor="start">图取说明书 FIG. 6 的发送方和保留逐出写回的情况。各控制消息的交换与总线时延无比例关系。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260056885a1-fig-4-first">第一道同步屏障</a> 它在 TLB 失效命令和缓存失效命令之间。响应表明旧转换的失效达到所需完成条件。</li><li><a href="#us20260056885a1-fig-4-inflight">仍在进行的逐出写回</a> 行已经进入逐出路径，数据仍可能在缓存层级之间或在总线接口等待。</li><li><a href="#us20260056885a1-fig-4-local">缓存失效响应</a> 允许先通知本地失效处理，避免为了这条响应反向等待互连上的同址逐出写。</li><li><a href="#us20260056885a1-fig-4-second-ack">第二道屏障响应</a> 只有满足第二道同步屏障的完成要求才发。公开权 7 明确其等待同地址逐出。</li></ul>
+  <p class="figure-evidence">原图 6；说明书归档段 0064、0065、0066、0067、0068、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US20260056885A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>主处理器</dt><dd>110</dd></div><div><dt>协处理器</dt><dd>120</dd></div><div><dt>协处理器缓存</dt><dd>160</dd></div><div><dt>解除页映射</dt><dd>610</dd></div><div><dt>远程 TLB 失效命令</dt><dd>615</dd></div><div><dt>第一道同步屏障命令</dt><dd>620</dd></div><div><dt>第一道同步屏障响应</dt><dd>625</dd></div><div><dt>远程缓存失效命令</dt><dd>630</dd></div><div><dt>逐行失效操作</dt><dd>635</dd></div><div><dt>缓存失效响应</dt><dd>640</dd></div><div><dt>第二道同步屏障命令</dt><dd>645</dd></div><div><dt>第二道同步屏障响应</dt><dd>650</dd></div><div><dt>协处理器 LSU</dt><dd>590</dd></div></dl></details>
+</figure></section><section id="range"><h2>缓存行数由目标硬件展开</h2><p>图 5 上方的一条远程命令固定先到命令处理器。若范围为单行，可直接查指定地址。若范围为多行，迭代器把地址范围变成多条本地行失效操作。一条多行命令可以减少跨互连包数，每行的 tag 查询仍要在目标执行。实际时延取决于硬件能以多快速度查找和完成失效。</p><p>图的下端示意多级缓存实施方式。外层缓存可作为协处理器内部的一致性点。其行被失效后，内部一致性控制将维护传播到靠近执行流水线的一侧。它适用于本地多级缓存结构。公开权 20 加入这条传播关系。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　一条远程命令如何展开为逐行失效</h3>
+    <p id="fig-5-basis">沿单行直达与多行迭代两支看本地工作量和跨互连传输为何不同。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一条远程命令如何展开为逐行失效" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 668" role="img" aria-labelledby="us20260056885a1-fig-5-svg-title us20260056885a1-fig-5-svg-desc">
+<title id="us20260056885a1-fig-5-svg-title">一条远程命令如何展开为逐行失效</title>
+<desc id="us20260056885a1-fig-5-svg-desc">沿单行直达与多行迭代两支看本地工作量和跨互连传输为何不同。</desc>
+<defs><marker id="us20260056885a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260056885a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260056885a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260056885a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20260056885a1-fig-5-decode" d="M 238 160 L 366 160" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-5-arrow-main)"/>
+<path id="us20260056885a1-fig-5-short" d="M 403 209 L 403 253 Q 403 261 395 261 L 154 261 Q 146 261 146 269 L 146 327" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-5-arrow-data)"/>
+<path id="us20260056885a1-fig-5-many" d="M 491 209 L 491 327" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-5-arrow-main)"/>
+<path id="us20260056885a1-fig-5-to-multiple" d="M 587 372 L 709 372" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-5-arrow-main)"/>
+<path id="us20260056885a1-fig-5-to-one" d="M 242 371 L 279 371 Q 287 371 287 379 L 287 460 Q 287 468 295 468 L 795 468 Q 803 468 803 460 L 803 420" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260056885a1-fig-5-arrow-data)"/>
+<path id="us20260056885a1-fig-5-cohere" d="M 849 420 L 849 529" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260056885a1-fig-5-arrow-control)"/>
+<rect x="248.5" y="132" width="103" height="18" fill="#f5f5f5"/><text x="300" y="146" class="arrow-label" text-anchor="middle">PA、粒度</text>
+<rect x="203.5" y="234" width="109" height="18" fill="#f5f5f5"/><text x="258" y="248" class="arrow-label" text-anchor="middle">粒度为单行</text>
+<rect x="498.5" y="253" width="107" height="18" fill="#f5f5f5"/><text x="552" y="267" class="arrow-label" text-anchor="middle">粒度为多行</text>
+<rect x="596" y="343" width="108" height="18" fill="#f5f5f5"/><text x="650" y="357" class="arrow-label" text-anchor="middle">按行派发</text>
+<rect x="432.5" y="440" width="165" height="18" fill="#f5f5f5"/><text x="515" y="454" class="arrow-label" text-anchor="middle">单行只查对应地址</text>
+<rect x="674" y="485" width="162" height="18" fill="#f5f5f5"/><text x="755" y="499" class="arrow-label" text-anchor="middle">按一致性关系传播</text>
+<g id="us20260056885a1-fig-5-rx"><rect x="43" y="113" width="195" height="96" rx="6" fill="#f5f5f5"/><rect x="43" y="113" width="195" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140.5" y="139" class="node-name" text-anchor="middle">远程缓存失效命令</text><text x="140.5" y="161" class="node-detail" text-anchor="middle">一条互连命令含 PA 和粒度</text></g>
+<g id="us20260056885a1-fig-5-h"><rect x="366" y="113" width="221" height="96" rx="6" fill="#f5f5f5"/><rect x="366" y="113" width="221" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476.5" y="139" class="node-name" text-anchor="middle">命令处理器</text><text x="476.5" y="161" class="node-detail" text-anchor="middle">解析起始地址与失效范围</text></g>
+<g id="us20260056885a1-fig-5-single"><rect x="47" y="327" width="195" height="93" rx="6" fill="#f5f5f5"/><rect x="47" y="327" width="195" height="93" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144.5" y="353" class="node-name" text-anchor="middle">单行派发</text><text x="144.5" y="375" class="node-detail" text-anchor="middle">直接生成一条本地操作</text></g>
+<g id="us20260056885a1-fig-5-multi"><rect x="366" y="327" width="221" height="93" rx="6" fill="#f5f5f5"/><rect x="366" y="327" width="221" height="93" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476.5" y="353" class="node-name" text-anchor="middle">多行失效迭代器</text><text x="476.5" y="375" class="node-detail" text-anchor="middle">生成本地逐行操作</text></g>
+<g id="us20260056885a1-fig-5-cache"><rect x="709" y="327" width="206" height="93" rx="6" fill="#f5f5f5"/><rect x="709" y="327" width="206" height="93" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="812" y="353" class="node-name" text-anchor="middle">目标缓存控制器</text><text x="812" y="375" class="node-detail" text-anchor="middle">按每个地址查 tag</text></g>
+<g id="us20260056885a1-fig-5-coh"><rect x="709" y="529" width="206" height="93" rx="6" fill="#f5f5f5"/><rect x="709" y="529" width="206" height="93" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="812" y="555" class="node-name" text-anchor="middle">内部一致性控制</text><text x="812" y="577" class="node-detail" text-anchor="middle">需要时向本地缓存传播</text></g>
+<text x="43" y="59" class="signal-title" text-anchor="start">一次远程命令可以在协处理器内展开为多条本地操作</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260056885a1-fig-5-short">单行直接派发</a> 单行请求可以绕过迭代器，只到对应物理 tag。</li><li><a href="#us20260056885a1-fig-5-many">多行迭代器</a> 用命令指定的粒度或数量生成本地逐行操作。</li><li><a href="#us20260056885a1-fig-5-cache">目标缓存控制器</a> 接到本地操作后执行实际 tag 匹配与状态更新。</li><li><a href="#us20260056885a1-fig-5-cohere">协处理器内部传播</a> 以外层缓存为本地一致性点的实施例中，内部一致性电路将维护传播到靠近流水线的缓存。</li></ul>
+  <p class="figure-evidence">原图 4B、5、7；说明书归档段 0047、0056、0057、0058、0059、0060、0077、0081；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20260056885A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>远程缓存失效命令</dt><dd>190</dd></div><div><dt>命令处理器</dt><dd>552</dd></div><div><dt>多行失效迭代器</dt><dd>554</dd></div><div><dt>缓存控制电路</dt><dd>570</dd></div><div><dt>协处理器内部一致性控制</dt><dd>575</dd></div><div><dt>协处理器外层缓存</dt><dd>580</dd></div><div><dt>执行流水线一侧的本地缓存</dt><dd>560</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US20260056885A1</code><span>美国公开申请</span><time datetime="2026-02-26">2026-02-26</time></p>
-  <h1>面向物理标签的远程缓存失效</h1>
-  <p class="english-title" lang="en">Remote Cache Invalidation</p>
-  <p class="document-question">协处理器用虚拟地址发起访问，远程失效命令用什么地址找到同一缓存行？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">失效控制器将命令携带的物理地址与协处理器缓存的物理标签比较。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>协处理器支持虚拟寻址，命令与本地比较所用的地址仍是物理地址。</dd></div><div><dt>验证方法</dt><dd>用两个虚拟地址访问同一物理缓存行，再按物理地址失效。以不同物理页为对照，记录标签命中和各行有效位。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">同族授权独立权项把远程维护与解除映射关联起来。本件公开权项明确命令携带的地址类型，以及协处理器缓存采用的标签类型。</p>
-    <p>主处理器执行远程失效指令，发出带物理地址的命令。协处理器虽然支持虚拟寻址，其缓存采用物理标签，失效控制器可以直接比较命令里的地址与缓存标签。</p>
-    <ol class="walkthrough"><li><h3>翻译普通访问的地址</h3><p>协处理器执行普通访问时，翻译电路可以把虚拟地址（VA）转换成物理地址（PA），再用 PA 查找缓存。</p></li><li><h3>把 PA 写进命令</h3><p>主处理器执行远程失效指令。公开独立权项要求命令指明要失效的物理地址。</p></li><li><h3>用物理标签定位行</h3><p>互连把命令送至目标协处理器。失效控制电路按 PA 匹配缓存标签，直接使匹配的行失效。</p></li><li><h3>开展多行或翻译维护</h3><p>单条命令可以覆盖多行。另一些从属项加入解除映射、TLB 维护和两道屏障，给页面撤销映射后的操作增加次序约束。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 的失效命令携物理地址。协处理器普通指令仍可先翻译虚拟地址，随后访问同一套物理标签。原图 4 至图 7 另外说明设备寻址与消息投递。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>物理标签</dt><dd>用物理地址中的标识位确认该缓存位置保存哪一个物理行。协处理器的常规指令仍可以使用虚拟地址。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">普通访问和远程维护都比较物理标签</a></li><li><a href="#fig-2">设备标识用于路由，PA 用于匹配缓存行</a></li><li><a href="#fig-4">提前响应和后续逐出由两道屏障约束</a></li><li><a href="#fig-3">同族两份文本对 PA 和解除映射的要求</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">普通访问和远程维护都比较物理标签</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260056885A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="普通访问和远程维护都比较物理标签">
-    <img class="paper-image native-image" src="../mechanisms/US20260056885A1/fig-1/diagram.svg" width="701" height="332"
-         style="--paper-width:701px" alt="普通访问和远程维护都比较物理标签。普通访问先把 VA 翻译成 PA，远程维护命令自身携带 PA。缓存用相同类型的地址比较标签。">
-  </div>
-  <figcaption>
-    <span>普通访问先把 VA 翻译成 PA，远程维护命令自身携带 PA。缓存用相同类型的地址比较标签。</span>
-    <span class="figure-evidence">图 2、4–5，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00009" aria-label="原文权利要求 9">9</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">设备标识用于路由，PA 用于匹配缓存行</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260056885A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="设备标识用于路由，PA 用于匹配缓存行">
-    <img class="paper-image native-image" src="../mechanisms/US20260056885A1/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="设备标识用于路由，PA 用于匹配缓存行。主处理器发指令，协处理器的控制电路收到命令后，用 PA 查找并使匹配行失效。全过程由硬件完成。">
-  </div>
-  <figcaption>
-    <span>主处理器发指令，协处理器的控制电路收到命令后，用 PA 查找并使匹配行失效。全过程由硬件完成。</span>
-    <span class="figure-evidence">图 4–7，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">提前响应和后续逐出由两道屏障约束</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260056885A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="提前响应和后续逐出由两道屏障约束">
-    <img class="paper-image native-image" src="../mechanisms/US20260056885A1/fig-4/diagram.svg" width="920" height="524"
-         style="--paper-width:920px" alt="提前响应和后续逐出由两道屏障约束。权利要求 7 允许失效响应先于逐出完成，第二道屏障必须等匹配地址的逐出结束。">
-  </div>
-  <figcaption>
-    <span>权利要求 7 允许失效响应先于逐出完成，第二道屏障必须等匹配地址的逐出结束。</span>
-    <span class="figure-evidence">原图 6，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">同族两份文本对 PA 和解除映射的要求</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">文本位置</th><th scope="col">PA 与标签</th><th scope="col">Unmap</th></tr></thead><tbody><tr><th scope="row">本件公开权 1</th><td class="emphasis">命令 PA＋物理标签</td><td>未明列</td></tr><tr><th scope="row">本件公开权 3</th><td>承接独权</td><td class="emphasis">加入</td></tr><tr><th scope="row">父件授权权 1</th><td>独权未明列 PA</td><td class="emphasis">明确要求</td></tr></tbody></table>
-  <figcaption>
-    <span>本件公开独立权项规定命令携带 PA，缓存使用物理标签，权 3 再加入解除映射。父件授权独立权项已经包含解除映射。</span>
-    <span class="figure-evidence">本件公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>；US12487927B2 权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>物理标签匹配</dt><dd>按物理行定位 <span class="subdued">原图 4A–5，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>使用第二道屏障</dt><dd>约束逐出完成 <span class="subdued">原图 6，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>物理地址令接收侧比较路径不再依赖对应虚拟地址。命令的投递成本仍由互连承担，而标签比较成本取决于缓存结构。应分别观察目标设备接收时点和物理标签匹配时点。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若旧物理行仍被其他设备缓存，只对一个设备发出失效命令不会自动清掉另一个设备的副本。这是从定向命令接口推得的边界，公开权利要求 1 没有承诺跨设备广播。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>协处理器的 VA 0x4000 映射到 PA 0x9000。例中用 64 B 缓存行，相关标签指向 0x9000 所在行。</dd></div><div><dt>处理结果</dt><dd>携带 PA 0x9000 的失效命令匹配这一行。若另一个 VA 也映射到该 PA，它的访问同样查找这个物理行。</dd></div><div><dt>结果解读</dt><dd>64 B 是示例行大小。系统何时能确认物理缓存维护完成，要看目标设备和所用屏障协议。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +167,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=program%20the%20computing%20system%20to%20generate%20a%20computer%20simulation%20model">F13</a></th><td>介质中的硬件描述指令生成表示所述硬件的计算机仿真模型</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=based%20on%20execution%20of%20a%20remote%20invalidate%20instruction">F14</a></th><td>主处理器执行远程失效指令后发出缓存失效命令</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=in%20response%20to%20the%20cache%20invalidate%20command">F15</a></th><td>协处理器的失效控制电路处理目标缓存行</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=without%20executing%20any%20instructions%20on%20the%20coprocessor%20circuitry">F16</a></th><td>协处理器的硬件处理维护命令，执行流水线无须执行指令</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=the%20coprocessor%20cache%20circuitry%20is%20tagged%20using%20physical%20addresses">F17</a></th><td>目标缓存的标签使用物理地址</td><td><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=FIG.%204%20A%20is%20a%20diagram%20illustrating%20example%20fields%20of%20a%20remote%20invalidate%20instruction%2C%20according%20to">说明书 0045</a> · 原图 4A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=the%20cache%20invalidate%20command%20indicates%20a%20physical%20address%20to%20be%20invalidated">F18</a></th><td>维护命令指明要失效的物理地址</td><td><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=FIG.%204%20A%20is%20a%20diagram%20illustrating%20example%20fields%20of%20a%20remote%20invalidate%20instruction%2C%20according%20to">说明书 0045</a> · <a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=In%20other%20embodiments%2C%20cache%20160%20is%20virtually%20tagged%20and%20the%20address%20is%20all%20or%20a%20portion">说明书 0046</a> · 原图 4A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260056885A1/en#:~:text=is%20configured%20to%20translate%20virtual%20addresses%20to%20physical%20addresses">F19</a></th><td>模型表示协处理器支持虚拟地址翻译为物理地址</td><td>原图 2</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置权项指定主处理器发命令和协处理器硬件按物理标签失效。原图 4A–5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>协处理器缓存与主处理器任一缓存均不处于同一共享域。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>先建立并解除给协处理器的页映射，再依据这次解除映射发出缓存失效。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>页解除映射时一致性控制器维护其他处理器缓存，不处理协处理器缓存。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>解除映射时主处理器发送 TLB 失效，清除协处理器中对应翻译。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>翻译失效与缓存失效间发第一道屏障，再于缓存失效后发第二道。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>允许缓存失效响应早于匹配地址逐出，第二道屏障保证逐出完成。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>一条命令可指定并处理多条协处理器缓存行。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>互连数据包包含失效地址信息和目标协处理器标识。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>设备还具备显示屏与网络接口电路。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>方法项指定以带物理地址的命令触发按物理标签查找，失效由协处理器硬件执行。原图 4A–5、7。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>处理器可为协处理器建立并撤销页映射，缓存失效由撤销触发。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>加入协处理器 TLB；该方法项原文指定协处理器按解除映射发 TLB 失效命令。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>主处理器向协处理器发送两道屏障，分别放在两次失效间和缓存失效后。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>缓存失效用互连报文发送，报文携带地址信息与设备标识。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>一致性控制器维护同域其他处理器缓存，解除映射时不负责协处理器缓存。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>介质项储存硬件描述指令，处理后生成包含同一远程失效电路机制的仿真模型。原图 1、5。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>模型还表示选择性一致性控制，解除映射时维护其他处理器缓存。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>模型中的协处理器缓存与主处理器缓存属于不同的共享域。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>协处理器缓存失效后，控制电路将对应失效传播到靠近流水线的缓存。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></dt><dd>远程失效命令指明 PA。支持虚拟寻址的协处理器根据物理标签执行失效。</dd></div><div><dt>图 4A–5</dt><dd>命令字段确定要发给哪个设备。接收端的失效电路根据 PA 确定要清理哪一行。</dd></div><div><dt>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260056885A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></dt><dd>权 3 加入解除映射。权 6–9 还涉及屏障、多行维护及报文字段。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20260056885A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
-<p>授权权 1 从主处理器撤销协处理器映射后的维护流程划定场景，由协处理器硬件处理远程失效。继续申请的公开权 1 具体限定命令携带物理地址、目标缓存用物理标签匹配。对同一物理缓存行存在虚拟别名的情形，可沿这条关系比较清除动作的触发与定位。</p></li></ul>
-    <p><a href="../index.html?patent=US20260056885A1#knowledge">在全量关系图上定位 US20260056885A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-09-25</dd></div>
-    <div><dt>美国申请日</dt><dd>2025-10-31</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-02-26</dd></div>
-    <div><dt>美国申请号</dt><dd>US19/376,473</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brett S. Feero、Dennis R. Bradford、Gaurav Garg、Jeff Gonion、Bernard J. Semeria、James Vash、Richard F. Russo</dd></div><div><dt>分类号</dt><dd>G06F12/0815、G06F12/0808、G06F12/0811、G06F12/0813、G06F12/0882、G06F12/1045、G06F9/544、G06F12/0857、G06F12/1027、G06F2212/1024、G06F2212/682、G06F2212/683</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20260056885A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20260056885A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 公开申请全文，覆盖 133 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4A、4B、5、6、7。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US12487927B2.html"><code>US12487927B2</code> 解除映射后的协处理器缓存失效</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20260056885A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

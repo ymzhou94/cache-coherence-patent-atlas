@@ -1,119 +1,161 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US9043570B2 系统缓存的分组配额与替换 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US9043570B2</code><span>美国授权专利</span><time datetime="2015-05-26">2015-05-26</time></p>
-  <h1>系统缓存的分组配额与替换</h1>
-  <p class="english-title" lang="en">System cache with quota-based control</p>
-  <p class="document-question">各客户端错峰使用系统缓存时，怎样给各组设置容量上限，同时共享物理缓存行？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">SLC 控制器在分配缺失时比较发起组占用量和配额，再选定查找替换候选行的组。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>各组配额之和可大于物理容量，实际驻留量受缓存总行数约束。</dd></div><div><dt>验证方法</dt><dd>保持相同请求和组映射，使发起组的占用量分别位于配额两侧。记录候选行所属组、逐出对象和各组驻留行数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9043570B2/en#CLM-00005">原文权利要求 5</a><a href="#fig-3">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">几个组的需求高峰可能出现在不同时间。允许配额总和超出物理行数，可以给每组留较高上限。实际分配仍要在目标 set 找到合格行。</p>
-    <p>缓存按组记录占用，可按配置启用配额。各组配额总和允许超过物理行数。分配请求缺失时，本组是否达到上限决定到哪个组找替换候选行。</p>
-    <ol class="walkthrough"><li><h3>按组记录当前占用</h3><p>缓存标签保存组归属和行状态。控制器统计每组的行数，再读出配额是否启用。</p></li><li><h3>缺失时查本组上限</h3><p>要分配新行的请求缺失后，控制器将请求所属组的当前行数与其配额比较。</p></li><li><h3>按比较结果选搜索范围</h3><p>本组已到上限时，从本组找替换候选行以限制占用。尚未到上限时，可以从其他组找候选。两种情况都受 set 范围和行状态约束。</p></li><li><h3>更新占用，按配置清理</h3><p>替换完成后更新相应组的占用。一些实现还会在关闭配额后按配置执行 flush 或 drop。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 把 sticky 分配的资格再收紧一层。在本组配额已满时只找同组普通行，若找不到合格候选，则该 sticky 请求得不到新缓存行。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>sticky 缓存行</dt><dd>带保留状态、受专门替换策略约束的缓存行。图 9 在请求组达上限后，可按组配置决定新的 sticky 请求能否替换同组旧 sticky 行。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">组占用怎样影响替换候选</a></li><li><a href="#fig-2">禁用配额后何时清除实际状态</a></li><li><a href="#fig-4">如何把一组驻留行转记给另一组</a></li><li><a href="#fig-3">配额比较后怎样选择替换候选</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">组占用怎样影响替换候选</h3></div>
-    <a class="paper-open" href="../mechanisms/US9043570B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="组占用怎样影响替换候选">
-    <img class="paper-image native-image" src="../mechanisms/US9043570B2/fig-1/diagram.svg" width="758" height="440"
-         style="--paper-width:758px" alt="组占用怎样影响替换候选。控制器在分配缺失时比较请求组的占用与上限，再搜索符合条件的 ways。">
-  </div>
-  <figcaption>
-    <span>控制器在分配缺失时比较请求组的占用与上限，再搜索符合条件的 ways。</span>
-    <span class="figure-evidence">图 3、图 4、图 6–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">禁用配额后何时清除实际状态</h3></div>
-    <a class="paper-open" href="../mechanisms/US9043570B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="禁用配额后何时清除实际状态">
-    <img class="paper-image native-image" src="../mechanisms/US9043570B2/fig-2/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="禁用配额后何时清除实际状态。驱动清除使能位后，控制器根据 flush 或 drop 处理该组缓存行，结束后再把实际状态清为 inactive。">
-  </div>
-  <figcaption>
-    <span>驱动清除使能位后，控制器根据 flush 或 drop 处理该组缓存行，结束后再把实际状态清为 inactive。</span>
-    <span class="figure-evidence">原图 7，说明书 0081、0083–0084，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">如何把一组驻留行转记给另一组</h3></div>
-    <a class="paper-open" href="../mechanisms/US9043570B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="如何把一组驻留行转记给另一组">
-    <img class="paper-image native-image" src="../mechanisms/US9043570B2/fig-4/diagram.svg" width="920" height="380"
-         style="--paper-width:920px" alt="如何把一组驻留行转记给另一组。转移前核对目标组剩余配额。足额时把源组全部驻留行改为目标组归属，所用空间仍是原系统缓存。">
-  </div>
-  <figcaption>
-    <span>转移前核对目标组剩余配额。足额时把源组全部驻留行改为目标组归属，所用空间仍是原系统缓存。</span>
-    <span class="figure-evidence">说明书 0059–0060、0065，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">配额比较后怎样选择替换候选</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">请求组状态</th><th scope="col">首次搜索</th><th scope="col">找不到合格行时</th></tr></thead><tbody><tr><th scope="row">配额已满</th><td>查本组普通行</td><td>对 sticky 请求，仅允许且存在同组 sticky 候选才替换</td></tr><tr><th scope="row">配额未满</th><td>查其他组普通行</td><td class="emphasis">可回到本组搜索</td></tr><tr><th scope="row">保护请求且本组已满</th><td>禁止 sticky 替换时只查本组普通行</td><td>找不到候选就不分配</td></tr></tbody></table>
-  <figcaption>
-    <span>表中保留原图 9 的候选搜索。每个候选还必须位于该地址映射到的缓存组中。</span>
-    <span class="figure-evidence">原图 9，说明书 0092–0096，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="https://patentimages.storage.googleapis.com/32/8c/35/41989ce0376638/US9043570.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按组设置占用上限</dt><dd>限制单组扩张 <span class="subdued">原图 6–9，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></span></dd></div><div><dt>转移组归属</dt><dd>复用已驻留数据 <span class="subdued">说明书 0059–0060、0065，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>配额比较只决定搜索方向。真正选用哪一路还取决于候选行的状态，观察拒绝分配时应同时记录组占用、普通行候选集合和各组未用配额。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若目标组中的行都受保护，一个 sticky 请求即使优先级高也会因为找不到普通候选而分配失败。这来自权利要求 7，不能把所有未分配都解释成物理容量已用尽。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>缓存有 8 条可用行，A 和 B 的配额都是 6。当前 A 占 6 条，B 占 2 条。假定相关组里有可替换的普通行。</dd></div><div><dt>处理结果</dt><dd>新来的 A 缺失从 A 组找替换候选行，A 仍占 6 条。此时 B 尚未到 6，可在另一组找合格行，把一行空间让给 B。</dd></div><div><dt>结果解读</dt><dd>两个上限合计 12，但最多仍只能放下 8 条。搜索范围由发出缺失请求的组是否达到上限决定。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#quota">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、5、9、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>共享系统缓存怎样让数据流按配额竞争物理位置 · US9043570B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US9043570B2</code> · <a href="https://patents.google.com/patent/US9043570B2/en">专利全文</a></p>
+<h1>共享系统缓存怎样让数据流按配额竞争物理位置</h1><p class="reading-question">不同数据流的高峰不一定同时到来。系统缓存能否让各组上限之和超过物理容量，同时在缺失时限制已用满的组继续扩张？</p>
+<p class="reading-answer">控制器在每条缓存行标签上记录 group ID，用分组计数与配额判断是否允许扩大占用。低于单组上限时可竞争其他组的可替换行；到达上限后只能在本组已有位置中替换。配额上限可以超额配置，全部实际占用受物理容量约束。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2015-05-26</dd></div><div><dt>申请号</dt><dd>US13/610,642</dd></div><div><dt>最早优先权</dt><dd>2012-09-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu、James Wang</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#quota-and-occupancy">行归属、占用计数和配额上限分别记录</a></li><li><a href="#select-victim">缺失时先用占用计数决定候选归属</a></li><li><a href="#drain-group">清使能位之后，等实际状态确认清理完成</a></li><li><a href="#transfer-group">批量转移归属要检查接收组的剩余配额</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="quota-and-occupancy"><h2>行归属、占用计数和配额上限分别记录</h2><p>图 1 画了同一物理缓存组的四路，A、B 行按地址落到可用位置。行标签中的 group ID 是数据流归属，可以跨发起方。同一个数据流的行也可以落在多路。控制器按整个系统缓存统计各组占用，不为每个 group ID 画出固定的缓存路分区。</p><p>权利要求 1、9 的 M 是所有组配额之和，N 是物理缓存行容量。可以配置 M&gt;N。表 5 给出原图七组之和 10 MB、物理容量 2 MB 的示例。设备驱动或 OS 可分配上限，硬件实际占用仍取决于请求到达、地址索引和逐出候选。高峰同时出现时，各组无法都用满其配额。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　group ID 配额限制可占用行数，各组共用物理缓存范围</h3>
+    <p id="fig-1-basis">配额大小和已分配行数是两项。组 A、B 的可用位置均由地址和合法候选决定，图中不为任一组切出固定的路。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="group ID 配额限制可占用行数，各组共用物理缓存范围" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 702" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">group ID 配额限制可占用行数，各组共用物理缓存范围</title>
+<desc id="fig-1-svg-desc">配额大小和已分配行数是两项。组 A、B 的可用位置均由地址和合法候选决定，图中不为任一组切出固定的路。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-input" d="M 291 148 L 413 148" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-way" d="M 697 144 L 846 144" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-mt" d="M 1089 257 L 1089 321" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-count" d="M 846 377 L 752 377 Q 744 377 744 385 L 744 535 Q 744 543 736 543 L 697 543" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-capacity" d="M 291 547 L 413 547" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-criterion" d="M 697 577 L 846 577" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="721" y="103" width="84" height="18" fill="#f5f5f5"/><text x="763" y="117" class="arrow-label" text-anchor="middle">按组查多路</text>
+<rect x="1125" y="282" width="70" height="18" fill="#f5f5f5"/><text x="1160" y="296" class="arrow-label" text-anchor="middle">逐行归属</text>
+<rect x="767" y="448" width="84" height="18" fill="#f5f5f5"/><text x="809" y="462" class="arrow-label" text-anchor="middle">更新组行数</text>
+<rect x="309" y="507" width="84" height="18" fill="#f5f5f5"/><text x="351" y="521" class="arrow-label" text-anchor="middle">寄存器读写</text>
+<rect x="723" y="604" width="104" height="18" fill="#f5f5f5"/><text x="775" y="618" class="arrow-label" text-anchor="middle">读占用与上限</text>
+<g id="fig-1-req"><rect x="48" y="93" width="243" height="100" rx="6" fill="#f5f5f5"/><rect x="48" y="93" width="243" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169.5" y="119" class="node-name" text-anchor="middle">来自 group A、B 的请求</text><text x="169.5" y="141" class="node-detail" text-anchor="middle">地址、group ID、分配提示</text></g>
+<g id="fig-1-index"><rect x="413" y="88" width="284" height="108" rx="6" fill="#f5f5f5"/><rect x="413" y="88" width="284" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="555" y="114" class="node-name" text-anchor="middle">索引与标签查找</text><text x="555" y="136" class="node-detail" text-anchor="middle">先定位对应缓存组</text><text x="555" y="154" class="node-detail" text-anchor="middle">同索引有多路候选</text></g>
+<g id="fig-1-region"><rect x="846" y="76" width="484" height="181" rx="6" fill="#f5f5f5"/><rect x="846" y="76" width="484" height="181" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1088" y="102" class="node-name" text-anchor="middle">共享数据阵列：一个缓存组的例子</text><text x="1088" y="124" class="node-detail" text-anchor="middle">标签与数据用相同路号</text><text x="1088" y="142" class="node-detail" text-anchor="middle">物理路不会由 group ID 固定绑定</text></g>
+<g id="fig-1-a"><rect x="874" y="192" width="101" height="48" rx="6" fill="#f5f5f5"/><rect x="874" y="192" width="101" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="924.5" y="218" class="node-name" text-anchor="middle">路 0 · A</text></g>
+<g id="fig-1-b"><rect x="985" y="192" width="101" height="48" rx="6" fill="#f5f5f5"/><rect x="985" y="192" width="101" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1035.5" y="218" class="node-name" text-anchor="middle">路 1 · B</text></g>
+<g id="fig-1-c"><rect x="1096" y="192" width="101" height="48" rx="6" fill="#f5f5f5"/><rect x="1096" y="192" width="101" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1146.5" y="218" class="node-name" text-anchor="middle">路 2 · A</text></g>
+<g id="fig-1-d"><rect x="1207" y="192" width="101" height="48" rx="6" fill="#f5f5f5"/><rect x="1207" y="192" width="101" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1257.5" y="218" class="node-name" text-anchor="middle">路 3 · B</text></g>
+<g id="fig-1-meta"><rect x="846" y="321" width="484" height="110" rx="6" fill="#f5f5f5"/><rect x="846" y="321" width="484" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1088" y="347" class="node-name" text-anchor="middle">同一批行的标签元数据</text><text x="1088" y="369" class="node-detail" text-anchor="middle">每行记自己的状态和 group ID</text><text x="1088" y="387" class="node-detail" text-anchor="middle">组归属用来统计和筛选逐出</text></g>
+<g id="fig-1-counter"><rect x="413" y="488" width="284" height="109" rx="6" fill="#f5f5f5"/><rect x="413" y="488" width="284" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="555" y="514" class="node-name" text-anchor="middle">group ID 的占用计数器</text><text x="555" y="536" class="node-detail" text-anchor="middle">以缓存行为单位统计</text><text x="555" y="554" class="node-detail" text-anchor="middle">累计整个系统缓存</text></g>
+<g id="fig-1-cfg"><rect x="48" y="490" width="243" height="109" rx="6" fill="#f5f5f5"/><rect x="48" y="490" width="243" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169.5" y="516" class="node-name" text-anchor="middle">逐组配置</text><text x="169.5" y="538" class="node-detail" text-anchor="middle">驱动可设置配额、使能</text><text x="169.5" y="556" class="node-detail" text-anchor="middle">读出实际状态</text></g>
+<g id="fig-1-select"><rect x="846" y="495" width="484" height="106" rx="6" fill="#f5f5f5"/><rect x="846" y="495" width="484" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1088" y="521" class="node-name" text-anchor="middle">缓存控制单元比较配额与计数</text><text x="1088" y="543" class="node-detail" text-anchor="middle">已达配额和未达配额走不同的候选搜索</text><text x="1088" y="561" class="node-detail" text-anchor="middle">物理总占用仍受 N 限制</text></g>
+<text x="48" y="44" class="signal-title" text-anchor="start">缓存组的物理路和数据流 group ID 各自作用</text>
+<text x="48" y="654" class="signal-title" text-anchor="start">图中仅展示一个缓存组；逐组计数覆盖系统缓存中的所有有效行。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-index">地址索引与数据流归属是两个字段</a> 不同 group ID 的缓存行可同驻一缓存组。原图 4 的标签含 group ID。对于同索引的候选，不预先规定哪一路属于哪一组。</li><li><a href="#fig-1-counter">对每个 group ID 分开统计占用</a> 控制单元从标签归属维护分组行数，配额寄存器呈现各组已分配行数。硬件判断是否仍有配额。</li><li><a href="#fig-1-region">同一片数据阵列承载所有组的行</a> 总物理位置仍只有 N。把各组上限相加可以得到大于 N 的 M，适用于各组占用高峰未完全重叠的场景。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5、6、7、8；说明书归档段 0061、0062、0064、0068、0069、0072、0073、0075、0077、0078、0079、0083、0086、0087、0088；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US9043570B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>标签阵列与系统缓存数据阵列</dt><dd>62、64</dd></div><div><dt>行状态与所属 group ID</dt><dd>74、78</dd></div><div><dt>组配额配置寄存器及大小字段</dt><dd>116、118</dd></div><div><dt>当前已分配行计数</dt><dd>128</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　原图 6 的七组配额，合计大于物理容量</h3>
+    <p id="fig-5-basis">原图把物理系统缓存容量设为 2 MB。以下是可配置的各组使用上限，单位保留原图写法。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">group ID</th><th scope="col">配额上限</th></tr></thead><tbody><tr id="fig-5-g1"><th scope="row">1</th><td>1 MB</td></tr><tr id="fig-5-g2"><th scope="row">2</th><td>3 MB</td></tr><tr id="fig-5-g3"><th scope="row">3</th><td>2.5 MB</td></tr><tr id="fig-5-g4"><th scope="row">4</th><td>256 KB</td></tr><tr id="fig-5-g5"><th scope="row">5</th><td>1 MB</td></tr><tr id="fig-5-g6"><th scope="row">6</th><td>256 KB</td></tr><tr id="fig-5-g7"><th scope="row">7</th><td>2 MB</td></tr><tr id="fig-5-sum"><th scope="row">合计</th><td>10 MB</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-sum">配额之和为 10 MB</a> 原图将各组配额相加，给出物理容量的五倍。可分配到的实际行数受到其他组占用和替换资格限制。</li></ul>
+  <p class="figure-evidence">原图 6、8；说明书归档段 0075、0076、0077、0078、0086、0087、0088；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
+  
+</figure></section><section id="select-victim"><h2>缺失时先用占用计数决定候选归属</h2><p>图 2 中，组 A 没达到配额时，原图 9 优先找其他组的非 sticky 行。成功替换后 A 增加一个位置，被替换组减少一个位置。找不到合法的他组候选时，控制器还可尝试替换 A 已有的行。</p><p>达到配额时只搜 A 的候选，进行本组内替换。A 的非 sticky 行优先。只有进入 sticky 分支，且请求本身为 sticky、A 允许此类替换时，才进一步考虑 A 的 sticky 行。这个位置若也不可用，就不分配本次请求。</p><p>四路模型以 A 上限为 3 为例。A、B 各占两路时，A 缺失可替换 B 的一个非 sticky 行并增到三路。下一次 A 缺失只能替换已有 A 行。若 B 剩余的候选都是 sticky，即使 A 低于配额，也可能只能做本组内替换，或完全没有可替换行。模型仅检验候选资格和占用计数。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　达到配额和仍有余量时，逐出候选来自不同的 group ID</h3>
+    <p id="fig-2-basis">图中重绘原图 9 的两条资格搜索。只看目标索引的各路；另一个组的 sticky 行参与不了未达配额的扩展。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="达到配额和仍有余量时，逐出候选来自不同的 group ID" style="--figure-width:1420px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 780" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">达到配额和仍有余量时，逐出候选来自不同的 group ID</title>
+<desc id="fig-2-svg-desc">图中重绘原图 9 的两条资格搜索。只看目标索引的各路；另一个组的 sticky 行参与不了未达配额的扩展。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-in" d="M 302 141 L 403 141" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-below" d="M 673 139 L 795 139" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-net" d="M 1076 143 L 1161 143" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-limit" d="M 520 196 L 520 338" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-fallback" d="M 902 203 L 902 270 Q 902 278 894 278 L 630 278 Q 622 278 622 286 L 622 338" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-use" d="M 673 384 L 1161 384" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-only" d="M 535 453 L 535 566 Q 535 574 543 574 L 795 574" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-allow" d="M 987 514 L 987 477 Q 987 469 995 469 L 1242 469 Q 1250 469 1250 461 L 1250 439" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-skip" d="M 1076 577 L 1161 577" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="705" y="97" width="56" height="18" fill="#f5f5f5"/><text x="733" y="111" class="arrow-label" text-anchor="middle">未达到</text>
+<rect x="1096" y="103" width="46" height="18" fill="#f5f5f5"/><text x="1119" y="117" class="arrow-label" text-anchor="middle">找到</text>
+<rect x="548" y="251" width="56" height="18" fill="#f5f5f5"/><text x="576" y="265" class="arrow-label" text-anchor="middle">已达到</text>
+<rect x="710" y="238" width="112" height="18" fill="#f5f5f5"/><text x="766" y="252" class="arrow-label" text-anchor="middle">无合格他组候选</text>
+<rect x="840" y="343" width="172" height="18" fill="#f5f5f5"/><text x="926" y="357" class="arrow-label" text-anchor="middle">找到 A 的非 sticky 行</text>
+<rect x="569" y="534" width="172" height="18" fill="#f5f5f5"/><text x="655" y="548" class="arrow-label" text-anchor="middle">没有 A 的非 sticky 行</text>
+<rect x="1039" y="478" width="184" height="18" fill="#f5f5f5"/><text x="1131" y="492" class="arrow-label" text-anchor="middle">允许且找到本组 sticky</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-2-start"><rect x="45" y="89" width="257" height="101" rx="6" fill="#f5f5f5"/><rect x="45" y="89" width="257" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="115" class="node-name" text-anchor="middle">组 A 的请求发生缺失</text><text x="173.5" y="137" class="node-detail" text-anchor="middle">读 A 的已分配行数</text></g>
+<g id="fig-2-cmp"><rect x="403" y="89" width="270" height="107" rx="6" fill="#f5f5f5"/><rect x="403" y="89" width="270" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="538" y="115" class="node-name" text-anchor="middle">A 占用与配额比较</text><text x="538" y="137" class="node-detail" text-anchor="middle">输入当前行数与上限</text></g>
+<g id="fig-2-spare"><rect x="795" y="85" width="281" height="118" rx="6" fill="#f5f5f5"/><rect x="795" y="85" width="281" height="118" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="935.5" y="111" class="node-name" text-anchor="middle">仍低于上限</text><text x="935.5" y="133" class="node-detail" text-anchor="middle">优先搜索其他组</text><text x="935.5" y="151" class="node-detail" text-anchor="middle">候选必须非 sticky</text></g>
+<g id="fig-2-grow"><rect x="1161" y="87" width="216" height="109" rx="6" fill="#f5f5f5"/><rect x="1161" y="87" width="216" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1269" y="113" class="node-name" text-anchor="middle">占用可净增一行</text><text x="1269" y="135" class="node-detail" text-anchor="middle">替换其他组的候选</text></g>
+<g id="fig-2-own"><rect x="403" y="338" width="270" height="115" rx="6" fill="#f5f5f5"/><rect x="403" y="338" width="270" height="115" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="538" y="364" class="node-name" text-anchor="middle">查找归属于 A 的候选</text><text x="538" y="386" class="node-detail" text-anchor="middle">先选 A 的非 sticky</text><text x="538" y="404" class="node-detail" text-anchor="middle">不扩大占用</text></g>
+<g id="fig-2-reuse"><rect x="1161" y="331" width="216" height="108" rx="6" fill="#f5f5f5"/><rect x="1161" y="331" width="216" height="108" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1269" y="357" class="node-name" text-anchor="middle">在本组复用位置</text><text x="1269" y="379" class="node-detail" text-anchor="middle">A 名下总行数不增</text></g>
+<g id="fig-2-protect"><rect x="795" y="514" width="281" height="129" rx="6" fill="#f5f5f5"/><rect x="795" y="514" width="281" height="129" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="935.5" y="540" class="node-name" text-anchor="middle">继续检查 A 的 sticky</text><text x="935.5" y="562" class="node-detail" text-anchor="middle">请求本身为 sticky</text><text x="935.5" y="580" class="node-detail" text-anchor="middle">且配置允许替换</text><text x="935.5" y="598" class="node-detail" text-anchor="middle">再找 A 的 sticky 候选</text></g>
+<g id="fig-2-none"><rect x="1161" y="524" width="216" height="106" rx="6" fill="#f5f5f5"/><rect x="1161" y="524" width="216" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1269" y="550" class="node-name" text-anchor="middle">仍没有合法候选</text><text x="1269" y="572" class="node-detail" text-anchor="middle">该请求不分配</text></g>
+<text x="45" y="45" class="signal-title" text-anchor="start">以组 A 为例，画出在索引对应候选中的搜索顺序</text>
+<text x="45" y="722" class="signal-title" text-anchor="start">图示关注目标缓存组已无空位时的替换。其他实施例可优先使用无效位置。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-spare">低于本组配额，先允许挤出另一组的非 sticky 行</a> 找到另一组非 sticky 时，本组可净增一行。对照从属权项 8 增加本组行数。按组计数还要反映被替换行的旧归属。</li><li><a href="#fig-2-own">已用满配额，只能做本组内替换</a> 即使另一个 group ID 有非 sticky 行，也不能直接再扩展。低于上限却找不到合格他组候选时，也可回到本组搜索。</li><li><a href="#fig-2-protect">只有特定 sticky 请求有资格替换本组 sticky</a> 原图 9 要求请求本身为 sticky，且配置允许 sticky 替换。没选出合法受害行时，原图用不分配结束。</li></ul>
+  <p class="figure-evidence">原图 4、7、9；说明书归档段 0062、0063、0064、0082、0083、0091、0092、0093、0094、0095、0096；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00022" aria-label="原文权利要求 22">22</a> <a href="../diagrams/US9043570B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>当前占用计数与配额比较</dt><dd>154、156</dd></div><div><dt>在各路中查找同 group ID 旧行</dt><dd>158</dd></div><div><dt>查他组非 sticky、确认候选并增加占用</dt><dd>160、162、164</dd></div><div><dt>本组非 sticky 检查、sticky 条件和不分配结果</dt><dd>166–176</dd></div></dl></details>
+</figure></section><section id="drain-group"><h2>清使能位之后，等实际状态确认清理完成</h2><p>图 3 区分驱动写的 Quota Enable 与缓存硬件维护的 Quota State。驱动撤去配额后，硬件按 group ID 清理行。Flush 可先把脏行标为 LRU dirty，再写回内存。Drop 直接失效可能含有修改的数据，不把修改写回。两条路径对下游数据的影响不同。</p><p>实际状态在清完后才变为 inactive。驱动如果在清理中再次置使能，同一组仍不能开始新分配，直到清理结束。说明书没有给出这个阶段需要的固定时钟周期。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　清理时使能位先变化，实际状态要等缓存行处理完</h3>
+    <p id="fig-3-basis">驱动清使能触发硬件清理。Flush 和 Drop 决定脏数据的处理方式；实际状态位是清理完成的观测点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="清理时使能位先变化，实际状态要等缓存行处理完" style="--figure-width:1420px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 702" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">清理时使能位先变化，实际状态要等缓存行处理完</title>
+<desc id="fig-3-svg-desc">驱动清使能触发硬件清理。Flush 和 Drop 决定脏数据的处理方式；实际状态位是清理完成的观测点。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-go" d="M 328 232 L 408 232" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-f" d="M 675 225 L 715 225 Q 723 225 723 217 L 723 161 Q 723 153 731 153 L 764 153" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-d" d="M 675 277 L 713 277 Q 721 277 721 285 L 721 399 Q 721 407 729 407 L 764 407" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-endf" d="M 1068 159 L 1097 159 Q 1105 159 1105 167 L 1105 220 Q 1105 228 1113 228 L 1150 228" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-endd" d="M 1068 407 L 1097 407 Q 1105 407 1105 399 L 1105 279 Q 1105 271 1113 271 L 1150 271" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-wait" d="M 540 310 L 540 516" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="689" y="106" width="54" height="18" fill="#f5f5f5"/><text x="716" y="120" class="arrow-label" text-anchor="middle">Flush</text>
+<rect x="663" y="375" width="46" height="18" fill="#f5f5f5"/><text x="686" y="389" class="arrow-label" text-anchor="middle">Drop</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="576" y="432" width="168" height="18" fill="#f5f5f5"/><text x="660" y="446" class="arrow-label" text-anchor="middle">清理中的组先停止新分配</text>
+<g id="fig-3-start"><rect x="42" y="172" width="286" height="138" rx="6" fill="#f5f5f5"/><rect x="42" y="172" width="286" height="138" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="185" y="198" class="node-name" text-anchor="middle">驱动清 Quota Enable</text><text x="185" y="220" class="node-detail" text-anchor="middle">此前由硬件观察到 active</text><text x="185" y="238" class="node-detail" text-anchor="middle">驱动令使能位由 1 变 0</text></g>
+<g id="fig-3-mode"><rect x="408" y="178" width="267" height="132" rx="6" fill="#f5f5f5"/><rect x="408" y="178" width="267" height="132" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="541.5" y="204" class="node-name" text-anchor="middle">系统缓存读取清理方式</text><text x="541.5" y="226" class="node-detail" text-anchor="middle">按组查配置</text><text x="541.5" y="244" class="node-detail" text-anchor="middle">实际状态仍为 active</text></g>
+<g id="fig-3-flush"><rect x="764" y="91" width="304" height="132" rx="6" fill="#f5f5f5"/><rect x="764" y="91" width="304" height="132" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="916" y="117" class="node-name" text-anchor="middle">Flush</text><text x="916" y="139" class="node-detail" text-anchor="middle">脏行可先标为 LRU dirty</text><text x="916" y="157" class="node-detail" text-anchor="middle">随后 writeback</text></g>
+<g id="fig-3-drop"><rect x="764" y="346" width="304" height="132" rx="6" fill="#f5f5f5"/><rect x="764" y="346" width="304" height="132" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="916" y="372" class="node-name" text-anchor="middle">Drop</text><text x="916" y="394" class="node-detail" text-anchor="middle">让对应行失效</text><text x="916" y="412" class="node-detail" text-anchor="middle">脏数据不写回</text></g>
+<g id="fig-3-done"><rect x="1150" y="190" width="230" height="127" rx="6" fill="#f5f5f5"/><rect x="1150" y="190" width="230" height="127" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1265" y="216" class="node-name" text-anchor="middle">本组行清完</text><text x="1265" y="238" class="node-detail" text-anchor="middle">Quota State 改为 inactive</text></g>
+<g id="fig-3-reenable"><rect x="408" y="516" width="267" height="102" rx="6" fill="#f5f5f5"/><rect x="408" y="516" width="267" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="541.5" y="542" class="node-name" text-anchor="middle">驱动提前重新使能</text><text x="541.5" y="564" class="node-detail" text-anchor="middle">新分配等现有清理结束</text></g>
+<text x="42" y="49" class="signal-title" text-anchor="start">配置请求和硬件完成状态有时间差</text>
+<text x="42" y="662" class="signal-title" text-anchor="start">按同一 group ID 处理。说明书未规定软件看到完成状态所需的具体周期。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-start">驱动写使能位，缓存硬件管理实际状态</a> 写 1 之后由硬件观察并置 active。生命周期结束时写 0 触发对该组行的清理。</li><li><a href="#fig-3-flush">Flush 与 Drop 的数据语义不同</a> Flush 模式的脏行可先转 LRU dirty，再写回内存。Drop 模式使其失效而不写回，被丢弃内容不能当作下游已经更新。</li><li><a href="#fig-3-done">完成清理后实际状态才是 inactive</a> 中途再次设使能，不会越过尚未完成的清理。本组在清完前不能再分配。</li></ul>
+  <p class="figure-evidence">原图 7、8；说明书归档段 0079、0080、0081、0082、0083、0084、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US9043570B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>设置 Flush 或 Drop 的字段</dt><dd>120</dd></div><div><dt>驱动可写的 Quota Enable</dt><dd>124</dd></div><div><dt>系统缓存更新的 Quota State</dt><dd>126</dd></div><div><dt>供软件读取的本组行数</dt><dd>128</dd></div></dl></details>
+</figure></section><section id="transfer-group"><h2>批量转移归属要检查接收组的剩余配额</h2><p>图 4 对照权利要求 18。软件可以发命令把 A 已分配的所有行转给 B。控制器检查 B 的剩余配额是否覆盖 A 的全部占用；不够时达不到该权项所述条件。说明书的跨阶段示例保持 sticky 数据驻留，修改的是分组归属。</p><p>这里没有重新定义一致性协议的行所有权。实现还要维护 A、B 两组的计数与标签一致。权项写明全部行转移及配额条件，未指定标签改写的原子性或逐行更新时间。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　批量转移驻留归属，先检查接收组的剩余配额</h3>
+    <p id="fig-4-basis">权利要求 18 写出转移命令、接收组配额检查与全部转移三个条件。说明书给出的场景是两组按阶段复用缓存里的 sticky 数据。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="批量转移驻留归属，先检查接收组的剩余配额" style="--figure-width:1380px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 672" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">批量转移驻留归属，先检查接收组的剩余配额</title>
+<desc id="fig-4-svg-desc">权利要求 18 写出转移命令、接收组配额检查与全部转移三个条件。说明书给出的场景是两组按阶段复用缓存里的 sticky 数据。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-4-req" d="M 333 140 L 435 140" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-cap" d="M 586 203 L 586 298" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<path id="fig-4-yes" d="M 739 333 L 780 333 Q 788 333 788 325 L 788 289 Q 788 281 796 281 L 862 281" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-no" d="M 739 377 L 781 377 Q 789 377 789 385 L 789 508 Q 789 516 797 516 L 862 516" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="608" y="241" width="46" height="18" fill="#f5f5f5"/><text x="631" y="255" class="arrow-label" text-anchor="middle">比较</text>
+<rect x="787" y="242" width="46" height="18" fill="#f5f5f5"/><text x="810" y="256" class="arrow-label" text-anchor="middle">足够</text>
+<rect x="789" y="474" width="46" height="18" fill="#f5f5f5"/><text x="812" y="488" class="arrow-label" text-anchor="middle">不足</text>
+<g id="fig-4-command"><rect x="46" y="89" width="287" height="108" rx="6" fill="#f5f5f5"/><rect x="46" y="89" width="287" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="189.5" y="115" class="node-name" text-anchor="middle">软件请求 A → B</text><text x="189.5" y="137" class="node-detail" text-anchor="middle">转移 group ID 归属</text></g>
+<g id="fig-4-stat"><rect x="435" y="86" width="304" height="117" rx="6" fill="#f5f5f5"/><rect x="435" y="86" width="304" height="117" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="587" y="112" class="node-name" text-anchor="middle">读来源与接收组计数</text><text x="587" y="134" class="node-detail" text-anchor="middle">A 当前占用 a 行</text><text x="587" y="152" class="node-detail" text-anchor="middle">B 的剩余配额 Qb−b</text></g>
+<g id="fig-4-compare"><rect x="435" y="298" width="304" height="111" rx="6" fill="#f5f5f5"/><rect x="435" y="298" width="304" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="587" y="324" class="node-name" text-anchor="middle">B 剩余配额 ≥ a？</text><text x="587" y="346" class="node-detail" text-anchor="middle">判断转移全部 A 行是否合法</text></g>
+<g id="fig-4-transfer"><rect x="862" y="226" width="460" height="119" rx="6" fill="#f5f5f5"/><rect x="862" y="226" width="460" height="119" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1092" y="252" class="node-name" text-anchor="middle">接收组空间足够</text><text x="1092" y="274" class="node-detail" text-anchor="middle">已在缓存中的 A 行改属 B</text><text x="1092" y="292" class="node-detail" text-anchor="middle">组计数随归属更新</text></g>
+<g id="fig-4-keep"><rect x="862" y="462" width="460" height="118" rx="6" fill="#f5f5f5"/><rect x="862" y="462" width="460" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1092" y="488" class="node-name" text-anchor="middle">接收组空间不足</text><text x="1092" y="510" class="node-detail" text-anchor="middle">达不到该权项的转移条件</text><text x="1092" y="528" class="node-detail" text-anchor="middle">说明书没有规定部分成功路径</text></g>
+<text x="46" y="45" class="signal-title" text-anchor="start">转移的是分组配额归属</text>
+<text x="46" y="626" class="signal-title" text-anchor="start">转移改变缓存容量的分组归属。一致性协议仍按自身规则管理数据所有权。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-command">软件发出 group ID 归属转移命令</a> 这一动作用于不同阶段之间复用存量的缓存行。图中的 A、B 指数据流归属。</li><li><a href="#fig-4-compare">比较接收组剩余配额和来源组实际占用</a> 若 B 的当前占用为 b、上限 Qb，空余就是 Qb−b；转移 A 的全部 a 行至少需要这么多空位配额。</li><li><a href="#fig-4-transfer">通过后改变标签归属，不改变相同物理位置</a> 权项覆盖源组全部已分配行，不只任意选择几条。说明书示例保持sticky 属性。对照图 1，数据不用在缓存路之间搬运。</li></ul>
+  <p class="figure-evidence">原图 3、4、7；说明书归档段 0061、0064、0065、0067、0079、0083；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US9043570B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>待更新的行归属（group ID）</dt><dd>78</dd></div><div><dt>组配额和当前行数，用于计算剩余配额</dt><dd>118、128</dd></div></dl></details>
+</figure></section></div>
+<p><a class="lab-link" href="../lab.html#quota">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -144,49 +186,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=a%20control%20unit%20coupled%20to%20the%20cache%20memory">F15</a></th><td>缓存控制器与保存多行的数据存储相连</td><td><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=Referring%20now%20to%20FIG.%203%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20cache">说明书 0047</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=track%20a%20number%20of%20cache%20lines%20allocated%20to%20a%20specified%20group%20identifier%20%28ID%29">F16</a></th><td>统计指定组的占用行数</td><td><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=Field%20124%20may%20indicate%20if%20the%20quota%20is%20enabled%20or%20disabled%20for%20the%20group%20ID.%20After">说明书 0083</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=limit%20the%20number%20of%20cache%20lines%20to%20a%20quota%20assigned%20to%20the%20specified%20group%20ID">F17</a></th><td>限制指定组的占用行数</td><td><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=Field%20124%20may%20indicate%20if%20the%20quota%20is%20enabled%20or%20disabled%20for%20the%20group%20ID.%20After">说明书 0083</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=responsive%20to%20receiving%20a%20corresponding%20ownership%20transfer%20command">F18</a></th><td>接收组归属转移命令</td><td><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=In%20some%20embodiments%2C%20ownership%20of%20cache%20lines%20may%20be%20transferred%20from%20a%20first%20group%20ID%20to">说明书 0060</a> · <a href="https://patents.google.com/patent/US9043570B2/en#:~:text=In%20some%20embodiments%2C%20ownership%20of%20sticky%20lines%20may%20be%20transferred%20from%20one%20group%20ID%20to%20another">说明书 0065</a> · 原图 3–4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=responsive%20to%20determining%20the%20second%20group%20ID%20has%20a%20sufficient%20amount%20of%20unused%20quota%20for%20the">F19</a></th><td>检查目标组的剩余配额是否满足转移</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=the%20transfer%20of%20ownership%20includes%20all%20cache%20lines%20allocated%20to%20the%20first%20group%20ID">F20</a></th><td>对源组已分配的全部行转记归属</td><td><a href="https://patents.google.com/patent/US9043570B2/en#:~:text=In%20some%20embodiments%2C%20ownership%20of%20cache%20lines%20may%20be%20transferred%20from%20a%20first%20group%20ID%20to">说明书 0060</a> · 原图 4</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>方法按标识分组和统计占用、按组限配额、维护使能，配额总量可超过缓存物理行数。原图 6–8。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>缓存缺失时需判断该请求所属组是否已经到达其占用配额。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>请求组达到配额后，从该组现有行中查找替换候选。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>系统缓存为多路组相联，候选搜索检查该地址所在组的各路。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td>独立项</td><td>替换方法根据缺失请求组是否用满配额，切换同组或其他组的第一次候选搜索。原图 9。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>sticky 请求在组配额满且禁替换 sticky 时，只搜同组普通行。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>找不到前项所需的同组普通候选时，禁止为该 sticky 请求分配。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-5">5</a></td><td>找到且替换其他组候选后，增加请求组的占用计数。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>内存控制器项列物理数据阵列和带状态／组号的标签，由控制器计数和执行配额。原图 3–4、6–8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>请求组未到上限时，允许查找任一组的普通候选行。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>同一缓存组的多路可以同时含同个组标识的行。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>为每组选择 flush 写回脏数据或 drop 丢弃的清理配置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>禁用相应组配额且选择 flush 时，清理该组所有行。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>由设备驱动清除该组的配额使能指示。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-12">12</a></td><td>配额已禁用且配置 drop 时，直接无效化该组全部行。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-9">9</a></td><td>各组使用各自的缓存行计数器。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-9">9</a></td><td>按组配置新增 sticky 行是否可替换同组旧 sticky 行。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>缓存项限定软件命令触发全组缓存行归属转移，且目标组须有足够空闲配额。原图 4、7，说明书 0060。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>组归属转移的缓存也允许配额合计超过实际行数。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>缓存为 N 路组相联，组标识不固定存储路。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-18">18</a></td><td>为指定组维护追踪已分配行数的配额计数器。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-21">21</a></td><td>指定组请求缺失后读取其计数器，判断是否达到配额。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>第 1 项给出配额统计及 M&gt;N 的情形。第 5 项按缺失时本组是否达到配额决定查找组。</dd></div><div><dt>图 6、图 8、图 9</dt><dd>图 6 描述配额表，图 8 给出超配例子，图 9 展示缺失后的候选分支。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9043570B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>从属项进一步涉及逐 way 搜索及清理配额时的 flush 或 drop。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US9043570B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US9311251B2.html#engineering">按数据流保留 sticky 缓存行</a>
-<p>US9311251B2 把 sticky 状态和数据流组号写入标签，禁止其他组的填充替换该组的 sticky 行。US9043570B2 在缓存缺失时比较发起组的占用量和配额，再决定从本组还是其他组查找候选行。前一机制约束哪些行可被替换，后一机制约束到哪个组中搜索。</p></li><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
-<p>US11232033B2 的处理器根据运行时状态和预计的带宽变化计算新配额，再让内存缓存控制器执行。US9043570B2 描述了另一件专利如何在缓存缺失时执行已设定的组配额。比较两种机制时，可把配额更新时点和随后第一次受配额影响的逐出决策分开记录。</p></li></ul>
-    <p><a href="../index.html?patent=US9043570B2#knowledge">在全量关系图上定位 US9043570B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2012-09-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2012-09-11</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2015-05-26</dd></div>
-    <div><dt>美国申请号</dt><dd>US13/610,642</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu、James Wang</dd></div><div><dt>分类号</dt><dd>G06F12/08、G06F12/0831、G06F12/0871、G06F12/123、G06F12/126、G06F2212/6042、Y02B60/1225、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US9043570B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US9043570B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 公布全文与图文说明，覆盖 102 个说明书段落、22 项权利要求。</p>
-  <p>核对过的图号为 图 3、图 4、图 6、图 7、图 8、图 9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US9043570B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

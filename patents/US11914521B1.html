@@ -1,123 +1,180 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11914521B1 硬件闭环控制各代理缓存额度 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用分时计数和访存权重更新缓存配额 · US11914521B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11914521B1</code> · <a href="https://patents.google.com/patent/US11914521B1/en">专利全文</a></p>
+<h1>用分时计数和访存权重更新缓存配额</h1><p class="reading-question">缓存控制器的物理计数器少于要观察的请求标识时，怎样采样并调整各代理的空间配额？</p>
+<p class="reading-answer">请求携带 DSID。缓存控制器每个时间窗只观察一组 DSID，保存结果后把计数器切给下一组。配额电路根据样本、权重等输入决定是否更改分配，配额组可以包含一个或多个代理的请求。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-02-27</dd></div><div><dt>申请号</dt><dd>US17/809,822</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Wolfgang H. Klingauf、Muhammad Umer Amjad、Connie W. Cheung、Yueh-Ta Wu、Muditha Kanchana、John H. Kelm</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#inputs">配额电路同时接收请求计数和系统内存访问权重</a></li><li><a href="#windows">分时轮转让同一只计数器观察不同 DSID</a></li><li><a href="#handoff">从定时器到期到控制器应用新配额</a></li><li><a href="#identity">配额组可以跨代理，也可以聚合单个代理的多个 DSID</a></li><li><a href="#scope">判断收益要同时记录配额、miss 和 DRAM 流量</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="inputs"><h2>配额电路同时接收请求计数和系统内存访问权重</h2><p>图 1 从带 DSID 的请求入口分出两条通路。缓存控制电路服务正常请求，计数器只累加本采样窗选中标识的请求。控制电路维护缓存行的读写和替换，配额电路保存新的空间配置供它读取。</p><p>授权第 1、10 项还要求按各代理的系统内存访问确定权重。说明书 ¶0041–0045 举例以旧配额比例和 DRAM 字节份额作加权平均，再乘缓存容量。缓存访问次数与 DRAM 字节份额观测的是两个事件集合。高访问次数若主要命中少数行，新增配额带来的收益可能有限。</p><p>按说明书公式取缓存 16 MiB，旧配额占 25%，该代理 DRAM 字节份额占 75%。旧比例加权系数为 0.75 时，新配额为 6 MiB；系数降为 0.25 时，新配额为 10 MiB。这个例子仅验证公式对新样本的响应幅度。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　配额分配读取缓存请求统计和系统内存访问权重</h3>
+    <p id="fig-1-basis">分开请求服务路径、两个不同统计来源和给缓存控制器的配额配置。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="配额分配读取缓存请求统计和系统内存访问权重" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 653" role="img" aria-labelledby="us11914521b1-fig-1-svg-title us11914521b1-fig-1-svg-desc">
+<title id="us11914521b1-fig-1-svg-title">配额分配读取缓存请求统计和系统内存访问权重</title>
+<desc id="us11914521b1-fig-1-svg-desc">分开请求服务路径、两个不同统计来源和给缓存控制器的配额配置。</desc>
+<defs><marker id="us11914521b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11914521b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11914521b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11914521b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11914521b1-fig-1-selected" d="M 231 151 L 363 151" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-main)"/>
+<path id="us11914521b1-fig-1-normal" d="M 122 199 L 122 241 Q 122 249 130 249 L 789 249 Q 797 249 797 257 L 797 308" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-data)"/>
+<path id="us11914521b1-fig-1-stats" d="M 505 202 L 505 299" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11914521b1-fig-1-arrow-control)"/>
+<path id="us11914521b1-fig-1-weight" d="M 231 363 L 363 363" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-main)"/>
+<path id="us11914521b1-fig-1-allocate" d="M 471 423 L 471 493" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-main)"/>
+<path id="us11914521b1-fig-1-apply" d="M 583 548 L 818 548 Q 826 548 826 540 L 826 414" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-data)"/>
+<path id="us11914521b1-fig-1-issue" d="M 861 308 L 861 207" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-1-arrow-main)"/>
+<rect x="246" y="123" width="100" height="18" fill="#f5f5f5"/><text x="296" y="137" class="arrow-label" text-anchor="middle">按 DSID 计数</text>
+<rect x="319" y="226" width="108" height="18" fill="#f5f5f5"/><text x="373" y="240" class="arrow-label" text-anchor="middle">正常请求路径</text>
+<rect x="454.5" y="258" width="99" height="18" fill="#f5f5f5"/><text x="504" y="272" class="arrow-label" text-anchor="middle">窗口内统计</text>
+<rect x="242" y="335" width="108" height="18" fill="#f5f5f5"/><text x="296" y="349" class="arrow-label" text-anchor="middle">访问权重输入</text>
+<rect x="414.5" y="448" width="101" height="18" fill="#f5f5f5"/><text x="465" y="462" class="arrow-label" text-anchor="middle">提交新配额</text>
+<rect x="618.5" y="517" width="191" height="18" fill="#f5f5f5"/><text x="714" y="531" class="arrow-label" text-anchor="middle">给替换与分配逻辑读取</text>
+<rect x="808.5" y="259" width="105" height="18" fill="#f5f5f5"/><text x="861" y="273" class="arrow-label" text-anchor="middle">读写与替换</text>
+<g id="us11914521b1-fig-1-req"><rect x="40" y="105" width="191" height="94" rx="6" fill="#f5f5f5"/><rect x="40" y="105" width="191" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="135.5" y="131" class="node-name" text-anchor="middle">带 DSID 的请求</text><text x="135.5" y="153" class="node-detail" text-anchor="middle">来自硬件或软件代理</text></g>
+<g id="us11914521b1-fig-1-ct"><rect x="363" y="105" width="220" height="97" rx="6" fill="#f5f5f5"/><rect x="363" y="105" width="220" height="97" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="473" y="131" class="node-name" text-anchor="middle">分时请求计数器</text><text x="473" y="153" class="node-detail" text-anchor="middle">对本窗口选中的 DSID 累加</text></g>
+<g id="us11914521b1-fig-1-arr"><rect x="717" y="105" width="206" height="102" rx="6" fill="#f5f5f5"/><rect x="717" y="105" width="206" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="820" y="131" class="node-name" text-anchor="middle">缓存阵列</text><text x="820" y="153" class="node-detail" text-anchor="middle">读、写、逐出和替换</text></g>
+<g id="us11914521b1-fig-1-memory"><rect x="40" y="312" width="191" height="105" rx="6" fill="#f5f5f5"/><rect x="40" y="312" width="191" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="135.5" y="338" class="node-name" text-anchor="middle">系统内存访问统计</text><text x="135.5" y="360" class="node-detail" text-anchor="middle">按代理记录 DRAM 字节数</text><text x="135.5" y="378" class="node-detail" text-anchor="middle">可用于计算权重</text></g>
+<g id="us11914521b1-fig-1-alloc"><rect x="363" y="299" width="220" height="124" rx="6" fill="#f5f5f5"/><rect x="363" y="299" width="220" height="124" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="473" y="325" class="node-name" text-anchor="middle">缓存配额分配电路</text><text x="473" y="347" class="node-detail" text-anchor="middle">阈值、优先级与权重</text><text x="473" y="365" class="node-detail" text-anchor="middle">决定增减或保持配额</text></g>
+<g id="us11914521b1-fig-1-ctl"><rect x="717" y="308" width="206" height="106" rx="6" fill="#f5f5f5"/><rect x="717" y="308" width="206" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="820" y="334" class="node-name" text-anchor="middle">缓存控制电路</text><text x="820" y="356" class="node-detail" text-anchor="middle">使用当前配额实施分配</text></g>
+<g id="us11914521b1-fig-1-state"><rect x="363" y="493" width="220" height="97" rx="6" fill="#f5f5f5"/><rect x="363" y="493" width="220" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="473" y="519" class="node-name" text-anchor="middle">缓存配额寄存器</text><text x="473" y="541" class="node-detail" text-anchor="middle">持有已确定的配额</text></g>
+<text x="40" y="58" class="signal-title" text-anchor="start">缓存访问统计和系统内存访问权重分别送入配额分配电路</text>
+<text x="40" y="621" class="legend" text-anchor="start">系统内存访问统计是权重输入之一。缓存相联度、统计指标和配额生效机制可随实现变化。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11914521b1-fig-1-selected">按本窗口 DSID 累加</a> 传入的是缓存访问请求，观测范围受计数器当前绑定限制。</li><li><a href="#us11914521b1-fig-1-weight">系统内存访问量</a> 权重实例用 DRAM 字节占比与旧比例合成。</li><li><a href="#us11914521b1-fig-1-alloc">缓存配额分配电路</a> 阈值、优先级、统计和权重共同参与判定。</li><li><a href="#us11914521b1-fig-1-apply">将配额落实到缓存分配</a> 控制电路读取配额寄存器，可据此选择 set 或 way。</li></ul>
+  <p class="figure-evidence">原图 1、2A、3；说明书归档段 0028、0034、0035、0036、0039、0041、0042、0046、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11914521B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求计数器</dt><dd>203</dd></div><div><dt>缓存配额分配电路</dt><dd>204</dd></div><div><dt>计数阈值比较器</dt><dd>205（原图 2A 比较器所在框）</dd></div><div><dt>缓存配额寄存器</dt><dd>206</dd></div><div><dt>缓存控制电路</dt><dd>207</dd></div><div><dt>定时器</dt><dd>208</dd></div><div><dt>缓存阵列</dt><dd>220</dd></div></dl></details>
+</figure></section><section id="windows"><h2>分时轮转让同一只计数器观察不同 DSID</h2><p>图 2 的计数器 B 在窗口 A 对 DSID 1 计数，在窗口 B 改为 DSID 4。每次切换前先保存样本，再关闭旧绑定或重置对应计数。说明书 ¶0052–0056 允许按窗调整长度，也可以一轮采完再评估。图示三只计数器和六个 DSID 用于展开原图 2B 的分时关系。</p><p>表 4 固定 DSID 4 总共提交四次请求，只移动这些请求相对窗口边界的位置。全部落在窗口 A 时，DSID 4 原始计数读取为 0。两次落在窗口 B 时读到 2，四次都落在 B 时读到 4。硬件实现还须分清未计、计到零和计数器饱和，说明书 ¶0053–0054 给出对应情形。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同一组物理计数器在两个采样窗分别绑定不同 DSID</h3>
+    <p id="fig-2-basis">并排观察一个采样轮次内的计数器绑定、读数和切换。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一组物理计数器在两个采样窗分别绑定不同 DSID" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="us11914521b1-fig-2-svg-title us11914521b1-fig-2-svg-desc">
+<title id="us11914521b1-fig-2-svg-title">同一组物理计数器在两个采样窗分别绑定不同 DSID</title>
+<desc id="us11914521b1-fig-2-svg-desc">并排观察一个采样轮次内的计数器绑定、读数和切换。</desc>
+<defs><marker id="us11914521b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11914521b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11914521b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11914521b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us11914521b1-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">窗口 A</text>
+<line x1="354" y1="76" x2="354" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">保存 A</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">窗口 B</text>
+<line x1="678" y1="76" x2="678" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">保存 B</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">下一轮</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us11914521b1-fig-2-lane-a"><text x="24" y="136" class="node-name" text-anchor="start">计数器 A</text>
+<rect x="192" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="136" class="arrow-label" text-anchor="middle">计 DSID 0</text>
+<rect x="516" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="136" class="arrow-label" text-anchor="middle">计 DSID 3</text>
+<circle cx="678" cy="131" r="5" fill="#4f5d75"/>
+<text x="678" y="171" class="arrow-label" text-anchor="end">得到 DSID 3 的值</text></g>
+<g id="us11914521b1-fig-2-lane-b"><text x="24" y="228" class="node-name" text-anchor="start">计数器 B</text>
+<rect x="192" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="228" class="arrow-label" text-anchor="middle">计 DSID 1</text>
+<rect x="516" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="228" class="arrow-label" text-anchor="middle">计 DSID 4</text>
+<circle cx="678" cy="223" r="5" fill="#4f5d75"/>
+<text x="678" y="263" class="arrow-label" text-anchor="end">得到 DSID 4 的值</text></g>
+<g id="us11914521b1-fig-2-lane-c"><text x="24" y="320" class="node-name" text-anchor="start">计数器 C</text>
+<rect x="192" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="320" class="arrow-label" text-anchor="middle">计 DSID 2</text>
+<rect x="516" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="320" class="arrow-label" text-anchor="middle">计 DSID 5</text>
+<circle cx="678" cy="315" r="5" fill="#4f5d75"/>
+<text x="678" y="355" class="arrow-label" text-anchor="end">得到 DSID 5 的值</text></g>
+<g id="us11914521b1-fig-2-result"><text x="24" y="412" class="node-name" text-anchor="start">采样结果寄存器</text>
+<rect x="354" y="388" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="412" class="arrow-label" text-anchor="middle">保存 DSID 0–2</text>
+<rect x="678" y="388" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="412" class="arrow-label" text-anchor="middle">保存 DSID 3–5</text>
+<circle cx="840" cy="407" r="5" fill="#bf4520"/>
+<text x="840" y="447" class="arrow-label" text-anchor="end">轮回窗口 A</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">用三只计数器监测六个 DSID 的说明性实例。原图 2B 展示轮转机制，未固定计数器或子集数。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11914521b1-fig-2-lane-b">同一计数器改变绑定</a> A 窗计 DSID 1，B 窗才计 DSID 4。</li><li><a href="#us11914521b1-fig-2-result">读数随所选 DSID 保存</a> 切换后可以清零，给下一个子集使用。</li><li><a href="#us11914521b1-fig-2-axis">窗口轮转</a> 时间阶段未设物理周期值。</li></ul>
+  <p class="figure-evidence">原图 2B；说明书归档段 0051、0052、0053、0055、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US11914521B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求计数器</dt><dd>203</dd></div><div><dt>定时器</dt><dd>208</dd></div><div><dt>定时器到期信号</dt><dd>原图 2A：Interval Expired</dd></div><div><dt>计数器清零信号</dt><dd>原图 2A：Counter Reset</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　相同四次请求因采样相位得到三个计数值</h3>
+    <p id="fig-4-basis">在只观察窗口 B 的前提下，为同一 DSID 对比三个采样相位。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">DSID 4 的四次访问</th><th scope="col">进入 A 和 B 的请求</th><th scope="col">计数器记录的值</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">全部在 A</th><td>A 4，B 0</td><td>0</td></tr><tr id="fig-4-table-row-2"><th scope="row">平均分跨过边界</th><td>A 2，B 2</td><td>2</td></tr><tr id="fig-4-table-row-3"><th scope="row">全部在 B</th><td>A 0，B 4</td><td>4</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-basis">采样口径</a> 窗口 A、B 时长相同，四个请求以三组不同的时序摆放。</li></ul>
+  <p class="figure-evidence">原图 2B、3；说明书归档段 0051、0052、0053、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求计数器</dt><dd>203</dd></div></dl></details>
+</figure></section><section id="handoff"><h2>从定时器到期到控制器应用新配额</h2><p>图 3 把保存统计与修改配额拆开。定时器到期，分配电路读取这一窗的累积值，用阈值等条件判断变化是否需要处理。需要时写入配额寄存器，之后由缓存控制电路执行分配；继续采样时可以清零计数器并重启定时器。</p><p>原图 3 的闭环将配额变化反馈到之后的访问表现，原图 7 将保留原配额和更新配额作为不同分支。说明书也允许上下文切换等事件触发重算。第 19 项明确限定定时器到期引发计数器重置；时间窗结束本身未要求任何样本都触发配额变化。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　计数到期后读取样本，按需写配额寄存器</h3>
+    <p id="fig-3-basis">读数、配额生效和计数器清零发生在不同部件，且不是每次都写。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="计数到期后读取样本，按需写配额寄存器" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 505" role="img" aria-labelledby="us11914521b1-fig-3-svg-title us11914521b1-fig-3-svg-desc">
+<title id="us11914521b1-fig-3-svg-title">计数到期后读取样本，按需写配额寄存器</title>
+<desc id="us11914521b1-fig-3-svg-desc">读数、配额生效和计数器清零发生在不同部件，且不是每次都写。</desc>
+<defs><marker id="us11914521b1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11914521b1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11914521b1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11914521b1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11914521b1-fig-3-begin"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-data)"/><rect x="191.5" y="96" width="91" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">开始一个采样窗</text></g>
+<g id="us11914521b1-fig-3-end"><path d="M 116 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-main)"/><rect x="326" y="144" width="65" height="18" fill="#f5f5f5"/><text x="358.5" y="158" class="arrow-label" text-anchor="middle">定时器到期</text></g>
+<g id="us11914521b1-fig-3-snapshot"><path d="M 358 216 L 601 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-main)"/><rect x="362.5" y="192" width="234" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">保存或读取当前选中 DSID 的计数</text></g>
+<g id="us11914521b1-fig-3-compare"><path d="M 601 258 L 625 258 Q 633 258 633 266 L 633 268 Q 633 276 625 276 L 601 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-control)"/><rect x="663" y="234" width="104" height="18" fill="#f5f5f5"/><text x="715" y="248" class="arrow-label" text-anchor="middle">用阈值和策略评估</text></g>
+<g id="us11914521b1-fig-3-publish"><path d="M 601 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-main)"/><rect x="651" y="288" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">需要时写入调整后的配额</text></g>
+<g id="us11914521b1-fig-3-reset"><path d="M 601 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-data)"/><rect x="421" y="336" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="350" class="arrow-label" text-anchor="middle">示例实现清零计数器</text></g>
+<g id="us11914521b1-fig-3-restart"><path d="M 601 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-3-arrow-data)"/><rect x="300" y="384" width="117" height="18" fill="#f5f5f5"/><text x="358.5" y="398" class="arrow-label" text-anchor="middle">定时器继续下一窗口</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">定时器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">请求计数器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">配额分配电路</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">配额寄存器／控制</text>
+<text x="28" y="484" class="legend" text-anchor="start">按原图 2A、3 和 7 的计时实施例组合绘制。分组轮转的读数和配额更新可以用不同周期。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11914521b1-fig-3-end">定时器到期</a> 缓存控制器获得读数时间点，可以按每窗或每轮评估。</li><li><a href="#us11914521b1-fig-3-snapshot">先获取累积值</a> 还可输入命中、缺失、阈值或不同缓存行的访问量。</li><li><a href="#us11914521b1-fig-3-publish">配额改变才更新</a> 配置保存后，缓存控制电路执行对应的空间分配。</li><li><a href="#us11914521b1-fig-3-reset">准备下一轮</a> 清零是说明书中的一例，第 19 项明确要求定时器触发的清零。</li></ul>
+  <p class="figure-evidence">原图 2A、3、6、7；说明书归档段 0048、0050、0053、0055、0059、0060、0073、0074、0078、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11914521B1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求计数器</dt><dd>203</dd></div><div><dt>缓存配额分配电路</dt><dd>204</dd></div><div><dt>缓存配额寄存器</dt><dd>206</dd></div><div><dt>缓存控制电路</dt><dd>207</dd></div><div><dt>定时器</dt><dd>208</dd></div><div><dt>定时器到期信号</dt><dd>原图 2A：Interval Expired</dd></div><div><dt>计数器清零信号</dt><dd>原图 2A：Counter Reset</dd></div><div><dt>请求统计量</dt><dd>315</dd></div><div><dt>计算得到的缓存配额</dt><dd>325</dd></div></dl></details>
+</figure></section><section id="identity"><h2>配额组可以跨代理，也可以聚合单个代理的多个 DSID</h2><p>图 5 上半部保留原图 4 的两个代理示例。代理 3 的请求带 DSID 4，代理 4 的请求带 DSID 13，两个标识共享配额组 4。下半部中代理 5 有 DSID 7、8、9，三个都映射到配额组 8。监控样本属于 DSID 或组，执行时使用相应缓存空间配置。</p><p>第 8 项的持久性属性可限制同一配额组内一个 DSID 的缓存行是否可被另一 DSID 的行替换。第 9 项的限制属性是允许映射到配额组的 DSID 最大个数。图中组值和 DSID 值是原文示例，它们不代表缓存阵列中的物理路。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　两个代理可共享一组，单个代理也可有多个 DSID</h3>
+    <p id="fig-5-basis">用原图 4 的实际示例标识串起请求标识与空间配额归属。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两个代理可共享一组，单个代理也可有多个 DSID" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 588" role="img" aria-labelledby="us11914521b1-fig-5-svg-title us11914521b1-fig-5-svg-desc">
+<title id="us11914521b1-fig-5-svg-title">两个代理可共享一组，单个代理也可有多个 DSID</title>
+<desc id="us11914521b1-fig-5-svg-desc">用原图 4 的实际示例标识串起请求标识与空间配额归属。</desc>
+<defs><marker id="us11914521b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11914521b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11914521b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11914521b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11914521b1-fig-5-a3id" d="M 217 160 L 367 160" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-data)"/>
+<path id="us11914521b1-fig-5-a4id" d="M 217 296 L 367 296" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-data)"/>
+<path id="us11914521b1-fig-5-a5id" d="M 217 463 L 367 463" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-data)"/>
+<path id="us11914521b1-fig-5-shared-a" d="M 541 158 L 616 158 Q 624 158 624 166 L 624 212 Q 624 220 632 220 L 709 220" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-main)"/>
+<path id="us11914521b1-fig-5-shared-b" d="M 541 296 L 624 296 Q 632 296 632 288 L 632 266 Q 632 258 640 258 L 709 258" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-main)"/>
+<path id="us11914521b1-fig-5-shared-c" d="M 541 463 L 709 463" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11914521b1-fig-5-arrow-main)"/>
+<rect x="212" y="133" width="156" height="18" fill="#f5f5f5"/><text x="290" y="147" class="arrow-label" text-anchor="middle">请求携带 DSID 4</text>
+<rect x="211.5" y="269" width="159" height="18" fill="#f5f5f5"/><text x="291" y="283" class="arrow-label" text-anchor="middle">请求携带 DSID 13</text>
+<rect x="205" y="436" width="178" height="18" fill="#f5f5f5"/><text x="294" y="450" class="arrow-label" text-anchor="middle">不同任务带各自 DSID</text>
+<rect x="564" y="129" width="102" height="18" fill="#f5f5f5"/><text x="615" y="143" class="arrow-label" text-anchor="middle">映射到组 4</text>
+<rect x="565.5" y="306" width="107" height="18" fill="#f5f5f5"/><text x="619" y="320" class="arrow-label" text-anchor="middle">同一组配额</text>
+<rect x="571.5" y="434" width="101" height="18" fill="#f5f5f5"/><text x="622" y="448" class="arrow-label" text-anchor="middle">映射到组 8</text>
+<g id="us11914521b1-fig-5-a3"><rect x="42" y="114" width="175" height="89" rx="6" fill="#f5f5f5"/><rect x="42" y="114" width="175" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="140" class="node-name" text-anchor="middle">代理 3</text><text x="129.5" y="162" class="node-detail" text-anchor="middle">任务使用 DSID 4</text></g>
+<g id="us11914521b1-fig-5-a4"><rect x="42" y="251" width="175" height="89" rx="6" fill="#f5f5f5"/><rect x="42" y="251" width="175" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="277" class="node-name" text-anchor="middle">代理 4</text><text x="129.5" y="299" class="node-detail" text-anchor="middle">任务使用 DSID 13</text></g>
+<g id="us11914521b1-fig-5-a5"><rect x="42" y="410" width="175" height="106" rx="6" fill="#f5f5f5"/><rect x="42" y="410" width="175" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="436" class="node-name" text-anchor="middle">代理 5</text><text x="129.5" y="458" class="node-detail" text-anchor="middle">三个任务相关 DSID</text><text x="129.5" y="476" class="node-detail" text-anchor="middle">由同一代理产生</text></g>
+<g id="us11914521b1-fig-5-d4"><rect x="367" y="113" width="174" height="91" rx="6" fill="#f5f5f5"/><rect x="367" y="113" width="174" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454" y="139" class="node-name" text-anchor="middle">DSID 4</text><text x="454" y="161" class="node-detail" text-anchor="middle">该请求随附的标识</text></g>
+<g id="us11914521b1-fig-5-d13"><rect x="367" y="251" width="174" height="91" rx="6" fill="#f5f5f5"/><rect x="367" y="251" width="174" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454" y="277" class="node-name" text-anchor="middle">DSID 13</text><text x="454" y="299" class="node-detail" text-anchor="middle">该请求随附的标识</text></g>
+<g id="us11914521b1-fig-5-d789"><rect x="367" y="410" width="174" height="106" rx="6" fill="#f5f5f5"/><rect x="367" y="410" width="174" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454" y="436" class="node-name" text-anchor="middle">DSID 7、8、9</text><text x="454" y="458" class="node-detail" text-anchor="middle">各自可有不同属性</text><text x="454" y="476" class="node-detail" text-anchor="middle">映射同一配额组</text></g>
+<g id="us11914521b1-fig-5-g4"><rect x="709" y="178" width="204" height="124" rx="6" fill="#f5f5f5"/><rect x="709" y="178" width="204" height="124" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="811" y="204" class="node-name" text-anchor="middle">共享配额组 4</text><text x="811" y="226" class="node-detail" text-anchor="middle">代理 3 与 4 共享配额</text><text x="811" y="244" class="node-detail" text-anchor="middle">可用持久性属性约束替换</text></g>
+<g id="us11914521b1-fig-5-g8"><rect x="709" y="410" width="204" height="106" rx="6" fill="#f5f5f5"/><rect x="709" y="410" width="204" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="811" y="436" class="node-name" text-anchor="middle">多 DSID 配额组 8</text><text x="811" y="458" class="node-detail" text-anchor="middle">代理 5 的不同任务</text><text x="811" y="476" class="node-detail" text-anchor="middle">共同占用本组配额</text></g>
+<text x="42" y="58" class="signal-title" text-anchor="start">代理、DSID 与配额组对应不同层次的身份</text>
+<text x="42" y="559" class="legend" text-anchor="start">按原图 4 选取两个组。保留示例实际的 DSID 和组值，布局不代表物理 set 或 way 划分。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11914521b1-fig-5-g4">两个代理共享一个组的配额</a> 代理 3、4 的不同 DSID 映射到配额组 4。</li><li><a href="#us11914521b1-fig-5-d789">一个代理有多个请求标识</a> 代理 5 的三个 DSID 可以区分任务，同时使用一个组的缓存配额。</li><li><a href="#us11914521b1-fig-5-g8">配额应用在组的共享空间</a> 持久性属性可以限制组内不同 DSID 的行替换。</li></ul>
+  <p class="figure-evidence">原图 4、5；说明书归档段 0062、0063、0064、0065、0066、0067、0068、0069、0075；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11914521B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共享配额组 4</dt><dd>原图 4：Quota Group 4</dd></div><div><dt>多 DSID 配额组 8</dt><dd>原图 4：Quota Group 8</dd></div></dl></details>
+</figure></section><section id="scope"><h2>判断收益要同时记录配额、miss 和 DRAM 流量</h2><p>授权第 1、10 项明确按系统内存访问确定权重，第 17 项的独立系统表述以分时计数和根据跟踪结果决定是否更新配额为主。说明书还允许计数每个代理涉及的不同缓存行、命中和缺失，或允许逻辑配额和超过物理缓存容量。</p><p>对手机 SoC 工作负载，分别记录 DSID 被观察的时长、该窗口内请求数、配额生效时点、缓存 miss 和 DRAM 读写字节。采样与摄像帧或渲染任务的周期若长期对齐，零样本可能一直错过突发，配额调整效果应按相同请求轨迹下的基线核对。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US11914521B1</code><span>美国授权专利</span><time datetime="2024-02-27">2024-02-27</time></p>
-  <h1>硬件闭环控制各代理缓存额度</h1>
-  <p class="english-title" lang="en">Cache quota control</p>
-  <p class="document-question">需要统计的数据集比计数器多时，控制器怎样估计各代理需要多少缓存？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">SLC 控制器让同一组计数器分时统计不同 DSID 子集，用系统内存访问量加权判断是否调整代理配额。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>每个采样窗口只覆盖部分数据集，短突发和采样窗口相位不同时可能得出不同反馈。</dd></div><div><dt>验证方法</dt><dd>保持每个 DSID 的总请求数不变，把同一突发分别放在对应采样窗口内外。记录采样选择、计数、权重与最终配额。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11914521B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">一个代理可产生多个数据集。若每个 DSID 都用一套专用计数器，统计硬件会随数据集增加。控制器让不同的 DSID 子集轮用同一组计数器。</p>
-    <p>控制器从请求标识识别数据集及代理，用同一组计数器分时统计不同数据集，再根据系统内存访问确定权重，判断是否调整各代理的缓存额度。</p>
-    <ol class="walkthrough"><li><h3>辨认请求属于哪个数据集</h3><p>数据请求携带 DSID 或相关标识。控制器按映射确定统计结果归入哪个数据集和代理。</p></li><li><h3>让各子集轮用计数器</h3><p>当前时间窗把物理计数器分给一个子集。到时后读取累计结果，再把计数器分给另一子集。</p></li><li><h3>按内存访问给各代理定权重</h3><p>控制器根据系统内存访问计算权重，并在累积请求统计后，结合各代理现有额度评估是否需要调整。</p></li><li><h3>决定是否更新额度</h3><p>控制器可以保留当前配置，也可以重新分配，随后继续采样。控制增益和采样时长取决于实现。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 由定时器划定读累计计数的时点，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 又允许将与代理标识关联的优先级纳入容量更新判断。同一 DSID 的计数和优先级是不同输入。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>DSID</dt><dd>把与任务相关的数据访问归成一组的标识。一个代理可对应多个 DSID。</dd></div><div><dt>采样窗口</dt><dd>本批计数器服务特定 DSID 子集的时间范围。</dd></div><div><dt>配额组</dt><dd>共享一个缓存空间分配规则的数据集组合。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">多个数据集轮用一组计数器</a></li><li><a href="#fig-2">两个窗口各测一组 DSID</a></li><li><a href="#fig-3">采样之后再决定是否调额</a></li><li><a href="#fig-4">ID 4 的突发会在哪个窗口漏记</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">多个数据集轮用一组计数器</h3></div>
-    <a class="paper-open" href="../mechanisms/US11914521B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="多个数据集轮用一组计数器">
-    <img class="paper-image native-image" src="../mechanisms/US11914521B1/fig-1/diagram.svg" width="782" height="408"
-         style="--paper-width:782px" alt="多个数据集轮用一组计数器。控制器根据请求标识记录各数据集的访存，结合独立取得的系统内存访问权重判断配额是否需要更新。">
-  </div>
-  <figcaption>
-    <span>控制器根据请求标识记录各数据集的访存，结合独立取得的系统内存访问权重判断配额是否需要更新。</span>
-    <span class="figure-evidence">图 1、图 2A、图 3、图 5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/10/bd/b5/2d2ef35d595596/US11914521.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">两个窗口各测一组 DSID</h3></div>
-    <a class="paper-open" href="../mechanisms/US11914521B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="两个窗口各测一组 DSID">
-    <img class="paper-image native-image" src="../mechanisms/US11914521B1/fig-2/diagram.svg" width="524" height="564"
-         style="--paper-width:524px" alt="两个窗口各测一组 DSID。6 个标识轮用 3 个计数器。比较两个窗口的统计时，要保留各自的采样时间。">
-  </div>
-  <figcaption>
-    <span>6 个标识轮用 3 个计数器。比较两个窗口的统计时，要保留各自的采样时间。</span>
-    <span class="figure-evidence">图 2B，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>；教学映射。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/10/bd/b5/2d2ef35d595596/US11914521.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-3-title">采样之后再决定是否调额</h3></div>
-    <a class="paper-open" href="../mechanisms/US11914521B1/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="采样之后再决定是否调额">
-    <img class="paper-image native-image" src="../mechanisms/US11914521B1/fig-3/diagram.svg" width="920" height="458"
-         style="--paper-width:920px" alt="采样之后再决定是否调额。计数到达读数边界后，控制器拿计数和相关策略输入判断是否更新配置。计数器是否重置由具体权项或实施方式决定。">
-  </div>
-  <figcaption>
-    <span>计数到达读数边界后，控制器拿计数和相关策略输入判断是否更新配置。计数器是否重置由具体权项或实施方式决定。</span>
-    <span class="figure-evidence">图 3、图 6、图 7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/10/bd/b5/2d2ef35d595596/US11914521.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">ID 4 的突发会在哪个窗口漏记</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">ID 4 活动</th><th scope="col">A 窗未分给它</th><th scope="col">B 窗分给它</th></tr></thead><tbody><tr><th scope="row">只在 A 突发</th><td class="emphasis">不可见</td><td>可能读到 0</td></tr><tr><th scope="row">跨 A 和 B</th><td>A 段不可见</td><td>B 段可数</td></tr><tr><th scope="row">稳定在 B</th><td>不计</td><td class="emphasis">持续记录</td></tr></tbody></table>
-  <figcaption>
-    <span>固定 ID 4 的突发数量，只移动突发时点。模型中它仅在 B 窗被选中，因此 A 窗的突发不会进入这一计数器结果。</span>
-    <span class="figure-evidence">图 2B、图 3；工程对照。 · <a href="https://patentimages.storage.googleapis.com/10/bd/b5/2d2ef35d595596/US11914521.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>分时复用物理计数器</dt><dd>覆盖更多数据集标识 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>；原图 2B</span></dd></div><div><dt>按系统内存访问加权</dt><dd>估计代理配额需求 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>；原图 3</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>分时复用可以用较少计数器覆盖更多数据集，定时读取带来可观测的更新边界。调额能否归因于统计变化，还应同时记录优先级和计数已积累的窗口覆盖。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若两个运行阶段有相近的累计访问量而代理优先级变化，容量仍可能改变。仅比较 DSID 访问计数会把这一结果误判为计数或反馈错误。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>有 6 个 DSID 和 3 个统计通道。窗口 A 统计 ID 0–2，窗口 B 用同一组通道统计 ID 3–5。两个子集属于不同代理。</dd></div><div><dt>处理结果</dt><dd>经过两个窗口，控制器得到 6 个 DSID 的采样值，可结合系统内存访问权重判断是否调整额度。若 ID 4 只在窗口 A 突发，这一轮就记录不到该峰值。</dd></div><div><dt>结果解读</dt><dd>实施方式可以改变窗口长度、补偿方法和 DSID 映射规则。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>缓存控制器保存代理配额，两个时间窗复用计数器观察不同 DSID 子集，并依据系统内存访问权重判断是否调额。见原图 2B、3。</p>
+  <p>缓存控制器保存代理配额，两个时间窗复用计数器观察不同 数据集标识（DSID）子集，并依据系统内存访问权重判断是否更新缓存配额。见原图 2B、3。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=store%20indications%20of%20current%20allocations%20of%20the%20cache%20memory%20to%20individual%20ones%20of%20the%20plurality%20of">F1</a></th><td>缓存控制器保存各代理已有的缓存空间分配。</td><td>原图 1、3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=track%20requests%20to%20the%20cache%20memory%20based%20on%20identification%20values%20specified%20in%20the%20requests">F2</a></th><td>按请求内的标识跟踪各代理的缓存访问。</td><td>原图 2A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=for%20a%20first%20time%20interval%2C%20count%20cache%20access%20requests%20for%20ones%20of%20the%20plurality%20of%20agents">F3</a></th><td>在第一时间窗统计第一组 DSID 对应的请求。</td><td>原图 2B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=for%20a%20second%20time%20interval%2C%20count%20cache%20access%20requests%20for%20ones%20of%20the%20plurality%20of%20agents">F4</a></th><td>在第二时间窗复用计数器统计第二组 DSID 对应的请求。</td><td>原图 2B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=determine%20weighting%20values%2C%20based%20on%20accesses%20to%20a%20system%20memory%2C%20by%20the%20individual%20ones%20of%20the">F5</a></th><td>依据各代理访问系统内存的情况确定权重。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=determine%20whether%20to%20update%20allocations%20of%20the%20cache%20memory%20to%20the%20individual%20ones%20of%20the%20plurality">F6</a></th><td>结合跟踪到的访问决定是否更新。</td><td>原图 3</td></tr></tbody>
@@ -131,54 +188,18 @@
   </table>
 </section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
   <h4 id="independent-17-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></h4>
-  <p>系统含接收多代理请求的缓存子系统，按标识和两个时间窗跟踪请求并据此决定调额。该独权无系统内存访问权重条件。见原图 2B、3。</p>
+  <p>系统含接收多代理请求的缓存子系统，按标识和两个时间窗跟踪请求并据此决定是否更新缓存配额。该独权无系统内存访问权重条件。见原图 2B、3。</p>
   <table class="comparison-table" aria-labelledby="independent-17-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=a%20cache%20subsystem%20including%20a%20cache%20controller%20and%20a%20cache%20memory">F13</a></th><td>系统含控制器及缓存存储。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=store%20information%20indicating%20current%20allocations%20of%20the%20cache%20memory%20to%20individual%20ones%20of%20the%20plurality%20of">F14</a></th><td>缓存控制器保存各代理已有的缓存空间分配。</td><td>原图 1、3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=track%20access%20requests%2C%20using%20identification%20values%20associated%20with%20ones%20of%20the%20plurality%20of%20agents">F15</a></th><td>按请求内的标识跟踪各代理的缓存访问。</td><td>原图 2A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=for%20a%20first%20time%20interval%2C%20count%20cache%20access%20requests%20for%20agents%20associated%20with%20a%20first%20subset">F16</a></th><td>在第一时间窗统计第一组 DSID 对应的请求。</td><td>原图 2B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=for%20a%20second%20time%20interval%2C%20count%20cache%20access%20requests%20for%20agents%20associated%20with%20a%20second%20subset">F17</a></th><td>在第二时间窗复用计数器统计第二组 DSID 对应的请求。</td><td>原图 2B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11914521B1/en#:~:text=determine%20whether%20to%20update%20allocations%20of%20the%20cache%20memory%20to%20individual%20ones%20of%20the%20plurality%20of">F18</a></th><td>基于已经追踪的请求决定是否更新分配。</td><td>原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>缓存控制器保存代理配额，两个时间窗复用计数器观察不同 DSID 子集，并依据系统内存访问权重判断是否调额。见原图 2B、3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>计数器统计对应代理的缓存请求，各代理与一个或多个 DSID 关联。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>定时器到期时读取计数器累积值。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>按定时器设定的间隔定期读数并判断是否调整。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>比较累积计数与阈值，并依比较结果确定缓存分配。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>除访问统计外，是否调整代理缓存区还取决于各访问标识的优先级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>DSID 持久性属性指定同配额组其他 DSID 的行能否替换它。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>DSID 限制属性指定配额组最多能映射多少数据集。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>方法按请求标识、两窗计数和系统内存访问权重，决定缓存配额是否更新。见原图 2B、3、6–7。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>累加各代理的缓存访问笔数，代理对应一个或多个 DSID。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>周期性以累计计数判断是否更新缓存分配。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>用累计计数与一个或多个阈值比较。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-12">12</a></td><td>定期评估时还确定各代理的优先级。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>DSID 属性加入同组替换持久性，以及配额组最多映射 DSID 数。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>系统含接收多代理请求的缓存子系统，按标识和两个时间窗跟踪请求并据此决定调额。该独权无系统内存访问权重条件。见原图 2B、3。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>调配电路用计数器累积值与阈值的比较结果计算分配。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>定时决定分配，并在定时器到期时重置计数器。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>缓存控制器保存代理配额，两个时间窗复用计数器观察不同 数据集标识（DSID）子集，并依据系统内存访问权重判断是否更新缓存配额。见原图 2B、3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>计数器统计对应代理的缓存请求，各代理与一个或多个 DSID 关联。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>定时器到期时读取计数器累积值。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>按定时器设定的间隔定期读数并判断是否调整。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>比较累积计数与阈值，并依比较结果确定缓存分配。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>除访问统计外，是否调整代理缓存区还取决于各访问标识的优先级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>DSID 持久性属性指定同配额组其他 DSID 的行能否替换它。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>DSID 限制属性指定配额组最多能映射多少数据集。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>方法按请求标识、两窗计数和系统内存访问权重，决定缓存配额是否更新。见原图 2B、3、6–7。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>累加各代理的缓存访问笔数，代理对应一个或多个 DSID。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>周期性以累计计数判断是否更新缓存分配。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>用累计计数与一个或多个阈值比较。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-12">12</a></td><td>定期评估时还确定各代理的优先级。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>DSID 属性加入同组替换持久性，以及配额组最多映射 DSID 数。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>系统含接收多代理请求的缓存子系统，按标识和两个时间窗跟踪请求并据此决定是否更新缓存配额。该独权无系统内存访问权重条件。见原图 2B、3。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>调配电路用计数器累积值与阈值的比较结果计算分配。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>定时决定分配，并在定时器到期时重置计数器。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>代理关联配额组，组内以 DSID 标识相关执行任务的数据。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>用一组计数器在不同时间段记录不同 DSID 子集，并根据系统内存访问等信息决定是否更新额度。</dd></div><div><dt>图 2B、图 3</dt><dd>图 2B 给出计数器轮换，图 3 给出从采样到额度调整的反馈关系。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11914521B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>从属项涉及计数器关联、定时器读取和定期评估是否调整。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11914521B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11232033B2.html#engineering">应用运行状态驱动的缓存配额</a>
-<p>US11232033B2 由处理器估计配额变化对带宽的影响，并运行时修改组配额。US11914521B1 在缓存控制器中分时计数各 DSID 子集，并按系统内存访问给代理分配权重。做动态负载对照时，可检验配额更新分别受预测偏差和计数时间窗口影响的程度。</p></li></ul>
-    <p><a href="../index.html?patent=US11914521B1#knowledge">在全量关系图上定位 US11914521B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-06-29</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-02-27</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/809,822</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Wolfgang H. Klingauf、Muhammad Umer Amjad、Connie W. Cheung、Yueh-Ta Wu、Muditha Kanchana、John H. Kelm</dd></div><div><dt>分类号</dt><dd>G06F12/0895、G06F12/0837、G06F12/0873</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11914521B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11914521B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 112 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2A、图 2B、图 3、图 4、图 5、图 6、图 7。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11914521B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

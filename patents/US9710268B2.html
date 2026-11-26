@@ -1,123 +1,201 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US9710268B2 预测存储队列命中以提前发射依赖访存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>数据缓存到 AGU 的早旁路怎样缩短指针追逐的发射间隔 · US9710268B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US9710268B2</code> · <a href="https://patents.google.com/patent/US9710268B2/en">专利全文</a></p>
+<h1>数据缓存到 AGU 的早旁路怎样缩短指针追逐的发射间隔</h1><p class="reading-question">年轻 load 或 store 的地址要用较老 load 的返回值。如果这个值来自 L1 数据缓存，怎样再提前一拍发射？</p>
+<p class="reading-answer">load/store 依赖预测器预先判断较老 load 会不会命中 store queue。预测从 L1 数据缓存取得结果时，保留站可提前发射消费者，让其到地址生成单元（AGU）时同步接收较老 load 的早旁路结果。若实际来源或格式校验失败，则冲刷受影响的年轻操作，并可训练预测器。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2017-07-18</dd></div><div><dt>申请号</dt><dd>US14/264,789</dd></div><div><dt>最早优先权</dt><dd>2014-04-29</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Stephan G. Meier、Pradeep Kanapathipillai、Sandeep Gupta</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#path">第一条 load 的缓存数据，在哪一级进入下一条的 AGU</a></li><li><a href="#latency">从同一个生产者发射时刻量 3 拍和 4 拍</a></li><li><a href="#select">相依关系、数据来源和数据格式共同限制早发</a></li><li><a href="#validation">旁路值已经送出时，校验失败怎样恢复</a></li><li><a href="#chain">沿着指针链，哪些相邻访存间隔能连续缩短</a></li><li><a href="#fields">预测表保留哪些依赖与失败状态</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="path"><h2>第一条 load 的缓存数据，在哪一级进入下一条的 AGU</h2><p>原图 3 画一个 LSU 流水线。保留站发射访存操作，下一段可读寄存器文件，再经过操作数选择器进入 AGU。AGU 产生虚拟地址，DTLB 提供物理地址。查找后，数据缓存与 store queue 各有取值路径。</p><p>图 1 跟踪原文中不同访存操作间的连线。生产者为较老 load。L1 数据缓存取出的值在常规对齐逻辑之前抽头，作为消费者操作数选择器的另一输入。所得值参与年轻 load 或 store 的地址计算。store queue 取出的值经过常规对齐和结果选择，图示实施方式没有同样快的直接旁路。</p><p>授权第 1、8、14 项以预测 store queue 命中决定发射间隔。第 2、10、15 项进一步描述从数据缓存直达年轻操作的 AGU。发射、地址生成以及数据写回在不同阶段。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　L1 读出在常规对齐前分支到消费者 AGU</h3>
+    <p id="fig-1-basis">较老 load 的 L1 readout 经早旁路进入消费者的操作数选择器。store queue 数据仍走常规对齐及结果选择。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="L1 读出在常规对齐前分支到消费者 AGU" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 662" role="img" aria-labelledby="us9710268b2-fig-1-svg-title us9710268b2-fig-1-svg-desc">
+<title id="us9710268b2-fig-1-svg-title">L1 读出在常规对齐前分支到消费者 AGU</title>
+<desc id="us9710268b2-fig-1-svg-desc">较老 load 的 L1 readout 经早旁路进入消费者的操作数选择器。store queue 数据仍走常规对齐及结果选择。</desc>
+<defs><marker id="us9710268b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9710268b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9710268b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9710268b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9710268b2-fig-1-direct" d="M 275 135 L 365 135" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-main)"/>
+<path id="us9710268b2-fig-1-normald" d="M 154 188 L 154 215 Q 154 223 162 223 L 319 223 Q 327 223 327 231 L 327 252 Q 327 260 335 260 L 365 260" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-data)"/>
+<path id="us9710268b2-fig-1-normals" d="M 151 354 L 151 446 Q 151 454 159 454 L 365 454" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-data)"/>
+<path id="us9710268b2-fig-1-lead" d="M 598 130 L 689 130" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-main)"/>
+<path id="us9710268b2-fig-1-loadnormal" d="M 598 269 L 627 269 Q 635 269 635 277 L 635 387 Q 635 395 643 395 L 689 395" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-data)"/>
+<path id="us9710268b2-fig-1-storenormal" d="M 598 454 L 632 454 Q 640 454 640 446 L 640 439 Q 640 431 648 431 L 689 431" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-1-arrow-data)"/>
+<rect x="278.5" y="104" width="87" height="18" fill="#f5f5f5"/><text x="322" y="118" class="arrow-label" text-anchor="middle">L1 早旁路</text>
+<rect x="201" y="194" width="92" height="18" fill="#f5f5f5"/><text x="247" y="208" class="arrow-label" text-anchor="middle">缓存读出</text>
+<rect x="235.5" y="422" width="77" height="18" fill="#f5f5f5"/><text x="274" y="436" class="arrow-label" text-anchor="middle">队列值</text>
+<rect x="598" y="98" width="90" height="18" fill="#f5f5f5"/><text x="643" y="112" class="arrow-label" text-anchor="middle">地址操作数</text>
+<rect x="606" y="305" width="90" height="18" fill="#f5f5f5"/><text x="651" y="319" class="arrow-label" text-anchor="middle">缓存侧值</text>
+<rect x="596.5" y="469" width="89" height="18" fill="#f5f5f5"/><text x="641" y="483" class="arrow-label" text-anchor="middle">队列侧值</text>
+<g id="us9710268b2-fig-1-data"><rect x="40" y="112" width="235" height="76" rx="6" fill="#f5f5f5"/><rect x="40" y="112" width="235" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="157.5" y="138" class="node-name" text-anchor="middle">生产者的 L1 数据缓存</text><text x="157.5" y="160" class="node-detail" text-anchor="middle">取出较老 load 所需数据</text></g>
+<g id="us9710268b2-fig-1-sq"><rect x="40" y="278" width="235" height="76" rx="6" fill="#f5f5f5"/><rect x="40" y="278" width="235" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="157.5" y="304" class="node-name" text-anchor="middle">生产者的 store queue</text><text x="157.5" y="326" class="node-detail" text-anchor="middle">取更早 store 的数据</text></g>
+<g id="us9710268b2-fig-1-aligncache"><rect x="365" y="225" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="365" y="225" width="233" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="481.5" y="251" class="node-name" text-anchor="middle">缓存侧对齐</text><text x="481.5" y="273" class="node-detail" text-anchor="middle">常规路径的字节处理</text></g>
+<g id="us9710268b2-fig-1-alignsq"><rect x="365" y="416" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="365" y="416" width="233" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="481.5" y="442" class="node-name" text-anchor="middle">队列侧对齐</text><text x="481.5" y="464" class="node-detail" text-anchor="middle">常规路径的字节处理</text></g>
+<g id="us9710268b2-fig-1-regular"><rect x="689" y="375" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="689" y="375" width="233" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="805.5" y="401" class="node-name" text-anchor="middle">常规结果选择器</text><text x="805.5" y="423" class="node-detail" text-anchor="middle">写回或常规结果转发</text></g>
+<g id="us9710268b2-fig-1-mux"><rect x="365" y="92" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="365" y="92" width="233" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="481.5" y="118" class="node-name" text-anchor="middle">消费者输入选择器</text><text x="481.5" y="140" class="node-detail" text-anchor="middle">寄存器读出或早旁路</text></g>
+<g id="us9710268b2-fig-1-agu"><rect x="689" y="92" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="689" y="92" width="233" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="805.5" y="118" class="node-name" text-anchor="middle">消费者 AGU</text><text x="805.5" y="140" class="node-detail" text-anchor="middle">使用基值生成地址</text></g>
+<text x="36" y="562" class="legend" text-anchor="start">早旁路抽头位于缓存读出之后、常规对齐之前。依赖预测选择是否提前发射，执行阶段核验该值能否使用。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9710268b2-fig-1-data">生产者的 L1 数据缓存</a> L1 数据缓存取值发生在地址生成和查找之后。早旁路的抽头在这个取值节点与对齐逻辑之间。</li><li><a href="#us9710268b2-fig-1-sq">生产者的 store queue</a> store queue 查找可能决定老 load 应使用更早 store 的值。此实施方式的值仍经过常规对齐。</li><li><a href="#us9710268b2-fig-1-regular">常规结果选择器</a> 常规结果路径选择数据缓存或 store queue 的正确值，之后可以写回，也可以经一般结果转发使用。</li><li><a href="#us9710268b2-fig-1-direct">L1 早旁路</a> 这个分支把数据缓存读出送去年轻操作的操作数选择器，不等待常规对齐。</li><li><a href="#us9710268b2-fig-1-mux">消费者输入选择器</a> 选择器可以接收寄存器读出，也可接受早旁路。早旁路要和消费者流水级对齐。</li><li><a href="#us9710268b2-fig-1-agu">消费者 AGU</a> 年轻操作用得到的基值与其它操作数生成地址。预测错误或格式不符需要冲刷。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、6；说明书归档段 0037、0041、0042、0043、0044、0048、0049、0050、0052、0053、0054、0055、0065、0066、0067、0068、0078、0079、0080、0081、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US9710268B2/fig-1.html">打开独立图稿</a></p>
+  
+</figure></section><section id="latency"><h2>从同一个生产者发射时刻量 3 拍和 4 拍</h2><p>图 2 用第 0 拍的老 load 发射作共同起点。原文示例中，若预期结果由 L1 数据缓存直接旁路，年轻操作第 3 拍从保留站发射。若预期经过 store queue 的正常结果路径，则到第 4 拍才发射。图中的 AGU 时点按原图 3 的流水级关系对齐，较早的选择需要数据读出与消费者地址输入在同一拍可用。</p><p>这里的少 1 拍是生产者发射到消费者发射的间隔，不是 DRAM 访问时延，也不是两条指令各自的退休时刻。授权第 1、8、14 项给 M 小于 N，第 9 项把它限定为 M 等于 N 减 1，没有写死 3 和 4。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　L1 早旁路发射间隔 3 拍，store queue 路径 4 拍</h3>
+    <p id="fig-2-basis">消费者提前一拍发射，在 AGU 处与较老 load 的缓存侧旁路结果相遇。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="L1 早旁路发射间隔 3 拍，store queue 路径 4 拍" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us9710268b2-fig-2-svg-title us9710268b2-fig-2-svg-desc">
+<title id="us9710268b2-fig-2-svg-title">L1 早旁路发射间隔 3 拍，store queue 路径 4 拍</title>
+<desc id="us9710268b2-fig-2-svg-desc">消费者提前一拍发射，在 AGU 处与较老 load 的缓存侧旁路结果相遇。</desc>
+<defs><marker id="us9710268b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9710268b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9710268b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9710268b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us9710268b2-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="284.571" y1="76" x2="284.571" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="284.571" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="377.143" y1="76" x2="377.143" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="377.143" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="469.714" y1="76" x2="469.714" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="469.714" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="562.286" y1="76" x2="562.286" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="562.286" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="654.857" y1="76" x2="654.857" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="654.857" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="747.429" y1="76" x2="747.429" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="747.429" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">7</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us9710268b2-fig-2-p"><text x="24" y="136" class="node-name" text-anchor="start">较老 load</text>
+<rect x="192" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="238.286" y="136" class="arrow-label" text-anchor="middle">发射</text>
+<rect x="284.571" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="330.857" y="136" class="arrow-label" text-anchor="middle">读寄存器</text>
+<rect x="377.143" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="423.429" y="136" class="arrow-label" text-anchor="middle">地址</text>
+<rect x="469.714" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">查找</text>
+<rect x="562.286" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="608.571" y="136" class="arrow-label" text-anchor="middle">读数据</text>
+<rect x="654.857" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="701.143" y="136" class="arrow-label" text-anchor="middle">选结果</text>
+<circle cx="192" cy="131" r="5" fill="#4f5d75"/>
+<text x="192" y="171" class="arrow-label" text-anchor="end">共同起点</text></g>
+<g id="us9710268b2-fig-2-fast"><text x="24" y="228" class="node-name" text-anchor="start">消费者 · 早旁路</text>
+<rect x="192" y="204" width="277.714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="330.857" y="228" class="arrow-label" text-anchor="middle">等待发射</text>
+<rect x="469.714" y="204" width="185.143" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="562.286" y="228" class="arrow-label" text-anchor="middle">发射后到 AGU</text>
+<circle cx="654.857" cy="223" r="5" fill="#bf4520"/>
+<text x="654.857" y="263" class="arrow-label" text-anchor="end">早旁路值到达</text></g>
+<g id="us9710268b2-fig-2-slow"><text x="24" y="320" class="node-name" text-anchor="start">消费者 · 常规</text>
+<rect x="192" y="296" width="370.286" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="377.143" y="320" class="arrow-label" text-anchor="middle">等待发射</text>
+<rect x="562.286" y="296" width="185.143" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="654.857" y="320" class="arrow-label" text-anchor="middle">发射后到 AGU</text>
+<circle cx="747.429" cy="315" r="5" fill="#4f5d75"/>
+<text x="747.429" y="355" class="arrow-label" text-anchor="end">常规值可用</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">3／4 拍为原文从发射到发射的例子。阶段格表示该拍内推进，AGU 标签标示对应格的完成边界。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9710268b2-fig-2-p">较老 load</a> 第 0 拍是较老 load 由保留站发射。原图 3 依次画了读寄存器、地址生成、查找、取数及结果选择。</li><li><a href="#us9710268b2-fig-2-fast">消费者 · 早旁路</a> 从共同发射起点过 3 拍发射年轻操作。示意到第 5 拍在 AGU 使用缓存读出的早旁路。</li><li><a href="#us9710268b2-fig-2-slow">消费者 · 常规</a> 从共同发射起点过 4 拍发射，示意在下一拍到 AGU。原文的 3 与 4 是解释发射间隔的实施例。</li></ul>
+  <p class="figure-evidence">原图 3、4、6；说明书归档段 0007、0008、0011、0012、0048、0049、0050、0052、0053、0054、0055、0065、0066、0067、0068、0078、0079、0080、0081、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US9710268B2/fig-2.html">打开独立图稿</a></p>
+  
+</figure></section><section id="select"><h2>相依关系、数据来源和数据格式共同限制早发</h2><p>译码与寄存器映射可发现消费者的地址源是生产者的目标寄存器。图 3 的发射间隔由预测的 store queue 命中切换。在原文一个实施方式，生产者的 PC 未命中预测表时允许预测不从 store queue 取值。预测表是否命中、store queue 是否命中和实际 L1 命中是三个不同事件。</p><p>快路径还要满足数据格式。例如生产者读取地址按字边界对齐，结果无需做符号扩展；说明书的一种实现还排除大端模式。部分条件可在调度时预测，也可在执行中核验。若来自 ALU 或更老的 store，通常不能沿这个数据缓存的早旁路使用。表 6 给出原图 5 的部分表字段与职责。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　发射端如何利用 store queue 命中预测选择间隔</h3>
+    <p id="fig-3-basis">先识别寄存器依赖，再按较老 load 的供值预测选间隔，实际来源、对齐和扩展后续核验。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="发射端如何利用 store queue 命中预测选择间隔" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 606" role="img" aria-labelledby="us9710268b2-fig-3-svg-title us9710268b2-fig-3-svg-desc">
+<title id="us9710268b2-fig-3-svg-title">发射端如何利用 store queue 命中预测选择间隔</title>
+<desc id="us9710268b2-fig-3-svg-desc">先识别寄存器依赖，再按较老 load 的供值预测选间隔，实际来源、对齐和扩展后续核验。</desc>
+<defs><marker id="us9710268b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9710268b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9710268b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9710268b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9710268b2-fig-3-query" d="M 267 153 L 358 153" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-3-arrow-data)"/>
+<path id="us9710268b2-fig-3-quick" d="M 596 137 L 637 137 Q 645 137 645 129 L 645 125 Q 645 117 653 117 L 688 117" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-3-arrow-main)"/>
+<path id="us9710268b2-fig-3-safe" d="M 596 164 L 635 164 Q 643 164 643 172 L 643 287 Q 643 295 651 295 L 688 295" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-3-arrow-data)"/>
+<path id="us9710268b2-fig-3-verify" d="M 925 120 L 936 120 Q 944 120 944 128 L 944 463 Q 944 471 936 471 L 925 471" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9710268b2-fig-3-arrow-return)"/>
+<rect x="266" y="122" width="90" height="18" fill="#f5f5f5"/><text x="311" y="136" class="arrow-label" text-anchor="middle">查询生产者</text>
+<rect x="598.5" y="87" width="91" height="18" fill="#f5f5f5"/><text x="644" y="101" class="arrow-label" text-anchor="middle">预测未命中</text>
+<rect x="595.5" y="223" width="89" height="18" fill="#f5f5f5"/><text x="640" y="237" class="arrow-label" text-anchor="middle">预测命中</text>
+<rect x="812.5" y="393" width="101" height="18" fill="#f5f5f5"/><text x="863" y="407" class="arrow-label" text-anchor="middle">执行并核验</text>
+<g id="us9710268b2-fig-3-dep"><rect x="34" y="116" width="233" height="76" rx="6" fill="#f5f5f5"/><rect x="34" y="116" width="233" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150.5" y="142" class="node-name" text-anchor="middle">检测地址寄存器依赖</text><text x="150.5" y="164" class="node-detail" text-anchor="middle">较老 load → 年轻访存</text></g>
+<g id="us9710268b2-fig-3-pred"><rect x="358" y="116" width="238" height="76" rx="6" fill="#f5f5f5"/><rect x="358" y="116" width="238" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477" y="142" class="node-name" text-anchor="middle">load/store 依赖预测器</text><text x="477" y="164" class="node-detail" text-anchor="middle">预测是否命中 store queue</text></g>
+<g id="us9710268b2-fig-3-fast"><rect x="688" y="81" width="237" height="76" rx="6" fill="#f5f5f5"/><rect x="688" y="81" width="237" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="806.5" y="107" class="node-name" text-anchor="middle">短发射间隔 M</text><text x="806.5" y="129" class="node-detail" text-anchor="middle">准备使用 L1 早旁路</text></g>
+<g id="us9710268b2-fig-3-normal"><rect x="688" y="255" width="237" height="76" rx="6" fill="#f5f5f5"/><rect x="688" y="255" width="237" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806.5" y="281" class="node-name" text-anchor="middle">常规发射间隔 N</text><text x="806.5" y="303" class="node-detail" text-anchor="middle">使用常规结果路径</text></g>
+<g id="us9710268b2-fig-3-real"><rect x="688" y="438" width="237" height="76" rx="6" fill="#f5f5f5"/><rect x="688" y="438" width="237" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806.5" y="464" class="node-name" text-anchor="middle">执行侧核验</text><text x="806.5" y="486" class="node-detail" text-anchor="middle">L1、store queue、格式</text></g>
+<text x="37" y="550" class="legend" text-anchor="start">间隔从生产者发射开始算，M 小于 N。冲刷条件和训练路径见图 4。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9710268b2-fig-3-dep">检测地址寄存器依赖</a> 译码与映射检查消费者是否需要较老 load 的目标值，目标可能是地址基值。</li><li><a href="#us9710268b2-fig-3-pred">load/store 依赖预测器</a> 依赖预测器按生产者信息判断是否将命中 store queue。可结合已经训练过的对齐与符号扩展状态。</li><li><a href="#us9710268b2-fig-3-fast">短发射间隔 M</a> 预测不命中 store queue 时可选 M 拍。较短路径仍要求执行时实际取到了适合旁路的 L1 数据。</li><li><a href="#us9710268b2-fig-3-normal">常规发射间隔 N</a> 预测命中时选 N 拍。等到消费者在 AGU 能获得常规结果路径供值。</li><li><a href="#us9710268b2-fig-3-real">执行侧核验</a> 检查真实是否命中 store queue，以及是否有按格式可用的 L1 值。误判交恢复逻辑。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5、6；说明书归档段 0041、0042、0043、0044、0045、0046、0048、0049、0050、0053、0054、0065、0066、0067、0068、0069、0070、0071、0072、0073、0074、0075、0076、0077、0078、0079、0080、0081、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US9710268B2/fig-3.html">打开独立图稿</a></p>
+  
+</figure></section><section id="validation"><h2>旁路值已经送出时，校验失败怎样恢复</h2><p>原图 6 在早发及旁路后校验实际来源和数据格式。实际 store queue 命中、L1 缺失，或数据不满足早旁路格式条件时，前次预期可能不成立。冲刷可以只针对依赖者，也可按实现清除更广的一组年轻操作。</p><p>图 4 画出三项动作的先后：消费者投机接收地址操作数，LSU 检测错误，恢复逻辑清除已用错值的年轻访存操作。预测器记录该生产者不能按早路径及时供值的状态，下一次相同代码可调整选择。第 16、17 项分别限定误预测训练和冲刷年轻操作。</p><p>回放代价可以抵消提前发射。假设成功每次省 1 拍，失败比常规发射额外耗 4 拍，长期以错误比例 p 计，平均节省为 1−5p 拍；p 小于 20% 时该简化模型才有正收益。失败代价为模型假设，应在具体实现测量从初次发射到有效重执行的时间。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　已早发的年轻访存检测到错误，怎样冲刷并训练</h3>
+    <p id="fig-4-basis">实际来源错误或格式不匹配时，恢复逻辑清除年轻操作。预测器保留生产者的失败信息，供下一次发射决策。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="已早发的年轻访存检测到错误，怎样冲刷并训练" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us9710268b2-fig-4-svg-title us9710268b2-fig-4-svg-desc">
+<title id="us9710268b2-fig-4-svg-title">已早发的年轻访存检测到错误，怎样冲刷并训练</title>
+<desc id="us9710268b2-fig-4-svg-desc">实际来源错误或格式不匹配时，恢复逻辑清除年轻操作。预测器保留生产者的失败信息，供下一次发射决策。</desc>
+<defs><marker id="us9710268b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9710268b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9710268b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9710268b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us9710268b2-fig-4-issue"><path d="M 116 120 L 480 120" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-4-arrow-main)"/><rect x="252.5" y="96" width="91" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">提前发射消费者</text></g>
+<g id="us9710268b2-fig-4-value"><path d="M 298 168 L 480 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-4-arrow-main)"/><rect x="330.5" y="144" width="117" height="18" fill="#f5f5f5"/><text x="389" y="158" class="arrow-label" text-anchor="middle">送 L1 早旁路值</text></g>
+<g id="us9710268b2-fig-4-bad"><path d="M 298 216 L 662 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9710268b2-fig-4-arrow-return)"/><rect x="421.5" y="192" width="117" height="18" fill="#f5f5f5"/><text x="480" y="206" class="arrow-label" text-anchor="middle">来源或格式核验失败</text></g>
+<g id="us9710268b2-fig-4-flush"><path d="M 662 264 L 480 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9710268b2-fig-4-arrow-return)"/><rect x="519" y="240" width="104" height="18" fill="#f5f5f5"/><text x="571" y="254" class="arrow-label" text-anchor="middle">冲刷受影响的操作</text></g>
+<g id="us9710268b2-fig-4-train"><path d="M 662 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9710268b2-fig-4-arrow-data)"/><rect x="707.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="753" y="302" class="arrow-label" text-anchor="middle">记录生产者失败</text></g>
+<g id="us9710268b2-fig-4-retry"><path d="M 844 360 L 116 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9710268b2-fig-4-arrow-return)"/><rect x="415" y="336" width="130" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">下次识别并选较长间隔</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">保留站</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">LSU 数据路径</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">消费者 AGU</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">恢复逻辑</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">依赖预测表</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。若核验成功则继续执行；这里仅画误预测恢复支路。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9710268b2-fig-4-issue">提前发射消费者</a> 假设本次消费者已从保留站提前发射，保留相依关联。</li><li><a href="#us9710268b2-fig-4-value">送 L1 早旁路值</a> 消费者 AGU 选择提早转发的操作数。该用法仍在核验范围内。</li><li><a href="#us9710268b2-fig-4-bad">来源或格式核验失败</a> 执行侧检查实际来源和格式，比如 store queue 实际命中或需要符号扩展。</li><li><a href="#us9710268b2-fig-4-flush">冲刷受影响的操作</a> 恢复逻辑冲刷受影响的年轻访存，必要时包含其他依赖操作。</li><li><a href="#us9710268b2-fig-4-train">记录生产者失败</a> 训练可按生产者 PC 和状态记录，使新一轮调度可以选择较长间隔。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0041、0042、0043、0044、0045、0046、0054、0055、0071、0072、0073、0074、0075、0076、0077、0078、0081、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US9710268B2/fig-4.html">打开独立图稿</a></p>
+  
+</figure></section><section id="chain"><h2>沿着指针链，哪些相邻访存间隔能连续缩短</h2><p>图 5 追踪原图 4 的一段寄存器依赖。指令先从内存读出 R7，再用 R7 生成读 R10 的地址；R10 的读出值又给 R16 的 load 作地址基值，R16 再给 R24 的 load 作基值。原图 9 给出节点里的 next 指针为什么构成相同的依赖形状。</p><p>每一条链接必须独立满足快速数据来源及格式条件。若三个相邻依赖都符合，按原文每段 3 拍与 4 拍的例子，第一到第四条的发射间隔从 12 拍减为 9 拍。一条相依 load 缺失会决定整条链后续什么时候能继续，模型只比较发射间隔。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　指针链上的每次读出怎样成为下一条 load 的地址基值</h3>
+    <p id="fig-5-basis">原图 4 的寄存器链把地址依赖传递三次。每次需要新一次供值预测与执行核验。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="指针链上的每次读出怎样成为下一条 load 的地址基值" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 592" role="img" aria-labelledby="us9710268b2-fig-5-svg-title us9710268b2-fig-5-svg-desc">
+<title id="us9710268b2-fig-5-svg-title">指针链上的每次读出怎样成为下一条 load 的地址基值</title>
+<desc id="us9710268b2-fig-5-svg-desc">原图 4 的寄存器链把地址依赖传递三次。每次需要新一次供值预测与执行核验。</desc>
+<defs><marker id="us9710268b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9710268b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9710268b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9710268b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9710268b2-fig-5-r7" d="M 242 157 L 369 157" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-5-arrow-main)"/>
+<path id="us9710268b2-fig-5-r10" d="M 583 157 L 709 157" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-5-arrow-main)"/>
+<path id="us9710268b2-fig-5-r16" d="M 816 197 L 816 352" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9710268b2-fig-5-arrow-main)"/>
+<rect x="242.5" y="126" width="121" height="18" fill="#f5f5f5"/><text x="303" y="140" class="arrow-label" text-anchor="middle">R7 作地址基值</text>
+<rect x="584.5" y="126" width="121" height="18" fill="#f5f5f5"/><text x="645" y="140" class="arrow-label" text-anchor="middle">R10 作地址基值</text>
+<rect x="659.5" y="263" width="141" height="18" fill="#f5f5f5"/><text x="730" y="277" class="arrow-label" text-anchor="middle">R16 作地址基值</text>
+<g id="us9710268b2-fig-5-load7"><rect x="28" y="120" width="214" height="77" rx="6" fill="#f5f5f5"/><rect x="28" y="120" width="214" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="135" y="146" class="node-name" text-anchor="middle">读取到 R7</text><text x="135" y="168" class="node-detail" text-anchor="middle">load 地址 R3＋8</text></g>
+<g id="us9710268b2-fig-5-load10"><rect x="369" y="120" width="214" height="77" rx="6" fill="#f5f5f5"/><rect x="369" y="120" width="214" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476" y="146" class="node-name" text-anchor="middle">读取到 R10</text><text x="476" y="168" class="node-detail" text-anchor="middle">load 地址 R7＋4</text></g>
+<g id="us9710268b2-fig-5-load16"><rect x="709" y="120" width="218" height="77" rx="6" fill="#f5f5f5"/><rect x="709" y="120" width="218" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="818" y="146" class="node-name" text-anchor="middle">读取到 R16</text><text x="818" y="168" class="node-detail" text-anchor="middle">load 地址 R10＋4</text></g>
+<g id="us9710268b2-fig-5-load24"><rect x="709" y="352" width="218" height="77" rx="6" fill="#f5f5f5"/><rect x="709" y="352" width="218" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="818" y="378" class="node-name" text-anchor="middle">读取到 R24</text><text x="818" y="400" class="node-detail" text-anchor="middle">load 地址 R16＋4</text></g>
+<text x="35" y="482" class="legend" text-anchor="start">三段都满足快路径条件时，模型中首尾发射间隔为 3×3＝9 拍。</text>
+<text x="35" y="507" class="legend" text-anchor="start">三段都走 4 拍路径时为 3×4＝12 拍。具体地址和寄存器来自原图 4，时长采用其实施例。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9710268b2-fig-5-load7">读取到 R7</a> 原图样例第一个画出的 load 把从 8(R3) 读出的值写至 R7。图从这里开始切出指针链。</li><li><a href="#us9710268b2-fig-5-load10">读取到 R10</a> 年轻 load 的有效地址使用 R7，并加偏移 4。若可用早旁路，R7 不用等常规结果回到寄存器文件。</li><li><a href="#us9710268b2-fig-5-load16">读取到 R16</a> 随后一个 load 用 R10 作基值。这是另一条生产者—消费者关系，必须重新检查。</li><li><a href="#us9710268b2-fig-5-load24">读取到 R24</a> 进一步的 load 用 R16 作基值，每段都可能受真实数据来源或缺失拖长。</li></ul>
+  <p class="figure-evidence">原图 4、6、9；说明书归档段 0007、0008、0056、0057、0059、0060、0064、0065、0066、0067、0068、0069、0070、0078、0079、0080、0081、0082、0090、0091；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US9710268B2/fig-5.html">打开独立图稿</a></p>
+  
+</figure></section><section id="fields"><h2>预测表保留哪些依赖与失败状态</h2><p>原图 5 的生产者和依赖者 PC 用于关联指令，store RNUM 与 Armed 用于跟踪已分派但尚未发射的 store。状态字段可说明曾发生排序违反，也可记录生产者从 store queue 取值或不能按早发档位供值。表 6 区分这几类用途。</p><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">表 6　依赖预测表如何同时支持非早发与顺序相关的状态</h3>
+    <p id="fig-6-basis">生产者和依赖者用 PC 识别。store 队列相关的在途状态与早旁路失败类型由不同字段记录。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">字段</th><th scope="col">用途</th></tr></thead><tbody><tr id="fig-6-pcs"><th scope="row">生产者 PC／依赖方 PC</th><td>按指令关联查询</td></tr><tr id="fig-6-rnum"><th scope="row">store RNUM</th><td>跟踪已分派 store 的 ROB 项</td></tr><tr id="fig-6-armed"><th scope="row">Armed</th><td>该 store 关联仍有效</td></tr><tr id="fig-6-status"><th scope="row">状态</th><td>记录不同失败或依赖类别</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-6-pcs">生产者 PC／依赖方 PC</a> 生产者和依赖方的 PC 可用于查询训练记录。</li><li><a href="#fig-6-rnum">store RNUM</a> 用于原文的 store—load 顺序等待，保留站能用 store 的 ROB 编号跟踪。</li><li><a href="#fig-6-armed">Armed</a> 原图用 Armed 表示匹配 store 已分派而尚待发射的状态。</li><li><a href="#fig-6-status">状态</a> 类型字段可记录顺序违反、生产者从 store queue 取得数据，或无法在早发档位及时供给。</li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0041、0042、0043、0044、0045、0046、0071、0072、0073、0074、0075、0076、0077、0078、0081、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US9710268B2</code><span>美国授权专利</span><time datetime="2017-07-18">2017-07-18</time></p>
-  <h1>预测存储队列命中以提前发射依赖访存</h1>
-  <p class="english-title" lang="en">Reducing latency for pointer chasing loads</p>
-  <p class="document-question">指针追踪时，较老 load 的预测数据来源怎样影响依赖访存的发射时间？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">发射逻辑依据较老 load 的存储队列命中预测，为依赖它的年轻访存安排较短或较长的发射间隔。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>短间隔适用于预测存储队列缺失。数据缓存返回可前递给地址生成器时，年轻访存才能按短间隔拿到正确地址输入。</dd></div><div><dt>验证方法</dt><dd>固定指针链和逐笔真实数据来源，对照一律用长间隔与按预测选间隔。记录相邻操作发射间隔、地址实际就绪时点及年轻操作重发次数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9710268B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">指针链上，较老 load 读出的值要参与下一次访存的地址计算。如果数据缓存能把该值直接送进地址生成器，后续操作可能少等一段路径。若数据需要从 store queue 取得，短间隔就可能不够。</p>
-    <p>依赖预测器估计较老 load 会否命中存储队列。调度器以较老 load 的发射为起点，在预测命中时安排等待 N 拍，在预测未命中时安排等待 M 拍。数据缓存结果若满足格式条件，可经早旁路直接送入较年轻操作的地址生成单元。</p>
-    <ol class="walkthrough"><li><h3>找出下一次访存的生产者</h3><p>核内指令发射逻辑识别年轻 load 或 store 对较老 load 的数据依赖，再根据预测的数据可用时间安排发射。</p></li><li><h3>预测较老 load 是否命中 store queue</h3><p>预测器可以用训练信息区分 store 转发和无法在短时间内供数的情况。预测 store queue 缺失后，数据缓存还须另行查询。</p></li><li><h3>给两种预测设置不同间隔</h3><p>预测命中使用较长的 N，预测缺失使用较短的 M。若旧 load 的数据可直接从缓存旁路，返回拍可对齐年轻操作的地址生成阶段。</p></li><li><h3>到地址生成时核对数据是否就绪</h3><p>地址计算使用实际读出的值。预测不准或数据缓存也缺失时，按实现推迟或重发。说明书还考虑了会增加流水阶段的对齐和符号扩展。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把对齐和符号扩展也放进预测条件。存储队列未命中预测只决定可尝试的调度时机，年轻地址生成实际还要接到满足格式要求的旧 load 结果。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>地址生成单元（AGU）</dt><dd>用依赖的源操作数计算访存地址。</dd></div><div><dt>早旁路</dt><dd>数据缓存返回值在常规对齐和扩展之前直接送入 AGU 的通路。</dd></div><div><dt>较老与较年轻</dt><dd>指程序中生产值的 load 和使用其结果的依赖访存的相对先后。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">从同一个发射点数 3 拍和 4 拍</a></li><li><a href="#fig-1">旧 load 的返回值可直接送到年轻操作的 AGU</a></li><li><a href="#fig-4">旁路结果先到 AGU，检查失败时冲刷年轻操作</a></li><li><a href="#fig-3">预测决定发射计划，实际结果决定能否使用</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">从同一个发射点数 3 拍和 4 拍</h3></div>
-    <a class="paper-open" href="../mechanisms/US9710268B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="从同一个发射点数 3 拍和 4 拍">
-    <img class="paper-image native-image" src="../mechanisms/US9710268B2/fig-2/diagram.svg" width="644" height="440"
-         style="--paper-width:644px" alt="从同一个发射点数 3 拍和 4 拍。较老 load 在 C0 发射。示例取 M=3、N=4：预测存储队列未命中按 M 安排，预测命中按 N 安排。图中拍数描述发射间隔。">
-  </div>
-  <figcaption>
-    <span>较老 load 在 C0 发射。示例取 M=3、N=4：预测存储队列未命中按 M 安排，预测命中按 N 安排。图中拍数描述发射间隔。</span>
-    <span class="figure-evidence">说明书图 6 的指针链和 LSU 示例。权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 给出 M &lt; N，图中拍数取自示例。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/3c/28/6b847639c21e1f/US9710268.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">旧 load 的返回值可直接送到年轻操作的 AGU</h3></div>
-    <a class="paper-open" href="../mechanisms/US9710268B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="旧 load 的返回值可直接送到年轻操作的 AGU">
-    <img class="paper-image native-image" src="../mechanisms/US9710268B2/fig-1/diagram.svg" width="816" height="542"
-         style="--paper-width:816px" alt="旧 load 的返回值可直接送到年轻操作的 AGU。调度器依据存储队列命中预测安排依赖操作的发射时点。数据缓存的数据可经早旁路直接到较年轻操作的地址生成单元，图中的控制线表示预测而非最终命中。">
-  </div>
-  <figcaption>
-    <span>调度器依据存储队列命中预测安排依赖操作的发射时点。数据缓存的数据可经早旁路直接到较年轻操作的地址生成单元，图中的控制线表示预测而非最终命中。</span>
-    <span class="figure-evidence">图 3–6、9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/3c/28/6b847639c21e1f/US9710268.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">旁路结果先到 AGU，检查失败时冲刷年轻操作</h3></div>
-    <a class="paper-open" href="../mechanisms/US9710268B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="旁路结果先到 AGU，检查失败时冲刷年轻操作">
-    <img class="paper-image native-image" src="../mechanisms/US9710268B2/fig-4/diagram.svg" width="753" height="480"
-         style="--paper-width:753px" alt="旁路结果先到 AGU，检查失败时冲刷年轻操作。数据缓存结果在对齐及符号扩展之前进入早旁路。若较老 load 实际命中存储队列，或检查发现格式条件不满足，图 6 的实现会冲刷相关依赖操作并训练预测器。">
-  </div>
-  <figcaption>
-    <span>数据缓存结果在对齐及符号扩展之前进入早旁路。若较老 load 实际命中存储队列，或检查发现格式条件不满足，图 6 的实现会冲刷相关依赖操作并训练预测器。</span>
-    <span class="figure-evidence">US9710268B2 图 5–6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>。冲刷和重训练按图 6 实施例。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/1c/3c/28/6b847639c21e1f/US9710268.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">预测决定发射计划，实际结果决定能否使用</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">存储队列预测</th><th scope="col">实际事件</th><th scope="col">发射计划与处理</th></tr></thead><tbody><tr><th scope="row">未命中</th><td>存储队列未命中，数据缓存命中且格式可直递</td><td class="emphasis">按 M 发射，可用数据缓存早旁路</td></tr><tr><th scope="row">命中</th><td>发射时结果尚未核验</td><td>按 N 发射</td></tr><tr><th scope="row">未命中</th><td>实际命中存储队列</td><td>提前发射失据，图 6 执行冲刷并训练预测器</td></tr><tr><th scope="row">未命中</th><td>数据缓存缺失或结果还需格式处理</td><td>短窗口可能拿不到可用数据，图 6 支持检查失败后冲刷</td></tr></tbody></table>
-  <figcaption>
-    <span>图 6 先按预测发射，再验证旁路数据和前置条件。未能按时得到可用的缓存结果时，提前发射无法按原计划完成。</span>
-    <span class="figure-evidence">原图 6，说明书 0079–0082，权项 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> · <a href="https://patentimages.storage.googleapis.com/1c/3c/28/6b847639c21e1f/US9710268.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测存储队列未命中</dt><dd>缩短依赖发射间隔 <span class="subdued">原图 3、6，权项 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></span></dd></div><div><dt>数据缓存结果早旁路</dt><dd>提前供给地址生成 <span class="subdued">原图 3，权项 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>缩短的是旧 load 到年轻访存发射之间的等待。若值还需要扩展或对齐调整，压力会转移到地址生成输入前的处理级，缓存数据阵列本身的读取时间可保持原样。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>同一链表循环可交替读自然对齐的整字指针与需扩展的压缩索引。后一类若使用相同的短间隔，即使都在数据缓存命中，也更容易赶不上年轻操作的地址生成拍。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>较老的指令从节点 p 读出 next，年轻指令访问 next+4。说明书举例比较普通约 4 拍与快速 3 拍或更少。这里取 4 和 3。</dd></div><div><dt>处理结果</dt><dd>旧 load 若在数据缓存命中，并把指针直接送到 LSU 的地址生成单元，年轻 load 可提前一拍发射。旧 load 若需要 store queue 数据，则按较长的 4 拍安排。</dd></div><div><dt>结果解读</dt><dd>独立权利要求只限定 M&lt;N。这里的间隔取自说明书示例，两次访存各自还可能经历其他缓存阶段和等待。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、14 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>处理器预测较老 load 是否命中存储队列，分别在该 load 发射后 N、M 拍发射依赖访存，0&lt;M&lt;N。见原图 3、6。</p>
+  <p>处理器预测较老 load 是否命中存储队列，分别在该 load 发射后 N、M 拍发射依赖访存，0&lt;M&lt;N。见原图 3、6。从较老 load 的硬件发射到较年轻访存操作的硬件发射。预测的 store 队列命中结果影响选择的间隔。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=determine%20that%20a%20younger%20memory%20operation%20is%20dependent%20on%20an%20older%20load%20operation">F1</a></th><td>判定年轻访存的输入依赖较早 load 的结果</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=generate%2C%20by%20the%20load-store%20dependency%20predictor%2C%20a%20prediction%20as%20to%20whether%20the%20older%20load%20operation%20will">F2</a></th><td>预测较早 load 会否命中 store 队列</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=issue%20the%20younger%20memory%20operation%20N%20clock%20cycles%20subsequent%20to%20the%20older%20load%20operation">F3</a></th><td>预测队列命中则在旧 load 后等 N 拍才发年轻访存</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=wherein%20M%20is%20a%20positive%20integer%20less%20than%20N">F4</a></th><td>预测不命中 store 队列用较短的 M 拍，须满足 0 &lt; M &lt; N</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=If%20the%20processor%20predicts%20that%20the%20producer%20load%20operation%20will%20not%20hit%20in%20the%20store%20queue">说明书 0080</a> · 原图 6</td></tr></tbody>
@@ -137,48 +215,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=a%20processor%3B%20and%20a%20memory">F10</a></th><td>系统包括处理器和存储器。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=Referring%20next%20to%20FIG.%207%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20700">说明书 0083</a> · <a href="https://patents.google.com/patent/US9710268B2/en#:~:text=The%20memory%20702%20may%20be%20any%20type%20of%20memory%2C%20such%20as%20dynamic%20random%20access%20memory%20%28DRAM%29%2C">说明书 0085</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=determine%20that%20a%20younger%20memory%20operation%20is%20dependent%20on%20an%20older%20load%20operation">F11</a></th><td>确定较年轻访存是否依赖较老 load。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=A%20processor%20may%20detect%20a%20dependency%20between%20a%20producer%20load%20operation%20and%20a%20consumer%20memory%20operation">说明书 0078</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=generate%2C%20by%20the%20load-store%20dependency%20predictor%2C%20a%20prediction%20as%20to%20whether%20the%20older%20load%20operation%20will">F12</a></th><td>依赖预测器预测较老 load 会否命中存储队列。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=A%20processor%20may%20detect%20a%20dependency%20between%20a%20producer%20load%20operation%20and%20a%20consumer%20memory%20operation">说明书 0078</a> · 原图 5 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=issue%20the%20younger%20memory%20operation%20N%20clock%20cycles%20subsequent%20to%20the%20older%20load%20operation">F13</a></th><td>预测命中时在较老 load 发射后 N 拍发射较年轻访存。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=If%20the%20processor%20predicts%20that%20the%20producer%20load%20operation%20will%20hit%20in%20the%20store%20queue%20%28">说明书 0079</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=issue%20the%20younger%20memory%20operation%20M%20clock%20cycles%20subsequent%20to%20the%20older%20load%20operation">F14</a></th><td>预测未命中时在较老 load 发射后 M 拍发射较年轻访存。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=If%20the%20processor%20predicts%20that%20the%20producer%20load%20operation%20will%20not%20hit%20in%20the%20store%20queue">说明书 0080</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=wherein%20M%20is%20a%20positive%20integer%20less%20than%20N">F15</a></th><td>M 是小于 N 的正整数。</td><td><a href="https://patents.google.com/patent/US9710268B2/en#:~:text=If%20the%20processor%20predicts%20that%20the%20producer%20load%20operation%20will%20hit%20in%20the%20store%20queue%20%28">说明书 0079</a> · <a href="https://patents.google.com/patent/US9710268B2/en#:~:text=If%20the%20processor%20predicts%20that%20the%20producer%20load%20operation%20will%20not%20hit%20in%20the%20store%20queue">说明书 0080</a> · 原图 3 · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>处理器预测较老 load 是否命中存储队列，分别在该 load 发射后 N、M 拍发射依赖访存，0&lt;M&lt;N。见原图 3、6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>进一步在预测队列不命中时把数据缓存返回值直接送年轻操作的 AGU。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>增加预测表，条目按已执行的 load 训练。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>预测较老 load 的地址字边界对齐，以及是否需要符号扩展。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-2">2</a></td><td>使用较老 load 取回的数据计算较年轻访存的地址。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>把较年轻访存限定为 store。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>只有格式条件允许时才以较短间隔发射较年轻访存。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>依据存储队列命中预测，在较老 load 后按 N 拍或 M 拍发行依赖访存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>将较短发射间隔 M 限定为 N 减一。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>预测存储队列未命中时，将数据缓存结果直接前递给地址生成单元。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>规定较老 load 的地址要满足字边界对齐。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>要求较老 load 的结果不需要符号扩展。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>在较年轻访存发射之前，判断较老 load 是否满足提前发射条件。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>规定包含处理器、存储器和依赖预测器的系统，按命中预测调节发射偏移。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>规定数据缓存结果直接旁路到较年轻操作的 AGU。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>较老 load 的预测错误时，训练依赖预测器。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>较老 load 被误预测时，冲刷已经发射的依赖访存。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>AGU 以较老 load 的结果计算较年轻访存的地址。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>处理器预测较老 load 是否命中存储队列，分别在该 load 发射后 N、M 拍发射依赖访存，0&lt;M&lt;N。见原图 3、6。从较老 load 的硬件发射到较年轻访存操作的硬件发射。预测的 store 队列命中结果影响选择的间隔。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>进一步在预测队列不命中时把数据缓存返回值直接送年轻操作的 AGU。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>增加预测表，条目按已执行的 load 训练。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>预测较老 load 的地址字边界对齐，以及是否需要符号扩展。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-2">2</a></td><td>使用较老 load 取回的数据计算较年轻访存的地址。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>把较年轻访存限定为 store。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>只有格式条件允许时才以较短间隔发射较年轻访存。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>依据存储队列命中预测，在较老 load 后按 N 拍或 M 拍发射依赖访存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>将较短发射间隔 M 限定为 N 减一。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>预测存储队列未命中时，将数据缓存结果直接前递给地址生成单元。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>规定较老 load 的地址要满足字边界对齐。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>要求较老 load 的结果不需要符号扩展。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>在较年轻访存发射之前，判断较老 load 是否满足提前发射条件。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>规定包含处理器、存储器和依赖预测器的系统，按命中预测调节发射偏移。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>规定数据缓存结果直接旁路到较年轻操作的 AGU。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>较老 load 的预测错误时，训练依赖预测器。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>较老 load 被误预测时，冲刷已经发射的依赖访存。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>AGU 以较老 load 的结果计算较年轻访存的地址。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按较老 load 的 store queue 命中预测，选择 N 或 M 拍后发射年轻的依赖访存。M 小于 N。</dd></div><div><dt>说明书图 3–6、9</dt><dd>图中包括前递硬件、指令依赖、预测表和调度。文字以指针链为例比较 4 拍与 3 拍或更少。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9710268B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></dt><dd>这些项补充了向地址生成单元直接转发、预测对齐或符号扩展、形成地址，以及年轻操作可以是 store 的条件。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US9710268B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11829763B2.html#engineering">把地址学习与陈旧缓存数据反馈结合</a>
-<p>预测地址即使正确，US11829763B2 仍会检查存储队列。命中队列时取消按预测地址发起的数据缓存查询，改从队列取数据，并下调学习置信度。US9710268B2 预测较老 load 会否命中存储队列，分别在该 load 发射后 N 拍或较短的 M 拍发射依赖访存。</p></li></ul>
-    <p><a href="../index.html?patent=US9710268B2#knowledge">在全量关系图上定位 US9710268B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2014-04-29</dd></div>
-    <div><dt>美国申请日</dt><dd>2014-04-29</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2017-07-18</dd></div>
-    <div><dt>美国申请号</dt><dd>US14/264,789</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Stephan G. Meier、Pradeep Kanapathipillai、Sandeep Gupta</dd></div><div><dt>分类号</dt><dd>G06F9/30043、G06F9/3826、G06F9/3834、G06F9/3861</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US9710268B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US9710268B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 92 个说明书段落、18 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8、图 9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US9710268B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

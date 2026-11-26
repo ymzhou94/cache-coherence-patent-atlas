@@ -1,126 +1,230 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11175917B1 并行重放缓冲加快等待 store 数据的 load · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在 store 数据操作发射时提前启动 load 重放 · US11175917B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11175917B1</code> · <a href="https://patents.google.com/patent/US11175917B1/en">专利全文</a></p>
+<h1>在 store 数据操作发射时提前启动 load 重放</h1><p class="reading-question">load 已命中较老的 store，store 数据尚未进入队列时，怎样少等几个周期？</p>
+<p class="reading-answer">并行于保留站的重放缓冲记录这次 load 及其依赖 store 的标识。它在保留站发射对应 store 数据操作时匹配标识并尝试重发 load。若重放缓冲未获得条目或发射失败，load 执行队列仍可在较晚的信号到来后重放。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2021-11-16</dd></div><div><dt>申请号</dt><dd>US17/018,875</dd></div><div><dt>最早优先权</dt><dd>2020-09-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Mridul Agarwal、Kulin N. Kothari、Nikhil Gupta</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#paths">快速重放和常规重放看到的事件不同</a></li><li><a href="#states">第一次 load 执行怎样选转发、缓存访问或重放</a></li><li><a href="#cycles">以同一次 store 数据操作发射作为计时起点</a></li><li><a href="#fields">RLB 条目的哪些字段进入匹配、撤销和流水线选择</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="paths"><h2>快速重放和常规重放看到的事件不同</h2><p>store 地址和数据可由两项独立的操作提供。因此，load 的地址可能已命中 store 队列中的较老请求，但对应数据尚未进入队列。图 1 中，load 执行队列（LEQ）保存未完成 load，重放缓冲（RLB）可以另外保存这条 load 及依赖 store 的标识。</p><p>快速路径在保留站发射 store 数据操作时接收 store 标识（SNUM），再用按内容寻址的匹配电路寻找等它的 load。常规路径在 store 数据操作走到 LSU 后面的阶段时才得到可重放信号。load 退休队列（LRQ）负责内存定序与退休；此图的两个重放出口属于执行路径。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　store 标识让并行侧路提前重发 load</h3>
+    <p id="fig-1-basis">上方是首次发射及地址查找。保留站单独把 store 标识给重放缓冲，提早触发再次发射。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="store 标识让并行侧路提前重发 load" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 488" role="img" aria-labelledby="us11175917b1-fig-1-svg-title us11175917b1-fig-1-svg-desc">
+<title id="us11175917b1-fig-1-svg-title">store 标识让并行侧路提前重发 load</title>
+<desc id="us11175917b1-fig-1-svg-desc">上方是首次发射及地址查找。保留站单独把 store 标识给重放缓冲，提早触发再次发射。</desc>
+<defs><marker id="us11175917b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11175917b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11175917b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11175917b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11175917b1-fig-1-initial" d="M 230 114 L 338 114" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-data)"/>
+<path id="us11175917b1-fig-1-check" d="M 572 114 L 730 114" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-data)"/>
+<path id="us11175917b1-fig-1-early_id" d="M 134 150 L 134 320" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-main)"/>
+<path id="us11175917b1-fig-1-blocked" d="M 828 150 L 828 320" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11175917b1-fig-1-arrow-control)"/>
+<path id="us11175917b1-fig-1-allocate" d="M 730 344 L 230 344" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-data)"/>
+<path id="us11175917b1-fig-1-scheduled" d="M 230 382 L 730 382" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11175917b1-fig-1-arrow-return)"/>
+<path id="us11175917b1-fig-1-replay" d="M 230 332 L 276 332 Q 284 332 284 324 L 284 274 Q 284 266 292 266 L 408 266 Q 416 266 416 258 L 416 150" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-main)"/>
+<path id="us11175917b1-fig-1-remaining" d="M 730 332 L 684 332 Q 676 332 676 324 L 676 250 Q 676 242 668 242 L 497 242 Q 489 242 489 234 L 489 150" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-1-arrow-data)"/>
+<rect x="233" y="84" width="102" height="18" fill="#f5f5f5"/><text x="284" y="98" class="arrow-label" text-anchor="middle">发射访存操作</text>
+<rect x="612" y="84" width="76" height="18" fill="#f5f5f5"/><text x="650" y="98" class="arrow-label" text-anchor="middle">地址比较</text>
+<rect x="147" y="198" width="224" height="18" fill="#f5f5f5"/><text x="259" y="212" class="arrow-label" text-anchor="middle">store 数据操作发射／SNUM</text>
+<rect x="595" y="197" width="216" height="18" fill="#f5f5f5"/><text x="703" y="211" class="arrow-label" text-anchor="middle">请求重放／较老 store 标识</text>
+<rect x="388.5" y="314" width="183" height="18" fill="#f5f5f5"/><text x="480" y="328" class="arrow-label" text-anchor="middle">尚待重放的 load 信息</text>
+<rect x="425" y="352" width="110" height="18" fill="#f5f5f5"/><text x="480" y="366" class="arrow-label" text-anchor="middle">已重新发射</text>
+<rect x="304" y="237" width="76" height="18" fill="#f5f5f5"/><text x="342" y="251" class="arrow-label" text-anchor="middle">快速重发</text>
+<rect x="519.5" y="212" width="133" height="18" fill="#f5f5f5"/><text x="586" y="226" class="arrow-label" text-anchor="middle">补齐 load 信息</text>
+<g id="us11175917b1-fig-1-rs"><rect x="40" y="78" width="190" height="72" rx="6" fill="#f5f5f5"/><rect x="40" y="78" width="190" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="135" y="104" class="node-name" text-anchor="middle">保留站（RS）</text><text x="135" y="126" class="node-detail" text-anchor="middle">选择 ready 操作发射</text></g>
+<g id="us11175917b1-fig-1-agu"><rect x="338" y="78" width="234" height="72" rx="6" fill="#f5f5f5"/><rect x="338" y="78" width="234" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="455" y="104" class="node-name" text-anchor="middle">AGU／TLB 与访存流水线</text><text x="455" y="126" class="node-detail" text-anchor="middle">地址生成和转换</text></g>
+<g id="us11175917b1-fig-1-stq"><rect x="730" y="78" width="196" height="72" rx="6" fill="#f5f5f5"/><rect x="730" y="78" width="196" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="828" y="104" class="node-name" text-anchor="middle">store 队列（STQ）</text><text x="828" y="126" class="node-detail" text-anchor="middle">按地址匹配较老 store</text></g>
+<g id="us11175917b1-fig-1-rlb"><rect x="40" y="320" width="190" height="84" rx="6" fill="#f5f5f5"/><rect x="40" y="320" width="190" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="135" y="346" class="node-name" text-anchor="middle">重放缓冲（RLB）</text><text x="135" y="368" class="node-detail" text-anchor="middle">按 store 标识匹配</text></g>
+<g id="us11175917b1-fig-1-leq"><rect x="730" y="320" width="196" height="84" rx="6" fill="#f5f5f5"/><rect x="730" y="320" width="196" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="828" y="346" class="node-name" text-anchor="middle">load 执行队列（LEQ）</text><text x="828" y="368" class="node-detail" text-anchor="middle">追踪未完成的 load</text></g>
+<text x="40" y="454" class="legend" text-anchor="start">快速重放以保留站的发射为触发，数据仍由 store 队列提供。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11175917b1-fig-1-stq">store 队列（STQ）</a> store 队列保存已执行尚未提交的 store。对会重叠的较老项，比对地址并检查数据可用性。</li><li><a href="#us11175917b1-fig-1-early_id">store 数据操作发射／SNUM</a> 来自保留站的 SNUM 带有对应 store 数据操作的发射事件，早于 store 数据写入队列。</li><li><a href="#us11175917b1-fig-1-rlb">重放缓冲（RLB）</a> 重放缓冲以内容寻址方式匹配 SNUM，条目还保存 load 标记、银行和目标寄存器等字段。</li><li><a href="#us11175917b1-fig-1-remaining">补齐 load 信息</a> 实际重发时，LEQ 可补齐未保存在重放缓冲的 load 信息。</li><li><a href="#us11175917b1-fig-1-scheduled">已重新发射</a> 重放缓冲成功发射后通知 LEQ，后者避免重复重发。</li></ul>
+  <p class="figure-evidence">原图 1、2、6、8；说明书归档段 0017、0021、0022、0023、0024、0026、0030、0031、0032、0033、0034、0035、0036、0038、0039、0047、0049、0050、0051、0052、0053、0054、0064、0065、0069、0070；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11175917B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>保留站（RS）</dt><dd>36</dd></div><div><dt>AGU／TLB 与访存流水线</dt><dd>38</dd></div><div><dt>store 队列（STQ）</dt><dd>42</dd></div><div><dt>load 执行队列（LEQ）</dt><dd>44</dd></div><div><dt>load 退休队列（LRQ）</dt><dd>46</dd></div><div><dt>重放缓冲（RLB）</dt><dd>50</dd></div><div><dt>依赖 store 标识匹配电路</dt><dd>56D</dd></div><div><dt>依赖 store 标识字段</dt><dd>66D</dd></div></dl></details>
+</figure></section><section id="states"><h2>第一次 load 执行怎样选转发、缓存访问或重放</h2><p>图 2 沿原图 7 的分支。若 store 队列中无冲突的较老 store，则按数据缓存结果查询或等待回填。若命中较老 store 且数据可转发，则直接取其数据。若只命中地址，LSU 触发重放，并尝试在重放缓冲分配条目。</p><p>对应 store 数据操作发射后，重放缓冲可以提前重新发射 load。LEQ 可补齐 load 地址或其他执行字段，并标记这条 load 已重发，以免常规路径再次选择它。图表 3 列出重放缓冲满、未匹配和仲裁失败时的不同处理。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　首次 load 进入访存流水线后怎样决定重放</h3>
+    <p id="fig-2-basis">先检查是否命中较老 store，再检查该项是否有可转发数据。确实缺数据时才申请快速重放。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="首次 load 进入访存流水线后怎样决定重放" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" role="img" aria-labelledby="us11175917b1-fig-2-svg-title us11175917b1-fig-2-svg-desc">
+<title id="us11175917b1-fig-2-svg-title">首次 load 进入访存流水线后怎样决定重放</title>
+<desc id="us11175917b1-fig-2-svg-desc">先检查是否命中较老 store，再检查该项是否有可转发数据。确实缺数据时才申请快速重放。</desc>
+<defs><marker id="us11175917b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11175917b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11175917b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11175917b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11175917b1-fig-2-lookup" d="M 480 135 L 480 199" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-2-arrow-data)"/>
+<path id="us11175917b1-fig-2-no_stq" d="M 612 255 L 704 255" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-2-arrow-data)"/>
+<path id="us11175917b1-fig-2-hit" d="M 480 311 L 480 372" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-2-arrow-data)"/>
+<path id="us11175917b1-fig-2-absent" d="M 348 434 L 272 434" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-2-arrow-main)"/>
+<path id="us11175917b1-fig-2-ready" d="M 612 434 L 704 434" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-2-arrow-data)"/>
+<rect x="497" y="149" width="114" height="18" fill="#f5f5f5"/><text x="554" y="163" class="arrow-label" text-anchor="middle">查询 store 队列</text>
+<rect x="623" y="225" width="70" height="18" fill="#f5f5f5"/><text x="658" y="239" class="arrow-label" text-anchor="middle">未命中</text>
+<rect x="492.5" y="329" width="55" height="18" fill="#f5f5f5"/><text x="520" y="343" class="arrow-label" text-anchor="middle">命中</text>
+<rect x="274.5" y="404" width="71" height="18" fill="#f5f5f5"/><text x="310" y="418" class="arrow-label" text-anchor="middle">数据未到</text>
+<rect x="621" y="404" width="74" height="18" fill="#f5f5f5"/><text x="658" y="418" class="arrow-label" text-anchor="middle">数据已到</text>
+<g id="us11175917b1-fig-2-issue"><rect x="365" y="63" width="230" height="72" rx="6" fill="#f5f5f5"/><rect x="365" y="63" width="230" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480" y="89" class="node-name" text-anchor="middle">首次发射 load</text><text x="480" y="111" class="node-detail" text-anchor="middle">地址生成及转换</text></g>
+<g id="us11175917b1-fig-2-match"><polygon points="480,199 612,255 480,311 348,255" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480" y="252" class="node-name" text-anchor="middle">命中较老 store？</text><text x="480" y="273" class="node-detail" text-anchor="middle">检查地址重叠</text></g>
+<g id="us11175917b1-fig-2-cache"><rect x="704" y="224" width="220" height="75" rx="6" fill="#f5f5f5"/><rect x="704" y="224" width="220" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814" y="250" class="node-name" text-anchor="middle">按数据缓存结果处理</text><text x="814" y="272" class="node-detail" text-anchor="middle">命中转发或等待回填</text></g>
+<g id="us11175917b1-fig-2-data"><polygon points="480,372 612,434 480,496 348,434" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480" y="431" class="node-name" text-anchor="middle">store 数据可转发？</text><text x="480" y="452" class="node-detail" text-anchor="middle">检查命中项的数据状态</text></g>
+<g id="us11175917b1-fig-2-replay"><rect x="36" y="402" width="236" height="78" rx="6" fill="#f5f5f5"/><rect x="36" y="402" width="236" height="78" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="154" y="428" class="node-name" text-anchor="middle">请求重放</text><text x="154" y="450" class="node-detail" text-anchor="middle">LEQ 记录／尝试分配 RLB</text></g>
+<g id="us11175917b1-fig-2-fwd"><rect x="704" y="402" width="220" height="78" rx="6" fill="#f5f5f5"/><rect x="704" y="402" width="220" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814" y="428" class="node-name" text-anchor="middle">转发较老 store 数据</text><text x="814" y="450" class="node-detail" text-anchor="middle">写入 load 的目标寄存器</text></g>
+<text x="36" y="541" class="legend" text-anchor="start">数据缓存缺失、TLB 缺失等可另触发重放；本图只展开 store 数据依赖。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11175917b1-fig-2-issue">首次发射 load</a> 保留站首次发射 load 后，可从保留站删掉它。执行队列负责可能的后续重放。</li><li><a href="#us11175917b1-fig-2-match">命中较老 store？</a> store 队列按地址和程序顺序找与 load 重叠的较老 store。</li><li><a href="#us11175917b1-fig-2-data">store 数据可转发？</a> 找到 store 还要检查数据是否可转发。数据不存在时，不能用这条 store 的结果。</li><li><a href="#us11175917b1-fig-2-replay">请求重放</a> 保存依赖 store 的标识，若重放缓冲有空条目则额外登记。</li><li><a href="#us11175917b1-fig-2-cache">按数据缓存结果处理</a> 没有命中较老 store 时，该 load 可沿数据缓存和缺失处理路径完成。</li></ul>
+  <p class="figure-evidence">原图 5、7；说明书归档段 0021、0023、0028、0030、0039、0063、0066、0067；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11175917B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>首次发射 load</dt><dd>70</dd></div><div><dt>查询 store 队列</dt><dd>78</dd></div><div><dt>判断是否命中较老 store</dt><dd>80</dd></div><div><dt>检查 store 数据可转发</dt><dd>82</dd></div><div><dt>转发较老 store 数据</dt><dd>84</dd></div><div><dt>请求重放</dt><dd>86</dd></div><div><dt>按数据缓存结果处理</dt><dd>88</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　匹配、仲裁和后备重放有什么边界</h3>
+    <p id="fig-3-basis">发射标识匹配只表示候选可以尝试重发。RLB 和 LEQ 还需要处理容量、流水线占用及重复发射。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件</th><th scope="col">快速路径</th><th scope="col">常规路径</th></tr></thead><tbody><tr id="fig-3-hit"><th scope="row">标识匹配且成功仲裁</th><td>RLB 重发；可由 LEQ 补齐字段</td><td>收到已重发状态后抑制重复发射</td></tr><tr id="fig-3-full"><th scope="row">RLB 满</th><td>不分配快速重放条目</td><td>LEQ 等待 store 数据阶段再选择</td></tr><tr id="fig-3-arbitration"><th scope="row">标识匹配但没获得流水线</th><td>稍后重试或释放条目</td><td>若尚未重发则继续接管</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-hit">标识匹配且成功仲裁</a> RLB 匹配 store 标识且得到可用流水线后发射，同时通知 LEQ。</li><li><a href="#fig-3-full">RLB 满</a> RLB 无可用条目时，LEQ 仍掌握依赖信息，可用常规路径重放。</li><li><a href="#fig-3-arbitration">标识匹配但没获得流水线</a> 可能发生同一 load 流水线的仲裁冲突。原文允许稍后重试或由 LEQ 处理。</li></ul>
+  <p class="figure-evidence">原图 2、6、8；说明书归档段 0032、0033、0034、0035、0036、0050、0051、0052、0053、0064、0065、0069、0070；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> </p>
+  
+</figure></section><section id="cycles"><h2>以同一次 store 数据操作发射作为计时起点</h2><p>图 4 把原图 3、4 的两种重放路径对齐。store 数据操作在第 0 拍发射。快速路径在第 1 拍匹配重放缓冲，在第 2 拍重新发射 load，第 7 拍进入数据转发级。常规路径在第 3 拍接收 store 标识，经过三拍的唤醒与仲裁，在第 6 拍重新发射，第 11 拍进入数据转发级。</p><p>两条路径从重新发射到转发都经过同一组流水级。原图的四拍差异来自提前发现依赖就绪。说明书还讨论在 store 数据操作发射的同拍完成比较，可把这项差异变成五拍。比较都限定在给出的流水级实现中。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　同一次 store 发射，快速 load 早四拍进入转发级</h3>
+    <p id="fig-4-basis">store 数据操作的第 0 拍作为共同起点。RLB 在第 2 拍重发，LEQ 在第 6 拍重发。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一次 store 发射，快速 load 早四拍进入转发级" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us11175917b1-fig-4-svg-title us11175917b1-fig-4-svg-desc">
+<title id="us11175917b1-fig-4-svg-title">同一次 store 发射，快速 load 早四拍进入转发级</title>
+<desc id="us11175917b1-fig-4-svg-desc">store 数据操作的第 0 拍作为共同起点。RLB 在第 2 拍重发，LEQ 在第 6 拍重发。</desc>
+<defs><marker id="us11175917b1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11175917b1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11175917b1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11175917b1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us11175917b1-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="246" y1="76" x2="246" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="246" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="300" y1="76" x2="300" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="354" y1="76" x2="354" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="408" y1="76" x2="408" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="462" y1="76" x2="462" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="462" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="516" y1="76" x2="516" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="570" y1="76" x2="570" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="570" y="64" class="arrow-label" text-anchor="middle">7</text>
+<line x1="624" y1="76" x2="624" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="678" y1="76" x2="678" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">9</text>
+<line x1="732" y1="76" x2="732" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">10</text>
+<line x1="786" y1="76" x2="786" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="786" y="64" class="arrow-label" text-anchor="middle">11</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">12</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us11175917b1-fig-4-store"><text x="24" y="136" class="node-name" text-anchor="start">store 数据操作</text>
+<rect x="192" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="219" y="136" class="arrow-label" text-anchor="middle">发射</text>
+<rect x="246" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="136" class="arrow-label" text-anchor="middle">RR</text>
+<rect x="300" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="327" y="136" class="arrow-label" text-anchor="middle">AT</text>
+<rect x="354" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="381" y="136" class="arrow-label" text-anchor="middle">DT</text>
+<rect x="408" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="136" class="arrow-label" text-anchor="middle">DD</text>
+<rect x="462" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="489" y="136" class="arrow-label" text-anchor="middle">FW</text>
+<rect x="516" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="543" y="136" class="arrow-label" text-anchor="middle">后 1</text>
+<rect x="570" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="136" class="arrow-label" text-anchor="middle">后 2</text>
+<rect x="624" y="112" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="651" y="136" class="arrow-label" text-anchor="middle">后 3</text>
+<circle cx="354" cy="131" r="5" fill="#4f5d75"/>
+<text x="354" y="171" class="arrow-label" text-anchor="end">向 LEQ 提供标识</text></g>
+<g id="us11175917b1-fig-4-fast"><text x="24" y="228" class="node-name" text-anchor="start">RLB 重放</text>
+<rect x="246" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="228" class="arrow-label" text-anchor="middle">匹配</text>
+<rect x="300" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="327" y="228" class="arrow-label" text-anchor="middle">发射</text>
+<rect x="354" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="381" y="228" class="arrow-label" text-anchor="middle">RR</text>
+<rect x="408" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="228" class="arrow-label" text-anchor="middle">AT</text>
+<rect x="462" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="489" y="228" class="arrow-label" text-anchor="middle">DT</text>
+<rect x="516" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="543" y="228" class="arrow-label" text-anchor="middle">DD</text>
+<rect x="570" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="228" class="arrow-label" text-anchor="middle">FW</text>
+<circle cx="570" cy="223" r="5" fill="#bf4520"/>
+<text x="570" y="263" class="arrow-label" text-anchor="end">进入转发级</text></g>
+<g id="us11175917b1-fig-4-normal"><text x="24" y="320" class="node-name" text-anchor="start">LEQ 重放</text>
+<rect x="354" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="381" y="320" class="arrow-label" text-anchor="middle">唤醒</text>
+<rect x="408" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="320" class="arrow-label" text-anchor="middle">仲裁 1</text>
+<rect x="462" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="489" y="320" class="arrow-label" text-anchor="middle">仲裁 2</text>
+<rect x="516" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="543" y="320" class="arrow-label" text-anchor="middle">发射</text>
+<rect x="570" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="320" class="arrow-label" text-anchor="middle">RR</text>
+<rect x="624" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="651" y="320" class="arrow-label" text-anchor="middle">AT</text>
+<rect x="678" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="705" y="320" class="arrow-label" text-anchor="middle">DT</text>
+<rect x="732" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="320" class="arrow-label" text-anchor="middle">DD</text>
+<rect x="786" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="813" y="320" class="arrow-label" text-anchor="middle">FW</text>
+<circle cx="786" cy="315" r="5" fill="#4f5d75"/>
+<text x="786" y="355" class="arrow-label" text-anchor="end">进入转发级</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">第 0 拍为 store 发射。RR 读寄存器，AT 地址生成与转换，DT 标签查询，DD 读数据，FW 转发。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11175917b1-fig-4-store">store 数据操作</a> store 数据操作先发射，再经过寄存器读取等流水级。原图 3 在 DT 级向 LEQ 提供 SNUM。</li><li><a href="#us11175917b1-fig-4-fast">RLB 重放</a> store 数据操作处在 RR 级时，RLB 完成标识匹配。下一拍重发 load，随后到第 7 拍进入 FW 转发级。</li><li><a href="#us11175917b1-fig-4-normal">LEQ 重放</a> LEQ 在 store 的 DT 级开始唤醒，再走两级仲裁，因而在第 6 拍重发 load，第 11 拍进入 FW。</li><li><a href="#us11175917b1-fig-4-axis">时间刻度</a> 0 拍为进入 store 数据操作的发射级。图画各级所在周期。4 拍差值可在两个 load 的发射级和转发级同时读取。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0032、0034、0055、0056、0057、0058、0059、0060、0061、0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11175917B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>load 流水线</dt><dd>60</dd></div><div><dt>store 流水线</dt><dd>62</dd></div></dl></details>
+</figure></section><section id="fields"><h2>RLB 条目的哪些字段进入匹配、撤销和流水线选择</h2><p>原图 6 把 RLB 条目拆成有效位、重排序缓冲区标签、LEQ 存储体号、依赖 store 标识、load 目的寄存器地址和数据缓存索引。只有其中的 store 标识用于检测等待的 store 数据操作已发射。LEQ 存储体号在给出的实现中同时选择重发的 load 流水线。重排序缓冲区标签可标识要随流水线清除的 load。</p><p>原图 2 同时给出另一部分 load 信息从 LEQ 进入流水线的连线，因此 RLB 不必保存全部执行字段。RLB 发射成功后可释放条目，并通知 LEQ 这条 load 已重发。如果未争到流水线，可以由 LEQ 走常规重发，也可以短暂再试。图 5 展开的是一次实际能够重发的条目。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射</h3>
+    <p id="fig-5-basis">依赖 store 标识提供匹配，LEQ 存储体决定流水线选择。RLB 和 LEQ 两边的数据共同描述重发的 load。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 645" role="img" aria-labelledby="us11175917b1-fig-5-svg-title us11175917b1-fig-5-svg-desc">
+<title id="us11175917b1-fig-5-svg-title">一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射</title>
+<desc id="us11175917b1-fig-5-svg-desc">依赖 store 标识提供匹配，LEQ 存储体决定流水线选择。RLB 和 LEQ 两边的数据共同描述重发的 load。</desc>
+<defs><marker id="us11175917b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11175917b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11175917b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11175917b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11175917b1-fig-5-id" d="M 150 161 L 150 220 Q 150 228 158 228 L 417 228 Q 425 228 425 236 L 425 308" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-main)"/>
+<path id="us11175917b1-fig-5-tag" d="M 478 161 L 478 308" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-pipe" d="M 815 161 L 815 220 Q 815 228 807 228 L 545 228 Q 537 228 537 236 L 537 308" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-issue" d="M 455 384 L 455 488" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-main)"/>
+<path id="us11175917b1-fig-5-rlbdat" d="M 266 524 L 363 524" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-leqdat" d="M 713 524 L 591 524" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-notify" d="M 591 363 L 812 363 Q 820 363 820 371 L 820 488" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11175917b1-fig-5-arrow-return)"/>
+<rect x="227" y="196" width="94" height="18" fill="#f5f5f5"/><text x="274" y="210" class="arrow-label" text-anchor="middle">匹配候选</text>
+<rect x="491.5" y="181" width="129" height="18" fill="#f5f5f5"/><text x="556" y="195" class="arrow-label" text-anchor="middle">候选的 load 标识</text>
+<rect x="633" y="197" width="108" height="18" fill="#f5f5f5"/><text x="687" y="211" class="arrow-label" text-anchor="middle">指定流水线</text>
+<rect x="277.5" y="420" width="145" height="18" fill="#f5f5f5"/><text x="350" y="434" class="arrow-label" text-anchor="middle">发射已仲裁的 load</text>
+<rect x="273" y="494" width="84" height="18" fill="#f5f5f5"/><text x="315" y="508" class="arrow-label" text-anchor="middle">RLB 字段</text>
+<rect x="609" y="494" width="86" height="18" fill="#f5f5f5"/><text x="652" y="508" class="arrow-label" text-anchor="middle">其余字段</text>
+<rect x="652.5" y="332" width="103" height="18" fill="#f5f5f5"/><text x="704" y="346" class="arrow-label" text-anchor="middle">已重发状态</text>
+<g id="us11175917b1-fig-5-match"><rect x="36" y="85" width="230" height="76" rx="6" fill="#f5f5f5"/><rect x="36" y="85" width="230" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="111" class="node-name" text-anchor="middle">有效位与依赖 store 标识</text><text x="151" y="133" class="node-detail" text-anchor="middle">与保留站提供的 SNUM 匹配</text></g>
+<g id="us11175917b1-fig-5-robt"><rect x="364" y="85" width="224" height="76" rx="6" fill="#f5f5f5"/><rect x="364" y="85" width="224" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476" y="111" class="node-name" text-anchor="middle">重排序缓冲区标签</text><text x="476" y="133" class="node-detail" text-anchor="middle">标识 load，可用于清除</text></g>
+<g id="us11175917b1-fig-5-bank"><rect x="713" y="85" width="213" height="76" rx="6" fill="#f5f5f5"/><rect x="713" y="85" width="213" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819.5" y="111" class="node-name" text-anchor="middle">LEQ 存储体号</text><text x="819.5" y="133" class="node-detail" text-anchor="middle">确定候选 load 的流水线</text></g>
+<g id="us11175917b1-fig-5-pick"><rect x="363" y="308" width="228" height="76" rx="6" fill="#f5f5f5"/><rect x="363" y="308" width="228" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477" y="334" class="node-name" text-anchor="middle">重发选择与仲裁</text><text x="477" y="356" class="node-detail" text-anchor="middle">成功取得指定流水线</text></g>
+<g id="us11175917b1-fig-5-local"><rect x="36" y="488" width="230" height="74" rx="6" fill="#f5f5f5"/><rect x="36" y="488" width="230" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="514" class="node-name" text-anchor="middle">RLB 自带的执行字段</text><text x="151" y="536" class="node-detail" text-anchor="middle">目的寄存器与缓存索引</text></g>
+<g id="us11175917b1-fig-5-fill"><rect x="363" y="488" width="228" height="74" rx="6" fill="#f5f5f5"/><rect x="363" y="488" width="228" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="477" y="514" class="node-name" text-anchor="middle">指定 load 流水线</text><text x="477" y="536" class="node-detail" text-anchor="middle">在所需流水级合并字段</text></g>
+<g id="us11175917b1-fig-5-leq"><rect x="713" y="488" width="213" height="74" rx="6" fill="#f5f5f5"/><rect x="713" y="488" width="213" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819.5" y="514" class="node-name" text-anchor="middle">对应 LEQ 存储体</text><text x="819.5" y="536" class="node-detail" text-anchor="middle">提供其余执行字段</text></g>
+<text x="36" y="606" class="legend" text-anchor="start">按原图 2、6、8 的一项实现。原文允许改变 RLB 与 LEQ 各自保存的字段。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11175917b1-fig-5-match">有效位与依赖 store 标识</a> RLB 有效表项保存的依赖 SNUM 与保留站送来的 store 数据操作标识比较。两者相同才得到相应 load 候选。</li><li><a href="#us11175917b1-fig-5-robt">重排序缓冲区标签</a> 重排序缓冲区标签可标识要从 RLB 清除的操作，也可以在重发时一起送出。</li><li><a href="#us11175917b1-fig-5-bank">LEQ 存储体号</a> 示例中 LEQ 存储体与 load 流水线一一对应。因此 RLB 用已存的存储体号指定该候选的入口。</li><li><a href="#us11175917b1-fig-5-fill">指定 load 流水线</a> 目的寄存器与数据缓存索引可来自 RLB，其余字段可在真正需要的流水级由 LEQ 补齐。</li><li><a href="#us11175917b1-fig-5-notify">已重发状态</a> 实际重发后通知 LEQ 标记该 load，以免后续 store 数据到达时再走另一条重发路径。</li></ul>
+  <p class="figure-evidence">原图 2、6、8；说明书归档段 0031、0033、0034、0035、0036、0047、0049、0050、0051、0052、0053、0064、0065、0068、0069、0070；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11175917B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>RLB 有效位</dt><dd>66A</dd></div><div><dt>重排序缓冲区标签</dt><dd>66B</dd></div><div><dt>LEQ 存储体号</dt><dd>66C</dd></div><div><dt>依赖 store 标识 SNUM</dt><dd>66D</dd></div><div><dt>load 目的物理寄存器地址</dt><dd>66E</dd></div><div><dt>数据缓存索引</dt><dd>66F</dd></div><div><dt>仲裁并发射重放的 load</dt><dd>96/98</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US11175917B1</code><span>美国授权专利</span><time datetime="2021-11-16">2021-11-16</time></p>
-  <h1>并行重放缓冲加快等待 store 数据的 load</h1>
-  <p class="english-title" lang="en">Buffer for replayed loads in parallel with reservation station for rapid rescheduling</p>
-  <p class="document-question">load 的地址已匹配到旧 store，数据还没到，何时可以重发？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">重放缓冲记录相依 load 与 store 的标识，在保留站发射该 store 的数据操作时触发 load 重执行。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>首次执行已有 store queue 地址命中，所需 store 数据尚未写入，且重放缓冲能分配表项。</dd></div><div><dt>验证方法</dt><dd>用同一笔 store 数据操作和同一 load 端口排程，对照发射时触发与写入 store queue 后触发。记录 load 重发拍和首次能实际转发数据的拍。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11175917B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">store 的地址和数据由不同操作产生。load 查到应读的旧 store 时，该 store 的数据可能还未写入队列。</p>
-    <p>load 首次查到旧 store 但数据未到时，LSU 触发重放。并列于保留站的重放缓冲记录两项操作的标识，监听保留站发射对应的 store 数据操作，并尝试提前重发该 load。</p>
-    <ol class="walkthrough"><li><h3>记录阻塞 load 的 store</h3><p>第一次执行时若地址匹配、所需数据还没到，load 必须重放。重放缓冲用这条 load 与阻塞它的 store 的标识定位依赖。</p></li><li><h3>在两张表保留重放所需信息</h3><p>RLB 表项保存匹配所需的 store 标识和 load 标识，也可带目标寄存器等字段。普通 load 执行队列保存其余字段，在重新发射时补齐。</p></li><li><h3>用数据操作发射作为触发点</h3><p>保留站发射 store 数据操作时，缓冲用它的序号找出关联的 load，并可向 load 流水线提前发出重执行请求。</p></li><li><h3>未能提前调度时走普通路径</h3><p>没有分到 RLB 表项时，load 留在 LEQ，等普通路径检测到相应 store 数据后重新发射。原图 3 的 LEQ 在 store 数据操作的 DT 阶段取得 SNUM，并经过重放仲裁。若 RLB 已经成功安排发射，LEQ 标记该 load，避免重复重发。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 允许保留站在首次发射后删除原 load。权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 把重执行所需字段分在重放缓冲和 load 队列，重新执行时由后者把剩余字段送入流水线。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>RLB</dt><dd>Replayed Load Buffer。保存因 store 缺数据而要重发的 load 信息。</dd></div><div><dt>LEQ</dt><dd>Load Execution Queue。保存 load 的执行状态并提供常规重发路径。</dd></div><div><dt>SNUM</dt><dd>store 操作的序号，用来把该 store 的数据操作与等待它的 load 配对。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">第一次查到 store 时还取不到数据</a></li><li><a href="#fig-1">重放缓冲从保留站等来发射标识</a></li><li><a href="#fig-4">同一 store 发射基准下，快速重放提前四拍</a></li><li><a href="#fig-3">快速和普通重放等待不同事件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">第一次查到 store 时还取不到数据</h3></div>
-    <a class="paper-open" href="../mechanisms/US11175917B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="第一次查到 store 时还取不到数据">
-    <img class="paper-image native-image" src="../mechanisms/US11175917B1/fig-2/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="第一次查到 store 时还取不到数据。load 需要重放时，缓冲先保存 L 和 S 的标识。之后由 S 对应的数据操作发射触发 L。">
-  </div>
-  <figcaption>
-    <span>load 需要重放时，缓冲先保存 L 和 S 的标识。之后由 S 对应的数据操作发射触发 L。</span>
-    <span class="figure-evidence">说明书图 5–8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/fe/e9/01c1bf31f4f8b5/US11175917.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">重放缓冲从保留站等来发射标识</h3></div>
-    <a class="paper-open" href="../mechanisms/US11175917B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="重放缓冲从保留站等来发射标识">
-    <img class="paper-image native-image" src="../mechanisms/US11175917B1/fig-1/diagram.svg" width="764" height="300"
-         style="--paper-width:764px" alt="重放缓冲从保留站等来发射标识。load 流水线把需要重放的操作登记到 RLB。保留站的 store 发射标识触发匹配，实际的数据仍从 store 队列转发。">
-  </div>
-  <figcaption>
-    <span>load 流水线把需要重放的操作登记到 RLB。保留站的 store 发射标识触发匹配，实际的数据仍从 store 队列转发。</span>
-    <span class="figure-evidence">说明书图 1–2、6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/fe/e9/01c1bf31f4f8b5/US11175917.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">同一 store 发射基准下，快速重放提前四拍</h3></div>
-    <a class="paper-open" href="../mechanisms/US11175917B1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一 store 发射基准下，快速重放提前四拍">
-    <img class="paper-image native-image" src="../mechanisms/US11175917B1/fig-4/diagram.svg" width="788" height="776"
-         style="--paper-width:788px" alt="同一 store 发射基准下，快速重放提前四拍。两条 load 路径与同一次 store 数据操作发射对齐。快速路径在第 2 拍重发、第 7 拍转发，普通路径分别在第 6 拍和第 11 拍。周期数对应原图 3、4 的流水线实施例。">
-  </div>
-  <figcaption>
-    <span>两条 load 路径与同一次 store 数据操作发射对齐。快速路径在第 2 拍重发、第 7 拍转发，普通路径分别在第 6 拍和第 11 拍。周期数对应原图 3、4 的流水线实施例。</span>
-    <span class="figure-evidence">原文图 3–4 和正文的四拍对照，采用说明书示例。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/fe/e9/01c1bf31f4f8b5/US11175917.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">快速和普通重放等待不同事件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件</th><th scope="col">观察事件</th><th scope="col">重发路径</th></tr></thead><tbody><tr><th scope="row">捕获且成功调度</th><td class="emphasis">保留站发出对应数据操作</td><td>RLB 重发，LEQ 记为已重发</td></tr><tr><th scope="row">RLB 满，未登记</th><td>普通路径检测到 store 更新</td><td>由 LEQ 调度</td></tr><tr><th scope="row">已捕获但端口不可用</th><td>RLB 未能安排该拍重发</td><td>可放弃让 LEQ 接手，也可稍后重试</td></tr></tbody></table>
-  <figcaption>
-    <span>重放缓冲未分配时，普通路径等 store 数据写入队列。两条路径都必须取得相应 store 的较新值。</span>
-    <span class="figure-evidence">权 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>，说明书图 3–4。 · <a href="https://patentimages.storage.googleapis.com/09/fe/e9/01c1bf31f4f8b5/US11175917.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>在发射时匹配标识</dt><dd>提前重发依赖读 <span class="subdued">原图 4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>分存重执行字段</dt><dd>缩小重放缓冲需求 <span class="subdued">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>快唤醒的直接输入是 store 数据操作的发射标识。一条 load 的地址、控制和队列状态仍需在重执行时归并。节省的等待要扣除字段汇合及 load 端口仲裁。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若一笔 store 的数据操作恰好唤醒多条匹配的 load，各项会同时竞争有限的重发端口。即使检测提前，排在后面的 load 也可能已经错过能节省的窗口。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>沿用图 3、4 的时序。load L 首次命中 store S 的地址，但缺数据。分别让 L 使用重放缓冲和普通队列。</dd></div><div><dt>处理结果</dt><dd>快速路径在 store 数据操作发射时匹配标识。图中的 L 比普通路径早 4 个周期发射并收到转发数据。</dd></div><div><dt>结果解读</dt><dd>4 个周期来自该说明书时序。比较两条路径时使用相同的 store 发射拍、依赖关系和转发端口调度。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、14 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>权利要求 1。原图 5–8 对应首次缺数据、配对登记和保留站发射触发重放。</p>
+  <p>权利要求 1。原图 5–8 对应首次缺数据、配对登记和保留站发射触发重放。保留站把对应 store 数据操作送往执行。重放缓冲用这个先行事件触发 load 重发，实际转发仍需正确的 store 数据。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20reservation%20station%20configured%20to%20issue%20a%20first%20load%20operation%20for%20execution">F1</a></th><td>保留站发射第一条 load。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20store%20queue%20configured%20to%20hold%20store%20operations%20that%20have%20been%20executed%20but%20have%20not%20committed">F2</a></th><td>store 队列保存已执行但未提交的 store。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20LSU%2020%20may%20also%20implement%20one%20or%20more%20store%20pipes%2C%20and%20in%20particular%20may%20implement">说明书 0039</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=cause%20a%20replay%20of%20the%20first%20load%20operation%20based%20on%20the%20detection%20of%20a%20hit%20on">F3</a></th><td>load 命中旧 store 且数据未就绪时触发重放。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20replayed%20load%20buffer%20coupled%20in%20parallel%20with%20the%20reservation%20station">F4</a></th><td>重放缓冲和保留站并接。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%204%20%2C%20on%20the%20other%20hand%2C%20is%20a%20timing%20diagram%20for%20a%20store%20data%20op">说明书 0061</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operand%20%28the%20store%20data%20operand%29%20for%20the%20store">说明书 0069</a> · 原图 4 · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=capture%20an%20identifier%20of%20the%20first%20load%20operation%20and%20the%20first%20store%20operation%20based%20on%20the">F5</a></th><td>为需要重放的 load 保留与其依赖的 store 标识。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%206%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20an%20exemplary%20entry%2064%20that%20may">说明书 0064</a> · 原图 5 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=monitor%20the%20reservation%20station%20for%20issuance%20of%20a%20first%20store%20data%20operation%20corresponding%20to%20the%20first">F6</a></th><td>重放缓冲检测保留站发射相应 store 数据操作，并据此重发 load。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%204%20%2C%20on%20the%20other%20hand%2C%20is%20a%20timing%20diagram%20for%20a%20store%20data%20op">说明书 0061</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operand%20%28the%20store%20data%20operand%29%20for%20the%20store">说明书 0069</a> · 原图 4 · 原图 8</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20reservation%20station%20configured%20to%20issue%20a%20first%20load%20operation%20for%20execution">F1</a></th><td>保留站发射第一条 load。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20store%20queue%20configured%20to%20hold%20store%20operations%20that%20have%20been%20executed%20but%20have%20not%20committed">F2</a></th><td>store 队列保存已执行但未提交的 store。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20LSU%2020%20may%20also%20implement%20one%20or%20more%20store%20pipes%2C%20and%20in%20particular%20may%20implement">说明书 0039</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=cause%20a%20replay%20of%20the%20first%20load%20operation%20based%20on%20the%20detection%20of%20a%20hit%20on">F3</a></th><td>load 命中较老 store 且数据未就绪时触发重放。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=a%20replayed%20load%20buffer%20coupled%20in%20parallel%20with%20the%20reservation%20station">F4</a></th><td>重放缓冲和保留站并接。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%204%20%2C%20on%20the%20other%20hand%2C%20is%20a%20timing%20diagram%20for%20a%20store%20data%20op">说明书 0061</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operand%20%28the%20store%20data%20operand%29%20for%20the%20store">说明书 0069</a> · 原图 4 · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=capture%20an%20identifier%20of%20the%20first%20load%20operation%20and%20the%20first%20store%20operation%20based%20on%20the">F5</a></th><td>为需要重放的 load 保留与其依赖的 store 标识。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%206%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20an%20exemplary%20entry%2064%20that%20may">说明书 0064</a> · 原图 5 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=monitor%20the%20reservation%20station%20for%20issuance%20of%20a%20first%20store%20data%20operation%20corresponding%20to%20the%20first">F6</a></th><td>重放缓冲检测保留站发射相应 store 数据操作，并据此重发 load。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%204%20%2C%20on%20the%20other%20hand%2C%20is%20a%20timing%20diagram%20for%20a%20store%20data%20op">说明书 0061</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operand%20%28the%20store%20data%20operand%29%20for%20the%20store">说明书 0069</a> · 原图 4 · 原图 8</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
   <h4 id="independent-9-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></h4>
@@ -137,48 +241,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=issuing%20a%20first%20load%20operation%20for%20execution%20from%20a%20reservation%20station">F12</a></th><td>保留站首先正常发射 load。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=detecting%20a%20hit%20on%20a%20first%20store%20operation%20in%20a%20store%20queue%20by%20the%20first%20load">F13</a></th><td>load 首次执行时发现 store 队列地址命中。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=replaying%20the%20first%20load%20operation%20based%20on%20the%20hit%20on%20the%20first%20store%20operation%20and%20a">F14</a></th><td>匹配项的数据尚不可用时，触发此次 load 重放。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operands%20for%20the%20load%20op%20are%20available%2C%20and">说明书 0067</a> · 原图 5 · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=capturing%20an%20identifier%20of%20the%20first%20load%20operation%20and%20the%20first%20store%20operation%20in%20a%20replayed">F15</a></th><td>并接于保留站的 RLB 记录配对的 load 和 store 标识。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%205%20is%20a%20timing%20diagram%20of%20a%20load%20op%20during%20initial%20execute%2C%20when%20issued%20from">说明书 0063</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%206%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20an%20exemplary%20entry%2064%20that%20may">说明书 0064</a> · 原图 5 · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=issuing%20the%20first%20load%20operation%20for%20reexecution%20based%20on%20issuance%20of%20a%20first%20store%20data%20operation">F16</a></th><td>保留站发射用于向队列写入数据的操作时，触发关联 load 的重发。</td><td><a href="https://patents.google.com/patent/US11175917B1/en#:~:text=FIG.%204%20%2C%20on%20the%20other%20hand%2C%20is%20a%20timing%20diagram%20for%20a%20store%20data%20op">说明书 0061</a> · <a href="https://patents.google.com/patent/US11175917B1/en#:~:text=The%20RS%2036%20may%20determine%20that%20the%20source%20operand%20%28the%20store%20data%20operand%29%20for%20the%20store">说明书 0069</a> · 原图 4 · 原图 8</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>权利要求 1。原图 5–8 对应首次缺数据、配对登记和保留站发射触发重放。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>保留站首次发射 load 后，删除其中原有的 load 项。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>把描述同一 load 的信息分存于重放缓冲和 load 队列。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>在 load 重执行时，load 队列把剩余字段送入访存流水线。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>RLB 满时第二条 load 不被捕获，改由 load 队列在相应 store 更新后调度。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>普通路径检测到 store 队列更新的流水级晚于重放缓冲检测到数据操作发射的流水级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>首条 load 因匹配 store 而缺数据时，为它分配一个重放缓冲项。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>让命中另一条 store 并被重放的第二条 load 占用另一缓冲项。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>保留站发射后删掉原 load；重放缓冲记录等待配对，按数据操作发射时点重发。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>把描述 load 的数据分存于重放缓冲和 load 队列。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>重执行时由 load 队列把剩余字段送入访存流水线。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>重放缓冲满时，第二条 load 等相应 store 更新后由 load 队列重发。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>store 队列的更新在比快速路径检测发射更晚的流水级被看到。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>检测 load 命中旧 store 但缺数据后记录配对，按保留站发出对应 store 数据操作的事件重发。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>拆分存放 load 字段，并在重发时从 load 队列送入剩余字段。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第二条 load 因重放缓冲已满未被记录时，等其依赖的 store 队列更新，再从 load 队列重发。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>首次发射以后，在保留站删掉这条 load。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>首条 load 因匹配 store 但缺数据而重放时，为它分配缓冲项。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>第二条 load 命中另一条 store 要重放时，再分配一个重放缓冲项。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>重放缓冲直接监视保留站，检测对应 store 数据操作的发射。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>权利要求 1。原图 5–8 对应首次缺数据、配对登记和保留站发射触发重放。保留站把对应 store 数据操作送往执行。重放缓冲用这个先行事件触发 load 重发，实际转发仍需正确的 store 数据。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>保留站首次发射 load 后，删除其中原有的 load 项。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>把描述同一 load 的信息分存于重放缓冲和 load 队列。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>在 load 重执行时，load 队列把剩余字段送入访存流水线。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>RLB 满时第二条 load 不被捕获，改由 load 队列在相应 store 更新后调度。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>普通路径检测到 store 队列更新的流水级晚于重放缓冲检测到数据操作发射的流水级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>首条 load 因匹配 store 而缺数据时，为它分配一个重放缓冲项。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>让命中另一条 store 并被重放的第二条 load 占用另一缓冲项。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>保留站发射后删掉原 load；重放缓冲记录等待配对，按数据操作发射时点重发。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>把描述 load 的数据分存于重放缓冲和 load 队列。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>重执行时由 load 队列把剩余字段送入访存流水线。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>重放缓冲满时，第二条 load 等相应 store 更新后由 load 队列重发。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>store 队列的更新在比快速路径检测发射更晚的流水级被看到。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>检测 load 命中较老 store 但缺数据后记录配对，按保留站发出对应 store 数据操作的事件重发。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>拆分存放 load 字段，并在重发时从 load 队列送入剩余字段。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第二条 load 因重放缓冲已满未被记录时，等其依赖的 store 队列更新，再从 load 队列重发。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>首次发射以后，在保留站删掉这条 load。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>首条 load 因匹配 store 但缺数据而重放时，为它分配缓冲项。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>第二条 load 命中另一条 store 要重放时，再分配一个重放缓冲项。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>重放缓冲直接监视保留站，检测对应 store 数据操作的发射。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>地址命中而数据不可用时，用标识记录依赖。识别到对应的 store 数据操作已发射，就触发 load 重执行。</dd></div><div><dt>说明书图 3–5</dt><dd>图 3 到图 4 对照了初次执行与两条重放路径。该实施例的快速路径早 4 拍。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11175917B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>load 的其余字段可以留在普通队列。重放缓冲满时，普通队列可以在 store 数据写入后重新调度 load。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11175917B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11416254B2.html#engineering">同一解码组内的零额外周期 load 旁路</a>
-<p>US11416254B2 在同一解码组内检查较早的 store 和后续 load 是否访问同一位置，并确认中间没有指令改写所用的寻址寄存器。符合资格时，重命名器把 load 目的映射到 store 的数据源物理寄存器。US11175917B1 在执行期命中存储队列却没拿到数据时，记录配对标识，等相应的 store 数据操作发射后触发 load 重放。</p></li></ul>
-    <p><a href="../index.html?patent=US11175917B1#knowledge">在全量关系图上定位 US11175917B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2020-09-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2020-09-11</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2021-11-16</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/018,875</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Mridul Agarwal、Kulin N. Kothari、Nikhil Gupta</dd></div><div><dt>分类号</dt><dd>G06F9/30043、G06F9/3861、G06F9/3834、G06F9/3838、G06F9/4881</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11175917B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11175917B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 106 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8、图 9、图 10。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11175917B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

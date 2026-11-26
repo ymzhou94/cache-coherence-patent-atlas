@@ -1,119 +1,169 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12248350B2 跨裸片事务如何唤醒互连 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>跨裸片事务发出之前，先恢复本端并等远端就绪 · US12248350B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12248350B2</code> · <a href="https://eureka.patsnap.com/patent/US12248350B2">专利全文</a></p>
+<h1>跨裸片事务发出之前，先恢复本端并等远端就绪</h1><p class="reading-question">软件对片内外使用同一事务协议时，互连休眠后第一次跨裸片访问怎样在正确时点发出？</p>
+<p class="reading-answer">本端用仍活动的电路识别远端目的，恢复本端接口后发异步唤醒。发出事务前可等目标端、全部接口或指定数量的就绪应答。进入低功耗前还要处理在途事务和转发拓扑。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-03-11</dd></div><div><dt>申请号</dt><dd>US18/174,985</dd></div><div><dt>最早优先权</dt><dd>2021-05-12</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Dany Davidov、Misbah RAMADAN、Itamar Rozen、Tzach Zemer</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#wake-path">检测、恢复与真实事务由不同路径承担</a></li><li><a href="#ack">唤醒应答要满足实际转发范围</a></li><li><a href="#entry">进入低功耗前，要等在途事务发完或否决本轮</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="wake-path"><h2>检测、恢复与真实事务由不同路径承担</h2><p>图 1 的本端网络交换电路依据目的地址区分片内和跨裸片访问。软件仍可用相同事务协议访问两侧的代理。硬件要识别跨裸片目的，在供电或时钟已门控时保持一条检测路径。权利要求 18 指出可保留交换电路，说明书也举例让少量接口逻辑继续工作。</p><p>图 2 沿真正的发包顺序往下。先由本端 PMU 恢复本端网络电路，本端接口才驱动异步唤醒线。远端可在网络时钟门控时识别该跳变，再恢复供电、时钟及必要状态。远端确认可以接收事务后，本端才发送原来等待的包。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　哪些逻辑仍能识别远端访问和异步唤醒</h3>
+    <p id="fig-1-basis">本端在低功耗下识别需要跨裸片的事务，先恢复自己的互连接口。远端由时钟关闭时仍可检测的唤醒路径恢复接口。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="哪些逻辑仍能识别远端访问和异步唤醒" style="--figure-width:1340px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 719" role="img" aria-labelledby="us12248350b2-fig-1-svg-title us12248350b2-fig-1-svg-desc">
+<title id="us12248350b2-fig-1-svg-title">哪些逻辑仍能识别远端访问和异步唤醒</title>
+<desc id="us12248350b2-fig-1-svg-desc">本端在低功耗下识别需要跨裸片的事务，先恢复自己的互连接口。远端由时钟关闭时仍可检测的唤醒路径恢复接口。</desc>
+<defs><marker id="us12248350b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12248350b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12248350b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12248350b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12248350b2-fig-1-bus" d="M 274 158 L 337 158" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-data)"/>
+<path id="us12248350b2-fig-1-queue" d="M 588 155 L 671 155" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-data)"/>
+<path id="us12248350b2-fig-1-notice" d="M 466 218 L 466 387" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-1-arrow-control)"/>
+<path id="us12248350b2-fig-1-enable-local" d="M 594 433 L 793 433 Q 801 433 801 425 L 801 218" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-main)"/>
+<path id="us12248350b2-fig-1-transaction" d="M 912 151 L 1043 151" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-main)"/>
+<path id="us12248350b2-fig-1-ack" d="M 1043 192 L 912 192" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-1-arrow-return)"/>
+<path id="us12248350b2-fig-1-wake" d="M 862 218 L 862 305 Q 862 313 870 313 L 1176 313 Q 1184 313 1184 321 L 1184 387" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-1-arrow-control)"/>
+<path id="us12248350b2-fig-1-enable-remote" d="M 1233 387 L 1233 218" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-main)"/>
+<path id="us12248350b2-fig-1-deliver" d="M 1299 171 L 1312 171 Q 1320 171 1320 179 L 1320 640 Q 1320 648 1312 648 L 1299 648" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-1-arrow-main)"/>
+<rect x="279.5" y="133" width="55" height="18" fill="#f5f5f5"/><text x="307" y="147" class="arrow-label" text-anchor="middle">事务</text>
+<rect x="592" y="129" width="76" height="18" fill="#f5f5f5"/><text x="630" y="143" class="arrow-label" text-anchor="middle">远端事务</text>
+<rect x="483.5" y="305" width="119" height="18" fill="#f5f5f5"/><text x="543" y="319" class="arrow-label" text-anchor="middle">需用本端互连</text>
+<rect x="659.5" y="408" width="97" height="18" fill="#f5f5f5"/><text x="708" y="422" class="arrow-label" text-anchor="middle">恢复本端</text>
+<rect x="923" y="125" width="110" height="18" fill="#f5f5f5"/><text x="978" y="139" class="arrow-label" text-anchor="middle">发送真实事务</text>
+<rect x="924" y="166" width="108" height="18" fill="#f5f5f5"/><text x="978" y="180" class="arrow-label" text-anchor="middle">远端就绪应答</text>
+<rect x="968" y="288" width="128" height="18" fill="#f5f5f5"/><text x="1032" y="302" class="arrow-label" text-anchor="middle">异步唤醒边沿</text>
+<rect x="1237" y="314" width="74" height="18" fill="#f5f5f5"/><text x="1274" y="328" class="arrow-label" text-anchor="middle">恢复远端</text>
+<rect x="1166.5" y="561" width="141" height="18" fill="#f5f5f5"/><text x="1237" y="575" class="arrow-label" text-anchor="middle">转送已接收事务</text>
+<g id="us12248350b2-fig-1-src-task"><rect x="43" y="120" width="231" height="77" rx="6" fill="#f5f5f5"/><rect x="43" y="120" width="231" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="158.5" y="146" class="node-name" text-anchor="middle">本端发起电路</text><text x="158.5" y="168" class="node-detail" text-anchor="middle">CPU 或其他互连事务源</text></g>
+<g id="us12248350b2-fig-1-lookup"><rect x="337" y="120" width="251" height="98" rx="6" fill="#f5f5f5"/><rect x="337" y="120" width="251" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="462.5" y="146" class="node-name" text-anchor="middle">本端地址判定与转发</text><text x="462.5" y="168" class="node-detail" text-anchor="middle">网络交换电路可保持活动</text><text x="462.5" y="186" class="node-detail" text-anchor="middle">用目的地址识别远端访问</text></g>
+<g id="us12248350b2-fig-1-local"><rect x="671" y="120" width="241" height="98" rx="6" fill="#f5f5f5"/><rect x="671" y="120" width="241" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="791.5" y="146" class="node-name" text-anchor="middle">本端互连接口</text><text x="791.5" y="168" class="node-detail" text-anchor="middle">低功耗可门控时钟或供电</text></g>
+<g id="us12248350b2-fig-1-remote"><rect x="1043" y="120" width="256" height="98" rx="6" fill="#f5f5f5"/><rect x="1043" y="120" width="256" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1171" y="146" class="node-name" text-anchor="middle">远端互连接口</text><text x="1171" y="168" class="node-detail" text-anchor="middle">恢复可接收事务后回确认</text></g>
+<g id="us12248350b2-fig-1-pmu-a"><rect x="337" y="387" width="257" height="99" rx="6" fill="#f5f5f5"/><rect x="337" y="387" width="257" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="465.5" y="413" class="node-name" text-anchor="middle">本端电源管理电路</text><text x="465.5" y="435" class="node-detail" text-anchor="middle">接地址判定通知</text><text x="465.5" y="453" class="node-detail" text-anchor="middle">恢复本端互连时钟或供电</text></g>
+<g id="us12248350b2-fig-1-pmu-b"><rect x="1043" y="387" width="256" height="99" rx="6" fill="#f5f5f5"/><rect x="1043" y="387" width="256" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1171" y="413" class="node-name" text-anchor="middle">远端电源管理电路</text><text x="1171" y="435" class="node-detail" text-anchor="middle">网络时钟门控时仍可检测</text><text x="1171" y="453" class="node-detail" text-anchor="middle">恢复远端接口和所需状态</text></g>
+<g id="us12248350b2-fig-1-target"><rect x="1043" y="608" width="256" height="77" rx="6" fill="#f5f5f5"/><rect x="1043" y="608" width="256" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1171" y="634" class="node-name" text-anchor="middle">远端目标电路</text><text x="1171" y="656" class="node-detail" text-anchor="middle">唤醒确认后接收真实事务</text></g>
+<text x="33" y="42" class="signal-title" text-anchor="start">处理器使用同一事务协议；唤醒控制与传输事务分走不同路径</text>
+<text x="34" y="672" class="legend" text-anchor="start">低功耗期间可以保留网络交换电路、接口中的一小段或其他检测逻辑。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12248350b2-fig-1-notice">需用本端互连</a> 网络交换电路依据目的地址判断事务要跨裸片，再向本端电源管理电路发通知。权利要求 18 的该电路在低功耗仍活动；说明书也给出保留部分网络电路的做法。</li><li><a href="#us12248350b2-fig-1-wake">异步唤醒边沿</a> 本端接口恢复后才发送异步唤醒。可用专用引脚的公共连接，某些变体也可利用接口地址线或其他引脚的逻辑跳变。远端检测该边沿时不依赖已门控的网络时钟。</li><li><a href="#us12248350b2-fig-1-enable-remote">恢复远端</a> 远端 PMU 恢复本地互连所需的时钟、供电或其他状态。本端控制线、异步唤醒线与准备完成后的事务路径承担不同职责。</li><li><a href="#us12248350b2-fig-1-ack">远端就绪应答</a> 远端接口恢复到能接收事务后才发就绪应答。它可经额外引脚或一种网络报文返回，说明书没有固定格式。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、6、8；说明书归档段 0025、0026、0027、0028、0030、0033、0055、0056、0061、0062、0063、0073、0074、0075、0076、0077、0089、0090、0091、0092；权利要求 1、4、7、8、10、11、13、14、15、16、18、19、20 <a href="../diagrams/US12248350B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>本地总线</dt><dd>FIG. 3 · 360</dd></div><div><dt>地址判定与保留活动的网络交换电路</dt><dd>权利要求 10、18</dd></div><div><dt>电源管理电路</dt><dd>FIG. 3 · 120</dd></div><div><dt>网络电路 / 互连接口</dt><dd>FIG. 3 · 110 / 310</dd></div><div><dt>唤醒 / 就绪应答</dt><dd>FIG. 3 · 350 / 355</dd></div><div><dt>互连时钟</dt><dd>FIG. 3 · 365</dd></div><div><dt>发送真实事务</dt><dd>FIG. 6 · 630</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　本端接口先醒，远端确认后真实事务才上链路</h3>
+    <p id="fig-2-basis">把本端上电、共享线上的唤醒边沿、远端恢复和应答放在同一时间轴。持有事务的一侧直到收到指定应答才发包。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="本端接口先醒，远端确认后真实事务才上链路" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="us12248350b2-fig-2-svg-title us12248350b2-fig-2-svg-desc">
+<title id="us12248350b2-fig-2-svg-title">本端接口先醒，远端确认后真实事务才上链路</title>
+<desc id="us12248350b2-fig-2-svg-desc">把本端上电、共享线上的唤醒边沿、远端恢复和应答放在同一时间轴。持有事务的一侧直到收到指定应答才发包。</desc>
+<defs><marker id="us12248350b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12248350b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12248350b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12248350b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12248350b2-fig-2-request"><path d="M 116 120 L 298 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-data)"/><rect x="161.5" y="96" width="91" height="18" fill="#f5f5f5"/><text x="207" y="110" class="arrow-label" text-anchor="middle">通知有远端事务</text></g>
+<g id="us12248350b2-fig-2-enable-local"><path d="M 298 168 L 480 168" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-control)"/><rect x="350" y="144" width="78" height="18" fill="#f5f5f5"/><text x="389" y="158" class="arrow-label" text-anchor="middle">解除本端门控</text></g>
+<g id="us12248350b2-fig-2-local-done"><path d="M 480 216 L 298 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-2-arrow-return)"/><rect x="350" y="192" width="78" height="18" fill="#f5f5f5"/><text x="389" y="206" class="arrow-label" text-anchor="middle">本端接口恢复</text></g>
+<g id="us12248350b2-fig-2-wake-pin"><path d="M 480 264 L 662 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-main)"/><rect x="532" y="240" width="78" height="18" fill="#f5f5f5"/><text x="571" y="254" class="arrow-label" text-anchor="middle">异步唤醒边沿</text></g>
+<g id="us12248350b2-fig-2-wake-detected"><path d="M 662 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-data)"/><rect x="720.5" y="288" width="65" height="18" fill="#f5f5f5"/><text x="753" y="302" class="arrow-label" text-anchor="middle">检测到唤醒</text></g>
+<g id="us12248350b2-fig-2-restore"><path d="M 844 360 L 662 360" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-control)"/><rect x="714" y="336" width="78" height="18" fill="#f5f5f5"/><text x="753" y="350" class="arrow-label" text-anchor="middle">恢复远端接口</text></g>
+<g id="us12248350b2-fig-2-ack"><path d="M 662 408 L 480 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-2-arrow-return)"/><rect x="545" y="384" width="52" height="18" fill="#f5f5f5"/><text x="571" y="398" class="arrow-label" text-anchor="middle">就绪应答</text></g>
+<g id="us12248350b2-fig-2-transfer"><path d="M 480 456 L 662 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-2-arrow-main)"/><rect x="532" y="432" width="78" height="18" fill="#f5f5f5"/><text x="571" y="446" class="arrow-label" text-anchor="middle">发送真实事务</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">本端请求方</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">本端 PMU</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">本端接口</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">远端接口</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">远端 PMU</text>
+<text x="28" y="532" class="legend" text-anchor="start">时间自上而下。顺序复原原图 6、8；恢复耗时没有按比例画出。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12248350b2-fig-2-request">通知有远端事务</a> 低功耗下，事务可能由源代理、保留活动的接口逻辑或本地交换电路通知 PMU。本图省略了这些检测实现的内部时序。</li><li><a href="#us12248350b2-fig-2-wake-pin">异步唤醒边沿</a> 本端网络电路必须先恢复到能驱动唤醒边沿的状态。这里不会先尝试发送真实事务。</li><li><a href="#us12248350b2-fig-2-ack">就绪应答</a> 远端检测唤醒并恢复接口后发送应答。此时应答承诺能够接收事务，它与后续事务响应的含义不同。</li><li><a href="#us12248350b2-fig-2-transfer">发送真实事务</a> 本例等目标端应答就发包。较复杂的转发条件或全部回复的变体在表 3。</li></ul>
+  <p class="figure-evidence">原图 3、6、8；说明书归档段 0062、0063、0073、0074、0075、0076、0077、0078、0079、0088、0089、0090、0091、0092、0093；权利要求 1、4、8、10、11、13、14、15、16、18 <a href="../diagrams/US12248350B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>检测到待发远端事务</dt><dd>FIG. 6 · 605</dd></div><div><dt>恢复本端接口 / 发送异步唤醒边沿</dt><dd>FIG. 6 · 610 / 615</dd></div><div><dt>恢复远端接口 / 发送就绪应答</dt><dd>FIG. 6 · 620 / 625</dd></div><div><dt>发送真实事务</dt><dd>FIG. 6 · 630</dd></div><div><dt>收到就绪后发送事务</dt><dd>FIG. 8 · 840</dd></div></dl></details>
+</figure></section><section id="ack"><h2>唤醒应答要满足实际转发范围</h2><p>表 3 分开三种发包条件。原图 6 等目标端就绪，权利要求 6 等所有其他接口，权利要求 17 则以一定数量应答为门槛。在需要中间转发的拓扑上，还要确认指定路径里的节点能转发；就绪应答不表示目的端已完成这笔事务。</p><p>图 5 取同一个 B 门控场景。网状网络的 A 至 D 仍可直连，C 可以经 A 到达 D。单向环中 A 至 D 必须经过 B，D 处于活动态也不能解决 B 的转发缺口。按原图 2 拆开两个连接图可复核这一点。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　哪些应答到齐后才能开始发包</h3>
+    <p id="fig-3-basis">同一握手可以只等目标端、等待全部指定接口，或使用应答数量阈值。判据对应不同权项，需按具体拓扑理解。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">采用的判据</th><th scope="col">发包前需要看到什么</th><th scope="col">对应公开内容</th></tr></thead><tbody><tr id="fig-3-dest"><th scope="row">等目标接口</th><td>实际目标从低功耗恢复并确认可接收</td><td>权项 4、13–14、16；原图 6</td></tr><tr id="fig-3-all"><th scope="row">等全部其他接口</th><td>每个需要响应的其他 IC 分别返回确认</td><td>权项 5–6；说明书的其他实施方式</td></tr><tr id="fig-3-minimum"><th scope="row">达到应答数量阈值</th><td>至少收到配置所需数量的其他兼容接口应答</td><td>权项 17</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-dest">等目标接口</a> 原图 6 的事务发向某个远端接口，只等待该接口确认可接收。</li><li><a href="#fig-3-all">等全部其他接口</a> 若没醒的节点也必须观察部分事务，指定全部其他接口都应答后才能发包。少一项依然等待。</li><li><a href="#fig-3-minimum">达到应答数量阈值</a> 权利要求 17 给出子集应答达到数量阈值的条件。阈值数、计入哪些接口以及它们与目标和路径的关系应按具体实现核对。</li></ul>
+  <p class="figure-evidence">原图 3、6、8；说明书归档段 0063、0076、0077、0078、0089、0091、0092；权利要求 4、5、6、13、14、16、17 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>就绪应答</dt><dd>FIG. 3 · 355</dd></div><div><dt>目标接口可接收后发应答</dt><dd>FIG. 6 · 625</dd></div><div><dt>等待全部应答 / 等待数量阈值</dt><dd>权利要求 6 / 17</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　同一个裸片进入门控，为什么网状网络还能转发而单向环会断路</h3>
+    <p id="fig-5-basis">同样让 B 的网络接口进入低功耗，A 到 D 的网状直连仍存在，单向环却必须经已门控的 B。路由决定哪些节点要参加恢复。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一个裸片进入门控，为什么网状网络还能转发而单向环会断路" style="--figure-width:1280px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 678" role="img" aria-labelledby="us12248350b2-fig-5-svg-title us12248350b2-fig-5-svg-desc">
+<title id="us12248350b2-fig-5-svg-title">同一个裸片进入门控，为什么网状网络还能转发而单向环会断路</title>
+<desc id="us12248350b2-fig-5-svg-desc">同样让 B 的网络接口进入低功耗，A 到 D 的网状直连仍存在，单向环却必须经已门控的 B。路由决定哪些节点要参加恢复。</desc>
+<defs><marker id="us12248350b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12248350b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12248350b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12248350b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12248350b2-fig-5-mesh-a-to-c" d="M 285 357 L 285 391 Q 285 399 277 399 L 141 399 Q 133 399 133 407 L 133 467" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-main)"/>
+<path id="us12248350b2-fig-5-mesh-c-to-a" d="M 109 467 L 109 381 Q 109 373 117 373 L 237 373 Q 245 373 245 365 L 245 329 Q 245 321 253 321 L 264 321" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-data)"/>
+<path id="us12248350b2-fig-5-mesh-a-to-d" d="M 430 357 L 430 397 Q 430 405 438 405 L 549 405 Q 557 405 557 413 L 557 467" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-main)"/>
+<path id="us12248350b2-fig-5-mesh-d-to-a" d="M 592 467 L 592 388 Q 592 380 584 380 L 491 380 Q 483 380 483 372 L 483 328 Q 483 320 475 320 L 461 320" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-data)"/>
+<path id="us12248350b2-fig-5-mesh-gated-a" d="M 352 280 L 352 192" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-5-arrow-control)"/>
+<path id="us12248350b2-fig-5-mesh-gated-b" d="M 459 160 L 623 160 Q 631 160 631 168 L 631 467" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-5-arrow-control)"/>
+<path id="us12248350b2-fig-5-ring-stop" d="M 914 155 L 1048 155" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-5-arrow-return)"/>
+<path id="us12248350b2-fig-5-ring-b-to-d" d="M 1149 192 L 1149 467" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-5-arrow-control)"/>
+<path id="us12248350b2-fig-5-ring-d-to-c" d="M 1048 500 L 914 500" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-data)"/>
+<path id="us12248350b2-fig-5-ring-c-to-a" d="M 821 467 L 821 192" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-5-arrow-data)"/>
+<rect x="169" y="373" width="88" height="18" fill="#f5f5f5"/><text x="213" y="387" class="arrow-label" text-anchor="middle">仍能转发</text>
+<rect x="120.5" y="347" width="93" height="18" fill="#f5f5f5"/><text x="167" y="361" class="arrow-label" text-anchor="middle">返回方向</text>
+<rect x="432" y="380" width="110" height="18" fill="#f5f5f5"/><text x="487" y="394" class="arrow-label" text-anchor="middle">A 至 D 可用</text>
+<rect x="494.5" y="354" width="91" height="18" fill="#f5f5f5"/><text x="540" y="368" class="arrow-label" text-anchor="middle">返回方向</text>
+<rect x="371.5" y="219" width="91" height="18" fill="#f5f5f5"/><text x="417" y="233" class="arrow-label" text-anchor="middle">B 侧停用</text>
+<rect x="479.5" y="135" width="145" height="18" fill="#f5f5f5"/><text x="552" y="149" class="arrow-label" text-anchor="middle">B 的其他边亦停用</text>
+<rect x="928" y="130" width="106" height="18" fill="#f5f5f5"/><text x="981" y="144" class="arrow-label" text-anchor="middle">首跳阻断</text>
+<rect x="1069" y="350" width="166" height="18" fill="#f5f5f5"/><text x="1152" y="364" class="arrow-label" text-anchor="middle">B 无法继续向 D 转发</text>
+<rect x="929.5" y="474" width="105" height="18" fill="#f5f5f5"/><text x="982" y="488" class="arrow-label" text-anchor="middle">D → C 可用</text>
+<rect x="845" y="327" width="112" height="18" fill="#f5f5f5"/><text x="901" y="341" class="arrow-label" text-anchor="middle">C → A 可用</text>
+<g id="us12248350b2-fig-5-mesh-a"><rect x="264" y="280" width="197" height="77" rx="6" fill="#f5f5f5"/><rect x="264" y="280" width="197" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="362.5" y="306" class="node-name" text-anchor="middle">A 互连接口</text><text x="362.5" y="328" class="node-detail" text-anchor="middle">转发 C 或 D 的事务</text></g>
+<g id="us12248350b2-fig-5-mesh-b"><rect x="260" y="123" width="199" height="69" rx="6" fill="#f5f5f5"/><rect x="260" y="123" width="199" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="359.5" y="149" class="node-name" text-anchor="middle">B 已门控</text><text x="359.5" y="171" class="node-detail" text-anchor="middle">本节点不参加转发</text></g>
+<g id="us12248350b2-fig-5-mesh-c"><rect x="34" y="467" width="186" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="467" width="186" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127" y="493" class="node-name" text-anchor="middle">C 互连接口</text><text x="127" y="515" class="node-detail" text-anchor="middle">仍可通过 A 转发</text></g>
+<g id="us12248350b2-fig-5-mesh-d"><rect x="472" y="467" width="188" height="74" rx="6" fill="#f5f5f5"/><rect x="472" y="467" width="188" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="566" y="493" class="node-name" text-anchor="middle">D 互连接口</text><text x="566" y="515" class="node-detail" text-anchor="middle">仍可直接访问 A</text></g>
+<g id="us12248350b2-fig-5-ring-a"><rect x="719" y="123" width="195" height="69" rx="6" fill="#f5f5f5"/><rect x="719" y="123" width="195" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="816.5" y="149" class="node-name" text-anchor="middle">A 互连接口</text><text x="816.5" y="171" class="node-detail" text-anchor="middle">请求发给 D</text></g>
+<g id="us12248350b2-fig-5-ring-b"><rect x="1048" y="123" width="197" height="69" rx="6" fill="#f5f5f5"/><rect x="1048" y="123" width="197" height="69" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1146.5" y="149" class="node-name" text-anchor="middle">B 已门控</text><text x="1146.5" y="171" class="node-detail" text-anchor="middle">A 的下一跳无法转发</text></g>
+<g id="us12248350b2-fig-5-ring-d"><rect x="1048" y="467" width="198" height="74" rx="6" fill="#f5f5f5"/><rect x="1048" y="467" width="198" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1147" y="493" class="node-name" text-anchor="middle">D 互连接口</text><text x="1147" y="515" class="node-detail" text-anchor="middle">仍醒，但 A 到不了</text></g>
+<g id="us12248350b2-fig-5-ring-c"><rect x="719" y="467" width="195" height="74" rx="6" fill="#f5f5f5"/><rect x="719" y="467" width="195" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="816.5" y="493" class="node-name" text-anchor="middle">C 互连接口</text><text x="816.5" y="515" class="node-detail" text-anchor="middle">环上其他一段仍工作</text></g>
+<text x="33" y="44" class="signal-title" text-anchor="start">两种互连同时比较：都假设 B 的接口处于低功耗</text>
+<text x="35" y="91" class="legend" text-anchor="start">A · 网状网络（保留 A、C、D 的活跃路径）</text>
+<text x="719" y="91" class="legend" text-anchor="start">B · 单向环（A→B→D→C→A）</text>
+<text x="33" y="606" class="legend" text-anchor="start">箭头表示示例的数据转发方向，虚线表示 B 门控后当前不能转发的物理边。</text>
+<text x="33" y="634" class="legend" text-anchor="start">两网络可分别门控是一个实现条件。是否要同步唤醒取决于实际活跃路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12248350b2-fig-5-mesh-a-to-d">A 至 D 可用</a> 网状网络中 A 与 D 直连，B 不转发时仍能发。C 可经 A 到 D，剩余三个活跃节点依然可达。</li><li><a href="#us12248350b2-fig-5-ring-stop">首跳阻断</a> 单向环 A 到 D 只能按 A→B→D 经过下一跳。B 停在低功耗时，就算 D 已准备好，该路径仍断开。</li><li><a href="#us12248350b2-fig-5-ring-b-to-d">B 无法继续向 D 转发</a> 如果同一网络电路没有把网状部分与环形部分分开，就还要按受影响的另一网络评估门控；不能只依据一个网络的可达结果。</li></ul>
+  <p class="figure-evidence">原图 1、2、7、8；说明书归档段 0030、0034、0035、0036、0037、0038、0039、0043、0044、0045、0046、0047、0048、0049、0050、0051、0076、0077、0078、0085、0087、0090、0091；权利要求 1、2、4、6、8、12、17、20 <a href="../diagrams/US12248350B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>网状网络</dt><dd>FIG. 2 · 105</dd></div><div><dt>环形网络</dt><dd>FIG. 2 · 205</dd></div><div><dt>A 至 D 的本地网络电路</dt><dd>FIG. 2 · 110a–110d</dd></div><div><dt>降功耗请求 / 各端批准或否决</dt><dd>FIG. 2 · 240 / 245</dd></div><div><dt>影响连通性判定的在途或待发事务</dt><dd>FIG. 2 · 235</dd></div></dl></details>
+</figure></section><section id="entry"><h2>进入低功耗前，要等在途事务发完或否决本轮</h2><p>图 4 中 B 等的是前一事务的响应。主端检测到本地空闲并提出降功耗，其他节点的批准也无法代替 B 的检查。B 收到上一笔响应后才批准，这是原图 4 的分支。原图 5 的另一种实施方式直接拒绝，主端撤销请求并重新开始空闲计数。</p><p>独立权利要求 1、8、15 都把发出远端唤醒前的本地恢复写入要求。同步进入低功耗及不同应答条件由从属权项进一步限定。同族 US11592889B2 更侧重本地与全局条件的协商。</p><p>从功耗和延迟看，低功耗态节省的驻留功耗需要和唤醒、等待造成的代价一起量。在台架上可分别取本端恢复、异步唤醒传输、远端恢复、就绪应答返回和首个实际事务发出的时点。协议操作的发送与完成分开计时。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　前一事务还没有响应，低功耗请求怎样处理</h3>
+    <p id="fig-4-basis">主端本地空闲到阈值仍需查全局条件。等待响应的一侧可以保持接口可用，收到响应后再批准进入低功耗。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="前一事务还没有响应，低功耗请求怎样处理" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 696" role="img" aria-labelledby="us12248350b2-fig-4-svg-title us12248350b2-fig-4-svg-desc">
+<title id="us12248350b2-fig-4-svg-title">前一事务还没有响应，低功耗请求怎样处理</title>
+<desc id="us12248350b2-fig-4-svg-desc">主端本地空闲到阈值仍需查全局条件。等待响应的一侧可以保持接口可用，收到响应后再批准进入低功耗。</desc>
+<defs><marker id="us12248350b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12248350b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12248350b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12248350b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="596" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="596" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="596" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12248350b2-fig-4-prior"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-data)"/><rect x="252.5" y="96" width="91" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">前一事务的请求</text></g>
+<g id="us12248350b2-fig-4-idle"><path d="M 480 162 L 504 162 Q 512 162 512 170 L 512 172 Q 512 180 504 180 L 480 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-control)"/><rect x="535.5" y="138" width="117" height="18" fill="#f5f5f5"/><text x="594" y="152" class="arrow-label" text-anchor="middle">本地空闲计数到阈值</text></g>
+<g id="us12248350b2-fig-4-offer"><path d="M 480 216 L 116 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-data)"/><rect x="252.5" y="192" width="91" height="18" fill="#f5f5f5"/><text x="298" y="206" class="arrow-label" text-anchor="middle">请求进入低功耗</text></g>
+<g id="us12248350b2-fig-4-other-offer"><path d="M 480 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-data)"/><rect x="603.5" y="240" width="117" height="18" fill="#f5f5f5"/><text x="662" y="254" class="arrow-label" text-anchor="middle">也征询其他 SoC</text></g>
+<g id="us12248350b2-fig-4-check"><path d="M 116 306 L 140 306 Q 148 306 148 314 L 148 316 Q 148 324 140 324 L 116 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-control)"/><rect x="165" y="282" width="130" height="18" fill="#f5f5f5"/><text x="230" y="296" class="arrow-label" text-anchor="middle">等事务响应，暂缓批准</text></g>
+<g id="us12248350b2-fig-4-other-ok"><path d="M 844 360 L 480 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-4-arrow-return)"/><rect x="597" y="336" width="130" height="18" fill="#f5f5f5"/><text x="662" y="350" class="arrow-label" text-anchor="middle">其他 SoC 先批准</text></g>
+<g id="us12248350b2-fig-4-response"><path d="M 480 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12248350b2-fig-4-arrow-return)"/><rect x="252.5" y="384" width="91" height="18" fill="#f5f5f5"/><text x="298" y="398" class="arrow-label" text-anchor="middle">前一事务的响应</text></g>
+<g id="us12248350b2-fig-4-approve"><path d="M 116 456 L 480 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-main)"/><rect x="252.5" y="432" width="91" height="18" fill="#f5f5f5"/><text x="298" y="446" class="arrow-label" text-anchor="middle">批准进入低功耗</text></g>
+<g id="us12248350b2-fig-4-b-sleep"><path d="M 116 498 L 140 498 Q 148 498 148 506 L 148 508 Q 148 516 140 516 L 116 516" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-control)"/><rect x="191" y="474" width="78" height="18" fill="#f5f5f5"/><text x="230" y="488" class="arrow-label" text-anchor="middle">本端互连门控</text></g>
+<g id="us12248350b2-fig-4-a-sleep"><path d="M 480 546 L 504 546 Q 512 546 512 554 L 512 556 Q 512 564 504 564 L 480 564" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12248350b2-fig-4-arrow-control)"/><rect x="548.5" y="522" width="91" height="18" fill="#f5f5f5"/><text x="594" y="536" class="arrow-label" text-anchor="middle">确认齐备后门控</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">从 SoC B 互连</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">主 SoC A 互连</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">其他 SoC</text>
+<text x="28" y="628" class="legend" text-anchor="start">画出了原图 4 的延迟批准分支。原图 5 的直接拒绝分支会撤销本轮，重新开始空闲计时。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12248350b2-fig-4-check">等事务响应，暂缓批准</a> 从 SoC B 正在等此前事务的响应。因此其他 SoC 即使已同意，主端也不能关闭仍需使用的互连。</li><li><a href="#us12248350b2-fig-4-response">前一事务的响应</a> 主 SoC A 发回的是先前事务的正常响应。B 收到后才能判断该事务已经完成。</li><li><a href="#us12248350b2-fig-4-approve">批准进入低功耗</a> B 此时才返回批准降功耗，双方按各自实现进入低功耗。两端门控动作不必像图上一样严格串行。</li><li><a href="#us12248350b2-fig-4-a-sleep">确认齐备后门控</a> 主端确认进入低功耗的条件已齐备，随后给本端互连门控。若 B 返回拒绝，原图 5 的另一种实施方式会撤销本轮，再重新开始空闲计数。</li></ul>
+  <p class="figure-evidence">原图 4、5、7；说明书归档段 0009、0010、0011、0035、0036、0037、0038、0066、0067、0068、0069、0070、0071、0072、0073、0080、0082、0083、0084、0085、0086、0087；权利要求 1、2、8、12、15 <a href="../diagrams/US12248350B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>先前事务请求 / 先前事务响应</dt><dd>FIG. 4 · 405 / 422</dd></div><div><dt>空闲到阈值 / 请求进入低功耗</dt><dd>FIG. 4 · 410 / 415</dd></div><div><dt>等事务响应 / 批准降功耗</dt><dd>FIG. 4 · 420 / 425</dd></div><div><dt>两端互连门控</dt><dd>FIG. 4 · 430 / 435</dd></div><div><dt>直接拒绝 / 撤销本轮 / 重启空闲计时</dt><dd>FIG. 5 · 525 / 535 / 540</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US12248350B2</code><span>美国授权专利</span><time datetime="2025-03-11">2025-03-11</time></p>
-  <h1>跨裸片事务如何唤醒互连</h1>
-  <p class="english-title" lang="en">Die-to-die dynamic clock and power gating</p>
-  <p class="document-question">互连段已进入低功耗状态，第一笔跨裸片事务怎样恢复链路？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">遇到跨裸片事务时，发起裸片先恢复本地网络电路，再向目标裸片发唤醒请求并等待确认，随后发送原事务。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>第一笔事务受两端链路恢复限制。同一裸片内的事务可走相同总线协议而无需等待远端恢复。</dd></div><div><dt>验证方法</dt><dd>用同一地址流对照本地、远端已醒、远端休眠三种状态。分段记录请求入队、本地恢复、远端确认和真正发出事务的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12248350B2">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">本地与远端资源可以使用共同总线协议完成访问。封装中跨裸片路径包含可进入低功耗状态的网络电路。</p>
-    <p>低功耗期间，发起裸片检测到目标在另一裸片的待发事务，先恢复本地网络电路，再由本地网络电路向目标发唤醒信号。权利要求 4 要求收到目标确认后才发送原事务。</p>
-    <ol class="walkthrough"><li><h3>检测远端目标</h3><p>处于低功耗状态的发起裸片仍能用部分网络逻辑、内部交换机或源端通知电源管理器。权利要求 10 使用目的地址做判断。</p></li><li><h3>恢复本地网络电路</h3><p>电源管理器恢复本地网络电路的电源信号或时钟之后，才能用它产生唤醒信号。</p></li><li><h3>通知远端恢复</h3><p>远端电源管理器可以检测无需网络时钟的异步唤醒。实施例可用专门引脚或地址线跳变。</p></li><li><h3>满足确认条件后发出事务</h3><p>目的网络电路恢复到能接收事务后回确认。权利要求 4 规定收到该确认再发事务，权利要求 6、17 分别规定不同的确认集合。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 4 在确认后发送目标事务，权 5 允许唤醒节点连到所有裸片，权 6 可等待多个确认。实现选择的唤醒范围会改变不相关网络段是否也被恢复。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>异步唤醒信号</dt><dd>可以在远端网络时钟停用时识别的电平或跳变。远端恢复并确认可承载事务之后，才按相应权项放行正常请求。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">确认后才能发送第一笔跨裸片事务</a></li><li><a href="#fig-1">低功耗下哪些电路负责唤醒裸片互连</a></li><li><a href="#fig-4">还在等上一笔事务时如何批准降功耗</a></li><li><a href="#fig-3">发事务之前需要收到哪些确认</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">确认后才能发送第一笔跨裸片事务</h3></div>
-    <a class="paper-open" href="../mechanisms/US12248350B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="确认后才能发送第一笔跨裸片事务">
-    <img class="paper-image native-image" src="../mechanisms/US12248350B2/fig-2/diagram.svg" width="920" height="500"
-         style="--paper-width:920px" alt="确认后才能发送第一笔跨裸片事务。本端唤醒是两端交互的前置步骤。普通事务推迟到远端准备完成。">
-  </div>
-  <figcaption>
-    <span>本端唤醒是两端交互的前置步骤。普通事务推迟到远端准备完成。</span>
-    <span class="figure-evidence">原图 6、8，权利要求 4、13–14、16。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12248350">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">低功耗下哪些电路负责唤醒裸片互连</h3></div>
-    <a class="paper-open" href="../mechanisms/US12248350B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="低功耗下哪些电路负责唤醒裸片互连">
-    <img class="paper-image native-image" src="../mechanisms/US12248350B2/fig-1/diagram.svg" width="916" height="408"
-         style="--paper-width:916px" alt="低功耗下哪些电路负责唤醒裸片互连。发起端的检测逻辑通知本地电源管理器。网络电路恢复后发唤醒。远端由保留的检测逻辑识别电平变化，即便网络时钟仍被门控。">
-  </div>
-  <figcaption>
-    <span>发起端的检测逻辑通知本地电源管理器。网络电路恢复后发唤醒。远端由保留的检测逻辑识别电平变化，即便网络时钟仍被门控。</span>
-    <span class="figure-evidence">原图 3、6，说明书 [0061]–[0062]、[0073]–[0075] · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12248350">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">还在等上一笔事务时如何批准降功耗</h3></div>
-    <a class="paper-open" href="../mechanisms/US12248350B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="还在等上一笔事务时如何批准降功耗">
-    <img class="paper-image native-image" src="../mechanisms/US12248350B2/fig-4/diagram.svg" width="560" height="449"
-         style="--paper-width:560px" alt="还在等上一笔事务时如何批准降功耗。原图 4 的从端收到此前事务的响应后，才批准主端进入低功耗。原图 5 则允许从端先拒绝本次请求，主端重新计空闲。">
-  </div>
-  <figcaption>
-    <span>原图 4 的从端收到此前事务的响应后，才批准主端进入低功耗。原图 5 则允许从端先拒绝本次请求，主端重新计空闲。</span>
-    <span class="figure-evidence">原图 4–5，说明书 [0065]–[0071]，权利要求 2、12 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12248350">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">发事务之前需要收到哪些确认</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">放行条件</th><th scope="col">需要确认的端点</th><th scope="col">适用权项</th></tr></thead><tbody><tr><th scope="row">目标已就绪</th><td>事务目标集成电路</td><td>权利要求 4</td></tr><tr><th scope="row">其他端点均已就绪</th><td>节点连接到的其他各集成电路</td><td>权利要求 6</td></tr><tr><th scope="row">确认数量达阈值</th><td>符合门槛的其他兼容网络电路子集</td><td>权利要求 17</td></tr></tbody></table>
-  <figcaption>
-    <span>使用共享唤醒节点时，可能有多个远端退出低功耗。具体等待条件由权项选择。</span>
-    <span class="figure-evidence">原图 6，权利要求 4、6、17 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12248350">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按需唤醒互连接口</dt><dd>扩展低功耗驻留 <span class="subdued">原图 3、6，权利要求 1、15</span></dd></div><div><dt>就绪确认后放行</dt><dd>待链路可接收 <span class="subdued">原图 6、8，权利要求 4、16</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>首笔远端请求等待由本端恢复和远端应答构成，能量还取决于附带上电的互连段数。评估分别测目标与非目标的供电状态驻留以及请求真正发送时间。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>固定同一远端目标，在封装内增加保持低功耗的非目标裸片。若目标请求不变但共享唤醒使各非目标额外耗能，可用各网络段上电事件定位成本。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>两个裸片的互连段都在低功耗状态。裸片 A 请求访问 B 上的资源。</dd></div><div><dt>处理结果</dt><dd>A 先恢复本端网络电路，再触发 B 唤醒。B 返回确认后，A 才发请求。</dd></div><div><dt>结果解读</dt><dd>测量从事务变成待处理到获得远端确认的时间，再单独量测从发出请求到收到响应的互连延迟。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -137,49 +187,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=a%20particular%20circuit%20block%20configured%20to%20generate%20transactions%20to%20be%20sent%20to%20other%20circuit%20blocks">F12</a></th><td>本地功能块可向其他功能块发起事务</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=Turning%20to%20FIG.%203%2C%20an%20SoC%20used%20in%20multi-SoC%20systems%20is%20depicted.%20As%20illustrated%20SoC%20101">说明书 0054</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=Network%20circuit%20110%20bridges%20communication%20between%20ones%20of%20functional%20circuits%20370%20and%20functional%20circuits%20included%20in">说明书 0056</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=form%20a%20portion%20of%20a%20network%20when%20coupled%20to%20other%20compatible%20network%20circuits%20that%20are%20on">F13</a></th><td>与异裸片的兼容接口接成共享网络并交换事务</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=As%20shown%2C%20network%20circuit%20110%20is%20configured%20to%20form%20a%20portion%20of%20network%20105%20when%20coupled">说明书 0055</a> · 原图 1、3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=in%20response%20to%20a%20determination%20that%20conditions%20are%20satisfied%2C%20cause%20the%20network%20circuit%20to%20enter%20a">F14</a></th><td>电源管理器判断条件满足后令本地网络进入低功耗</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=As%20illustrated%2C%20power%20management%20circuit%20120%20is%20configured%20to%20track%20local%20power%20information%20130%20associated%20with">说明书 0057</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=To%20place%20network%20circuit%20110%20into%20the%20reduced%20power%20mode%2C%20power%20management%20circuit%20120%20may%20reduce">说明书 0061</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=receive%20a%20request%20from%20the%20particular%20circuit%20block%20to%20send%20a%20particular%20transaction%20to%20a%20different">F15</a></th><td>电源管理器收到需要跨网络发出的本地事务通知</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=After%20network%20circuit%20110%20has%20entered%20the%20reduced%20power%20mode%2C%20regardless%20if%20SoC%20101%20is%20designated">说明书 0062</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=The%20current%20example%20begins%20with%20network%20circuits%20110%20in%20the%20reduced%20power%20mode%20for%20at%20least">说明书 0074</a> · 原图 3、6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=wake%20the%20network%20circuit%20from%20the%20reduced%20power%20mode">F16</a></th><td>电源管理器先恢复本地网络电路</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=After%20network%20circuit%20110%20has%20entered%20the%20reduced%20power%20mode%2C%20regardless%20if%20SoC%20101%20is%20designated">说明书 0062</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=As%20shown%2C%20power%20management%20circuit%20120b%20is%20further%20configured%2C%20in%20response%20to%20the%20indication%2C%20to%20cause">说明书 0075</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=in%20response%20to%20the%20waking%2C%20to%20assert%20a%20wake%20signal%20on%20a%20node%20coupled%20to%20a">F17</a></th><td>本地网络恢复后向连接目标网络电路的节点发唤醒信号</td><td><a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=As%20shown%2C%20power%20management%20circuit%20120b%20is%20further%20configured%2C%20in%20response%20to%20the%20indication%2C%20to%20cause">说明书 0075</a> · <a href="https://eureka.patsnap.com/patent/US12248350B2#:~:text=The%20wake%20signal%20may%20be%20implemented%20in%20various%20manners.%20For%20example%2C%20each%20of%20network%20circuits%20110">说明书 0076</a> · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>多个裸片通过网络组成同一个逻辑系统，处理器以同一协议访问本地与远端。发起端对待发跨裸片请求先恢复本地网络电路，然后向目标端置位唤醒。原图 1、3、6。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>降功耗前由主集成电路检查各端条件，同时向其余集成电路发请求。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>分别将多个集成电路限定为多个 SoC。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>收到目的端的唤醒确认之后才发送原请求所指的事务。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>唤醒节点连至所有集成电路，使处于降功耗态的端点退出。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>广播型唤醒中，必须收到其他各集成电路的确认才发事务。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-5">5</a></td><td>通过一个或多个地址线的电平跳变来发唤醒信号。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>方法项规定进入低功耗后，发起端由仍工作的电源管理电路识别目标并恢复，再经网络置位与远端唤醒引脚相接的节点。原图 3、6–8。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>两片集成电路上的电路块对于软件采用同一访问方式。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>用本地交换电路的目标地址判断跨裸片请求，并通知电源管理器。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>唤醒由专用引脚的逻辑电平改变实现，至少接上目的地的对应引脚。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>进入降功耗前要求主端判断跨集成电路的条件并通知其他端。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>接收端电源管理电路唤醒本地电路，确认可接收后发送响应。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>发起收到对端确认后才把原事务发往该目的地。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>集成电路项描述可与其他集成电路组网的网络电路及本地事务发起块。电源管理器在需要时唤醒本地网络，网络电路向远端置位唤醒信号。原图 3、6。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>本地网络电路等到目标网络电路确认唤醒后发送原事务。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>在其他兼容网络电路的确认数量达到阈值后放行待发事务。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>交换电路在降功耗期间继续工作，检测内部总线请求并通知电源管理器。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>通过使一条或多条地址线跳变置位唤醒信号。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>处理器用和本地访问相同的网络协议访问其他电路块。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>原图 1–3，权利要求 1、8、15</dt><dd>统一总线协议连接本地和远端电路块，电源管理模块可单独保留检测链路。</dd></div><div><dt>原图 6、8，权利要求 4–6、13–17</dt><dd>先恢复本端再唤醒远端。有些权项还限定等待确认的端点集合。</dd></div><div><dt>原图 4–5、7，权利要求 2、12</dt><dd>降功耗需要端点协调。遇到未完成事务时，可以等该事务完成再批准，或直接拒绝并重新开始计空闲。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12248350B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11630789B2.html#engineering">优先投递给已上电核心的中断控制</a>
-<p>US11630789B2 在第一轮尝试由已上电核心接受中断，所有核簇返回 Nack 后才重试并允许上电。US12248350B2 的发起端先恢复本端网络电路、唤醒指定的远端，再依权利要求 4 等待确认后发送跨裸片事务。前者在一轮均未接受中断时才进入能唤醒核心的下一轮，后者的确认是向既定目的地发出事务的前提。</p></li><li><a href="US11592889B2.html#engineering">跨 die 互连按本地和全局状态门控</a>
-<p>US12248350B2 继续自 US17/318,670。母案阅读重点是各裸片如何达成可门控的条件，继续案权 1 将首笔远端事务的恢复顺序写入独立权利要求。继续案权 4 明确收到远端确认后发送。</p></li></ul>
-    <p><a href="../index.html?patent=US12248350B2#knowledge">在全量关系图上定位 US12248350B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-05-12</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-02-27</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-03-11</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/174,985</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Dany Davidov、Misbah RAMADAN、Itamar Rozen、Tzach Zemer</dd></div><div><dt>分类号</dt><dd>G06F1/3203、G06F1/18、G06F1/3209、G06F1/3237、G06F1/3287、G06F13/36、G06F13/4022、G06F13/4291、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12248350B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12248350B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权专利全文，覆盖 129 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US11592889B2.html"><code>US11592889B2</code> 跨 die 互连按本地和全局状态门控</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12248350B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

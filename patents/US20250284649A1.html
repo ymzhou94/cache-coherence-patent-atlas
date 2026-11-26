@@ -1,119 +1,156 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20250284649A1 CPU 按可中断点的到达时限应答中断投递 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPU 要怎样在中断到达时判断自己能否及时接受 · US20250284649A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20250284649A1</code> · <a href="https://patents.google.com/patent/US20250284649A1/en">专利全文</a></p>
+<h1>CPU 要怎样在中断到达时判断自己能否及时接受</h1><p class="reading-question">收到中断请求后，哪些在途操作能让一个已经上电的 CPU 返回 Nack？</p>
+<p class="reading-answer">中断应答电路检查相关子电路能否在时限内达到可中断点。前级可因尚未退休的操作或屏蔽拒绝，访存单元也可因在途设备访问拒绝。原图的接受路径先回 Ack，再冻结解析边界、推进退休，最后进入中断。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-09-11</dd></div><div><dt>申请号</dt><dd>US19/169,824</dd></div><div><dt>最早优先权</dt><dd>2020-09-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeffrey E. Gonion、Charles E. Tucker、Tal Kuzi、Richard F. Russo、Mridul Agarwal、Christopher M. Tsay、Gideon N. Levinsky、Shih-Chieh Wen、Lior Zimet</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#control">同一个 Req 进入核内后，哪些状态能否决它</a></li><li><a href="#refuse">前级没有拒绝，设备访存仍可能让本次投递失败</a></li><li><a href="#accept">接受后，解析指针与退休指针要怎样收敛</a></li><li><a href="#scope">继续申请集中在核内判定与逐候选回退</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="control"><h2>同一个 Req 进入核内后，哪些状态能否决它</h2><p>图 1 先把 CPU cluster 中断控制器与核接口（CIF）分开。核接口转递 Int Req 和 Ack／Nack。做决定的是核内中断应答电路，它读重排序缓冲区（ROB）和访存单元（LSU）的状态。公开权利要求 2 描述一个或多个子电路能否及时到达可中断点，ROB 与 LSU 的具体职责在从属项展开。</p><p>检查 ROB 时，已进入流水线但尚未退休的操作决定前级是否能前进。潜在长时延的不可中断操作或中断屏蔽可使应答电路提前拒绝。通过此前级判断后，实施例再查询 LSU。图 1 两根回送线保留了两类信息的产生者。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　Int Req 到了核内，ROB 与 LSU 分别提供什么</h3>
+    <p id="fig-1-basis">CIF 转递请求和应答。核内中断应答电路依据各子电路的状态决定是否承诺在时限内进入中断。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="Int Req 到了核内，ROB 与 LSU 分别提供什么" style="--figure-width:1200px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 500" role="img" aria-labelledby="us20250284649a1-fig-1-svg-title us20250284649a1-fig-1-svg-desc">
+<title id="us20250284649a1-fig-1-svg-title">Int Req 到了核内，ROB 与 LSU 分别提供什么</title>
+<desc id="us20250284649a1-fig-1-svg-desc">CIF 转递请求和应答。核内中断应答电路依据各子电路的状态决定是否承诺在时限内进入中断。</desc>
+<defs><marker id="us20250284649a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250284649a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250284649a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250284649a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250284649a1-fig-1-req" d="M 272 241 L 376 241" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-1-arrow-data)"/>
+<path id="us20250284649a1-fig-1-outer-return" d="M 376 275 L 272 275" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-1-arrow-return)"/>
+<path id="us20250284649a1-fig-1-inner-req" d="M 539 236 L 649 236" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-1-arrow-data)"/>
+<path id="us20250284649a1-fig-1-inner-return" d="M 649 267 L 539 267" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-1-arrow-return)"/>
+<path id="us20250284649a1-fig-1-rob-check" d="M 939 105 L 885 105 Q 877 105 877 113 L 877 218 Q 877 226 869 226 L 837 226" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-1-arrow-return)"/>
+<path id="us20250284649a1-fig-1-lsu-query" d="M 837 249 L 913 249 Q 921 249 921 257 L 921 351 Q 921 359 929 359 L 939 359" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-1-arrow-control)"/>
+<path id="us20250284649a1-fig-1-lsu-result" d="M 939 399 L 893 399 Q 885 399 885 391 L 885 281 Q 885 273 877 273 L 837 273" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-1-arrow-return)"/>
+<rect x="292" y="217" width="64" height="18" fill="#f5f5f5"/><text x="324" y="231" class="arrow-label" text-anchor="middle">Int Req</text>
+<rect x="283" y="252" width="82" height="18" fill="#f5f5f5"/><text x="324" y="266" class="arrow-label" text-anchor="middle">Ack／Nack</text>
+<rect x="559" y="212" width="70" height="18" fill="#f5f5f5"/><text x="594" y="226" class="arrow-label" text-anchor="middle">Int Req</text>
+<rect x="550.5" y="243" width="87" height="18" fill="#f5f5f5"/><text x="594" y="257" class="arrow-label" text-anchor="middle">Ack／Nack</text>
+<rect x="802.5" y="145" width="133" height="18" fill="#f5f5f5"/><text x="869" y="159" class="arrow-label" text-anchor="middle">退休／屏蔽判断</text>
+<rect x="881" y="293" width="72" height="18" fill="#f5f5f5"/><text x="917" y="307" class="arrow-label" text-anchor="middle">询问 LSU</text>
+<rect x="826.5" y="325" width="119" height="18" fill="#f5f5f5"/><text x="886" y="339" class="arrow-label" text-anchor="middle">访存完成条件</text>
+<g id="us20250284649a1-fig-1-cluster"><rect x="36" y="213" width="236" height="80" rx="6" fill="#f5f5f5"/><rect x="36" y="213" width="236" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="154" y="239" class="node-name" text-anchor="middle">CPU cluster 中断控制器</text><text x="154" y="261" class="node-detail" text-anchor="middle">向一个候选发出中断</text></g>
+<g id="us20250284649a1-fig-1-cif"><rect x="376" y="213" width="163" height="80" rx="6" fill="#f5f5f5"/><rect x="376" y="213" width="163" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="457.5" y="239" class="node-name" text-anchor="middle">核接口（CIF）</text><text x="457.5" y="261" class="node-detail" text-anchor="middle">转递请求和应答</text></g>
+<g id="us20250284649a1-fig-1-ackctrl"><rect x="649" y="202" width="188" height="88" rx="6" fill="#f5f5f5"/><rect x="649" y="202" width="188" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="743" y="228" class="node-name" text-anchor="middle">核内中断应答电路</text><text x="743" y="250" class="node-detail" text-anchor="middle">判断能否在时限内到达</text><text x="743" y="268" class="node-detail" text-anchor="middle">返回 Ack 或 Nack</text></g>
+<g id="us20250284649a1-fig-1-rob"><rect x="939" y="75" width="221" height="90" rx="6" fill="#f5f5f5"/><rect x="939" y="75" width="221" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1049.5" y="101" class="node-name" text-anchor="middle">重排序缓冲区（ROB）</text><text x="1049.5" y="123" class="node-detail" text-anchor="middle">跟踪未退休操作</text><text x="1049.5" y="141" class="node-detail" text-anchor="middle">解析边界</text></g>
+<g id="us20250284649a1-fig-1-lsu"><rect x="939" y="341" width="221" height="90" rx="6" fill="#f5f5f5"/><rect x="939" y="341" width="221" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1049.5" y="367" class="node-name" text-anchor="middle">访存单元（LSU）</text><text x="1049.5" y="389" class="node-detail" text-anchor="middle">检查在途访问</text><text x="1049.5" y="407" class="node-detail" text-anchor="middle">必要时报告指针</text></g>
+<text x="35" y="38" class="signal-title" text-anchor="start">请求由左向右，接受或拒绝的应答返回发起方</text>
+<text x="35" y="470" class="legend" text-anchor="start">原图 6 的核接口独立转递中断控制消息；它也服务缓存请求，但图中只显示中断相关路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250284649a1-fig-1-inner-req">Int Req</a> 请求先经过核接口。Ack／Nack 反向返回同一个候选接口。</li><li><a href="#us20250284649a1-fig-1-rob-check">退休／屏蔽判断</a> 前级给出退休相关约束，以及会导致拒绝的屏蔽或长时延状态。</li><li><a href="#us20250284649a1-fig-1-lsu-result">访存完成条件</a> 访存单元需要检查已发出的访问能否到达边界。核内应答要等到可判定时才返回。</li></ul>
+  <p class="figure-evidence">原图 1、6、8；说明书归档段 0024、0025、0057、0058、0059、0060、0061、0062、0063、0084、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20250284649A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU cluster 中断控制器</dt><dd>24A–24n</dd></div><div><dt>核接口（CIF）</dt><dd>122</dd></div><div><dt>核内中断应答电路</dt><dd>126</dd></div><div><dt>重排序缓冲区（ROB）</dt><dd>108</dd></div><div><dt>访存单元（LSU）</dt><dd>118</dd></div></dl></details>
+</figure></section><section id="refuse"><h2>前级没有拒绝，设备访存仍可能让本次投递失败</h2><p>图 2 选择了一个在途设备地址访问的例子。核内已没有可从 ROB 直接返回的拒绝，LSU 仍可报告预计不能按时达到边界；中断应答电路发 Nack，cluster 控制器可根据权利要求 18 选择另一个处理器。权利要求 19 再覆盖所有候选各自拒绝后返回一个 cluster 层的 Nack。</p><p>表 3 列出的检查在不同阶段发生。屏蔽和长时延主要是前级判定。设备地址空间访问的资格由从属权项写明。说明书还列举同步屏障与重排序边界不能收拢等情形。介质或时钟频率变化都可能影响等待长度，但公开文本没有给出所有设备的固定门限。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　一次设备访存怎样导致本候选发 Nack</h3>
+    <p id="fig-2-basis">前级通过仍可能在 LSU 处拒绝，回送的应答让控制器决定是否换下一候选。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一次设备访存怎样导致本候选发 Nack" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 504" role="img" aria-labelledby="us20250284649a1-fig-2-svg-title us20250284649a1-fig-2-svg-desc">
+<title id="us20250284649a1-fig-2-svg-title">一次设备访存怎样导致本候选发 Nack</title>
+<desc id="us20250284649a1-fig-2-svg-desc">前级通过仍可能在 LSU 处拒绝，回送的应答让控制器决定是否换下一候选。</desc>
+<defs><marker id="us20250284649a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250284649a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250284649a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250284649a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us20250284649a1-fig-2-req"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-2-arrow-data)"/><rect x="211" y="96" width="52" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">中断请求</text></g>
+<g id="us20250284649a1-fig-2-rob-ask"><path d="M 358 168 L 601 168" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-2-arrow-control)"/><rect x="440.5" y="144" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">检查退休条件</text></g>
+<g id="us20250284649a1-fig-2-rob-ok"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-2-arrow-return)"/><rect x="414.5" y="192" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">尚无 Nack 条件</text></g>
+<g id="us20250284649a1-fig-2-lsu-ask"><path d="M 358 264 L 844 264" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-2-arrow-control)"/><rect x="562" y="240" width="78" height="18" fill="#f5f5f5"/><text x="601" y="254" class="arrow-label" text-anchor="middle">检查在途访存</text></g>
+<g id="us20250284649a1-fig-2-lsu-nack"><path d="M 844 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-2-arrow-return)"/><rect x="536" y="288" width="130" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">设备地址访问仍未完成</text></g>
+<g id="us20250284649a1-fig-2-respond"><path d="M 358 360 L 116 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-2-arrow-main)"/><rect x="165.5" y="336" width="143" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">Nack：本次预计超时</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">cluster 中断控制器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">核内中断应答电路</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">重排序缓冲区</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">访存单元</text>
+<text x="28" y="436" class="legend" text-anchor="start">Nack 回到 cluster 中断控制器。权利要求 18 随后允许它改选另一个处理器。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250284649a1-fig-2-rob-ok">尚无 Nack 条件</a> 原图 8 前级未发现单独成立的拒绝条件，才继续查询 LSU。</li><li><a href="#us20250284649a1-fig-2-lsu-nack">设备地址访问仍未完成</a> 未完成的设备地址空间访问可能超出时间窗口。这里以该条件成立的情况演示。</li><li><a href="#us20250284649a1-fig-2-respond">Nack：本次预计超时</a> 方法独权 9 明确收到请求之后可因达不到时限返回 Nack。</li></ul>
+  <p class="figure-evidence">原图 6、8；说明书归档段 0058、0059、0060、0062、0084、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US20250284649A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>核接口（CIF）</dt><dd>122</dd></div><div><dt>核内中断应答电路</dt><dd>126</dd></div><div><dt>请求 LSU 状态</dt><dd>144</dd></div><div><dt>检查 LSU 的 Nack 条件</dt><dd>146</dd></div><div><dt>发出 Nack</dt><dd>142</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　不同拒绝判据应放回各自的检查位置</h3>
+    <p id="fig-3-basis">同一应答可以由前级指令状态、LSU 在途操作或无法调整的解析边界触发。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">检查位置</th><th scope="col">公开文献条件</th><th scope="col">硬件结果</th><th scope="col">权项或说明书</th></tr></thead><tbody><tr id="fig-3-masked"><th scope="row">ROB 或 MDR</th><td>尚未完成的长时延操作，或已生效的屏蔽状态</td><td>可先发 Nack</td><td>权利要求 4、5；段落 [0059]–[0060]</td></tr><tr id="fig-3-device"><th scope="row">LSU</th><td>设备地址空间访问仍未完成</td><td>按公开权项进一步限制 Nack 判据</td><td>权利要求 7、14、21</td></tr><tr id="fig-3-boundary"><th scope="row">边界收拢</th><td>解析指针与 true LS NS pointer 之间含无法撤销的操作</td><td>原图 8 的实施例返回 Nack</td><td>段落 [0083]、[0085]</td></tr><tr id="fig-3-reachable"><th scope="row">边界可达</th><td>适用子电路预计在规定时限内达到同一可中断点</td><td>接受分支可发 Ack</td><td>权利要求 2、15、17</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-device">LSU</a> 设备地址空间访问作为独立从属条件。图 2 展开了一次完整应答。</li><li><a href="#fig-3-boundary">边界收拢</a> 原图 7 的位置关系与原图 8 的移动、冻结有明确前后。</li><li><a href="#fig-3-masked">ROB 或 MDR</a> 已退休的架构屏蔽状态与待退休的推测更新是说明书列举的不同条件。</li></ul>
+  <p class="figure-evidence">原图 7、8；说明书归档段 0058、0059、0060、0061、0062、0063、0082、0083、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>前级 Nack 判定</dt><dd>140</dd></div><div><dt>访存 Nack 判定</dt><dd>146</dd></div><div><dt>边界能否收拢</dt><dd>152</dd></div><div><dt>产生 Ack</dt><dd>154</dd></div></dl></details>
+</figure></section><section id="accept"><h2>接受后，解析指针与退休指针要怎样收敛</h2><p>图 5 把 ROB 的指针放在同一程序顺序上。退休指针指向最早尚未退休的操作。解析指针前面的相关分支结果和异常检查已解析；它到最新操作指针之间仍是推测操作。LSU 的 true LS NS pointer 指向它已承诺完成的最早访存。</p><p>新的可中断点落在原来的已提交窗口内时，处理器尝试把解析指针向较早的操作缩回。看图 5 的橙框。已提交但不可撤销的操作，以及不可中断的微码操作组，都可能使缩回失败，这个候选于是返回 Nack。</p><p>图 4 顺着成功分支给出三个时点。收到中断请求后先判断边界能否及时收拢；成功后回 Ack，再冻结解析指针并等待退休到新边界。最后处理器从中断入口取指。用请求至 Ack 和 Ack 至入口读数，分别量核内判定与退休等待。说明书以约 5 μs 举例说明一个实施例的规定时限。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　接受以后，等退休到边界才进入中断</h3>
+    <p id="fig-4-basis">LSU 指针先参与能否到达的预测，Ack 发出后再冻结解析边界并推进真实退休。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="接受以后，等退休到边界才进入中断" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="us20250284649a1-fig-4-svg-title us20250284649a1-fig-4-svg-desc">
+<title id="us20250284649a1-fig-4-svg-title">接受以后，等退休到边界才进入中断</title>
+<desc id="us20250284649a1-fig-4-svg-desc">LSU 指针先参与能否到达的预测，Ack 发出后再冻结解析边界并推进真实退休。</desc>
+<defs><marker id="us20250284649a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250284649a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250284649a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250284649a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us20250284649a1-fig-4-req"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-4-arrow-data)"/><rect x="211" y="96" width="52" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">中断请求</text></g>
+<g id="us20250284649a1-fig-4-probe"><path d="M 358 168 L 844 168" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-4-arrow-control)"/><rect x="562" y="144" width="78" height="18" fill="#f5f5f5"/><text x="601" y="158" class="arrow-label" text-anchor="middle">检查在途访问</text></g>
+<g id="us20250284649a1-fig-4-pointer"><path d="M 844 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-4-arrow-return)"/><rect x="605.5" y="192" width="234" height="18" fill="#f5f5f5"/><text x="722.5" y="206" class="arrow-label" text-anchor="middle">true LS NS pointer</text></g>
+<g id="us20250284649a1-fig-4-reachable"><path d="M 601 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-4-arrow-return)"/><rect x="434" y="240" width="91" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">解析边界可收拢</text></g>
+<g id="us20250284649a1-fig-4-ack"><path d="M 358 312 L 116 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-4-arrow-main)"/><rect x="213" y="288" width="48" height="18" fill="#f5f5f5"/><text x="237" y="302" class="arrow-label" text-anchor="middle">Ack</text></g>
+<g id="us20250284649a1-fig-4-freeze"><path d="M 358 360 L 601 360" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-4-arrow-control)"/><rect x="440.5" y="336" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="350" class="arrow-label" text-anchor="middle">冻结解析边界</text></g>
+<g id="us20250284649a1-fig-4-commit"><path d="M 601 408 L 358 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-4-arrow-return)"/><rect x="440.5" y="384" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">退休到该边界</text></g>
+<g id="us20250284649a1-fig-4-entry"><path d="M 358 450 L 382 450 Q 390 450 390 458 L 390 460 Q 390 468 382 468 L 358 468" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-4-arrow-main)"/><rect x="407" y="426" width="130" height="18" fill="#f5f5f5"/><text x="472" y="440" class="arrow-label" text-anchor="middle">进入中断，取入口指令</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">cluster 中断控制器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">核内中断应答电路</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">重排序缓冲区</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">访存单元</text>
+<text x="28" y="532" class="legend" text-anchor="start">画的是能够接受的路径。已解析边界在 Ack 后冻结，再让退休推进，箭头间距只表示事件顺序。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250284649a1-fig-4-pointer">true LS NS pointer</a> 指针对应 LSU 已承诺完成的访存，不能随意选一条仍推测的访问作为边界。</li><li><a href="#us20250284649a1-fig-4-ack">Ack</a> 这是到达可中断点的承诺，原图 8 接受路径还有两步。</li><li><a href="#us20250284649a1-fig-4-freeze">冻结解析边界</a> 冻结解析边界，等待退休指针到达该位置，才进入异常入口。</li><li><a href="#us20250284649a1-fig-4-entry">进入中断，取入口指令</a> ISA 所规定的入口取指时刻可作为硬件到达中断的观测点。</li></ul>
+  <p class="figure-evidence">原图 6、7、8；说明书归档段 0058、0063、0081、0082、0083、0084、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US20250284649A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>true LS NS pointer</dt><dd>136</dd></div><div><dt>尝试移动解析指针</dt><dd>150</dd></div><div><dt>产生 Ack</dt><dd>154</dd></div><div><dt>冻结边界后退休</dt><dd>156</dd></div><div><dt>进入中断</dt><dd>158</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　哪些 ROB 条目卡住了中断边界</h3>
+    <p id="fig-5-basis">把退休指针、LSU 给出的访存指针、解析指针和最新操作指针放在同一程序顺序上，再看同一缩回动作如何分成 Ack 与 Nack。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="哪些 ROB 条目卡住了中断边界" style="--figure-width:1180px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 666" role="img" aria-labelledby="us20250284649a1-fig-5-svg-title us20250284649a1-fig-5-svg-desc">
+<title id="us20250284649a1-fig-5-svg-title">哪些 ROB 条目卡住了中断边界</title>
+<desc id="us20250284649a1-fig-5-svg-desc">把退休指针、LSU 给出的访存指针、解析指针和最新操作指针放在同一程序顺序上，再看同一缩回动作如何分成 Ack 与 Nack。</desc>
+<defs><marker id="us20250284649a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250284649a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250284649a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250284649a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250284649a1-fig-5-retired-edge" d="M 207 145 L 207 245" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-data)"/>
+<path id="us20250284649a1-fig-5-ls-edge" d="M 429 145 L 429 245" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-5-arrow-control)"/>
+<path id="us20250284649a1-fig-5-resolved-edge" d="M 734 145 L 734 245" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-data)"/>
+<path id="us20250284649a1-fig-5-youngest-edge" d="M 1023 145 L 1023 245" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-data)"/>
+<path id="us20250284649a1-fig-5-move-back" d="M 734 179 L 429 179" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-main)"/>
+<path id="us20250284649a1-fig-5-undo-pass" d="M 555 336 L 555 386 Q 555 394 547 394 L 380 394 Q 372 394 372 402 L 372 452" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-main)"/>
+<path id="us20250284649a1-fig-5-undo-fail" d="M 620 336 L 620 386 Q 620 394 628 394 L 867 394 Q 875 394 875 402 L 875 452" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250284649a1-fig-5-arrow-return)"/>
+<path id="us20250284649a1-fig-5-advance" d="M 372 534 L 372 573" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250284649a1-fig-5-arrow-main)"/>
+<rect x="41.5" y="186" width="161" height="18" fill="#f5f5f5"/><text x="122" y="200" class="arrow-label" text-anchor="middle">已退休 / 未退休分界</text>
+<rect x="334" y="201" width="76" height="18" fill="#f5f5f5"/><text x="372" y="215" class="arrow-label" text-anchor="middle">拟议边界</text>
+<rect x="755" y="201" width="92" height="18" fill="#f5f5f5"/><text x="801" y="215" class="arrow-label" text-anchor="middle">原提交边界</text>
+<rect x="884.5" y="201" width="129" height="18" fill="#f5f5f5"/><text x="949" y="215" class="arrow-label" text-anchor="middle">ROB 中最新操作</text>
+<rect x="507.5" y="156" width="147" height="18" fill="#f5f5f5"/><text x="581" y="170" class="arrow-label" text-anchor="middle">向较早的操作缩回</text>
+<rect x="396" y="368" width="146" height="18" fill="#f5f5f5"/><text x="469" y="382" class="arrow-label" text-anchor="middle">可在时限内完成</text>
+<rect x="673" y="368" width="152" height="18" fill="#f5f5f5"/><text x="749" y="382" class="arrow-label" text-anchor="middle">存在不可撤销操作</text>
+<rect x="397" y="539" width="76" height="18" fill="#f5f5f5"/><text x="435" y="553" class="arrow-label" text-anchor="middle">Ack 之后</text>
+<g id="us20250284649a1-fig-5-retire-ptr"><rect x="113" y="78" width="190" height="67" rx="6" fill="#f5f5f5"/><rect x="113" y="78" width="190" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="208" y="104" class="node-name" text-anchor="middle">退休指针</text><text x="208" y="126" class="node-detail" text-anchor="middle">最早尚未退休的操作</text></g>
+<g id="us20250284649a1-fig-5-true-ls-ns"><rect x="316" y="78" width="229" height="67" rx="6" fill="#f5f5f5"/><rect x="316" y="78" width="229" height="67" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="430.5" y="104" class="node-name" text-anchor="middle">true LS NS pointer</text><text x="430.5" y="126" class="node-detail" text-anchor="middle">LSU 承诺完成的最早访存</text></g>
+<g id="us20250284649a1-fig-5-resolved-ptr"><rect x="622" y="78" width="226" height="67" rx="6" fill="#f5f5f5"/><rect x="622" y="78" width="226" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="735" y="104" class="node-name" text-anchor="middle">解析指针</text><text x="735" y="126" class="node-detail" text-anchor="middle">前序分支与异常检查已解析</text></g>
+<g id="us20250284649a1-fig-5-youngest-ptr"><rect x="913" y="78" width="220" height="67" rx="6" fill="#f5f5f5"/><rect x="913" y="78" width="220" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1023" y="104" class="node-name" text-anchor="middle">最新操作指针</text><text x="1023" y="126" class="node-detail" text-anchor="middle">最新分派至 ROB 的操作</text></g>
+<g id="us20250284649a1-fig-5-retired"><rect x="32" y="248" width="166" height="69" rx="6" fill="#f5f5f5"/><rect x="32" y="248" width="166" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="115" y="274" class="node-name" text-anchor="middle">已退休</text><text x="115" y="296" class="node-detail" text-anchor="middle">架构状态已更新</text></g>
+<g id="us20250284649a1-fig-5-retire-range"><rect x="215" y="248" width="206" height="69" rx="6" fill="#f5f5f5"/><rect x="215" y="248" width="206" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="318" y="274" class="node-name" text-anchor="middle">待推进退休</text><text x="318" y="296" class="node-detail" text-anchor="middle">退休指针到访存边界</text></g>
+<g id="us20250284649a1-fig-5-undo-range"><rect x="439" y="248" width="286" height="88" rx="6" fill="#f5f5f5"/><rect x="439" y="248" width="286" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="582" y="274" class="node-name" text-anchor="middle">尝试缩回的区间</text><text x="582" y="296" class="node-detail" text-anchor="middle">原属已提交操作</text><text x="582" y="314" class="node-detail" text-anchor="middle">逐项检查能否撤销</text></g>
+<g id="us20250284649a1-fig-5-speculative"><rect x="743" y="248" width="305" height="69" rx="6" fill="#f5f5f5"/><rect x="743" y="248" width="305" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="895.5" y="274" class="node-name" text-anchor="middle">推测操作</text><text x="895.5" y="296" class="node-detail" text-anchor="middle">可因重定向、预测失败等清除</text></g>
+<g id="us20250284649a1-fig-5-accept"><rect x="218" y="452" width="308" height="82" rx="6" fill="#f5f5f5"/><rect x="218" y="452" width="308" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="372" y="478" class="node-name" text-anchor="middle">发 Ack</text><text x="372" y="500" class="node-detail" text-anchor="middle">可在时限内移到访存边界</text></g>
+<g id="us20250284649a1-fig-5-reject"><rect x="715" y="452" width="320" height="82" rx="6" fill="#f5f5f5"/><rect x="715" y="452" width="320" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="875" y="478" class="node-name" text-anchor="middle">发 Nack</text><text x="875" y="500" class="node-detail" text-anchor="middle">本候选不能及时到达可中断点</text></g>
+<g id="us20250284649a1-fig-5-retire-to"><rect x="218" y="573" width="308" height="62" rx="6" fill="#f5f5f5"/><rect x="218" y="573" width="308" height="62" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="372" y="599" class="node-name" text-anchor="middle">冻结解析指针，继续退休</text><text x="372" y="621" class="node-detail" text-anchor="middle">跟到新边界，随后从中断入口取指</text></g>
+<text x="34" y="42" class="signal-title" text-anchor="start">ROB 条目按程序顺序排列，左侧较早</text>
+<text x="34" y="357" class="legend" text-anchor="start">中断应答电路检查能否缩回解析指针</text>
+<text x="34" y="650" class="legend" text-anchor="start">示意采用原图 7 的相对位置。间距不表示条目数或延迟。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250284649a1-fig-5-true-ls-ns">true LS NS pointer</a> 前级与 LSU 都没有先返回 Nack 时，LSU 给出 true LS NS pointer，定位它已承诺完成的最早访存。此处它位于原解析指针所标边界之前。</li><li><a href="#us20250284649a1-fig-5-undo-range">尝试缩回的区间</a> 橙框在访存边界与原解析边界之间，原先属于已提交操作。右侧的推测操作可以因异常或预测失败被清除。缩回时，真正需要区分能否撤销的是橙框中的操作。</li><li><a href="#us20250284649a1-fig-5-undo-fail">存在不可撤销操作</a> 例如已提交且必须退休的操作，或不可中断的微码操作组，可能让 ROB 无法及时缩回，应答电路因此返回 Nack。</li><li><a href="#us20250284649a1-fig-5-advance">Ack 之后</a> 可及时缩回的路径先发 Ack，随后冻结解析指针，等待退休指针追到此处才从中断入口取指。与图 4 连读可对应候选确认和异常入口两个事件。</li></ul>
+  <p class="figure-evidence">原图 7、8；说明书归档段 0063、0080、0081、0082、0083、0084、0085；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> <a href="../diagrams/US20250284649A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>重排序缓冲区（ROB）</dt><dd>FIG. 7 · 108</dd></div><div><dt>退休指针</dt><dd>FIG. 7 · 130</dd></div><div><dt>解析指针</dt><dd>FIG. 7 · 132</dd></div><div><dt>最新操作指针</dt><dd>FIG. 7 · 134</dd></div><div><dt>true LS NS pointer</dt><dd>FIG. 7 · 136</dd></div><div><dt>尝试缩回解析指针并检查结果</dt><dd>FIG. 8 · 150 / 152</dd></div><div><dt>发 Nack / 发 Ack</dt><dd>FIG. 8 · 142 / 154</dd></div><div><dt>冻结解析指针、继续退休并从中断入口取指</dt><dd>FIG. 8 · 156 / 158</dd></div></dl></details>
+</figure></section><section id="scope"><h2>继续申请集中在核内判定与逐候选回退</h2><p>该公开文本独立权利要求 2 给出两种应答，权利要求 9 从收到请求并返回 Nack 的方法步骤出发，权利要求 16 还限定 cluster 控制器与候选处理器的连接。Ack 在权利要求 17 补入系统权项，第二候选及汇总拒绝分别由权利要求 18、19 追加。</p><p>同族较早授权文本 US11630789B2 专门要求首轮只尝试上电候选，全部拒绝后才纳入断电候选。本篇图 1 至图 4 深入核内与本地控制器的接口；两层供电投递仍可由说明书原图 1–5、9–12 查到。</p><p class="subdued"><a href="#fig-1">对照图 1　Int Req 到了核内，ROB 与 LSU 分别提供什么</a></p><p class="subdued"><a href="#fig-4">对照图 4　接受以后，等退休到边界才进入中断</a></p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US20250284649A1</code><span>美国公开申请</span><time datetime="2025-09-11">2025-09-11</time></p>
-  <h1>CPU 按可中断点的到达时限应答中断投递</h1>
-  <p class="english-title" lang="en">Scalable Interrupts</p>
-  <p class="document-question">一个核心已上电，但有长延迟访存时，怎样在硬件投递阶段判断它能否及时响应中断？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">核心的应答电路判断各子系统能否在规定时间内到达可中断点，并据此对投递请求返回 Ack 或 Nack。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>已上电的核心也可能因在途指令或设备地址空间的访存无法及时进入可中断点。硬件应答和开始执行中断处理程序是两个时点。</dd></div><div><dt>验证方法</dt><dd>固定投递目标与允许等待时间，改变一笔设备访存的完成周期。记录 ROB 和 LSU 判定、Ack 或 Nack 到达、重投递及处理程序开始时刻。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002">原文权利要求 2</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">核簇中断控制器把请求发给一个候选核心。核心在接收中断之前先预测流水线的退休和在途访存能否到达可中断点。</p>
-    <p>核心的应答控制电路判断子系统能否在时限内到达可中断点。能到达则返回接受应答（Ack），任一子系统预计无法到达则返回拒绝应答（Nack）。</p>
-    <ol class="walkthrough"><li><h3>核心接口接收投递请求</h3><p>请求进入处理器的中断应答电路。硬件判断发生在开始执行中断处理程序之前。</p></li><li><h3>读取指令退休和访存状态</h3><p>重排序缓冲区（ROB）跟踪尚未退休的操作。访存单元（LSU）可反馈状态，权 8 还写明向 ROB 提供其必须完成的最早访存操作指针。</p></li><li><h3>检查是否能按时到达</h3><p>实施例可先检查指令状态，再查询 LSU。较长执行延迟、可屏蔽中断的操作或未完成的设备地址空间访问可能触发拒绝。</p></li><li><h3>回送应答与实际处理中断</h3><p>预计按时到达则回 Ack，预计不能达到则回 Nack。Ack 后可冻结边界指针并让操作退休至边界，再由核心接收中断。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 给出 LSU 向 ROB 提供最老已承诺访存位置的做法。公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> 针对在途设备地址空间访问。核心的应答状态以预计可中断条件决定，先于软件处理。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>可中断点</dt><dd>核心状态已满足接收中断条件的边界。</dd></div><div><dt>必须完成的访存操作</dt><dd>访存单元已经承诺完成、在所述判定中用于确定退休边界的操作。</dd></div><div><dt>MDR</dt><dd>原图中跟踪映射、分派与重命名的单元。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">访存条件导致核心拒绝本轮投递</a></li><li><a href="#fig-1">核心应答逻辑汇总 ROB 和 LSU 的判定</a></li><li><a href="#fig-4">返回 Ack 后仍需推进到可中断点</a></li><li><a href="#fig-3">Ack 和 Nack 的触发条件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">访存条件导致核心拒绝本轮投递</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="访存条件导致核心拒绝本轮投递">
-    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-2/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="访存条件导致核心拒绝本轮投递。较早的指令检查通过后，核心再询问 LSU。若 LSU 预计不能按时到达边界，应答电路发 Nack。">
-  </div>
-  <figcaption>
-    <span>较早的指令检查通过后，核心再询问 LSU。若 LSU 预计不能按时到达边界，应答电路发 Nack。</span>
-    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">核心应答逻辑汇总 ROB 和 LSU 的判定</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="核心应答逻辑汇总 ROB 和 LSU 的判定">
-    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-1/diagram.svg" width="697" height="284"
-         style="--paper-width:697px" alt="核心应答逻辑汇总 ROB 和 LSU 的判定。核簇控制器经接口向核心发出请求，核心应答电路读取 ROB 和 LSU 状态后返回 Ack 或 Nack。">
-  </div>
-  <figcaption>
-    <span>核簇控制器经接口向核心发出请求，核心应答电路读取 ROB 和 LSU 状态后返回 Ack 或 Nack。</span>
-    <span class="figure-evidence">图 6–7，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">返回 Ack 后仍需推进到可中断点</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250284649A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="返回 Ack 后仍需推进到可中断点">
-    <img class="paper-image native-image" src="../mechanisms/US20250284649A1/fig-4/diagram.svg" width="668" height="440"
-         style="--paper-width:668px" alt="返回 Ack 后仍需推进到可中断点。此图只画接受分支。应答电路先返回 Ack，然后冻结已解析边界并退休至该边界，核心随后接收中断。">
-  </div>
-  <figcaption>
-    <span>此图只画接受分支。应答电路先返回 Ack，然后冻结已解析边界并退休至该边界，核心随后接收中断。</span>
-    <span class="figure-evidence">图 6–8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">Ack 和 Nack 的触发条件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">在途状态</th><th scope="col">条件</th><th scope="col">结果</th></tr></thead><tbody><tr><th scope="row">各相关子系统均可到达</th><td>预计满足规定时限</td><td>Ack</td></tr><tr><th scope="row">长执行延迟或屏蔽中断的指令</th><td>满足相应从属判据</td><td>Nack</td></tr><tr><th scope="row">尚有设备地址空间访问</th><td>满足权 7 或权 21 的规定条件</td><td>Nack</td></tr></tbody></table>
-  <figcaption>
-    <span>只有到达可中断点的时间预测满足约束时才适合完成该次投递。</span>
-    <span class="figure-evidence">图 8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250284649">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测子系统到达时限</dt><dd>及时应答中断投递 <span class="subdued">原图 6、8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></span></dd></div><div><dt>向重排序缓冲区传指针</dt><dd>校验访存退休边界 <span class="subdued">原图 7、8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>Nack 可省去为等待该核心浪费的周期，同时可能触发重派。记录可中断预计和实际到达时间的差、重派次数，以及请求到处理程序开始的尾延迟。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让较慢设备访问多数刚超过应答门槛，替代核心也需要跨簇投递。若总中断延迟增加，需分离本核本可完成的剩余等待与跨簇重派开销。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>两颗核均处于上电状态，向其中一颗核发送中断请求。该核心仍有未完成的设备地址空间访问。</dd></div><div><dt>处理结果</dt><dd>如果加载/存储单元不能及时到达可中断点，核心给出 Nack。当前核没有立即进入中断服务例程。</dd></div><div><dt>结果解读</dt><dd>把投递请求到 Ack 或 Nack 的时间，与真正开始执行中断服务例程的延迟分开观测。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 2、9、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-2" aria-labelledby="independent-2-title">
   <h4 id="independent-2-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></h4>
@@ -131,54 +168,18 @@
   </table>
 </section><section class="independent-claim" id="independent-16" aria-labelledby="independent-16-title">
   <h4 id="independent-16-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></h4>
-  <p>系统由核簇和核簇中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</p>
+  <p>系统由 CPU cluster 和 CPU cluster 中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</p>
   <table class="comparison-table" aria-labelledby="independent-16-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=send%20the%20interrupt%20request%20to%20a%20given%20processor%20of%20the%20plurality%20of%20processors">F7</a></th><td>核簇控制器向一个候选处理器发请求</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=determine%20whether%20one%20or%20more%20subsystem%20circuits%20in%20the%20given%20processor%20will%20reach%20an%20interruptible%20point">F8</a></th><td>候选处理器判断子系统的时限</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=generate%20a%20non-acknowledge%20%28Nack%29%20response%20to%20the%20interrupt%20request">F9</a></th><td>相应条件下对请求返回 Nack</td><td>原图 8</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=send%20the%20interrupt%20request%20to%20a%20given%20processor%20of%20the%20plurality%20of%20processors">F7</a></th><td>CPU cluster 中断控制器向一个候选处理器发请求</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=determine%20whether%20one%20or%20more%20subsystem%20circuits%20in%20the%20given%20processor%20will%20reach%20an%20interruptible%20point">F8</a></th><td>候选处理器判断子系统的时限</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250284649A1#:~:text=generate%20a%20non-acknowledge%20%28Nack%29%20response%20to%20the%20interrupt%20request">F9</a></th><td>相应条件下对请求返回 Nack</td><td>原图 8</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td>独立项</td><td>处理器权项规定时限内到达与无法到达的两种应答。见原图 6、8。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>重排序缓冲区跟踪未退休操作，并报告是否能按时退休到可中断点。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在潜在延迟超过阈值的操作时可返回 Nack。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在使中断被屏蔽的操作时可返回 Nack。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-2">2</a></td><td>访存单元执行加载和存储，并报告能否在时限内完成至可中断点。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>存在未完成的设备地址空间访存时发 Nack。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>LSU 将必须完成的最早访存操作指针给 ROB，由 ROB 判断是否能及时到达边界。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先收请求，再判断子系统是否能按时到达，未达到条件时产生 Nack。见原图 8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>方法使用 ROB 跟踪未退休操作并回报按时到达的可能性。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>潜在执行延迟超过阈值的操作触发 Nack。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>会屏蔽中断的操作触发 Nack。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>方法由 LSU 执行访存并回报能否及时完成到边界。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>存在尚未完成的设备地址空间访存时产生 Nack。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>另一个中断请求可有另一时限，能按该时限到达时产生 Ack。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>系统由核簇和核簇中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>核心预计及时到达时产生 Ack。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>核簇控制器收到第一候选的 Nack 后向第二核心发送请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>收到多个处理器各自的 Nack 后，核簇控制器汇总并返回 Nack。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>候选处理器跟踪取到但未退休的操作，并判断能否在时限内退休到可中断点。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>判定时考虑是否有设备地址空间访存在整个指定时段内仍未完成。</td></tr></tbody>
+    <tbody><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td>独立项</td><td>处理器权项规定时限内到达与无法到达的两种应答。见原图 6、8。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>重排序缓冲区跟踪未退休操作，并报告是否能按时退休到可中断点。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在潜在延迟超过阈值的操作时可返回 Nack。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>ROB 内存在使中断被屏蔽的操作时可返回 Nack。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-2">2</a></td><td>访存单元执行加载和存储，并报告能否在时限内完成至可中断点。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>存在未完成的设备地址空间访存时发 Nack。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>LSU 将必须完成的最早访存操作指针给 ROB，由 ROB 判断是否能及时到达边界。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先收请求，再判断子系统是否能按时到达，未达到条件时产生 Nack。见原图 8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>方法使用 ROB 跟踪未退休操作并回报按时到达的可能性。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>潜在执行延迟超过阈值的操作触发 Nack。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>会屏蔽中断的操作触发 Nack。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>方法由 LSU 执行访存并回报能否及时完成到边界。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>存在尚未完成的设备地址空间访存时产生 Nack。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>另一个中断请求可有另一时限，能按该时限到达时产生 Ack。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>系统由 CPU cluster 和 CPU cluster 中断控制器组成，候选核心按预计到达时间返回 Nack。见原图 1、5、8。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>核心预计及时到达时产生 Ack。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>CPU cluster 中断控制器收到第一候选的 Nack 后向第二核心发送请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>收到多个处理器各自的 Nack 后，CPU cluster 中断控制器汇总并返回 Nack。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>候选处理器跟踪取到但未退休的操作，并判断能否在时限内退休到可中断点。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>判定时考虑是否有设备地址空间访存在整个指定时段内仍未完成。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 6–7，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>处理器应答逻辑、ROB 及 LSU 的观察边界。</dd></div><div><dt>图 8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250284649A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></dt><dd>规定时间内可中断的硬件判定。</dd></div><div><dt>图 1、4–5</dt><dd>中断控制器与核簇单元的投递和应答链路。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20250284649A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11630789B2.html#engineering">优先投递给已上电核心的中断控制</a>
-<p>US20250284649A1 经 US18/674,203 和 US18/301,837 追溯至授权为 US11630789B2 的 US17/246,311。US11630789B2 的权利要求 1 要求先尝试已上电核心，全部拒绝后进入允许核心上电的第二轮。继续申请的权利要求 9 则聚焦核心如何按能否及时到达可中断点返回 Nack。</p></li></ul>
-    <p><a href="../index.html?patent=US20250284649A1#knowledge">在全量关系图上定位 US20250284649A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2020-09-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2025-04-03</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-09-11</dd></div>
-    <div><dt>美国申请号</dt><dd>US19/169,824</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeffrey E. Gonion、Charles E. Tucker、Tal Kuzi、Richard F. Russo、Mridul Agarwal、Christopher M. Tsay、Gideon N. Levinsky、Shih-Chieh Wen、Lior Zimet</dd></div><div><dt>分类号</dt><dd>G06F9/4812、G06F1/26、G06F13/24、G06F9/5027、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20250284649A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20250284649A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对公开申请全文，覆盖 137 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US11630789B2.html"><code>US11630789B2</code> 优先投递给已上电核心的中断控制</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20250284649A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

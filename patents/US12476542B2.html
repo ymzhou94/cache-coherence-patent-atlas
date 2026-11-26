@@ -1,119 +1,201 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12476542B2 按电压变化率切换多相稳压控制环 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多相稳压器如何用电压变化率切换控制环 · US12476542B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12476542B2</code> · <a href="https://patents.google.com/patent/US12476542B2/en">专利全文</a></p>
+<h1>多相稳压器如何用电压变化率切换控制环</h1><p class="reading-question">负载阶跃正在改变输出电压时，稳压器什么时候把功率相交给瞬态控制，什么时候交回？</p>
+<p class="reading-answer">模数转换器（ADC）把主稳压轨的同一批样本送给两个控制环。变化率检测器判定轨电压变化率越界后，置位检测信号 SR_Det。每相的选择器因此改接变化率环，功率级和电感仍接在原稳压轨上。回到范围后可交回误差环，图 3D 的实施例允许经过一段保持时间再交回。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-11-18</dd></div><div><dt>申请号</dt><dd>US18/474,677</dd></div><div><dt>最早优先权</dt><dd>2019-04-17</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sanjay Pant、Fabio Gozzini、Hubert Attah、Jonathan F. Bolus、Wenxun Huang、Koushik Vaithyanathan、Alberto PUGGELLI</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#shared-rail">选择器改接的是逐相控制信号</a></li><li><a href="#handover">越界、回到范围和交回对应三个时刻</a></li><li><a href="#phase-pulse">相内 PWM 等下一拍时，额外脉冲从哪里进入</a></li><li><a href="#profiling">触发频繁时怎样调整下一轮的判定边界</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="shared-rail"><h2>选择器改接的是逐相控制信号</h2><p>在图 1B 中，输出轨经模数转换器采样。误差控制环比较轨电压与参考值，生成各相的常规控制量。变化率检测器对同一批样本做相邻差分，也可在多点上求平均。图 3B 展开了这个计算路径。</p><p>变化率比较器向逐相选择器发 SR_Det，同时将比较结果送给瞬态控制逻辑。该逻辑生成第二组逐相控制信号。选择器切换后，仍由原来的功率相通过本相电感向同一稳压轨注入电流。沿图 1 的三类线，可分别找到电压测量、控制信号和实际供电路径。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　两环共用轨电压样本和多相功率级</h3>
+    <p id="fig-1-basis">两个控制环取样于同一条主稳压轨。SR_Det 只控制选择器，实际相电流通过电感回到主稳压轨。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两环共用轨电压样本和多相功率级" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="us12476542b2-fig-1-svg-title us12476542b2-fig-1-svg-desc">
+<title id="us12476542b2-fig-1-svg-title">两环共用轨电压样本和多相功率级</title>
+<desc id="us12476542b2-fig-1-svg-desc">沿电压样本可见两个控制环都使用同一电压观测。SR_Det 只控制选择器，实际相电流通过电感回到主稳压轨。</desc>
+<defs><marker id="us12476542b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12476542b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12476542b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12476542b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12476542b2-fig-1-bits-error" d="M 200 208 L 228 208 Q 236 208 236 200 L 236 146 Q 236 138 244 138 L 284 138" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-1-arrow-data)"/>
+<path id="us12476542b2-fig-1-bits-slope" d="M 200 244 L 228 244 Q 236 244 236 252 L 236 310 Q 236 318 244 318 L 284 318" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-1-arrow-data)"/>
+<path id="us12476542b2-fig-1-error-ctrl" d="M 458 136 L 488 136 Q 496 136 496 144 L 496 200 Q 496 208 504 208 L 548 208" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-1-arrow-control)"/>
+<path id="us12476542b2-fig-1-detect" d="M 458 300 L 492 300 Q 500 300 500 292 L 500 238 Q 500 230 508 230 L 548 230" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-1-arrow-main)"/>
+<path id="us12476542b2-fig-1-slope-ctrl" d="M 458 336 L 512 336 Q 520 336 520 328 L 520 263 Q 520 255 528 255 L 548 255" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-1-arrow-control)"/>
+<path id="us12476542b2-fig-1-drive" d="M 692 230 L 760 230" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-1-arrow-control)"/>
+<path id="us12476542b2-fig-1-power" d="M 838 276 L 838 376" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-1-arrow-data)"/>
+<path id="us12476542b2-fig-1-feedback" d="M 760 408 L 128 408 Q 120 408 120 400 L 120 260" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-1-arrow-data)"/>
+<rect x="197.5" y="105" width="85" height="18" fill="#f5f5f5"/><text x="240" y="119" class="arrow-label" text-anchor="middle">电压样本</text>
+<rect x="192" y="329" width="90" height="18" fill="#f5f5f5"/><text x="237" y="343" class="arrow-label" text-anchor="middle">电压样本</text>
+<rect x="448" y="104" width="102" height="18" fill="#f5f5f5"/><text x="499" y="118" class="arrow-label" text-anchor="middle">第一组控制</text>
+<rect x="453.5" y="307" width="95" height="18" fill="#f5f5f5"/><text x="501" y="321" class="arrow-label" text-anchor="middle">SR_Det</text>
+<rect x="451.5" y="345" width="97" height="18" fill="#f5f5f5"/><text x="500" y="359" class="arrow-label" text-anchor="middle">第二组控制</text>
+<rect x="694" y="198" width="64" height="18" fill="#f5f5f5"/><text x="726" y="212" class="arrow-label" text-anchor="middle">逐相控制</text>
+<rect x="850.5" y="313" width="97" height="18" fill="#f5f5f5"/><text x="899" y="327" class="arrow-label" text-anchor="middle">各相电感</text>
+<rect x="413" y="377" width="88" height="18" fill="#f5f5f5"/><text x="457" y="391" class="arrow-label" text-anchor="middle">反馈 Vout</text>
+<g id="us12476542b2-fig-1-sense"><rect x="44" y="188" width="156" height="72" rx="6" fill="#f5f5f5"/><rect x="44" y="188" width="156" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="122" y="214" class="node-name" text-anchor="middle">模数转换器</text><text x="122" y="236" class="node-detail" text-anchor="middle">稳压轨采样</text></g>
+<g id="us12476542b2-fig-1-error"><rect x="284" y="104" width="174" height="68" rx="6" fill="#f5f5f5"/><rect x="284" y="104" width="174" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="371" y="130" class="node-name" text-anchor="middle">误差控制环</text><text x="371" y="152" class="node-detail" text-anchor="middle">比较参考电压</text></g>
+<g id="us12476542b2-fig-1-slope"><rect x="284" y="276" width="174" height="84" rx="6" fill="#f5f5f5"/><rect x="284" y="276" width="174" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="371" y="302" class="node-name" text-anchor="middle">变化率检测器</text><text x="371" y="324" class="node-detail" text-anchor="middle">差分与门限比较</text></g>
+<g id="us12476542b2-fig-1-select"><rect x="548" y="184" width="144" height="92" rx="6" fill="#f5f5f5"/><rect x="548" y="184" width="144" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="620" y="210" class="node-name" text-anchor="middle">逐相控制选择器</text><text x="620" y="232" class="node-detail" text-anchor="middle">SR_Det 选控制源</text></g>
+<g id="us12476542b2-fig-1-phases"><rect x="760" y="184" width="156" height="92" rx="6" fill="#f5f5f5"/><rect x="760" y="184" width="156" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="838" y="210" class="node-name" text-anchor="middle">功率相</text><text x="838" y="232" class="node-detail" text-anchor="middle">共用执行端</text></g>
+<g id="us12476542b2-fig-1-rail"><rect x="760" y="376" width="156" height="64" rx="6" fill="#f5f5f5"/><rect x="760" y="376" width="156" height="64" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="838" y="402" class="node-name" text-anchor="middle">主稳压轨</text><text x="838" y="424" class="node-detail" text-anchor="middle">负载和反馈接点</text></g>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12476542b2-fig-1-sense">模数转换器</a> 模数转换器对主稳压轨电压量化，电压样本分送两个控制环。</li><li><a href="#us12476542b2-fig-1-slope">变化率检测器</a> 变化率检测器含样本寄存、差分计算和门限比较。</li><li><a href="#us12476542b2-fig-1-select">逐相控制选择器</a> SR_Det 置位后逐相选第二组控制信号，电感和功率相继续共用。</li><li><a href="#us12476542b2-fig-1-power">各相电感</a> 每相电流通过本相电感供给主稳压轨，闭合轨电压反馈。</li></ul>
+  <p class="figure-evidence">原图 1B、3A、3B；说明书归档段 0030、0032、0033、0034、0035、0036、0037、0054、0056、0061、0062、0063、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12476542B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>模数转换器</dt><dd>104</dd></div><div><dt>主稳压轨</dt><dd>105</dd></div><div><dt>电压样本</dt><dd>107</dd></div><div><dt>误差控制环</dt><dd>101</dd></div><div><dt>变化率检测器</dt><dd>121</dd></div><div><dt>样本寄存器</dt><dd>323</dd></div><div><dt>变化率计算器</dt><dd>325</dd></div><div><dt>变化率比较器</dt><dd>327</dd></div><div><dt>瞬态控制逻辑</dt><dd>321</dd></div><div><dt>逐相控制选择器</dt><dd>128、129</dd></div><div><dt>功率相</dt><dd>102、103</dd></div><div><dt>各相电感</dt><dd>108、109</dd></div><div><dt>SR_Det</dt><dd>341</dd></div><div><dt>相内控制选择信号</dt><dd>345</dd></div></dl></details>
+</figure></section><section id="handover"><h2>越界、回到范围和交回对应三个时刻</h2><p>图 3D 的纵轴是轨电压变化率。越过上阈值或跌破下阈值都会触发同一个 SR_Det，极性决定第二控制环是倾向于减流还是补流。图 2 把两次越界与控制源画在同一条事件轴。回到范围之后，部分实施例让第二环继续控制一段时间。图中间距只表示事件顺序。</p><p>下降过快时，可以在有闲置相时打开额外的相，或增加脉宽调制（PWM）占空比。上升过快时，可以关闭活跃相或降低脉冲频率调制（PFM）的开关频率。表 3 把这些从属项与说明书举例分开。要量化瞬态电压下探（droop）或过冲，还需记录主稳压轨的电压最低点或最高点。变化率回到范围时，轨电压仍可能偏离目标。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　在上、下阈值处切换，同一轨上观察交回</h3>
+    <p id="fig-2-basis">越界触发同一选择动作。轨变化率回到范围的瞬间与误差环恢复控制的时点可以分离。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="在上、下阈值处切换，同一轨上观察交回" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 504" role="img" aria-labelledby="us12476542b2-fig-2-svg-title us12476542b2-fig-2-svg-desc">
+<title id="us12476542b2-fig-2-svg-title">在上、下阈值处切换，同一轨上观察交回</title>
+<desc id="us12476542b2-fig-2-svg-desc">越界触发同一选择动作。轨变化率回到范围的瞬间与误差环恢复控制的时点可以分离。</desc>
+<defs><marker id="us12476542b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12476542b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12476542b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12476542b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="56" class="signal-title" text-anchor="start">事件顺序（无实测时间刻度）</text>
+<text x="215.143" y="96" class="node-name" text-anchor="middle">范围内</text>
+<line x1="215.143" x2="215.143" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="325.429" y="96" class="node-name" text-anchor="middle">上越界</text>
+<line x1="325.429" x2="325.429" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="435.714" y="96" class="node-name" text-anchor="middle">回到范围</text>
+<line x1="435.714" x2="435.714" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="546" y="96" class="node-name" text-anchor="middle">首次交回</text>
+<line x1="546" x2="546" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="656.286" y="96" class="node-name" text-anchor="middle">下越界</text>
+<line x1="656.286" x2="656.286" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="766.571" y="96" class="node-name" text-anchor="middle">回到范围</text>
+<line x1="766.571" x2="766.571" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<text x="876.857" y="96" class="node-name" text-anchor="middle">再次交回</text>
+<line x1="876.857" x2="876.857" y1="110" y2="432" stroke="#4f5d75" opacity=".20"/>
+<line x1="160" x2="932" y1="154" y2="154" stroke="#4f5d75" stroke-dasharray="5,4"/>
+<text x="24" y="158" class="arrow-label" text-anchor="start">上阈值</text>
+<line x1="160" x2="932" y1="238" y2="238" stroke="#4f5d75" stroke-dasharray="5,4"/>
+<text x="24" y="242" class="arrow-label" text-anchor="start">下阈值</text>
+<text x="24" y="196" class="node-name" text-anchor="start">轨压变化率</text>
+<polyline points="215.143,196 325.429,124 435.714,196 546,196 656.286,270 766.571,196 876.857,196" fill="none" stroke="#2d3142" stroke-width="2"/>
+<text x="24" y="344" class="node-name" text-anchor="start">SR_Det／选择</text>
+<rect x="162" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="215.143" y="344" class="arrow-label" text-anchor="middle">未置位</text>
+<rect x="272.286" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="325.429" y="344" class="arrow-label" text-anchor="middle">置位</text>
+<rect x="382.571" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75" stroke-dasharray="4,3"/>
+<text x="435.714" y="344" class="arrow-label" text-anchor="middle">可保持</text>
+<rect x="492.857" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="546" y="344" class="arrow-label" text-anchor="middle">撤销</text>
+<rect x="603.143" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="656.286" y="344" class="arrow-label" text-anchor="middle">置位</text>
+<rect x="713.429" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75" stroke-dasharray="4,3"/>
+<text x="766.571" y="344" class="arrow-label" text-anchor="middle">可保持</text>
+<rect x="823.714" y="318" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="876.857" y="344" class="arrow-label" text-anchor="middle">撤销</text>
+<text x="24" y="402" class="node-name" text-anchor="start">逐相控制源</text>
+<rect x="162" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="215.143" y="402" class="arrow-label" text-anchor="middle">误差环</text>
+<rect x="272.286" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="325.429" y="402" class="arrow-label" text-anchor="middle">变化率环</text>
+<rect x="382.571" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75" stroke-dasharray="4,3"/>
+<text x="435.714" y="402" class="arrow-label" text-anchor="middle">变化率环可保留</text>
+<rect x="492.857" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="546" y="402" class="arrow-label" text-anchor="middle">误差环</text>
+<rect x="603.143" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="656.286" y="402" class="arrow-label" text-anchor="middle">变化率环</text>
+<rect x="713.429" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75" stroke-dasharray="4,3"/>
+<text x="766.571" y="402" class="arrow-label" text-anchor="middle">变化率环可保留</text>
+<rect x="823.714" y="376" width="106.286" height="40" rx="4" fill="#ececec" stroke="#4f5d75"/>
+<text x="876.857" y="402" class="arrow-label" text-anchor="middle">误差环</text>
+<g id="us12476542b2-fig-2-upper-cross"><circle cx="325.429" cy="124" r="5" fill="#bf4520" stroke="#f5f5f5"/><title>dV/dt &gt; +Thresh</title></g>
+<g id="us12476542b2-fig-2-hold"><circle cx="435.714" cy="376" r="5" fill="#4f5d75" stroke="#f5f5f5"/><title>可选保持第二环</title></g>
+<g id="us12476542b2-fig-2-return-first"><circle cx="546" cy="376" r="5" fill="#4f5d75" stroke="#f5f5f5"/><title>满足交回条件</title></g>
+<g id="us12476542b2-fig-2-lower-cross"><circle cx="656.286" cy="270" r="5" fill="#bf4520" stroke="#f5f5f5"/><title>dV/dt &lt; −Thresh</title></g>
+<g id="us12476542b2-fig-2-return-last"><circle cx="876.857" cy="376" r="5" fill="#4f5d75" stroke="#f5f5f5"/><title>误差环恢复</title></g>
+<text x="24" y="467" class="legend" text-anchor="start">纵轴仅表示阈值相对关系。虚线格为说明书允许的保持期。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12476542b2-fig-2-upper-cross">dV/dt &gt; +Thresh</a> 上穿 +Thresh，置位 SR_Det，第二环接管。</li><li><a href="#us12476542b2-fig-2-hold">可选保持第二环</a> 回到范围后的保持窗口是原图所述可选安排。</li><li><a href="#us12476542b2-fig-2-lower-cross">dV/dt &lt; −Thresh</a> 跌破 −Thresh 再触发，选择器动作相同，纠偏方向相反。</li></ul>
+  <p class="figure-evidence">原图 3D、6B；说明书归档段 0036、0037、0064、0065、0070、0071、0092；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12476542B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>SR_Det</dt><dd>341</dd></div><div><dt>逐相控制选择器</dt><dd>128、129</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　斜率方向决定补流或减流</h3>
+    <p id="fig-3-basis">同一个 SR_Det 会因正、负越界置位。功率相动作根据越界方向选择，表内从属项和举例分别标明。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">观测条件</th><th scope="col">接管后目标</th><th scope="col">权项中的动作</th><th scope="col">说明书举例或约束</th></tr></thead><tbody><tr id="fig-3-fall"><th scope="row">dV/dt &lt; 下阈值</th><td>增加总供电电流</td><td>权 5 启用闲置相，权 6 增加占空比，权 16 增流</td><td>还可提高 PFM 频率或切换为 PWM。先看有无空闲相。</td></tr><tr id="fig-3-rise"><th scope="row">dV/dt &gt; 上阈值</th><td>减少总供电电流</td><td>权 8 关闭活跃相，权 9 降低开关频率，权 17 减流</td><td>还可缩短 PWM 脉宽或切换为 PFM。</td></tr><tr id="fig-3-return"><th scope="row">重新进入斜率范围</th><td>准备交回误差环</td><td>权 1 以范围内状态控制选择</td><td>图 3D 允许先保持或逐步稳定；没有固定延迟数值。</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-fall">dV/dt &lt; 下阈值</a> 负向越界时，比较器输入的是下跌速度。相已全部启用时，应查看占空比或开关模式还有多少可调范围。</li><li><a href="#fig-3-rise">dV/dt &gt; 上阈值</a> 正向越界时，控制器让总注入电流减少。关相与降频取决于该实施方式及当前相状态。</li></ul>
+  <p class="figure-evidence">原图 1B、3D、6B；说明书归档段 0037、0038、0039、0040、0041、0070、0071、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>变化率检测器</dt><dd>121</dd></div><div><dt>功率相</dt><dd>102、103</dd></div></dl></details>
+</figure></section><section id="phase-pulse"><h2>相内 PWM 等下一拍时，额外脉冲从哪里进入</h2><p>常规 PWM 由本相时钟置位，电感电流的感测量达到目标后复位 SR 锁存器。一旦复位，常规路径要等下一次相时钟才能开始新的导通脉冲。原图 5 加入相内选择器，让直接脉冲和锁存输出共用同一个栅极驱动器。</p><p>原图 7 用绝对轨电压决定何时补发脉冲。轨电压低于下阈值时可按查表结果给一相或多相补发脉冲，帮助处于相初始化期间的稳压轨。若轨电压超过上阈值，也可通过额外脉冲让开关节点放电。这个实施例的判定量与图 2 比较的 dV/dt 不同。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　额外脉冲从相内选择器进入，绕过电流比较和锁存路径</h3>
+    <p id="fig-5-basis">本相的常规 PWM 由相时钟置位、由电流比较结果复位。绝对轨压低于门限时，所示实施例可发送预定脉冲，经相内多路选择器直接驱动本相开关。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="额外脉冲从相内选择器进入，绕过电流比较和锁存路径" style="--figure-width:1200px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 682" role="img" aria-labelledby="us12476542b2-fig-5-svg-title us12476542b2-fig-5-svg-desc">
+<title id="us12476542b2-fig-5-svg-title">额外脉冲从相内选择器进入，绕过电流比较和锁存路径</title>
+<desc id="us12476542b2-fig-5-svg-desc">本相的常规 PWM 由相时钟置位、由电流比较结果复位。绝对轨压低于门限时，所示实施例可发送预定脉冲，经相内多路选择器直接驱动本相开关。</desc>
+<defs><marker id="us12476542b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12476542b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12476542b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12476542b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12476542b2-fig-5-set" d="M 214 123 L 570 123" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-5-arrow-control)"/>
+<path id="us12476542b2-fig-5-target-i" d="M 214 280 L 312 280" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-data)"/>
+<path id="us12476542b2-fig-5-reset" d="M 502 265 L 640 265 Q 648 265 648 257 L 648 193" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-5-arrow-control)"/>
+<path id="us12476542b2-fig-5-latch-out" d="M 751 140 L 858 140 Q 866 140 866 148 L 866 249" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-data)"/>
+<path id="us12476542b2-fig-5-enable-pulse" d="M 214 476 L 312 476" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-5-arrow-control)"/>
+<path id="us12476542b2-fig-5-pulse-signal" d="M 525 465 L 690 465 Q 698 465 698 457 L 698 312 Q 698 304 706 304 L 780 304" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-main)"/>
+<path id="us12476542b2-fig-5-select-path" d="M 525 509 L 856 509 Q 864 509 864 501 L 864 360" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-5-arrow-control)"/>
+<path id="us12476542b2-fig-5-gate" d="M 953 302 L 1002 302" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-main)"/>
+<path id="us12476542b2-fig-5-switching" d="M 1089 361 L 1089 419" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-main)"/>
+<path id="us12476542b2-fig-5-sw-out" d="M 1089 525 L 1089 570" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-5-arrow-main)"/>
+<path id="us12476542b2-fig-5-feedback" d="M 1089 548 L 563 548 Q 555 548 555 540 L 555 376 Q 555 368 547 368 L 417 368 Q 409 368 409 360 L 409 336" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-5-arrow-return)"/>
+<rect x="362" y="95" width="78" height="18" fill="#f5f5f5"/><text x="401" y="109" class="arrow-label" text-anchor="middle">置位 S</text>
+<rect x="222.5" y="250" width="81" height="18" fill="#f5f5f5"/><text x="263" y="264" class="arrow-label" text-anchor="middle">电流指令</text>
+<rect x="526.5" y="237" width="71" height="18" fill="#f5f5f5"/><text x="562" y="251" class="arrow-label" text-anchor="middle">复位 R</text>
+<rect x="769" y="109" width="100" height="18" fill="#f5f5f5"/><text x="819" y="123" class="arrow-label" text-anchor="middle">常规 PWM</text>
+<rect x="221" y="446" width="86" height="18" fill="#f5f5f5"/><text x="264" y="460" class="arrow-label" text-anchor="middle">比较结果</text>
+<rect x="626" y="436" width="104" height="18" fill="#f5f5f5"/><text x="678" y="450" class="arrow-label" text-anchor="middle">直接脉冲</text>
+<rect x="651.5" y="480" width="95" height="18" fill="#f5f5f5"/><text x="699" y="494" class="arrow-label" text-anchor="middle">选择信号</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="1099.5" y="379" width="83" height="18" fill="#f5f5f5"/><text x="1141" y="393" class="arrow-label" text-anchor="middle">栅极信号</text>
+<rect x="1099.5" y="536" width="83" height="18" fill="#f5f5f5"/><text x="1141" y="550" class="arrow-label" text-anchor="middle">开关节点</text>
+<rect x="625.5" y="559" width="137" height="18" fill="#f5f5f5"/><text x="694" y="573" class="arrow-label" text-anchor="middle">本相电流感测</text>
+<g id="us12476542b2-fig-5-clock"><rect x="34" y="80" width="180" height="87" rx="6" fill="#f5f5f5"/><rect x="34" y="80" width="180" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="124" y="106" class="node-name" text-anchor="middle">本相基准时钟</text><text x="124" y="128" class="node-detail" text-anchor="middle">向 SR 锁存器置位</text></g>
+<g id="us12476542b2-fig-5-ref-i"><rect x="34" y="235" width="180" height="92" rx="6" fill="#f5f5f5"/><rect x="34" y="235" width="180" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="124" y="261" class="node-name" text-anchor="middle">本相控制电流</text><text x="124" y="283" class="node-detail" text-anchor="middle">常规环给出逐相目标</text></g>
+<g id="us12476542b2-fig-5-current-cmp"><rect x="312" y="230" width="190" height="106" rx="6" fill="#f5f5f5"/><rect x="312" y="230" width="190" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="407" y="256" class="node-name" text-anchor="middle">电流比较器</text><text x="407" y="278" class="node-detail" text-anchor="middle">感测量达到目标时复位</text></g>
+<g id="us12476542b2-fig-5-latch"><rect x="570" y="80" width="181" height="113" rx="6" fill="#f5f5f5"/><rect x="570" y="80" width="181" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="660.5" y="106" class="node-name" text-anchor="middle">SR 锁存器</text><text x="660.5" y="128" class="node-detail" text-anchor="middle">置位起始 PWM</text><text x="660.5" y="146" class="node-detail" text-anchor="middle">复位结束本相脉冲</text></g>
+<g id="us12476542b2-fig-5-rail-v"><rect x="34" y="433" width="180" height="90" rx="6" fill="#f5f5f5"/><rect x="34" y="433" width="180" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="124" y="459" class="node-name" text-anchor="middle">绝对轨压比较</text><text x="124" y="481" class="node-detail" text-anchor="middle">低于门限触发补流</text></g>
+<g id="us12476542b2-fig-5-pulse"><rect x="312" y="414" width="213" height="117" rx="6" fill="#f5f5f5"/><rect x="312" y="414" width="213" height="117" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="418.5" y="440" class="node-name" text-anchor="middle">额外脉冲生成</text><text x="418.5" y="462" class="node-detail" text-anchor="middle">查表选择脉冲宽度</text><text x="418.5" y="480" class="node-detail" text-anchor="middle">可触发一相或多相</text></g>
+<g id="us12476542b2-fig-5-phase-mux"><rect x="780" y="249" width="173" height="111" rx="6" fill="#f5f5f5"/><rect x="780" y="249" width="173" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="866.5" y="275" class="node-name" text-anchor="middle">相内多路选择器</text><text x="866.5" y="297" class="node-detail" text-anchor="middle">在锁存输出与</text><text x="866.5" y="315" class="node-detail" text-anchor="middle">直接脉冲间选择</text></g>
+<g id="us12476542b2-fig-5-drivers"><rect x="1002" y="247" width="173" height="114" rx="6" fill="#f5f5f5"/><rect x="1002" y="247" width="173" height="114" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1088.5" y="273" class="node-name" text-anchor="middle">栅极驱动缓冲</text><text x="1088.5" y="295" class="node-detail" text-anchor="middle">对上下管作电平转换</text></g>
+<g id="us12476542b2-fig-5-switch"><rect x="1002" y="419" width="173" height="106" rx="6" fill="#f5f5f5"/><rect x="1002" y="419" width="173" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1088.5" y="445" class="node-name" text-anchor="middle">相内半桥</text><text x="1088.5" y="467" class="node-detail" text-anchor="middle">高侧管接输入电源</text><text x="1088.5" y="485" class="node-detail" text-anchor="middle">低侧管接地</text></g>
+<g id="us12476542b2-fig-5-inductor"><rect x="1002" y="570" width="173" height="82" rx="6" fill="#f5f5f5"/><rect x="1002" y="570" width="173" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1088.5" y="596" class="node-name" text-anchor="middle">本相输出电感</text><text x="1088.5" y="618" class="node-detail" text-anchor="middle">串接到稳压轨</text></g>
+<text x="34" y="40" class="signal-title" text-anchor="start">常规 PWM 路径与同步时钟等待期间的额外脉冲路径</text>
+<text x="34" y="638" class="legend" text-anchor="start">所示为原图 5 的一个相。低电压触发额外脉冲是实施例中的独立判断。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12476542b2-fig-5-current-cmp">常规 PWM 的电流闭环</a> 电感电流的感测量达到本相控制电流时，比较器复位 SR 锁存器。本相时钟的后续置位开启一个新的常规脉冲。</li><li><a href="#us12476542b2-fig-5-pulse">用绝对轨压选择额外脉冲</a> 原图 3A、7 依据轨电压判断额外脉冲。低于阈值时按查表结果选择脉冲。这里的比较量是电压，图 2 的控制环切换比较的是 dV/dt。</li><li><a href="#us12476542b2-fig-5-phase-mux">相内选择器在驱动器之前</a> 选择信号将锁存器输出或直接脉冲接到同一节点。选额外脉冲时，可以在仍等待本相时钟或其他相初始化期间驱动功率级。</li><li><a href="#us12476542b2-fig-5-switch">上下管作用于同一开关节点</a> 驱动缓冲将逻辑转换成上下管所需电平。上管通过电感向稳压轨供电，另一状态使低侧器件导通。稳压轨与电感连接处的功率路径保持不变。</li></ul>
+  <p class="figure-evidence">原图 3A、4、5、7；说明书归档段 0058、0072、0073、0074、0076、0077、0081、0082、0083、0084、0089、0090、0098、0099、0100、0101、0102；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> <a href="../diagrams/US12476542B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>稳压轨</dt><dd>105</dd></div><div><dt>额外脉冲查表数据</dt><dd>302</dd></div><div><dt>本相基准时钟</dt><dd>310</dd></div><div><dt>直接脉冲信号</dt><dd>314</dd></div><div><dt>相内选择信号</dt><dd>315</dd></div><div><dt>SR 锁存器</dt><dd>501</dd></div><div><dt>电流比较器</dt><dd>502</dd></div><div><dt>栅极驱动缓冲</dt><dd>503–506</dd></div><div><dt>低侧和高侧功率开关</dt><dd>507／508</dd></div><div><dt>输出电感</dt><dd>509</dd></div><div><dt>相内多路选择器</dt><dd>513</dd></div></dl></details>
+</figure></section><section id="profiling"><h2>触发频繁时怎样调整下一轮的判定边界</h2><p>图 3C 中，计时器给出统计窗口，事件计数器记录窗口内的 SR_Det 置位次数。触发率计算器用该窗口计数求触发率。参数选择电路根据触发率查表，向变化率比较器回送新阈值。下一次越界判断会采用更新后的边界。</p><p>应用到负载阶跃测试时，分别记录负载变化、采样判定、SR_Det 置位、选择器切换和首个功率相动作。固定负载阶跃后改变采样相位或门限，可以观察纹波是否让触发次数上升，再用轨电压最低值和恢复时间判断切换是否有益。专利没有给出固定的采样间隔、门限值或恢复时间。权利要求 4、15、20 单独限定触发率反馈。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　窗口计数怎样改写下次检测的阈值</h3>
+    <p id="fig-4-basis">触发率反馈影响下一轮的门限。相选择仍由当次 SR_Det 决定，图中的回写线没有连到功率相。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="窗口计数怎样改写下次检测的阈值" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="us12476542b2-fig-4-svg-title us12476542b2-fig-4-svg-desc">
+<title id="us12476542b2-fig-4-svg-title">窗口计数怎样改写下次检测的阈值</title>
+<desc id="us12476542b2-fig-4-svg-desc">触发率反馈影响下一轮的门限。相选择仍由当次 SR_Det 决定，图中的回写线没有连到功率相。</desc>
+<defs><marker id="us12476542b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12476542b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12476542b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12476542b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12476542b2-fig-4-assert" d="M 220 270 L 298 270" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-4-arrow-control)"/>
+<path id="us12476542b2-fig-4-reset" d="M 374 136 L 374 232" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12476542b2-fig-4-arrow-control)"/>
+<path id="us12476542b2-fig-4-count" d="M 450 270 L 524 270" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-4-arrow-data)"/>
+<path id="us12476542b2-fig-4-trigger-rate" d="M 676 270 L 746 270" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12476542b2-fig-4-arrow-data)"/>
+<path id="us12476542b2-fig-4-threshold" d="M 828 308 L 828 404 Q 828 412 820 412 L 142 412 Q 134 412 134 404 L 134 308" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12476542b2-fig-4-arrow-main)"/>
+<rect x="221.5" y="240" width="73" height="18" fill="#f5f5f5"/><text x="258" y="254" class="arrow-label" text-anchor="middle">SR_Det</text>
+<rect x="392.5" y="176" width="115" height="18" fill="#f5f5f5"/><text x="450" y="190" class="arrow-label" text-anchor="middle">窗口结束／复位</text>
+<rect x="455.5" y="240" width="63" height="18" fill="#f5f5f5"/><text x="487" y="254" class="arrow-label" text-anchor="middle">窗口计数</text>
+<rect x="679" y="240" width="68" height="18" fill="#f5f5f5"/><text x="713" y="254" class="arrow-label" text-anchor="middle">窗口触发率</text>
+<rect x="423.5" y="382" width="113" height="18" fill="#f5f5f5"/><text x="480" y="396" class="arrow-label" text-anchor="middle">阈值参数回送</text>
+<g id="us12476542b2-fig-4-compare"><rect x="48" y="232" width="172" height="76" rx="6" fill="#f5f5f5"/><rect x="48" y="232" width="172" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="258" class="node-name" text-anchor="middle">变化率比较器</text><text x="134" y="280" class="node-detail" text-anchor="middle">输出 SR_Det</text></g>
+<g id="us12476542b2-fig-4-counter"><rect x="298" y="232" width="152" height="76" rx="6" fill="#f5f5f5"/><rect x="298" y="232" width="152" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="374" y="258" class="node-name" text-anchor="middle">触发事件计数器</text><text x="374" y="280" class="node-detail" text-anchor="middle">记录置位次数</text></g>
+<g id="us12476542b2-fig-4-timer"><rect x="298" y="72" width="152" height="64" rx="6" fill="#f5f5f5"/><rect x="298" y="72" width="152" height="64" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="374" y="98" class="node-name" text-anchor="middle">统计窗口计时器</text><text x="374" y="120" class="node-detail" text-anchor="middle">观察窗口</text></g>
+<g id="us12476542b2-fig-4-rate"><rect x="524" y="232" width="152" height="76" rx="6" fill="#f5f5f5"/><rect x="524" y="232" width="152" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="600" y="258" class="node-name" text-anchor="middle">触发率计算器</text><text x="600" y="280" class="node-detail" text-anchor="middle">按窗口归一</text></g>
+<g id="us12476542b2-fig-4-choose"><rect x="746" y="232" width="166" height="76" rx="6" fill="#f5f5f5"/><rect x="746" y="232" width="166" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="829" y="258" class="node-name" text-anchor="middle">参数选择电路</text><text x="829" y="280" class="node-detail" text-anchor="middle">按触发率查参数表</text></g>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12476542b2-fig-4-counter">触发事件计数器</a> 计数的是 SR_Det 置位事件。持续置位的一段时间不应被读成多个触发事件。</li><li><a href="#us12476542b2-fig-4-timer">统计窗口计时器</a> 统计窗口计时器界定统计窗口，并可在窗口结束时复位计数器。</li><li><a href="#us12476542b2-fig-4-choose">参数选择电路</a> 参数选择器根据窗口触发率查参数表，更新检测器的边界。阈值可分别或一起调节。</li><li><a href="#us12476542b2-fig-4-threshold">阈值参数回送</a> 门限更新送回变化率比较器，供下次比较使用。</li></ul>
+  <p class="figure-evidence">原图 1B、3B、3C、6C；说明书归档段 0042、0043、0044、0045、0065、0066、0067、0068、0069、0097；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12476542B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>变化率比较器</dt><dd>327</dd></div><div><dt>触发率统计电路</dt><dd>123</dd></div><div><dt>触发事件计数器</dt><dd>363</dd></div><div><dt>统计窗口计时器</dt><dd>364</dd></div><div><dt>触发率计算器</dt><dd>365</dd></div><div><dt>窗口触发率</dt><dd>368</dd></div><div><dt>参数选择电路</dt><dd>124</dd></div><div><dt>参数选择器</dt><dd>371</dd></div><div><dt>参数表</dt><dd>372</dd></div><div><dt>阈值参数回送</dt><dd>375</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=supply#catalog">硬件供电与保护</a></p>
-  <p class="document-id"><code>US12476542B2</code><span>美国授权专利</span><time datetime="2025-11-18">2025-11-18</time></p>
-  <h1>按电压变化率切换多相稳压控制环</h1>
-  <p class="english-title" lang="en">Slew rate detection in power converter with digital current mode control</p>
-  <p class="document-question">负载突变时，稳压器如何提前改变多相功率级的控制信号？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">变化率检测电路对数字电压样本比较门限，据结果选择常规或瞬态控制信号驱动多相功率级。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>触发依赖采样间隔与门限。开关纹波可能改变差分样本，造成接管或释放抖动。</dd></div><div><dt>验证方法</dt><dd>固定 Vin 和带宽，分别扫阶跃幅值、上升沿与 ADC 采样相位。量功率级切换时刻、触发率、最低电压及恢复时间。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12476542B2/en#CLM-00003">原文权利要求 3</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">采样电压的变化率能暴露正在发展的瞬态。它与基于目标电压误差的稳态控制指标不同。该授权把两类控制信号接到同一组多相功率级。</p>
-    <p>两环共用稳压轨电压采样。误差环按参考值与轨电压偏差控制。变化率溢出门限时，变化率环接管同一组功率相。触发率反馈调门限属于从属项。</p>
-    <ol class="walkthrough"><li><h3>采样输出电压</h3><p>ADC 给参考电压比较和变化率检测提供相同来源的数字样本。</p></li><li><h3>判断变化率</h3><p>变化率检测逻辑判断输出电压变化是否越过指定范围。</p></li><li><h3>选择瞬态控制环</h3><p>检测越界后，对多相功率级使用第二组控制信号，及时响应负载瞬态。</p></li><li><h3>统计触发率</h3><p>第三环统计控制环切换频率，使用参数电路调整变化率范围。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> 以轨电压变化率是否在范围内决定控制源。第 4 项才用一段时间内的触发率调整范围。图 3D 的部分实现允许轨变化率回到范围内后延后交回第一环。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>电压变化率（dV/dt）</dt><dd>单位时间内稳压轨电压的变化。控制器可用相邻 ADC 样本差分估计。</dd></div><div><dt>SR_Det</dt><dd>轨电压变化率越界检测信号，用于选择误差环或变化率环。</dd></div><div><dt>功率相</dt><dd>多相变换器中按各自控制信号切换并经对应电感向同一轨供电的支路。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">跨越上、下变化率阈值时怎样切换控制环</a></li><li><a href="#fig-1">同一稳压轨的两个控制环如何共用功率相</a></li><li><a href="#fig-4">触发率怎样反馈到下一轮变化率检测阈值</a></li><li><a href="#fig-3">变化率方向决定补流还是减流</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">跨越上、下变化率阈值时怎样切换控制环</h3></div>
-    <a class="paper-open" href="../mechanisms/US12476542B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="跨越上、下变化率阈值时怎样切换控制环">
-    <img class="paper-image native-image" src="../mechanisms/US12476542B2/fig-2/diagram.svg" width="784" height="528"
-         style="--paper-width:784px" alt="跨越上、下变化率阈值时怎样切换控制环。变化率高过上阈值和低过下阈值都置位 SR_Det，第二环取得控制。图 3D 还允许变化率回到范围后短暂保持第二环，交回时点可晚于回到范围的时点。各列只表事件先后。">
-  </div>
-  <figcaption>
-    <span>变化率高过上阈值和低过下阈值都置位 SR_Det，第二环取得控制。图 3D 还允许变化率回到范围后短暂保持第二环，交回时点可晚于回到范围的时点。各列只表事件先后。</span>
-    <span class="figure-evidence">原图 3D，说明书 0070–0071，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12476542">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">同一稳压轨的两个控制环如何共用功率相</h3></div>
-    <a class="paper-open" href="../mechanisms/US12476542B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一稳压轨的两个控制环如何共用功率相">
-    <img class="paper-image native-image" src="../mechanisms/US12476542B2/fig-1/diagram.svg" width="967" height="420"
-         style="--paper-width:967px" alt="同一稳压轨的两个控制环如何共用功率相。ADC 104 把稳压轨采样分送误差控制环和变化率检测器。选择器 128、129 按 SR_Det 选择驱动来源，选中后接到同一组功率相与各自的电感。">
-  </div>
-  <figcaption>
-    <span>ADC 104 把稳压轨采样分送误差控制环和变化率检测器。选择器 128、129 按 SR_Det 选择驱动来源，选中后接到同一组功率相与各自的电感。</span>
-    <span class="figure-evidence">原图 1B、3A–3B，说明书 0034–0037，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12476542">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">触发率怎样反馈到下一轮变化率检测阈值</h3></div>
-    <a class="paper-open" href="../mechanisms/US12476542B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="触发率怎样反馈到下一轮变化率检测阈值">
-    <img class="paper-image native-image" src="../mechanisms/US12476542B2/fig-4/diagram.svg" width="401" height="688"
-         style="--paper-width:401px" alt="触发率怎样反馈到下一轮变化率检测阈值。计数器 363 统计计时器 364 所定窗口内 SR_Det 的置位次数，计算单元 365 得到触发率。参数选择器 371 可查询表 372，将阈值返回变化率检测器。按触发方向分计数和调整滞回是另述实现。">
-  </div>
-  <figcaption>
-    <span>计数器 363 统计计时器 364 所定窗口内 SR_Det 的置位次数，计算单元 365 得到触发率。参数选择器 371 可查询表 372，将阈值返回变化率检测器。按触发方向分计数和调整滞回是另述实现。</span>
-    <span class="figure-evidence">原图 3C、6C，说明书 0066–0069、0097，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12476542">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">变化率方向决定补流还是减流</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">检测量</th><th scope="col">预定控制来源</th><th scope="col">典型动作或对应权项</th></tr></thead><tbody><tr><th scope="row">在指定范围</th><td>第一环</td><td>按参考电压偏差调节</td></tr><tr><th scope="row">低过下阈值</th><td>第二环</td><td>增加供给电流，或增加工作相与占空比（权 5、6、16）</td></tr><tr><th scope="row">高过上阈值</th><td>第二环</td><td>减少供给电流，或关闭若干相并降低频率（权 8、9、17）</td></tr></tbody></table>
-  <figcaption>
-    <span>相位增减、占空比和开关频率属于进一步限定或实施例。响应时要把变化率边界、绝对轨电压和驱动动作分别记录。</span>
-    <span class="figure-evidence">原图 1B、3D，说明书 0038–0041，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12476542">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按轨电压斜率切换</dt><dd>提前响应供电瞬态 <span class="subdued">说明书 0037–0039，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>统计触发更新门限</dt><dd>减少频繁控制切换 <span class="subdued">说明书 0066–0069、0097，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>按负载动作、采样差分达到门槛、SR_Det 置位、选择器改接和首个功率相响应五个节点计时。功率相开关动作比数字触发晚，二者不可用同一个时点。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>保持负载平均功率不变，只改变 ADC 采样相位。若纹波使触发次数上升但最大压降没有改善，可检查迟滞设置和门限宽度。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>平稳负载下，电压采样的变化率在设定范围内。随后负载阶跃，电压差分超过变化率阈值。</dd></div><div><dt>处理结果</dt><dd>选择电路将变化率控制环产生的控制信号送到各相。切换时点可与绝对电压达到欠压阈值的时点比较。</dd></div><div><dt>结果解读</dt><dd>触发条件是电压变化率。实验应单独记录绝对压降与变化率越界时刻。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、12、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,50 +219,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=a%20plurality%20of%20circuit%20blocks%20coupled%20to%20a%20power%20supply%20line">F13</a></th><td>供电线连接多个负载电路块</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=FIG.%201B%20is%20a%20block%20diagram%20of%20another%20embodiment%20of%20a%20power%20converter%20circuit%2C%20this%20embodiment">说明书 0034</a> · 原图 1B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=a%20power%20converter%20circuit%20including%20a%20plurality%20of%20phase%20circuits">F14</a></th><td>电源管理电路内有多相变换器</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=FIG.%201B%20is%20a%20block%20diagram%20of%20another%20embodiment%20of%20a%20power%20converter%20circuit%2C%20this%20embodiment">说明书 0034</a> · 原图 1B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=generate%20a%20plurality%20of%20digital%20samples%20using%20a%20voltage%20level%20on%20the%20power%20supply%20line">F15</a></th><td>采样供电线电压得到数字样本</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=FIG.%201B%20is%20a%20block%20diagram%20of%20another%20embodiment%20of%20a%20power%20converter%20circuit%2C%20this%20embodiment">说明书 0034</a> · <a href="https://patents.google.com/patent/US12476542B2/en#:~:text=Slew%20rate%20detection%20circuit%20121%20also%20includes%20a%20register%20323%20%28or%2C%20alternatively%20a%20buffer%20to%20carry">说明书 0063</a> · 原图 1B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=based%20on%20comparisons%20of%20a%20reference%20voltage%20value%20to%20the%20voltage%20level%20on%20the%20power%20supply">F16</a></th><td>第一组信号取决于参考值和轨电压比较</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=A%20block%20diagram%20depicting%20an%20embodiment%20of%20digital%20control%20circuit%20101%20is%20illustrated%20in%20FIG.%203A.">说明书 0052</a> · 原图 3A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=based%20on%20determining%20a%20rate%20of%20change%20of%20the%20voltage%20level%20of%20the%20power%20supply%20line">F17</a></th><td>第二组信号取决于同一轨的电压变化率</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=In%20determining%20the%20rate%20of%20change%20of%20the%20voltage%20level%2C%20slew%20rate%20detection%20circuit%20121%20may">说明书 0037</a> · <a href="https://patents.google.com/patent/US12476542B2/en#:~:text=Slew%20rate%20detection%20circuit%20121%20also%20includes%20a%20register%20323%20%28or%2C%20alternatively%20a%20buffer%20to%20carry">说明书 0063</a> · 原图 3B–3D</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=using%20the%20first%20plurality%20of%20control%20signals%20in%20response%20to%20determining%20that%20the%20rate%20of%20change">F18</a></th><td>变化率在范围内时，功率相采用第一组</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=FIG.%203D%20is%20a%20graphic%20illustration%20of%20the%20operation%20of%20one%20embodiment%20of%20a%20slew%20rate">说明书 0070</a> · 原图 3B–3D</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=using%20the%20second%20plurality%20of%20control%20signals%20in%20response%20to%20determining%20that%20the%20rate%20of%20change">F19</a></th><td>变化率超出范围时，功率相采用第二组</td><td><a href="https://patents.google.com/patent/US12476542B2/en#:~:text=FIG.%203D%20is%20a%20graphic%20illustration%20of%20the%20operation%20of%20one%20embodiment%20of%20a%20slew%20rate">说明书 0070</a> · <a href="https://patents.google.com/patent/US12476542B2/en#:~:text=The%20example%20continues%20with%20the%20rate%20of%20change%20eventually%20falling%20below%20the%20lower%20threshold%2C%20once%20again">说明书 0071</a> · 原图 3B–3D</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置权项包括共用稳压轨、多相功率级和分别生成驱动的两个控制环。以变化率是否越界选择环路。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>ADC 将轨电压量化为数字样本</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>变化率检测器比较数值门槛并转发相应控制信号</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>统计切换触发率并据此更新变化率范围</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>负变化率越界时追加启用功率相</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-3">3</a></td><td>负变化率越界时提高一个或多个功率相的占空比</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-3">3</a></td><td>负变化率越界时增加一个或多个功率相的开关周期</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-3">3</a></td><td>正变化率越界时停用部分活动功率相</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-3">3</a></td><td>正变化率越界时降低活动功率相的开关频率</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-2">2</a></td><td>第一环把各相的数字控制字转换成模拟控制信号</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>逐相 DAC 分别由对应的数字控制字生成电压信号</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>方法权项给出并行生成两组信号，并由第二环判断执行哪一组。第 13 项再具体规定 ADC 的采样来源。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>使用 ADC 获取轨电压数字样本</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>用变化率检测与门槛比较决定提供哪组信号</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>以触发率驱动参数电路修改变化率范围</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>负变化率越界时增加供给稳压轨的电流</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>正变化率越界时减少供给稳压轨的电流</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>系统权项强调负载电路块、多相变换器与两组控制信号的选择。两组信号基于同一供电轨的数字样本。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>把系统两组驱动信号归于第一和第二控制环</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>第三环依据切换触发率更新指定范围</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 3A、权 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>既有误差控制环与瞬态控制环共用输出采样。</dd></div><div><dt>图 3B、3D，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>变化率判断的输入、阈值和触发条件。</dd></div><div><dt>图 3C、6C，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12476542B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>切换触发率反馈至范围参数。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12476542B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11552563B2.html#engineering">以 dV/dt 补偿的双环开关稳压器</a>
-<p>US11552563B2 把电压变化率产生的电流合入误差路径，再结合输出电流反馈生成开关命令。US12476542B2 从 ADC 样本检测变化率，越界时选择第二套相位控制信号。前者是补偿项参与计算，后者是控制信号源切换，可用同一负载阶跃分别观测注入电流和切换时刻。</p></li><li><a href="US11736111B2.html#engineering">检测供电扰动并暂时延长时钟周期</a>
-<p>US12476542B2 检测稳压轨的电压变化率，超限时切换多相功率级的控制信号。US11736111B2 从两个 VCO 的比较结果识别本地电源事件，在保护窗口提高时钟周期，限制负载的切换速率。比较时用同一个负载扰动对齐稳压器接管和时钟保护动作。</p></li><li><a href="US11962245B2.html#engineering">多相稳压器的逐相数字控制与快速脉冲旁路</a>
-<p>US12476542B2 的说明书列出直接母案 US18/168,276。母案侧重从控制信号到功率级的多相控制路径，后件权利要求 1 增加按输出电压变化率决定哪个控制环接管。两份都应核对功率级收到控制信号的时刻。</p></li></ul>
-    <p><a href="../index.html?patent=US12476542B2#knowledge">在全量关系图上定位 US12476542B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2019-04-17</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-09-26</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-11-18</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/474,677</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sanjay Pant、Fabio Gozzini、Hubert Attah、Jonathan F. Bolus、Wenxun Huang、Koushik Vaithyanathan、Alberto PUGGELLI</dd></div><div><dt>分类号</dt><dd>G06F1/26、G06F1/30、G06F1/3203、H02M3/157、H02M3/1584、H03M1/12、H02M3/1586、H03M1/361</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12476542B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12476542B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 112 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US11962245B2.html"><code>US11962245B2</code> 多相稳压器的逐相数字控制与快速脉冲旁路</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12476542B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

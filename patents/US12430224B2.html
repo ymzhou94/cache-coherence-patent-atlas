@@ -1,119 +1,168 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12430224B2 缓存缺失追踪器在缓冲区不足时反压执行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在缓存回填途中捕获数据的调试追踪器 · US12430224B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12430224B2</code> · <a href="https://patents.google.com/patent/US12430224B2/en">专利全文</a></p>
+<h1>在缓存回填途中捕获数据的调试追踪器</h1><p class="reading-question">一笔处理器读请求缺失后，调试器如何找到对应的回填数据？调试记录处理不过来时，硬件暂停的是核心执行还是缓存发请求？</p>
+<p class="reading-answer">追踪电路在请求发出时留下关联项并申请记录空间，在回填返回缓存途中复制数据。两种取样位置对应不同的 stall 路径。处理器侧实施例可暂停被追踪的处理器，缓存侧实施例暂停缓存发出后续回填。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-09-30</dd></div><div><dt>申请号</dt><dd>US18/344,170</dd></div><div><dt>最早优先权</dt><dd>2021-08-31</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew J. Beaumont-Smith、Sandeep Gupta、Krishna C. Potnuru、Matthias Knoth</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#sample">先确认追踪电路在什么接口选样</a></li><li><a href="#associate">跟住请求、回填响应和追踪记录的关联</a></li><li><a href="#stall">缓冲将满时，只限制相应的上游</a></li><li><a href="#timing">时间戳测的是哪一段延迟</a></li><li><a href="#scope">三项独立权利要求的观测对象与暂停对象</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="sample"><h2>先确认追踪电路在什么接口选样</h2><p>图 1 把正常业务路径放在上方。取样点 A 观察处理器发往缓存的请求。调试模式可以指定处理器，仲裁器可从这些处理器的请求中选一笔导致读缺失的请求。实施例的缓存可以是共享 L2 或 L3，具体层次取决于处理器的缓存配置。</p><p>取样点 B 在缓存与内存之间，仲裁器直接选已发出的回填请求。这个接口也可能观察到一致性事件触发的回填。原图 3 的示例仍选取与读缺失对应的回填。两种实施例都在返回路径上复制数据，图中并列是为了比较观测点。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　从处理器侧采样与从回填总线采样</h3>
+    <p id="fig-1-basis">两种取样起点对应不同的选样对象。两者都可以在返回数据抵达缓存之前拷贝它。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从处理器侧采样与从回填总线采样" style="--figure-width:1320px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 550" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">从处理器侧采样与从回填总线采样</title>
+<desc id="fig-1-svg-desc">两种取样起点对应不同的选样对象。两者都可以在返回数据抵达缓存之前拷贝它。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-selected-request" d="M 278 113 L 520 113" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-unselected" d="M 278 239 L 520 239" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-fill-link" d="M 775 128 L 1052 128" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-return" d="M 1052 218 L 775 218" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-sample-a" d="M 366 113 L 366 167 Q 366 175 358 175 L 36 175 Q 28 175 28 183 L 28 402 Q 28 410 36 410 L 53 410" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-sample-b" d="M 904 128 L 904 299 Q 904 307 896 307 L 648 307 Q 640 307 640 315 L 640 362" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-sample-data" d="M 977 218 L 977 316 Q 977 324 985 324 L 1130 324 Q 1138 324 1138 332 L 1138 362" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<rect x="341" y="80" width="112" height="18" fill="#f5f5f5"/><text x="397" y="94" class="arrow-label" text-anchor="middle">处理器访存请求</text>
+<rect x="335" y="205" width="126" height="18" fill="#f5f5f5"/><text x="398" y="219" class="arrow-label" text-anchor="middle">同走正常访存路径</text>
+<rect x="866" y="92" width="112" height="18" fill="#f5f5f5"/><text x="922" y="106" class="arrow-label" text-anchor="middle">缓存行回填请求</text>
+<rect x="882" y="229" width="70" height="18" fill="#f5f5f5"/><text x="917" y="243" class="arrow-label" text-anchor="middle">回填数据</text>
+<rect x="97" y="149" width="120" height="18" fill="#f5f5f5"/><text x="157" y="163" class="arrow-label" text-anchor="middle">观测所选请求</text>
+<rect x="696" y="273" width="98" height="18" fill="#f5f5f5"/><text x="745" y="287" class="arrow-label" text-anchor="middle">观测回填请求</text>
+<rect x="1065" y="291" width="70" height="18" fill="#f5f5f5"/><text x="1100" y="305" class="arrow-label" text-anchor="middle">复制数据</text>
+<g id="fig-1-proc-a"><rect x="46" y="73" width="232" height="83" rx="6" fill="#f5f5f5"/><rect x="46" y="73" width="232" height="83" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="162" y="99" class="node-name" text-anchor="middle">被观察的处理器</text><text x="162" y="121" class="node-detail" text-anchor="middle">发出 load 等访存请求</text></g>
+<g id="fig-1-proc-other"><rect x="46" y="197" width="232" height="83" rx="6" fill="#f5f5f5"/><rect x="46" y="197" width="232" height="83" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="162" y="223" class="node-name" text-anchor="middle">其他处理器</text><text x="162" y="245" class="node-detail" text-anchor="middle">不在该次处理器选样范围</text></g>
+<g id="fig-1-cache"><rect x="520" y="84" width="255" height="187" rx="6" fill="#f5f5f5"/><rect x="520" y="84" width="255" height="187" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="647.5" y="110" class="node-name" text-anchor="middle">共享缓存</text><text x="647.5" y="132" class="node-detail" text-anchor="middle">查询缓存标签</text><text x="647.5" y="150" class="node-detail" text-anchor="middle">缺失时发起缓存行回填</text></g>
+<g id="fig-1-memory"><rect x="1052" y="98" width="224" height="150" rx="6" fill="#f5f5f5"/><rect x="1052" y="98" width="224" height="150" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1164" y="124" class="node-name" text-anchor="middle">内存电路</text><text x="1164" y="146" class="node-detail" text-anchor="middle">处理回填请求</text><text x="1164" y="164" class="node-detail" text-anchor="middle">沿读响应路径返回数据</text></g>
+<g id="fig-1-core-input"><rect x="53" y="362" width="255" height="98" rx="6" fill="#f5f5f5"/><rect x="53" y="362" width="255" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="180.5" y="388" class="node-name" text-anchor="middle">取样点 A</text><text x="180.5" y="410" class="node-detail" text-anchor="middle">处理器 → 缓存</text><text x="180.5" y="428" class="node-detail" text-anchor="middle">按请求者和读缺失选样</text></g>
+<g id="fig-1-fill-input"><rect x="520" y="362" width="255" height="98" rx="6" fill="#f5f5f5"/><rect x="520" y="362" width="255" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="647.5" y="388" class="node-name" text-anchor="middle">取样点 B</text><text x="647.5" y="410" class="node-detail" text-anchor="middle">缓存 → 内存</text><text x="647.5" y="428" class="node-detail" text-anchor="middle">按下游回填请求选样</text></g>
+<g id="fig-1-return-tap"><rect x="1000" y="362" width="276" height="98" rx="6" fill="#f5f5f5"/><rect x="1000" y="362" width="276" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1138" y="388" class="node-name" text-anchor="middle">数据观测点</text><text x="1138" y="410" class="node-detail" text-anchor="middle">内存 → 缓存</text><text x="1138" y="428" class="node-detail" text-anchor="middle">复制正在返回的数据</text></g>
+<text x="48" y="518" class="signal-title" text-anchor="start">业务请求和调试记录使用不同路径</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-proc-a">处理器侧入口</a> 调试模式指定要观察的处理器。仲裁器可以从这些处理器发出的请求中选一笔导致缓存缺失的读。</li><li><a href="#fig-1-fill-link">缓存侧入口</a> 另一个实施例直接观察缓存发往内存的回填请求。该接口可能看到因一致性机制触发的回填；示例仲裁仍选与读缺失相关的一笔。</li><li><a href="#fig-1-return-tap">在途回填数据</a> 回填数据沿正常返回路径送往缓存，追踪控制器在这里另行复制其所需部分。</li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0026、0027、0029、0034、0044、0045、0046、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12430224B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>追踪控制电路与仲裁器</dt><dd>101 / 120</dd></div><div><dt>共享缓存与处理器</dt><dd>105 / 115</dd></div><div><dt>处理器访存请求与缓存回填请求</dt><dd>135 / 250 / 350</dd></div><div><dt>返回的回填数据</dt><dd>255 / 355</dd></div><div><dt>内存电路</dt><dd>240</dd></div></dl></details>
+</figure></section><section id="associate"><h2>跟住请求、回填响应和追踪记录的关联</h2><p>图 2 用一笔读缺失给出三条并行路径。上排是控制：仲裁器选请求，追踪器在请求缓冲留下关联项，并申请追踪空间。中排是正常数据返回：内存返回数据后，观测点在缓存写入阵列和更新标签之前取走一份副本。下排是调试提交：追踪器把副本与元数据打包，在预留位置可用时提交。</p><p>申请空间和等待内存响应可以重叠。收到回填以后，原请求仍留在请求缓冲，直到相应追踪记录写入追踪缓冲。这样无需为了读取数据再向缓存发一笔访问。提前的是调试器能观测数据的时点。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　回填返回前建立关联和预留空间</h3>
+    <p id="fig-2-basis">请求缓冲保留原请求与回填的关联。让追踪记录落入追踪缓冲之后，才能删除请求缓冲中的关联项。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="回填返回前建立关联和预留空间" style="--figure-width:1320px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 584" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">回填返回前建立关联和预留空间</title>
+<desc id="fig-2-svg-desc">请求缓冲保留原请求与回填的关联。让追踪记录落入追踪缓冲之后，才能删除请求缓冲中的关联项。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-track" d="M 312 144 L 488 144" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-allocate" d="M 755 144 L 969 144" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-match" d="M 621 186 L 621 285" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-response" d="M 312 322 L 488 322" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-cache-path" d="M 755 322 L 969 322" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-debug-copy" d="M 551 360 L 551 405 Q 551 413 543 413 L 188 413 Q 180 413 180 421 L 180 461" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-record" d="M 312 499 L 488 499" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-slot" d="M 1123 186 L 1123 214 Q 1123 222 1115 222 L 898 222 Q 890 222 890 230 L 890 405 Q 890 413 882 413 L 661 413 Q 653 413 653 421 L 653 461" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-confirm" d="M 755 499 L 969 499" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="351" y="111" width="98" height="18" fill="#f5f5f5"/><text x="400" y="125" class="arrow-label" text-anchor="middle">登记选中请求</text>
+<rect x="827" y="111" width="70" height="18" fill="#f5f5f5"/><text x="862" y="125" class="arrow-label" text-anchor="middle">分配请求</text>
+<rect x="681" y="225" width="98" height="18" fill="#f5f5f5"/><text x="730" y="239" class="arrow-label" text-anchor="middle">关联返回数据</text>
+<rect x="365" y="287" width="70" height="18" fill="#f5f5f5"/><text x="400" y="301" class="arrow-label" text-anchor="middle">回填响应</text>
+<rect x="811" y="287" width="98" height="18" fill="#f5f5f5"/><text x="860" y="301" class="arrow-label" text-anchor="middle">正常返回路径</text>
+<rect x="292" y="380" width="140" height="18" fill="#f5f5f5"/><text x="362" y="394" class="arrow-label" text-anchor="middle">复制给追踪打包逻辑</text>
+<rect x="364" y="465" width="70" height="18" fill="#f5f5f5"/><text x="399" y="479" class="arrow-label" text-anchor="middle">打包记录</text>
+<rect x="743" y="384" width="98" height="18" fill="#f5f5f5"/><text x="792" y="398" class="arrow-label" text-anchor="middle">预留位置可用</text>
+<rect x="826" y="465" width="70" height="18" fill="#f5f5f5"/><text x="861" y="479" class="arrow-label" text-anchor="middle">写入确认</text>
+<g id="fig-2-selected"><rect x="48" y="106" width="264" height="80" rx="6" fill="#f5f5f5"/><rect x="48" y="106" width="264" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="180" y="132" class="node-name" text-anchor="middle">仲裁器选中一笔读缺失</text><text x="180" y="154" class="node-detail" text-anchor="middle">处理器请求进入调试路径</text></g>
+<g id="fig-2-association"><rect x="488" y="106" width="267" height="80" rx="6" fill="#f5f5f5"/><rect x="488" y="106" width="267" height="80" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="621.5" y="132" class="node-name" text-anchor="middle">请求缓冲</text><text x="621.5" y="154" class="node-detail" text-anchor="middle">建立原请求与回填的关联</text></g>
+<g id="fig-2-reservation"><rect x="969" y="106" width="302" height="80" rx="6" fill="#f5f5f5"/><rect x="969" y="106" width="302" height="80" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1120" y="132" class="node-name" text-anchor="middle">追踪缓冲分配</text><text x="1120" y="154" class="node-detail" text-anchor="middle">等待回填响应时预留空间</text></g>
+<g id="fig-2-memory"><rect x="48" y="285" width="264" height="75" rx="6" fill="#f5f5f5"/><rect x="48" y="285" width="264" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="180" y="311" class="node-name" text-anchor="middle">内存电路返回数据</text><text x="180" y="333" class="node-detail" text-anchor="middle">缓存行回填响应</text></g>
+<g id="fig-2-tap"><rect x="488" y="285" width="267" height="75" rx="6" fill="#f5f5f5"/><rect x="488" y="285" width="267" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="621.5" y="311" class="node-name" text-anchor="middle">复制回填数据</text><text x="621.5" y="333" class="node-detail" text-anchor="middle">观察在途响应，无需再读缓存</text></g>
+<g id="fig-2-install"><rect x="969" y="285" width="302" height="75" rx="6" fill="#f5f5f5"/><rect x="969" y="285" width="302" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1120" y="311" class="node-name" text-anchor="middle">共享缓存接收回填</text><text x="1120" y="333" class="node-detail" text-anchor="middle">写入缓存阵列并更新标签</text></g>
+<g id="fig-2-pack"><rect x="48" y="461" width="264" height="76" rx="6" fill="#f5f5f5"/><rect x="48" y="461" width="264" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="180" y="487" class="node-name" text-anchor="middle">生成调试记录</text><text x="180" y="509" class="node-detail" text-anchor="middle">回填数据＋元数据</text></g>
+<g id="fig-2-commit"><rect x="488" y="461" width="267" height="76" rx="6" fill="#f5f5f5"/><rect x="488" y="461" width="267" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="621.5" y="487" class="node-name" text-anchor="middle">写入追踪缓冲</text><text x="621.5" y="509" class="node-detail" text-anchor="middle">写入预留的记录空间</text></g>
+<g id="fig-2-release"><rect x="969" y="461" width="302" height="76" rx="6" fill="#f5f5f5"/><rect x="969" y="461" width="302" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1120" y="487" class="node-name" text-anchor="middle">删除请求缓冲项</text><text x="1120" y="509" class="node-detail" text-anchor="middle">确认追踪记录已写入</text></g>
+<text x="51" y="66" class="signal-title" text-anchor="start">选样与在途资源</text>
+<text x="51" y="253" class="signal-title" text-anchor="start">正常数据返回</text>
+<text x="51" y="438" class="signal-title" text-anchor="start">调试记录提交</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-association">请求缓冲关联项</a> 仲裁器留下被选中的读缺失，缓存发出回填请求后，控制器把该请求与关联项匹配。</li><li><a href="#fig-2-reservation">追踪空间预留</a> 发出分配请求可以与内存回填并行。分配尚未完成时的数据去向见图 3。</li><li><a href="#fig-2-tap">复制回填数据</a> 复制发生在回填进入缓存阵列、更新缓存标签之前。缓存仍按正常路径安装数据。</li><li><a href="#fig-2-release">删除关联项</a> 释放条件是追踪记录已进入追踪缓冲。收到响应本身还不足以释放关联项。</li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0034、0035、0036、0037、0069、0070、0071、0075；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US12430224B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求缓冲</dt><dd>220</dd></div><div><dt>追踪缓冲分配请求</dt><dd>245</dd></div><div><dt>回填请求与在途回填数据</dt><dd>250 / 255</dd></div><div><dt>调试追踪记录</dt><dd>257</dd></div><div><dt>追踪缓冲</dt><dd>125</dd></div><div><dt>缓存电路</dt><dd>105</dd></div></dl></details>
+</figure></section><section id="stall"><h2>缓冲将满时，只限制相应的上游</h2><p>调试器读出记录后会释放位置。若记录到达速度持续快于调试器的读出速度，追踪缓冲可能容纳不下下一条记录。图 3 的回填缓冲给已返回的数据一个暂存位置。占用达到门槛后，追踪控制电路可以减少后续输入。</p><p>处理器侧实施例可给被追踪的处理器发 stall，让它停止继续处理指令。某些实现仍允许正在处理的指令完成。缓存侧实施例在追踪缓冲空间不足时暂停缓存发出后续回填请求。调试器读出数据后，电路按可用空间撤销相应 stall。说明书 0040、0051 更明确地交代了恢复条件。</p><p>两类 stall 影响不同指标。处理器 stall 会改变后续指令执行与访存到达。缓存 stall 会改变后续回填发出的时间。对比调试关闭和开启时的结果时，应分别记录 stall 有效的周期和相应接口的请求量。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　追踪缓冲空间不足时，暂停哪一级</h3>
+    <p id="fig-3-basis">回填缓冲吸收已经在途的响应。处理器 stall 停止相应处理器继续处理指令，缓存 stall 停止缓存发出后续回填。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="追踪缓冲空间不足时，暂停哪一级" style="--figure-width:1320px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 624" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">追踪缓冲空间不足时，暂停哪一级</title>
+<desc id="fig-3-svg-desc">回填缓冲吸收已经在途的响应。处理器 stall 停止相应处理器继续处理指令，缓存 stall 停止缓存发出后续回填。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-info" d="M 316 119 L 502 119" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-readout" d="M 817 119 L 1001 119" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-route-spill" d="M 350 119 L 350 312 Q 350 320 358 320 L 502 320" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-drain-spill" d="M 753 273 L 753 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-capacity" d="M 656 372 L 656 452" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-status" d="M 817 144 L 935 144 Q 943 144 943 152 L 943 409 Q 943 417 935 417 L 807 417 Q 799 417 799 425 L 799 452" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-signal-a" d="M 502 488 L 316 488" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-signal-b" d="M 817 488 L 1001 488" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<rect x="340" y="86" width="126" height="18" fill="#f5f5f5"/><text x="403" y="100" class="arrow-label" text-anchor="middle">有空间，提交记录</text>
+<rect x="845" y="85" width="140" height="18" fill="#f5f5f5"/><text x="915" y="99" class="arrow-label" text-anchor="middle">读出记录，释放空间</text>
+<rect x="338" y="282" width="140" height="18" fill="#f5f5f5"/><text x="408" y="296" class="arrow-label" text-anchor="middle">空间不足，转入暂存</text>
+<rect x="802" y="204" width="112" height="18" fill="#f5f5f5"/><text x="858" y="218" class="arrow-label" text-anchor="middle">空间恢复后补交</text>
+<rect x="723" y="395" width="98" height="18" fill="#f5f5f5"/><text x="772" y="409" class="arrow-label" text-anchor="middle">读取缓冲空间</text>
+<rect x="975" y="378" width="126" height="18" fill="#f5f5f5"/><text x="1038" y="392" class="arrow-label" text-anchor="middle">追踪缓冲占用状态</text>
+<rect x="352" y="454" width="112" height="18" fill="#f5f5f5"/><text x="408" y="468" class="arrow-label" text-anchor="middle">处理器侧实施例</text>
+<rect x="862" y="454" width="98" height="18" fill="#f5f5f5"/><text x="911" y="468" class="arrow-label" text-anchor="middle">缓存侧实施例</text>
+<g id="fig-3-input"><rect x="47" y="77" width="269" height="91" rx="6" fill="#f5f5f5"/><rect x="47" y="77" width="269" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="181.5" y="103" class="node-name" text-anchor="middle">在途回填返回</text><text x="181.5" y="125" class="node-detail" text-anchor="middle">先生成本次追踪信息</text></g>
+<g id="fig-3-space"><rect x="502" y="77" width="315" height="91" rx="6" fill="#f5f5f5"/><rect x="502" y="77" width="315" height="91" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659.5" y="103" class="node-name" text-anchor="middle">追踪缓冲</text><text x="659.5" y="125" class="node-detail" text-anchor="middle">判断能否容纳本次记录</text><text x="659.5" y="143" class="node-detail" text-anchor="middle">监测缓冲占用阈值</text></g>
+<g id="fig-3-drain"><rect x="1001" y="77" width="269" height="91" rx="6" fill="#f5f5f5"/><rect x="1001" y="77" width="269" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1135.5" y="103" class="node-name" text-anchor="middle">调试器</text><text x="1135.5" y="125" class="node-detail" text-anchor="middle">读出已提交记录</text><text x="1135.5" y="143" class="node-detail" text-anchor="middle">释放相应缓冲位置</text></g>
+<g id="fig-3-spill"><rect x="502" y="273" width="315" height="99" rx="6" fill="#f5f5f5"/><rect x="502" y="273" width="315" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659.5" y="299" class="node-name" text-anchor="middle">回填缓冲</text><text x="659.5" y="321" class="node-detail" text-anchor="middle">空间不足时暂存已到数据</text><text x="659.5" y="339" class="node-detail" text-anchor="middle">空间恢复后可提交</text></g>
+<g id="fig-3-ctl"><rect x="502" y="452" width="315" height="82" rx="6" fill="#f5f5f5"/><rect x="502" y="452" width="315" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659.5" y="478" class="node-name" text-anchor="middle">追踪控制电路</text><text x="659.5" y="500" class="node-detail" text-anchor="middle">按取样实施例控制 stall</text></g>
+<g id="fig-3-core-stop"><rect x="47" y="452" width="269" height="82" rx="6" fill="#f5f5f5"/><rect x="47" y="452" width="269" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="181.5" y="478" class="node-name" text-anchor="middle">处理器 stall</text><text x="181.5" y="500" class="node-detail" text-anchor="middle">停止目标处理器后续指令</text></g>
+<g id="fig-3-cache-stop"><rect x="1001" y="452" width="269" height="82" rx="6" fill="#f5f5f5"/><rect x="1001" y="452" width="269" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1135.5" y="478" class="node-name" text-anchor="middle">缓存 stall</text><text x="1135.5" y="500" class="node-detail" text-anchor="middle">停止发出后续回填请求</text></g>
+<text x="62" y="587" class="signal-title" text-anchor="start">恢复条件按说明书 0040、0051 中的可用空间判定</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-spill">回填暂存</a> 记录无法放入追踪缓冲时，回填缓冲可临时保存数据或关联信息。它也可能逐渐耗尽。</li><li><a href="#fig-3-core-stop">处理器 stall</a> 处理器侧取样实施例可只暂停被追踪的处理器。已在处理的指令在有些实施例中可以完成。</li><li><a href="#fig-3-cache-stop">缓存 stall</a> 直接观察缓存回填发出的实施例暂停后续回填请求。图示没有要求取消已发出的回填。</li><li><a href="#fig-3-drain">调试器释放空间</a> 调试器读出并释放记录后，控制器重新判断可用空间，再撤销相应 stall。</li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0038、0039、0040、0050、0051、0076、0077；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12430224B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>追踪缓冲</dt><dd>125</dd></div><div><dt>回填缓冲</dt><dd>228</dd></div><div><dt>处理器 stall 电路及信号</dt><dd>260 / 265</dd></div><div><dt>缓存 stall 电路及信号</dt><dd>360 / 365</dd></div></dl></details>
+</figure></section><section id="timing"><h2>时间戳测的是哪一段延迟</h2><p>原图 4 给出按字组织的记录。图 4 把这些字重新接到请求、响应和调试器上。请求记录带地址和时间戳。首个数据记录带响应时间戳，连续数据记录用序号还原片段顺序。标签字的类型用于解析追踪记录，和共享缓存用于命中判断的地址标签属于不同结构。</p><p>时间戳可能取自观测事件，也可能取自记录创建时点。两端都以事件时点标记、且时基一致时，差值才对应表 5 的回填观测区间。若要计算核心看到的访存延迟，需要在核心收到响应时取样。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　调试器用记录类型和序号重组一笔回填</h3>
+    <p id="fig-4-basis">请求与响应各有独立时间戳。首个回填数据记录携带响应时间，后续片段使用序号排列。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="调试器用记录类型和序号重组一笔回填" style="--figure-width:1320px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 620" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">调试器用记录类型和序号重组一笔回填</title>
+<desc id="fig-4-svg-desc">请求与响应各有独立时间戳。首个回填数据记录携带响应时间，后续片段使用序号排列。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-4-request-record" d="M 297 128 L 446 128" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-first-record" d="M 297 319 L 446 319" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-tail-record" d="M 174 396 L 174 493 Q 174 501 182 501 L 446 501" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-req-read" d="M 803 127 L 907 127 Q 915 127 915 135 L 915 225 Q 915 233 923 233 L 1012 233" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-response-read" d="M 803 315 L 1012 315" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-sequence-read" d="M 803 500 L 944 500 Q 952 500 952 492 L 952 360 Q 952 352 960 352 L 1012 352" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<rect x="347" y="95" width="52" height="18" fill="#f5f5f5"/><text x="373" y="109" class="arrow-label" text-anchor="middle">打包</text>
+<rect x="339" y="285" width="70" height="18" fill="#f5f5f5"/><text x="374" y="299" class="arrow-label" text-anchor="middle">打包首段</text>
+<rect x="301" y="467" width="70" height="18" fill="#f5f5f5"/><text x="336" y="481" class="arrow-label" text-anchor="middle">后续片段</text>
+<rect x="829" y="95" width="70" height="18" fill="#f5f5f5"/><text x="864" y="109" class="arrow-label" text-anchor="middle">请求时间</text>
+<rect x="849" y="282" width="112" height="18" fill="#f5f5f5"/><text x="905" y="296" class="arrow-label" text-anchor="middle">首段与响应时间</text>
+<rect x="818" y="469" width="98" height="18" fill="#f5f5f5"/><text x="867" y="483" class="arrow-label" text-anchor="middle">按序交付片段</text>
+<g id="fig-4-observe-request"><rect x="50" y="83" width="247" height="91" rx="6" fill="#f5f5f5"/><rect x="50" y="83" width="247" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="109" class="node-name" text-anchor="middle">观察回填请求</text><text x="173.5" y="131" class="node-detail" text-anchor="middle">取地址和请求时间</text></g>
+<g id="fig-4-observe-return"><rect x="50" y="283" width="247" height="113" rx="6" fill="#f5f5f5"/><rect x="50" y="283" width="247" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="309" class="node-name" text-anchor="middle">观察回填响应</text><text x="173.5" y="331" class="node-detail" text-anchor="middle">取返回数据和响应时间</text><text x="173.5" y="349" class="node-detail" text-anchor="middle">按记录容量拆分片段</text></g>
+<g id="fig-4-req"><rect x="446" y="76" width="357" height="105" rx="6" fill="#f5f5f5"/><rect x="446" y="76" width="357" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="624.5" y="102" class="node-name" text-anchor="middle">回填请求记录</text><text x="624.5" y="124" class="node-detail" text-anchor="middle">标签字：类别、请求指示位</text><text x="624.5" y="142" class="node-detail" text-anchor="middle">数据字：地址、请求时间戳</text></g>
+<g id="fig-4-first"><rect x="446" y="260" width="357" height="113" rx="6" fill="#f5f5f5"/><rect x="446" y="260" width="357" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="624.5" y="286" class="node-name" text-anchor="middle">首个回填数据记录</text><text x="624.5" y="308" class="node-detail" text-anchor="middle">标签字：类别、响应指示位、序号</text><text x="624.5" y="326" class="node-detail" text-anchor="middle">数据字：片段数据、响应时间戳</text></g>
+<g id="fig-4-tail"><rect x="446" y="445" width="357" height="113" rx="6" fill="#f5f5f5"/><rect x="446" y="445" width="357" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="624.5" y="471" class="node-name" text-anchor="middle">后续数据记录</text><text x="624.5" y="493" class="node-detail" text-anchor="middle">标签字：类别、响应指示位、序号</text><text x="624.5" y="511" class="node-detail" text-anchor="middle">余下空间主要保存片段数据</text></g>
+<g id="fig-4-decode"><rect x="1012" y="196" width="262" height="183" rx="6" fill="#f5f5f5"/><rect x="1012" y="196" width="262" height="183" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1143" y="222" class="node-name" text-anchor="middle">调试器</text><text x="1143" y="244" class="node-detail" text-anchor="middle">识别请求与响应</text><text x="1143" y="262" class="node-detail" text-anchor="middle">按序号重组数据</text><text x="1143" y="280" class="node-detail" text-anchor="middle">按时间戳语义计算间隔</text></g>
+<text x="446" y="42" class="signal-title" text-anchor="start">追踪缓冲中的逻辑记录</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-req">回填请求记录</a> 请求指示位区分请求与响应。请求记录的时间戳用于定位回填请求的观察或写入时点，具体含义由实现决定。</li><li><a href="#fig-4-first">首个回填数据记录</a> 首段记录携带部分数据、序号和单独的时间戳。标签类型可表明这一组记录对应回填。</li><li><a href="#fig-4-tail">后续数据记录</a> 后续片段不重复所有首段元数据。调试器按序号恢复数据顺序。</li><li><a href="#fig-4-decode">调试重组</a> 用同一计时口径求两时间戳之差。若记录的是写入事件，差值还混有调试路径延迟。</li></ul>
+  <p class="figure-evidence">原图 2、4；说明书归档段 0037、0054、0055、0056、0057、0058、0059、0060、0062、0063；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12430224B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>回填请求记录</dt><dd>450</dd></div><div><dt>首个和后续回填数据记录</dt><dd>455a / 455b</dd></div><div><dt>标签字与数据字</dt><dd>460 / 465</dd></div><div><dt>类别和请求指示位</dt><dd>440c / 440d / 440j</dd></div><div><dt>请求与响应的时间戳</dt><dd>440g / 440m</dd></div><div><dt>回填数据片段序号</dt><dd>440i / 440o</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　用一笔事务核对三个不同的计时区间</h3>
+    <p id="fig-5-basis">同一周期计数器、以采样时刻作时间戳的教学例。表中的时间用来区分观测区间，不能推断真实处理器延迟。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">区间</th><th scope="col">开始周期</th><th scope="col">结束周期</th><th scope="col">间隔</th></tr></thead><tbody><tr id="fig-5-fill-return"><th scope="row">缓存发出回填 → 观察到返回数据</th><td>111</td><td>154</td><td>43 周期</td></tr><tr id="fig-5-capture"><th scope="row">处理器发出请求 → 观察到返回数据</th><td>100</td><td>154</td><td>54 周期</td></tr><tr id="fig-5-core-return"><th scope="row">处理器发出请求 → 处理器收到数据</th><td>100</td><td>160</td><td>60 周期</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-fill-return">回填区间</a> 从缓存发出回填到追踪控制器看到响应，共 43 周期。</li><li><a href="#fig-5-core-return">处理器访存区间</a> 从处理器请求到处理器收到数据，共 60 周期，需要额外观测处理器端的响应。</li></ul>
+  <p class="figure-evidence">原图 2、4；说明书归档段 0029、0036、0037、0059；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> </p>
+  
+</figure></section><section id="scope"><h2>三项独立权利要求的观测对象与暂停对象</h2><p>权利要求 1 和 8 在处理器到缓存的路径选择导致缺失的读请求，缓冲空间不足时暂停相应处理器。权利要求 15 从缓存到内存的回填路径取样，在回填缓冲暂存追踪信息，并暂停缓存发出后续内存请求。</p><p>权利要求 3、4 和 19、20 给出请求缓冲的分配和释放步骤。权利要求 2、9、15 说明追踪空间不足时的暂存。图 4 的具体字段布局来自说明书示例。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US12430224B2</code><span>美国授权专利</span><time datetime="2025-09-30">2025-09-30</time></p>
-  <h1>缓存缺失追踪器在缓冲区不足时反压执行</h1>
-  <p class="english-title" lang="en">Debug trace of cache memory requests</p>
-  <p class="document-question">影响访存延迟的缓存缺失，怎样完整记录而不丢失追踪事务？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">调试模式下追踪缓冲空间不足时，追踪器把相关信息暂存在回填缓冲，并通知缓存停止发出新内存请求。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>停顿来自调试记录不足，可能改变本来要测量的缺失服务间隔。</dd></div><div><dt>验证方法</dt><dd>重放同一缺失流，分别保持追踪缓冲充足和使其耗尽。记录剩余条目、回填缓冲占用、缓存停顿信号及到下层的请求间隔。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12430224B2/en#CLM-00015">原文权利要求 15</a><a href="#fig-3">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">分析缓存缺失时，需要知道发出请求、命中判定和下游访问的关系。追踪缓冲区可能先耗尽。授权文本在特定调试模式中反馈停顿，保证收集路径能继续处理已选择的事务。</p>
-    <p>追踪控制器监测核心与缓存之间的读请求。读缺失时分配记录，缓冲区剩余空间低于阈值则让选定核心暂停推进指令。另一独权从缓存到内存一侧观察请求，并在缓冲区不足时使缓存停止发出新的内存请求。</p>
-    <ol class="walkthrough"><li><h3>启用调试模式</h3><p>追踪电路仅在指定模式下监测选定的访存路径。</p></li><li><h3>识别缺失读</h3><p>根据缓存响应选择需要记录的请求。</p></li><li><h3>占用追踪条目</h3><p>为该请求分配与缓存阵列不同的缓冲位置并记录事务。</p></li><li><h3>缓冲区不足时施加回压</h3><p>按观察点停顿核心或缓存发出端，等待追踪记录释放空间。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 让选中的请求先暂存，记录写入追踪缓冲区后才删除暂存记录。依权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>，追踪记录可由缓存回填数据生成，因而需要把回填与原始请求正确对应。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>追踪缓冲</dt><dd>与缓存数据阵列分开的调试记录存储结构。</dd></div><div><dt>填充缓冲</dt><dd>原件中的 fill buffer，追踪缓冲空间不足时可暂存相关追踪信息。</dd></div><div><dt>停顿信号</dt><dd>由调试控制逻辑发出，在指定范围暂停核心指令推进或缓存对内存发新请求。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">追踪记录由访存路径旁路采集</a></li><li><a href="#fig-2">多次缺失使追踪缓冲区逼近阈值</a></li><li><a href="#fig-4">回填请求与分段数据分别何时留下记录</a></li><li><a href="#fig-3">观测点决定停顿对象</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">追踪记录由访存路径旁路采集</h3></div>
-    <a class="paper-open" href="../mechanisms/US12430224B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="追踪记录由访存路径旁路采集">
-    <img class="paper-image native-image" src="../mechanisms/US12430224B2/fig-1/diagram.svg" width="632" height="300"
-         style="--paper-width:632px" alt="追踪记录由访存路径旁路采集。追踪控制器观察核心至缓存的读缺失，缓冲区状态产生反向停顿请求。">
-  </div>
-  <figcaption>
-    <span>追踪控制器观察核心至缓存的读缺失，缓冲区状态产生反向停顿请求。</span>
-    <span class="figure-evidence">原图 2、图 4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">多次缺失使追踪缓冲区逼近阈值</h3></div>
-    <a class="paper-open" href="../mechanisms/US12430224B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="多次缺失使追踪缓冲区逼近阈值">
-    <img class="paper-image native-image" src="../mechanisms/US12430224B2/fig-2/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="多次缺失使追踪缓冲区逼近阈值。停顿信号由调试缓冲区状态触发。">
-  </div>
-  <figcaption>
-    <span>停顿信号由调试缓冲区状态触发。</span>
-    <span class="figure-evidence">原图 5–6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">回填请求与分段数据分别何时留下记录</h3></div>
-    <a class="paper-open" href="../mechanisms/US12430224B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="回填请求与分段数据分别何时留下记录">
-    <img class="paper-image native-image" src="../mechanisms/US12430224B2/fig-4/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="回填请求与分段数据分别何时留下记录。回填请求发出时记录请求标识、地址和时间戳。回填数据到达后，再记录对应请求标识、分段序号和数据。追踪缓冲空间不足时，权利要求 16 将相关记录暂留在填充缓冲。">
-  </div>
-  <figcaption>
-    <span>回填请求发出时记录请求标识、地址和时间戳。回填数据到达后，再记录对应请求标识、分段序号和数据。追踪缓冲空间不足时，权利要求 16 将相关记录暂留在填充缓冲。</span>
-    <span class="figure-evidence">原图 4；说明书 0056–0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">观测点决定停顿对象</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">模式</th><th scope="col">监测路径</th><th scope="col">缓冲区不足时</th></tr></thead><tbody><tr><th scope="row">核心侧</th><td>核心到缓存</td><td>对选定核心发出停顿</td></tr><tr><th scope="row">缓存侧</th><td>缓存到内存</td><td>保留回填信息并停发新内存请求</td></tr><tr><th scope="row">正常模式</th><td>图中未启用该追踪</td><td>不触发本调试回压</td></tr></tbody></table>
-  <figcaption>
-    <span>区分核心指令推进和缓存发出内存命令。</span>
-    <span class="figure-evidence">原图 2–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>追踪缓冲施加反压</dt><dd>减少已选记录遗漏 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>；原图 2–3</span></dd></div><div><dt>分别记录请求和回填</dt><dd>关联缺失与数据返回 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>；原图 4</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>调试器可以由同一请求关联缺失与回填，代价是未完成请求可能长期占据暂存条目。对同一请求 ID 记录暂存分配、回填抵达、追踪提交和暂存删除，有助于分辨条目被哪个阶段占用。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让两个核心同时产生缺失，保持外部内存延迟，分别改变回填的交错顺序。若被选请求的记录错绑到另一笔回填，记录完整率再高也无法据此重建正确的执行路径。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>调试模式下连续发生缓存读缺失，追踪缓冲区可用条目降到阈值以下。</dd></div><div><dt>处理结果</dt><dd>权项 1 中追踪控制器向选定核心发出停顿信号，解除后这些核心才恢复处理指令。</dd></div><div><dt>结果解读</dt><dd>记录比较应标出追踪引入的停顿周期。调试数据包含额外回压，不能直接作为正常运行的访问延迟。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -131,54 +180,18 @@
   </table>
 </section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
   <h4 id="independent-15-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></h4>
-  <p>系统从缓存发往内存的请求路径采样；追踪缓冲空间不足时，把相关信息放入填充缓冲，并暂停缓存发出后续内存请求。见原图 3–4。</p>
+  <p>系统从缓存发往内存的请求路径采样；追踪缓冲空间不足时，把相关信息放入回填缓冲，并暂停缓存发出后续内存请求。见原图 3–4。</p>
   <table class="comparison-table" aria-labelledby="independent-15-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=monitor%20memory%20requests%20issued%20by%20the%20cache%20memory%20circuit%20to%20the%20memory%20circuit">F13</a></th><td>调试模式监测缓存向内存发出的请求。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=allocate%20locations%20in%20the%20trace%20buffer%20for%20particular%20ones%20of%20the%20monitored%20memory%20requests">F14</a></th><td>为选定的请求分配追踪位置。</td><td>原图 3–4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=in%20response%20to%20a%20determination%20that%20the%20trace%20buffer%20does%20not%20have%20sufficient%20space">F15</a></th><td>检测追踪缓冲不足。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=store%20information%20associated%20with%20processing%20of%20the%20particular%20memory%20requests%20in%20a%20fill%20buffer">F16</a></th><td>把处理信息放在填充缓冲。</td><td>原图 3–4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=cease%20issuing%20further%20memory%20requests%20while%20the%20cache%20stall%20signal%20is%20asserted">F17</a></th><td>缓存停顿信号保持时，暂停发出新的内存请求。</td><td>原图 3</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=monitor%20memory%20requests%20issued%20by%20the%20cache%20memory%20circuit%20to%20the%20memory%20circuit">F13</a></th><td>调试模式监测缓存向内存发出的请求。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=allocate%20locations%20in%20the%20trace%20buffer%20for%20particular%20ones%20of%20the%20monitored%20memory%20requests">F14</a></th><td>为选定的请求分配追踪位置。</td><td>原图 3–4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=in%20response%20to%20a%20determination%20that%20the%20trace%20buffer%20does%20not%20have%20sufficient%20space">F15</a></th><td>检测追踪缓冲不足。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=store%20information%20associated%20with%20processing%20of%20the%20particular%20memory%20requests%20in%20a%20fill%20buffer">F16</a></th><td>把处理信息放在回填缓冲。</td><td>原图 3–4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12430224B2/en#:~:text=cease%20issuing%20further%20memory%20requests%20while%20the%20cache%20stall%20signal%20is%20asserted">F17</a></th><td>缓存停顿信号保持时，暂停发出新的内存请求。</td><td>原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置从核心到缓存筛选读缺失，分配追踪空间，并在空间不足时停顿选定核心。见原图 2、5–6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲空间不足时，后续监测请求的信息可先写回填缓冲。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>在追踪提交之前把受跟踪请求放进单独的请求缓冲。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲恢复到足够空间后撤销相应核心的停顿请求。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>利用对应的缓存回填数据生成追踪记录。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲包含在追踪控制电路内。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>方法筛选调试模式下的读缺失，为其分配缓存阵列之外的追踪地址，存储信息并在空间不足时停顿处理器。见原图 2、5。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>阈值不足时把信息放入填充缓冲。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>追踪分配之前，把部分被监视请求放入请求缓冲。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-8">8</a></td><td>持续看缓冲可用空间，达到阈值时重新启用被暂停的处理器。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>将停顿信号分别发给对应的一个或多个处理器。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>利用对应的缓存回填数据生成追踪记录。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统从缓存发往内存的请求路径采样；追踪缓冲空间不足时，把相关信息放入填充缓冲，并暂停缓存发出后续内存请求。见原图 3–4。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第一填充缓冲项用类型标为请求；稍后将相应回填数据留在另一项。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>追踪缓冲有足够空间时撤销缓存停顿信号。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>用仲裁算法选择要记录的被监测请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>在追踪提交之前把受跟踪请求放进单独的请求缓冲。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置从核心到缓存筛选读缺失，分配追踪空间，并在空间不足时停顿选定核心。见原图 2、5–6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲空间不足时，后续监测请求的信息可先写回填缓冲。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>在追踪提交之前把受跟踪请求放进单独的请求缓冲。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲恢复到足够空间后撤销相应核心的停顿请求。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>利用对应的缓存回填数据生成追踪记录。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>追踪缓冲包含在追踪控制电路内。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td>独立项</td><td>方法筛选调试模式下的读缺失，为其分配缓存阵列之外的追踪地址，存储信息并在空间不足时停顿处理器。见原图 2、5。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>阈值不足时把信息放入回填缓冲。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-8">8</a></td><td>追踪分配之前，把部分被监视请求放入请求缓冲。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-8">8</a></td><td>持续看缓冲可用空间，达到阈值时重新启用被暂停的处理器。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-8">8</a></td><td>将停顿信号分别发给对应的一个或多个处理器。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-8">8</a></td><td>利用对应的缓存回填数据生成追踪记录。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>系统从缓存发往内存的请求路径采样；追踪缓冲空间不足时，把相关信息放入回填缓冲，并暂停缓存发出后续内存请求。见原图 3–4。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>第一回填缓冲项用类型标为请求；稍后将相应回填数据留在另一项。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>追踪缓冲有足够空间时撤销缓存停顿信号。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>用仲裁算法选择要记录的被监测请求。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>在追踪提交之前把受跟踪请求放进单独的请求缓冲。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>确认相关追踪记录已写入后删除暂存请求条目。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>核心侧监测读缺失，追踪缓冲区剩余容量约束核心是否继续。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12430224B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>内存侧监测缓存发出的请求，必要时借用回填缓冲并禁止发新请求。</dd></div><div><dt>原图 2–6</dt><dd>说明核心侧、内存侧观测点，记录结构及停顿控制。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12430224B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20250103520A1.html#engineering">标签流水线发出前预留重试槽</a>
-<p>US12430224B2 的权利要求 15 在追踪缓冲区不足时用回填缓冲暂存相关信息，并反压缓存的新内存请求。US20250103520A1 在允许请求进入标签流水线之前预留重试槽，以保证随后需要再次处理的请求能留在控制器中。用这两种设计分析流水线停顿时，应分别记录调试追踪空间和事务重试空间。</p></li></ul>
-    <p><a href="../index.html?patent=US12430224B2#knowledge">在全量关系图上定位 US12430224B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-08-31</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-06-29</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-09-30</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/344,170</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew J. Beaumont-Smith、Sandeep Gupta、Krishna C. Potnuru、Matthias Knoth</dd></div><div><dt>分类号</dt><dd>G06F11/3648、G06F11/348、G06F11/3037、G06F12/0223、G06F12/0895、G06F2212/1008</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12430224B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12430224B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 118 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12430224B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

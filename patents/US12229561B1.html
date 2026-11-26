@@ -1,120 +1,146 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12229561B1 TLBI 后的数据同步屏障等待目标核在途访问 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>跨核 TLBI 后，目标核如何确认 DSB · US12229561B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12229561B1</code> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></p>
+<h1>跨核 TLBI 后，目标核如何确认 DSB</h1><p class="reading-question">发送核在 TLBI 后执行 DSB 时，目标核什么时候需要等待在途指令退休，又该怎样通知发送核？</p>
+<p class="reading-answer">目标核收到后续数据同步屏障（DSB）的通知，检查收到通知前已完成虚实地址翻译、但尚未退休的访存指令。目标核可等待相关指令退休后发出本地确认。互连收齐所需确认后向发送核返回全局确认。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-02-18</dd></div><div><dt>申请号</dt><dd>US17/933,037</dd></div><div><dt>最早优先权</dt><dd>2022-09-16</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Madhu Sudan Hari、Mridul Agarwal、Kulin N Kothari、John D Pape、Niket K Choudhary</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#path">LLC 和互连传递通知，目标核流水线判断是否可确认</a></li><li><a href="#messages">TLBI 与 DSB 的通知可以同时在途</a></li><li><a href="#tracking">两个状态位如何识别通知到达前已翻译的指令</a></li><li><a href="#invalidate">识别待失效项、实际失效和回复有各自的时点</a></li><li><a href="#cycle">两个 DSB 都在途时，目标核怎样解除循环等待</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="path"><h2>LLC 和互连传递通知，目标核流水线判断是否可确认</h2><p>发送核 P1 发起地址转换后备缓冲区（TLB）表项失效（TLBI），其后是数据同步屏障（DSB）。原图 4 的 P1、P2 同属一个 CPU cluster，共享最后一级缓存（LLC）。请求先上行到 LLC，再由互连广播至各 CPU cluster。共享 LLC 向 cluster 内处理器发下行通知，说明书称这些通知为 snoop。这里的 snoop 传的是维护请求，返回的是完成确认。</p><p>图 1 显示本地确认受目标核 P2 的访存与退休状态约束。收到通知时若还有已经完成地址翻译的在途指令，P2 等它们退休。部分实施例能识别其中实际使用受影响翻译的指令，将等待范围进一步缩小。与每次收到 DSB 就清除流水线相比，正常路径可保留不需要重做的操作。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　从下行 DSB snoop 到目标核的确认</h3>
+    <p id="fig-1-basis">目标核接收维护通知，并根据访存翻译状态和退休事件决定确认何时可以上送。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从下行 DSB snoop 到目标核的确认" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 470" role="img" aria-labelledby="us12229561b1-fig-1-svg-title us12229561b1-fig-1-svg-desc">
+<title id="us12229561b1-fig-1-svg-title">从下行 DSB snoop 到目标核的确认</title>
+<desc id="us12229561b1-fig-1-svg-desc">目标核接收维护通知，并根据访存翻译状态和退休事件决定确认何时可以上送。</desc>
+<defs><marker id="us12229561b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229561b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229561b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229561b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229561b1-fig-1-request" d="M 233 116 L 363 116" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-1-arrow-data)"/>
+<path id="us12229561b1-fig-1-snoop" d="M 595 116 L 719 116" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-1-arrow-main)"/>
+<path id="us12229561b1-fig-1-remember" d="M 820 152 L 820 219 Q 820 227 812 227 L 524 227 Q 516 227 516 235 L 516 323" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-1-arrow-main)"/>
+<path id="us12229561b1-fig-1-translated" d="M 233 360 L 363 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-1-arrow-data)"/>
+<path id="us12229561b1-fig-1-retire-event" d="M 719 360 L 595 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-1-arrow-return)"/>
+<path id="us12229561b1-fig-1-ack" d="M 457 323 L 457 152" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-1-arrow-return)"/>
+<rect x="240.5" y="86" width="113" height="18" fill="#f5f5f5"/><text x="297" y="100" class="arrow-label" text-anchor="middle">上送 DSB 请求</text>
+<rect x="594.5" y="86" width="125" height="18" fill="#f5f5f5"/><text x="657" y="100" class="arrow-label" text-anchor="middle">下行 DSB snoop</text>
+<rect x="590.5" y="198" width="155" height="18" fill="#f5f5f5"/><text x="668" y="212" class="arrow-label" text-anchor="middle">确定翻译状态边界</text>
+<rect x="233.5" y="330" width="125" height="18" fill="#f5f5f5"/><text x="296" y="344" class="arrow-label" text-anchor="middle">取得已翻译集合</text>
+<rect x="599.5" y="330" width="115" height="18" fill="#f5f5f5"/><text x="657" y="344" class="arrow-label" text-anchor="middle">相关指令退休</text>
+<rect x="320" y="226" width="118" height="18" fill="#f5f5f5"/><text x="379" y="240" class="arrow-label" text-anchor="middle">上送本地确认</text>
+<g id="us12229561b1-fig-1-send"><rect x="35" y="80" width="198" height="72" rx="6" fill="#f5f5f5"/><rect x="35" y="80" width="198" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="106" class="node-name" text-anchor="middle">发起核 P1</text><text x="134" y="128" class="node-detail" text-anchor="middle">按序执行 TLBI、DSB</text></g>
+<g id="us12229561b1-fig-1-llc"><rect x="363" y="80" width="232" height="72" rx="6" fill="#f5f5f5"/><rect x="363" y="80" width="232" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479" y="106" class="node-name" text-anchor="middle">CPU cluster 内的 LLC</text><text x="479" y="128" class="node-detail" text-anchor="middle">向互连上送、向核下发</text></g>
+<g id="us12229561b1-fig-1-receive"><rect x="719" y="80" width="207" height="72" rx="6" fill="#f5f5f5"/><rect x="719" y="80" width="207" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="822.5" y="106" class="node-name" text-anchor="middle">目标核 P2</text><text x="822.5" y="128" class="node-detail" text-anchor="middle">接收下行 DSB snoop</text></g>
+<g id="us12229561b1-fig-1-tracking"><rect x="35" y="323" width="198" height="74" rx="6" fill="#f5f5f5"/><rect x="35" y="323" width="198" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="349" class="node-name" text-anchor="middle">访存指令的翻译状态</text><text x="134" y="371" class="node-detail" text-anchor="middle">区分通知到达前后</text></g>
+<g id="us12229561b1-fig-1-gate"><rect x="363" y="323" width="232" height="74" rx="6" fill="#f5f5f5"/><rect x="363" y="323" width="232" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479" y="349" class="node-name" text-anchor="middle">目标核的确认判定</text><text x="479" y="371" class="node-detail" text-anchor="middle">相关等待集合何时为空</text></g>
+<g id="us12229561b1-fig-1-retire"><rect x="719" y="323" width="207" height="74" rx="6" fill="#f5f5f5"/><rect x="719" y="323" width="207" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="822.5" y="349" class="node-name" text-anchor="middle">指令退休逻辑</text><text x="822.5" y="371" class="node-detail" text-anchor="middle">回报仍在途的已翻译项</text></g>
+<text x="35" y="444" class="legend" text-anchor="start">已完成地址翻译表示物理地址已知。退休表示指令离开在途状态。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12229561b1-fig-1-llc">CPU cluster 内的 LLC</a> 同一 CPU cluster 内的 P1/P2 共享 LLC。LLC 向目标核转发来自互连的下行 DSB 通知。</li><li><a href="#us12229561b1-fig-1-remember">确定翻译状态边界</a> 目标核判断有哪些访存指令在 snoop 到达前已经完成地址翻译，且仍在流水线中。</li><li><a href="#us12229561b1-fig-1-tracking">访存指令的翻译状态</a> 主条件是仍在途且已完成翻译。较细的跟踪实施例只等待用到受影响翻译的指令。</li><li><a href="#us12229561b1-fig-1-ack">上送本地确认</a> 相关指令都退休，或者收到通知时相关集合已空，目标核即可回送本地 DSB 确认。</li></ul>
+  <p class="figure-evidence">原图 4、7、8、15、16；说明书归档段 0044、0047、0048、0049、0050、0051、0052、0053、0061、0062、0063、0064、0065、0066、0067、0079、0081、0086、0087、0089、0097；权利要求 1、2、3、8、9、10、15、16、17 <a href="../diagrams/US12229561B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>上行 DSB 请求／下行 DSB snoop</dt><dd>422/428</dd></div><div><dt>目标核上送本地 DSB 确认</dt><dd>430</dd></div><div><dt>收到该通知／相关指令退休／发送本地确认</dt><dd>704/706/708</dd></div><div><dt>重排序缓冲区（ROB）</dt><dd>108</dd></div><div><dt>访存单元 LSU</dt><dd>118</dd></div><div><dt>SoC 互连</dt><dd>27</dd></div></dl></details>
+</figure></section><section id="messages"><h2>TLBI 与 DSB 的通知可以同时在途</h2><p>原图 4 中 P1 按程序顺序发出 TLBI、DSB 请求。DSB 启动时，全局 TLBI 确认还未返回；P2 仍先看到下行 TLBI，再收到下行 DSB。图 2 将同一互连上的两种消息拆开，对照目标核发出的本地 DSB 确认与互连汇总后送回 P1 的全局确认。</p><p>原图 7 的关键先后是翻译完成、收到 DSB 通知、指令退休、返回确认。一般没有符合条件的在途指令时可以直接回复。发送核收到下行 DSB 通知后，另一原文实施例允许继续推测取指，到收到全局确认才把 DSB 视为完成。若较年轻操作已读取后来更新的值，则可能需要清除并重新取指。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　从发起 TLBI 与 DSB 到发送核收到全局确认</h3>
+    <p id="fig-2-basis">两个维护请求可以同时在 fabric 中传播。目标核自己的 DSB 确认必须等相关在途指令退休。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从发起 TLBI 与 DSB 到发送核收到全局确认" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 848" role="img" aria-labelledby="us12229561b1-fig-2-svg-title us12229561b1-fig-2-svg-desc">
+<title id="us12229561b1-fig-2-svg-title">从发起 TLBI 与 DSB 到发送核收到全局确认</title>
+<desc id="us12229561b1-fig-2-svg-desc">两个维护请求可以同时在 fabric 中传播。目标核自己的 DSB 确认必须等相关在途指令退休。</desc>
+<defs><marker id="us12229561b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229561b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229561b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229561b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="788" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="788" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="788" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="788" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12229561b1-fig-2-tlbi-up"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="172" y="96" width="130" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">上送 TLBI 请求</text></g>
+<g id="us12229561b1-fig-2-tlbi-fabric"><path d="M 358 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="464.5" y="144" width="273" height="18" fill="#f5f5f5"/><text x="601" y="158" class="arrow-label" text-anchor="middle">TLBI 请求送各 CPU cluster</text></g>
+<g id="us12229561b1-fig-2-dsb-up"><path d="M 116 216 L 358 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-main)"/><rect x="146" y="192" width="182" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">上送随后执行的 DSB 请求</text></g>
+<g id="us12229561b1-fig-2-dsb-fabric"><path d="M 358 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="471" y="240" width="260" height="18" fill="#f5f5f5"/><text x="601" y="254" class="arrow-label" text-anchor="middle">DSB 请求送各 CPU cluster</text></g>
+<g id="us12229561b1-fig-2-tlbi-fold"><path d="M 844 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="458" y="288" width="286" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">下发 TLBI 至本 CPU cluster</text></g>
+<g id="us12229561b1-fig-2-tlbi-down"><path d="M 358 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="401.5" y="336" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="350" class="arrow-label" text-anchor="middle">转发下行 TLBI 通知</text></g>
+<g id="us12229561b1-fig-2-tlbi-ack"><path d="M 601 408 L 358 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-2-arrow-return)"/><rect x="401.5" y="384" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">回报本地 TLBI 阶段</text></g>
+<g id="us12229561b1-fig-2-dsb-fold"><path d="M 844 456 L 358 456" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-data)"/><rect x="464.5" y="432" width="273" height="18" fill="#f5f5f5"/><text x="601" y="446" class="arrow-label" text-anchor="middle">下发 DSB 至本 CPU cluster</text></g>
+<g id="us12229561b1-fig-2-dsb-down"><path d="M 358 504 L 601 504" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-main)"/><rect x="408" y="480" width="143" height="18" fill="#f5f5f5"/><text x="479.5" y="494" class="arrow-label" text-anchor="middle">转发下行 DSB 通知</text></g>
+<g id="us12229561b1-fig-2-p2-retire"><path d="M 601 546 L 625 546 Q 633 546 633 554 L 633 556 Q 633 564 625 564 L 601 564" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-control)"/><rect x="663" y="522" width="104" height="18" fill="#f5f5f5"/><text x="715" y="536" class="arrow-label" text-anchor="middle">等待相关指令退休</text></g>
+<g id="us12229561b1-fig-2-p2-ack"><path d="M 601 600 L 358 600" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-2-arrow-return)"/><rect x="408" y="576" width="143" height="18" fill="#f5f5f5"/><text x="479.5" y="590" class="arrow-label" text-anchor="middle">上送本地 DSB 确认</text></g>
+<g id="us12229561b1-fig-2-llc-ack"><path d="M 358 648 L 844 648" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-2-arrow-return)"/><rect x="523" y="624" width="156" height="18" fill="#f5f5f5"/><text x="601" y="638" class="arrow-label" text-anchor="middle">汇集后上送 DSB 确认</text></g>
+<g id="us12229561b1-fig-2-fabric-global"><path d="M 844 696 L 358 696" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229561b1-fig-2-arrow-return)"/><rect x="529.5" y="672" width="143" height="18" fill="#f5f5f5"/><text x="601" y="686" class="arrow-label" text-anchor="middle">下发全局 DSB 确认</text></g>
+<g id="us12229561b1-fig-2-global"><path d="M 358 744 L 116 744" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-2-arrow-main)"/><rect x="178.5" y="720" width="117" height="18" fill="#f5f5f5"/><text x="237" y="734" class="arrow-label" text-anchor="middle">发起核收到全局确认</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">发起核 P1</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">共享 LLC</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">目标核 P2</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">SoC 互连</text>
+<text x="28" y="820" class="legend" text-anchor="start">保留 P2 的收到通知、退休和确认先后。省略 P1 的本地回复、其他 cluster 的回复以及独立的全局 TLBI 确认消息。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12229561b1-fig-2-dsb-up">上送随后执行的 DSB 请求</a> 原图 4 中发起核在全局 TLBI 确认之前已经发出 DSB 请求，两类请求有重叠在途阶段。</li><li><a href="#us12229561b1-fig-2-tlbi-down">转发下行 TLBI 通知</a> 目标核先收到 TLBI 通知。是否就在这个阶段失效 TLB，取决于所用实施例。图 4 另画延期失效。</li><li><a href="#us12229561b1-fig-2-p2-retire">等待相关指令退休</a> 在收到后续 DSB 通知之前已经完成翻译的在途指令，通常需要等到退休。</li><li><a href="#us12229561b1-fig-2-global">发起核收到全局确认</a> 发起核通过 LLC 接收由互连汇总返回的全局确认。这个事件晚于目标核自己的本地确认。</li></ul>
+  <p class="figure-evidence">原图 4、5、6、7、8；说明书归档段 0044、0046、0047、0048、0049、0050、0051、0052、0053、0054、0055、0056、0058、0059、0060、0061、0062、0063、0064、0067；权利要求 1、4、8、11、15、18 <a href="../diagrams/US12229561B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>TLBI 请求上行和下行转发</dt><dd>402–408</dd></div><div><dt>TLBI 本地与全局确认</dt><dd>410–416</dd></div><div><dt>DSB 请求上行和下行转发</dt><dd>422–428</dd></div><div><dt>DSB 本地与全局确认</dt><dd>430–436</dd></div><div><dt>发起核收到下行 DSB 通知至收到全局确认的窗口</dt><dd>464</dd></div></dl></details>
+</figure></section><section id="tracking"><h2>两个状态位如何识别通知到达前已翻译的指令</h2><p>目标核可为翻译已完成的指令设置翻译位，并对照代表当前等待集合的参考位。以参考位为 0 的一轮为例，通知到达前已完成的翻译记 0，此后完成的翻译记 1。相等时识别为通知前已翻译；只有这些指令仍未退休时才加入本轮的等待。</p><p>确认发送后参考位翻转用于下一轮。翻译位用于区分通知前后，退休状态来自指令流水线。原文在段落 [0064] 明确相等与先后对应关系；权利要求 2、3 把赋值、比较和确认后更新分开。正文用 0 和 1 说明原图 9 的两个抽象状态。具体位值可对调。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　翻译位等于参考位时，哪一类指令仍需等待？</h3>
+    <p id="fig-3-basis">比较前后两个翻译值可以定位本轮等待集合。指令若已经退休，即使值相等也不会再阻塞本地确认。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">观察状态</th><th scope="col">当前轮参考位</th><th scope="col">对应翻译位</th><th scope="col">本轮确认判定</th></tr></thead><tbody><tr id="fig-3-old"><th scope="row">收到通知前已完成翻译，仍在途</th><td>0</td><td>0</td><td>属于等待集合</td></tr><tr id="fig-3-old-done"><th scope="row">收到通知前已完成翻译，已经退休</th><td>0</td><td>0</td><td>已退出在途集合</td></tr><tr id="fig-3-late"><th scope="row">收到通知之后才完成翻译</th><td>0</td><td>1</td><td>不进入本轮等待</td></tr><tr id="fig-3-answered"><th scope="row">本轮的本地确认已经发送</th><td>从 0 翻到 1</td><td>等待后续翻译状态</td><td>用新参考值识别下一轮</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-old">收到通知前已完成翻译，仍在途</a> 表中 0 是当前轮次参考值。通知到达前已译指令与参考位同值。如果仍在途，加入等待集合。</li><li><a href="#fig-3-late">收到通知之后才完成翻译</a> 指令后来才完成翻译时，翻译位不同。其退休时间不决定本轮确认。</li><li><a href="#fig-3-answered">本轮的本地确认已经发送</a> 确认发出后才更新参考位。翻转不是翻译位取值与退休判定本身。</li></ul>
+  <p class="figure-evidence">原图 7、8、9；说明书归档段 0063、0064、0065、0066、0067、0068；权利要求 2、3、9、10、16、17 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>完成地址翻译并判定是否早于 DSB 通知</dt><dd>902–904</dd></div><div><dt>按到达顺序赋翻译位</dt><dd>906/908</dd></div><div><dt>比较翻译位和参考位</dt><dd>910</dd></div><div><dt>发确认后更新参考位</dt><dd>912</dd></div></dl></details>
+</figure></section><section id="invalidate"><h2>识别待失效项、实际失效和回复有各自的时点</h2><p>权利要求 4、11、18 的实施例在收到 TLBI 通知时只标记目标 TLB 表项，等收到对应 DSB 通知再失效。失效后，较新的地址翻译不再从这些已失效表项命中。先前完成翻译的指令仍可能保有物理地址，等它们退休后才能完成本地确认。原图 4 还展示在 TLBI 处理阶段立即失效的实现。</p><p>说明书另举两种必须清除部分年轻指令的情形。若本地 DSB 被先到的远端 DSB 阻住，清除位于本地 DSB 之后、仍占等待集合的操作可解除循环等待。若遇到长延迟的 PCIe load，也可清除它之后的相关操作，减少远端 DSB 等到这些较年轻操作才能退休所造成的延迟。这些规则属于其他权项，各自有不同触发条件。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　延期失效实施例中，何时清 TLB、何时发确认？</h3>
+    <p id="fig-4-basis">先标记待失效 TLB 表项。收到 DSB 后失效表项，并检查此前已翻译的在途指令，满足退休条件才返回确认。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="延期失效实施例中，何时清 TLB、何时发确认？" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 550" role="img" aria-labelledby="us12229561b1-fig-4-svg-title us12229561b1-fig-4-svg-desc">
+<title id="us12229561b1-fig-4-svg-title">延期失效实施例中，何时清 TLB、何时发确认？</title>
+<desc id="us12229561b1-fig-4-svg-desc">先标记待失效 TLB 表项。收到 DSB 后失效表项，并检查此前已翻译的在途指令，满足退休条件才返回确认。</desc>
+<defs><marker id="us12229561b1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229561b1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229561b1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229561b1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229561b1-fig-4-arrive" d="M 263 127 L 364 127" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-4-arrow-data)"/>
+<path id="us12229561b1-fig-4-stale" d="M 594 127 L 715 127" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-4-arrow-main)"/>
+<path id="us12229561b1-fig-4-observe" d="M 821 164 L 821 255 Q 821 263 813 263 L 485 263 Q 477 263 477 271 L 477 350" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-4-arrow-data)"/>
+<path id="us12229561b1-fig-4-drained" d="M 602 387 L 715 387" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-4-arrow-main)"/>
+<rect x="271.5" y="96" width="83" height="18" fill="#f5f5f5"/><text x="313" y="110" class="arrow-label" text-anchor="middle">保留标记</text>
+<rect x="613.5" y="97" width="79" height="18" fill="#f5f5f5"/><text x="653" y="111" class="arrow-label" text-anchor="middle">执行失效</text>
+<rect x="581.5" y="232" width="147" height="18" fill="#f5f5f5"/><text x="655" y="246" class="arrow-label" text-anchor="middle">失效后检查在途集合</text>
+<rect x="601.5" y="358" width="113" height="18" fill="#f5f5f5"/><text x="658" y="372" class="arrow-label" text-anchor="middle">等待集合为空</text>
+<g id="us12229561b1-fig-4-mark"><rect x="35" y="91" width="228" height="73" rx="6" fill="#f5f5f5"/><rect x="35" y="91" width="228" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="149" y="117" class="node-name" text-anchor="middle">接收 TLBI 并标记</text><text x="149" y="139" class="node-detail" text-anchor="middle">记录待失效 TLB 表项</text></g>
+<g id="us12229561b1-fig-4-dsb"><rect x="364" y="91" width="230" height="73" rx="6" fill="#f5f5f5"/><rect x="364" y="91" width="230" height="73" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479" y="117" class="node-name" text-anchor="middle">接收后续 DSB 通知</text><text x="479" y="139" class="node-detail" text-anchor="middle">到达该阶段才触发失效</text></g>
+<g id="us12229561b1-fig-4-invalidate"><rect x="715" y="91" width="212" height="73" rx="6" fill="#f5f5f5"/><rect x="715" y="91" width="212" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="821" y="117" class="node-name" text-anchor="middle">使目标 TLB 表项失效</text><text x="821" y="139" class="node-detail" text-anchor="middle">此后不能继续命中旧表项</text></g>
+<g id="us12229561b1-fig-4-drain"><rect x="354" y="350" width="248" height="74" rx="6" fill="#f5f5f5"/><rect x="354" y="350" width="248" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="478" y="376" class="node-name" text-anchor="middle">跟踪先前已翻译的指令</text><text x="478" y="398" class="node-detail" text-anchor="middle">仍在途就等待退休</text></g>
+<g id="us12229561b1-fig-4-reply"><rect x="715" y="350" width="212" height="74" rx="6" fill="#f5f5f5"/><rect x="715" y="350" width="212" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="821" y="376" class="node-name" text-anchor="middle">回送本地 DSB 确认</text><text x="821" y="398" class="node-detail" text-anchor="middle">其余核仍由互连汇总</text></g>
+<text x="35" y="493" class="legend" text-anchor="start">按原图 10 的先后画出。表项失效之后，仍需等已经取得物理地址的指令退休。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12229561b1-fig-4-mark">接收 TLBI 并标记</a> 下行 TLBI 指示指定目标表项。延期失效实施例把‘识别’与‘使表项失效’分隔。</li><li><a href="#us12229561b1-fig-4-invalidate">使目标 TLB 表项失效</a> 对应 DSB 通知到达时，使之前记录的目标表项失效。权利要求 4、11、18 说明这一执行点。</li><li><a href="#us12229561b1-fig-4-drain">跟踪先前已翻译的指令</a> 已翻译的操作可能继续持有先前取得的物理地址。失效 TLB 不会自动使这些操作退休。</li><li><a href="#us12229561b1-fig-4-reply">回送本地 DSB 确认</a> 检查此前已完成的翻译所对应的指令退休状态，满足确认条件后回送给发起方。</li></ul>
+  <p class="figure-evidence">原图 7、8、10；说明书归档段 0062、0063、0064、0067、0069、0070；权利要求 1、4、8、11、15、18 <a href="../diagrams/US12229561B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>接收 TLBI 通知并标记目标表项</dt><dd>1002/1004</dd></div><div><dt>收到 DSB 通知后失效标记项</dt><dd>1006/1008</dd></div><div><dt>相关已翻译指令退休后回送确认</dt><dd>1010</dd></div></dl></details>
+</figure></section><section id="cycle"><h2>两个 DSB 都在途时，目标核怎样解除循环等待</h2><p>当 P2 已收到远端 DSB 通知，又发起自己的本地 DSB，原图 11 的 LLC 可优先处理先到的远端请求。P2 的远端回复在等此前已翻译的指令退休，其中的示例指令 6、7 又要等它们之前的本地 DSB 退休。本地 DSB 则在等 LLC 发回自己的下行通知。图 5 把这三个等待关系展开。</p><p>原图 12 提出的处理是清除本地 DSB 之后的年轻指令，或只清除其中属于等待集合的操作。P2 继续等待剩余先前已翻译指令退休，之后回复远端 DSB。LLC 就可以推进本地 DSB，年轻指令随后可重新取指。权利要求 5、12、19 约束这条分支。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　本地 DSB 和远端 DSB 相互等待时，从哪条依赖解除？</h3>
+    <p id="fig-5-basis">远端确认等待年轻的已翻译指令。它们又要等本地 DSB；本地 DSB 的下行通知被延后。清除本地 DSB 后的相关年轻指令能解除这条依赖。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="本地 DSB 和远端 DSB 相互等待时，从哪条依赖解除？" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 635" role="img" aria-labelledby="us12229561b1-fig-5-svg-title us12229561b1-fig-5-svg-desc">
+<title id="us12229561b1-fig-5-svg-title">本地 DSB 和远端 DSB 相互等待时，从哪条依赖解除？</title>
+<desc id="us12229561b1-fig-5-svg-desc">远端确认等待年轻的已翻译指令。它们又要等本地 DSB；本地 DSB 的下行通知被延后。清除本地 DSB 后的相关年轻指令能解除这条依赖。</desc>
+<defs><marker id="us12229561b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229561b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229561b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229561b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229561b1-fig-5-wait-young" d="M 546 159 L 546 233 Q 546 241 554 241 L 800 241 Q 808 241 808 249 L 808 344" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-5-arrow-data)"/>
+<path id="us12229561b1-fig-5-wait-local" d="M 691 378 L 271 378" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-5-arrow-data)"/>
+<path id="us12229561b1-fig-5-wait-remote" d="M 156 344 L 156 129 Q 156 121 164 121 L 349 121" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229561b1-fig-5-arrow-data)"/>
+<path id="us12229561b1-fig-5-flush-target" d="M 616 541 L 799 541 Q 807 541 807 533 L 807 419" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229561b1-fig-5-arrow-main)"/>
+<rect x="586" y="210" width="184" height="18" fill="#f5f5f5"/><text x="678" y="224" class="arrow-label" text-anchor="middle">等待先前已翻译指令退休</text>
+<rect x="374.5" y="346" width="189" height="18" fill="#f5f5f5"/><text x="469" y="360" class="arrow-label" text-anchor="middle">按序退休，先等本地 DSB</text>
+<rect x="158" y="89" width="182" height="18" fill="#f5f5f5"/><text x="249" y="103" class="arrow-label" text-anchor="middle">LLC 优先处理远端 DSB</text>
+<rect x="630.5" y="506" width="175" height="18" fill="#f5f5f5"/><text x="718" y="520" class="arrow-label" text-anchor="middle">将指令 6、7 移出等待集合</text>
+<g id="us12229561b1-fig-5-remote"><rect x="349" y="85" width="261" height="74" rx="6" fill="#f5f5f5"/><rect x="349" y="85" width="261" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479.5" y="111" class="node-name" text-anchor="middle">P2 的远端 DSB 确认</text><text x="479.5" y="133" class="node-detail" text-anchor="middle">尚未回送给发起核 P1</text></g>
+<g id="us12229561b1-fig-5-local"><rect x="37" y="344" width="234" height="75" rx="6" fill="#f5f5f5"/><rect x="37" y="344" width="234" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="154" y="370" class="node-name" text-anchor="middle">P2 的本地 DSB</text><text x="154" y="392" class="node-detail" text-anchor="middle">等待 LLC 的下行通知</text></g>
+<g id="us12229561b1-fig-5-young"><rect x="691" y="344" width="235" height="75" rx="6" fill="#f5f5f5"/><rect x="691" y="344" width="235" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="808.5" y="370" class="node-name" text-anchor="middle">已翻译的年轻指令</text><text x="808.5" y="392" class="node-detail" text-anchor="middle">原图例：指令 6、7</text></g>
+<g id="us12229561b1-fig-5-flush"><rect x="345" y="505" width="271" height="72" rx="6" fill="#f5f5f5"/><rect x="345" y="505" width="271" height="72" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="480.5" y="531" class="node-name" text-anchor="middle">清除本地 DSB 后的相关操作</text><text x="480.5" y="553" class="node-detail" text-anchor="middle">之后重新取指</text></g>
+<text x="37" y="607" class="legend" text-anchor="start">前三条箭头读作“等待”。清除年轻操作后，剩余等待对象仍需退休。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12229561b1-fig-5-remote">P2 的远端 DSB 确认</a> P2 返回给 P1 的远端 DSB 确认受到先前翻译指令的退休限制。</li><li><a href="#us12229561b1-fig-5-young">已翻译的年轻指令</a> 原图 11 的指令 6、7 在程序顺序上比本地 DSB 年轻，已完成翻译却不能先退休。</li><li><a href="#us12229561b1-fig-5-local">P2 的本地 DSB</a> LLC 尚在处理更早到达的远端 DSB，因而暂缓将本地 DSB 通知发回 P2。</li><li><a href="#us12229561b1-fig-5-flush-target">将指令 6、7 移出等待集合</a> 从待确认集合移除阻塞的年轻操作。其余满足条件的指令仍要按原要求等待退休。</li></ul>
+  <p class="figure-evidence">原图 11、12；说明书归档段 0071、0072、0073、0074、0096；权利要求 5、12、19 <a href="../diagrams/US12229561B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>收到远端 DSB 通知</dt><dd>1102</dd></div><div><dt>P1 的远端 DSB</dt><dd>1104</dd></div><div><dt>P2 的本地 DSB</dt><dd>1106</dd></div><div><dt>等待回送的本地 DSB 通知</dt><dd>1108</dd></div><div><dt>清除本地 DSB 后的指令</dt><dd>1206</dd></div><div><dt>等待剩余已翻译指令退休／回送远端 DSB 确认</dt><dd>1208/1210</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US12229561B1</code><span>美国授权专利</span><time datetime="2025-02-18">2025-02-18</time></p>
-  <h1>TLBI 后的数据同步屏障等待目标核在途访问</h1>
-  <p class="english-title" lang="en">Processing of data synchronization barrier instructions</p>
-  <p class="document-question">远端核接收高速地址转换缓冲区失效（TLBI）后的数据同步屏障（DSB）时，哪些访问需要在确认前处理？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">目标核收到发起核在 TLBI 之后执行 DSB 的指示，检查已完成虚实地址转换、仍未退休的访存指令，等相关指令退休后再回复。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>等待对象是接收指示时已完成转换且仍在途的访问。实施例可用标志位区分接收指示前后的转换。</dd></div><div><dt>验证方法</dt><dd>固定双核 TLBI 与 DSB 的发送拍，只改变目标核上已转换访存的退休拍。分别记录 TLB 失效完成、目标核回复和发起核 DSB 完成时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12229561B1">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</p>
-    <p>目标核收到跟在 TLBI 后的远端 DSB 通知，检查访存地址已完成转换但尚未退休的指令。说明书用地址转换位和参考位区分 DSB 通知的前后；相应指令退休后才回复，参考位可在回复之后翻转。</p>
-    <ol class="walkthrough"><li><h3>发起跨核同步</h3><p>权 1 指定本地 DSB 指令跟在欲使 TLB 项失效的 TLBI 之后。</p></li><li><h3>确定待确认指令</h3><p>远端目标核检查有无虚拟地址已经转换为物理地址而尚未退休的指令。</p></li><li><h3>跟踪待处理项的退休</h3><p>实施例可用位标识区分 DSB 到达前后完成地址转换的指令。</p></li><li><h3>生成远端确认</h3><p>需等待的相关指令退休后，目标核才发出确认。</p></li><li><h3>发送核观察同步完成</h3><p>确认回到发起核，与具体内核软件是否使用这个实现无关。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 2 用指令携带的标志与当前标志判定它何时完成地址转换。权 3 把翻转当前标志安排在回复之后。权 4 另把目标 TLB 条目的真正失效安排在收到 DSB 指示之后。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>TLBI</dt><dd>Translation Lookaside Buffer Invalidate，使指定地址翻译缓存条目失效的操作。</dd></div><div><dt>DSB</dt><dd>Data Synchronization Barrier，数据同步屏障。此处用于在 TLBI 后等待远端确认。</dd></div><div><dt>转换位</dt><dd>与指令相关的位，用于与参考位对照，识别地址翻译发生在通知之前还是之后。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">收到 DSB 后等待有关指令退休</a></li><li><a href="#fig-1">远端屏障用在途地址转换状态决定何时回复</a></li><li><a href="#fig-3">地址转换位划分通知前后的访问</a></li><li><a href="#fig-4">TLBI 先标记，后续 DSB 通知触发失效</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">收到 DSB 后等待有关指令退休</h3></div>
-    <a class="paper-open" href="../mechanisms/US12229561B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="收到 DSB 后等待有关指令退休">
-    <img class="paper-image native-image" src="../mechanisms/US12229561B1/fig-2/diagram.svg" width="920" height="524"
-         style="--paper-width:920px" alt="收到 DSB 后等待有关指令退休。远端核先收到 TLBI 相关通知，再收到 DSB 通知。它检查已翻译且未退休的访问，等待相关指令退休后再回送确认。">
-  </div>
-  <figcaption>
-    <span>远端核先收到 TLBI 相关通知，再收到 DSB 通知。它检查已翻译且未退休的访问，等待相关指令退休后再回送确认。</span>
-    <span class="figure-evidence">图 7–9，权利要求 1–3。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">远端屏障用在途地址转换状态决定何时回复</h3></div>
-    <a class="paper-open" href="../mechanisms/US12229561B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="远端屏障用在途地址转换状态决定何时回复">
-    <img class="paper-image native-image" src="../mechanisms/US12229561B1/fig-1/diagram.svg" width="690" height="300"
-         style="--paper-width:690px" alt="远端屏障用在途地址转换状态决定何时回复。仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。">
-  </div>
-  <figcaption>
-    <span>仅让目标转换项失效还不足以说明已经取到该转换结果的指令完成了访问。发送核需要知道远端的这部分使用何时结束。</span>
-    <span class="figure-evidence">图 4–5、7，权利要求 1–2。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">地址转换位划分通知前后的访问</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">事件</th><th scope="col">位关系</th><th scope="col">处理</th></tr></thead><tbody><tr><th scope="row">通知到达前已转换</th><td>相同，例如 0/0</td><td class="emphasis">若仍在途，等待退休</td></tr><tr><th scope="row">通知到达时尚未完成转换</th><td>不同，例如 1/0</td><td>不列入本次旧转换集合</td></tr><tr><th scope="row">远端确认已发送</th><td class="emphasis">参考位从 0 改为 1</td><td>准备下一次判定</td></tr></tbody></table>
-  <figcaption>
-    <span>按原图 9 的一个阶段取参考位为 0。到达通知前完成转换的指令取相同位值，通知后的转换取不同位值。发出确认后才能翻转参考位。</span>
-    <span class="figure-evidence">原图 9，说明书原编号 0064–0067，权利要求 2–3。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">TLBI 先标记，后续 DSB 通知触发失效</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">收到的信号</th><th scope="col">目标 TLB 条目</th><th scope="col">动作</th></tr></thead><tbody><tr><th scope="row">TLBI 通知</th><td>识别受影响的条目</td><td>可先记录而不立即失效</td></tr><tr><th scope="row">尚未收到对应 DSB</th><td>保留先前识别记录</td><td>等待 DSB 通知</td></tr><tr><th scope="row">DSB 通知到达</th><td>使用已识别的条目</td><td class="emphasis">执行 TLB 项失效</td></tr></tbody></table>
-  <figcaption>
-    <span>原图 10 的实施例区分识别目标条目和真正使其失效。两者的时间差会和在途访存的退休等待交叠。</span>
-    <span class="figure-evidence">原图 10，说明书原编号 0068–0069，权利要求 4。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12229561">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>检查已转换在途项</dt><dd>将确认绑定到退休 <span class="subdued">原图 7–8，权利要求 1</span></dd></div><div><dt>逐项比较转换位</dt><dd>识别通知前已转换项 <span class="subdued">原图 9，权利要求 2–3</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>标志位可把跨边界的转换分开，发起核仍需等待远端回复。若想区分失效开销和已有访存排空，须单独看远端首次识别 TLB 条目、执行失效和发回确认三个时点。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>在目标核的 TLB 项已能很快失效时，让一条先完成转换的 load 继续等待远端缓存数据。确认仍可能被这条已在途指令拖住，单独测 TLB 维护用时会低估发送端等待。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>核 A 发出 TLBI 后执行 DSB。核 B 在收到 DSB 指示前已有一条地址完成转换的 load，但该 load 尚未退休。</dd></div><div><dt>处理结果</dt><dd>核 B 记录该在途 load，待满足退休条件后回复核 A。</dd></div><div><dt>结果解读</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>原图 7–8。远端核在收到 TLBI 后续 DSB 通知时，检查已转换的在途访存并在退休后回复。</p>
+  <p>原图 7–8。远端核在收到 TLBI 后续 DSB 通知时，检查已转换的在途访存并在退休后回复。目标核在收到 DSB 通知之后，确认相关已地址转换的旧访存完成退休，再发回应答。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=receive%20an%20indication%20of%20a%20data%20synchronization%20barrier%20%28DSB%29%20instruction%20in%20another%20processor">F1</a></th><td>响应另一处理器在 TLBI 后发来的 DSB 通知</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=determine%20whether%20an%20instruction%20is%20pending%20for%20which%20a%20virtual%20address%20used%20for%20a%20memory%20access">F2</a></th><td>接收端检查是否还有已完成虚实地址转换、但尚在途的访存指令</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=responsive%20to%20a%20determination%20that%20the%20instruction%20retires%2C%20provide%20an%20acknowledgement%20to%20the%20other%20processor">F3</a></th><td>确认所等指令退休后，向发起核回送 DSB 确认</td><td><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=The%20communication%20fabric%20may%20wait%20until%20receiving%20the%20%E2%80%9Cupstream%E2%80%9D%20acknowledgement%20from%20the%20other%20cluster%2C%20as%20indicated">说明书 0050</a> · 原图 4</td></tr></tbody>
@@ -134,50 +160,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=a%20first%20processor%3Ba%20second%20processor%3B%20andmemory%20storing%20program%20instructions">F8</a></th><td>设备包含两个处理器和存有程序的内存。</td><td></td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=receive%20an%20indication%20of%20a%20data%20synchronization%20barrier%20%28DSB%29%20instruction%20following%20a%20translation%20lookaside%20buffer%20invalidate">F9</a></th><td>第一核接收第二核在 TLBI 后的 DSB 通知。</td><td><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%207%2C%20a%20block%20diagram%20to%20illustrate%20an%20embodiment%20for%20processing%20DSB-related%20operation">说明书 0064</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%208%2C%20a%20flowchart%20illustrating%20an%20example%20embodiment%20for%20processing%20DSB-related%20operation%20in">说明书 0067</a> · 原图 7 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=determine%20whether%20an%20instruction%20is%20pending%20for%20which%20a%20virtual%20address%20used%20for%20a%20memory%20access">F10</a></th><td>检查仍在途却已完成虚实地址转换的访问。</td><td><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Therefore%2C%20the%20remote%20processor%20may%20not%20necessarily%20need%20to%20flush%20the%20instruction%20pipeline.%20Instead%2C%20the%20remote">说明书 0063</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%208%2C%20a%20flowchart%20illustrating%20an%20example%20embodiment%20for%20processing%20DSB-related%20operation%20in">说明书 0067</a> · 原图 7 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=responsive%20to%20a%20determination%20that%20the%20instruction%20is%20pending%2C%20determine%20whether%20the%20instruction%20retires">F11</a></th><td>发现此类指令后等待它退休。</td><td><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%207%2C%20a%20block%20diagram%20to%20illustrate%20an%20embodiment%20for%20processing%20DSB-related%20operation">说明书 0064</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%208%2C%20a%20flowchart%20illustrating%20an%20example%20embodiment%20for%20processing%20DSB-related%20operation%20in">说明书 0067</a> · 原图 7 · 原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=responsive%20to%20a%20determination%20that%20the%20instruction%20retires%2C%20provide%20an%20acknowledgement%20to%20the%20other%20processor">F12</a></th><td>在退休后向另一处理器回送确认。</td><td><a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%207%2C%20a%20block%20diagram%20to%20illustrate%20an%20embodiment%20for%20processing%20DSB-related%20operation">说明书 0064</a> · <a href="https://eureka.patsnap.com/patent/US12229561B1#:~:text=Turning%20now%20to%20FIG.%208%2C%20a%20flowchart%20illustrating%20an%20example%20embodiment%20for%20processing%20DSB-related%20operation%20in">说明书 0067</a> · 原图 7 · 原图 8</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 7–8。远端核在收到 TLBI 后续 DSB 通知时，检查已转换的在途访存并在退休后回复。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>以指令位和参考位比对，识别 DSB 到达前地址已完成转换的指令。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>发出确认后可翻转相应位值。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>先根据 TLBI 识别条目，收到后续 DSB 通知时才使目标 TLB 项失效。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>若有已转换的指令晚于目标核另一条 DSB，则可清除该本地 DSB 后的指令。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>已转换的在途指令晚于慢 PCIe 读时，清除该 PCIe 指令后的指令。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>远端 DSB 跟在指令缓存失效操作之后时，清除本核流水线。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>收到远端 DSB 后检查已翻译未退休项，等相应退休并回送确认。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>按 DSB 通知之前是否完成地址转换给指令置位，与参考位比较。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>向对端发出确认后改写参考位。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>由收到后续 DSB 通知触发已识别 TLB 条目失效。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>检测已转换在途项晚于本地 DSB 时，清除本地 DSB 后的指令。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>检测已转换在途项晚于本地 PCIe 读时，清除该 PCIe 读之后的指令。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-8">8</a></td><td>接到跟在指令缓存失效后的远端 DSB 时，清除指令流水线。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>双处理器设备中，目标核等已完成转换且在途的指令退休，才回复发起核。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>使翻译位表示通知前后，并与参考位比较。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>向第二处理器回送确认之后更新参考位。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>接到第二处理器的后续 DSB 通知后，使此前标记的 TLB 条目失效。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>清除晚于本地追加 DSB 的指令，条件是已有相关地址转换的在途指令。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>确认有较新指令在远端 DSB 到来前已经转换时，清除较老 PCIe 读后的指令。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 7–8。远端核在收到 TLBI 后续 DSB 通知时，检查已转换的在途访存并在退休后回复。目标核在收到 DSB 通知之后，确认相关已地址转换的旧访存完成退休，再发回应答。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>以指令位和参考位比对，识别 DSB 到达前地址已完成转换的指令。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>发出确认后可翻转相应位值。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>先根据 TLBI 识别条目，收到后续 DSB 通知时才使目标 TLB 项失效。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>若有已转换的指令晚于目标核另一条 DSB，则可清除该本地 DSB 后的指令。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>已转换的在途指令晚于慢 PCIe 读时，清除该 PCIe 指令后的指令。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>远端 DSB 跟在指令缓存失效操作之后时，清除本核流水线。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>收到远端 DSB 后检查已翻译未退休项，等相应退休并回送确认。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>按 DSB 通知之前是否完成地址转换给指令置位，与参考位比较。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>向对端发出确认后改写参考位。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>由收到后续 DSB 通知触发已识别 TLB 条目失效。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-8">8</a></td><td>检测已转换在途项晚于本地 DSB 时，清除本地 DSB 后的指令。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>检测已转换在途项晚于本地 PCIe 读时，清除该 PCIe 读之后的指令。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-8">8</a></td><td>接到跟在指令缓存失效后的远端 DSB 时，清除指令流水线。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>双处理器设备中，目标核等已完成转换且在途的指令退休，才回复发起核。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>使翻译位表示通知前后，并与参考位比较。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>向第二处理器回送确认之后更新参考位。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>接到第二处理器的后续 DSB 通知后，使此前标记的 TLB 条目失效。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>清除晚于本地追加 DSB 的指令，条件是已有相关地址转换的在途指令。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>确认有较新指令在远端 DSB 到来前已经转换时，清除较老 PCIe 读后的指令。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 4–5、7，权利要求 1–2</dt><dd>远端核收到后续 DSB 指示，检查已完成虚实地址转换但仍未退休的指令。实施例用标志位翻转区分屏障之前和之后的转换。确认发出前，需等待符合条件的指令退休。</dd></div><div><dt>图 7–9，权利要求 1–3</dt><dd>TLBI 完成时间和核 B 回复时间可能不同，原文把后者与旧侧指令退休关联。</dd></div><div><dt>图 9–10，权利要求 1–2</dt><dd>远端慢速访存可能仍然主导 DSB 确认尾延迟。访存指令、TLBI 和 DSB 的时序需要各自核对。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12229561B1">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12639070B2.html#engineering">指令同步屏障前后的投机取指</a>
-<p>两件讨论的屏障对象不同。US12229561B1 要求目标核等待在 DSB 指示之前已完成地址转换的在途指令退休，再回复发起核。US12639070B2 关注一个核内 ISB 前后，允许提前取年轻指令，并在退休阶段校验旧状态依赖。分别观测跨核确认延迟和屏障后首条指令的可译码时间。</p></li><li><a href="US12321746B2.html#engineering">跨处理器数据同步屏障可排除指定地址区间</a>
-<p>US12321746B2 的目标处理器等待排除地址区间之外的在途 load/store 完成后应答。US12229561B1 针对 TLB 失效指令（TLBI）之后的数据同步屏障（DSB），要求目标核根据已完成地址转换的在途指令是否退休来应答。两种机制的核间应答均受目标核流水线状态约束，但所等待的事务集合和完成条件不同。</p></li><li><a href="US12487927B2.html#engineering">解除映射后的协处理器缓存失效</a>
-<p>US12229561B1 在收到 TLBI 之后的 DSB 通知时，目标处理器等待有关的已转换在途指令退休，再发应答。US12487927B2 权 4–5 在 TLB 与缓存维护之间插入第一道屏障，并规定第二道屏障保证与失效地址匹配的逐出完成，即使缓存失效的响应先已发出。</p></li></ul>
-    <p><a href="../index.html?patent=US12229561B1#knowledge">在全量关系图上定位 US12229561B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-09-16</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-09-16</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-02-18</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/933,037</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Madhu Sudan Hari、Mridul Agarwal、Kulin N Kothari、John D Pape、Niket K Choudhary</dd></div><div><dt>分类号</dt><dd>G06F9/30079、G06F12/1027、G06F9/3004、G06F9/30087、G06F9/3818、G06F9/3834、G06F9/522、G06F2212/1008、G06F2212/1024、G06F2212/682、G06F2212/683</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12229561B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12229561B1">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 135 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 4、图 5、图 7、图 9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12229561B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

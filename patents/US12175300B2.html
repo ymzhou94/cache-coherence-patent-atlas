@@ -1,185 +1,208 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12175300B2 GPU 为高优先级逻辑槽预留分布式硬件槽 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU 按优先级保留分布式硬件槽，并在检查状态后分配 · US12175300B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12175300B2</code> · <a href="https://eureka.patsnap.com/patent/US12175300B2">专利全文</a></p>
+<h1>GPU 按优先级保留分布式硬件槽，并在检查状态后分配</h1><p class="reading-question">低优先级工作占用很多 GPU 分布式硬件槽时，怎样给高优先级工作保留可分配的入口？</p>
+<p class="reading-answer">GPU 用软件提供的优先级给逻辑工作槽筛选可用槽集合。未达到门槛的工作只能映射到通用槽；达到门槛者可以考虑预留槽，还可考虑符合规则的通用槽。分配器随后检查硬件槽状态与分派范围，引导工作由目标 mGPU 的 shader 执行。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-12-24</dd></div><div><dt>申请号</dt><dd>US17/399,759</dd></div><div><dt>最早优先权</dt><dd>2021-08-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew M. Havlir、Steven Fishwick、Melissa L. Velez</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#map">优先级如何从软件进入 GPU 硬件槽映射</a></li><li><a href="#ready">工作能提前进入队列，何时能开始执行</a></li><li><a href="#eligibility">预留槽回答资格，分配器另查可用性</a></li><li><a href="#contention">低优先级占满通用槽时，哪条分配路径仍存在</a></li><li><a href="#reclaim">通用资源短缺时，怎样回收已排空的低优先级槽</a></li><li><a href="#retain">结束后保留硬件槽，怎样交还资源</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="map"><h2>优先级如何从软件进入 GPU 硬件槽映射</h2><p>软件提交 GPU 工作单元（kick）与优先级。工作先进入逻辑工作槽，实际执行位置由 GPU 主控决定。原图 2、6 的分布式槽资源分配器要结合控流请求、硬件槽状态和软件约束。得到目标 dSlot 后，才可以将批次送给相应子单元。</p><p>图 1 将指定优先级与资源状态放在同一个分配器的两侧。每个分布式硬件槽（dSlot）有工作队列和对应的配置寄存器。目标 GPU 子单元（mGPU）的 shader 从该槽的工作描述执行。保留的是分布式槽资格，多个槽可以共享这个 mGPU 的 shader 资源。</p><p>第 1、11、17 项明确要求未达到优先级门槛的逻辑槽只能映射通用槽。第 9 项分别描述控制流处理器与硬件槽资源分配器。图 1 的工作类型和优先级用 GPU 术语，CPU cluster 与 OS 线程调度另有各自的状态。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　软件优先级如何改写逻辑工作槽的候选硬件范围</h3>
+    <p id="fig-1-basis">阈值产生预留资格。分配器结合候选集合和 dSlot 状态确定映射，然后把工作交给对应的 shader。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="软件优先级如何改写逻辑工作槽的候选硬件范围" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 716" role="img" aria-labelledby="us12175300b2-fig-1-svg-title us12175300b2-fig-1-svg-desc">
+<title id="us12175300b2-fig-1-svg-title">软件优先级如何改写逻辑工作槽的候选硬件范围</title>
+<desc id="us12175300b2-fig-1-svg-desc">阈值产生预留资格。分配器结合候选集合和 dSlot 状态确定映射，然后把工作交给对应的 shader。</desc>
+<defs><marker id="us12175300b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12175300b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12175300b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12175300b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12175300b2-fig-1-submit" d="M 259 134 L 348 134" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-1-arrow-data)"/>
+<path id="us12175300b2-fig-1-consider" d="M 574 134 L 687 134" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-1-arrow-data)"/>
+<path id="us12175300b2-fig-1-req" d="M 804 172 L 804 246 Q 804 254 796 254 L 469 254 Q 461 254 461 262 L 461 325" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-1-arrow-return)"/>
+<path id="us12175300b2-fig-1-check" d="M 259 361 L 348 361" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-1-arrow-data)"/>
+<path id="us12175300b2-fig-1-alloc" d="M 574 361 L 687 361" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-1-arrow-main)"/>
+<path id="us12175300b2-fig-1-exec" d="M 804 400 L 804 515" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-1-arrow-data)"/>
+<rect x="265.5" y="105" width="77" height="18" fill="#f5f5f5"/><text x="304" y="119" class="arrow-label" text-anchor="middle">写入描述</text>
+<rect x="574.5" y="104" width="111" height="18" fill="#f5f5f5"/><text x="630" y="118" class="arrow-label" text-anchor="middle">处理该工作槽</text>
+<rect x="602.5" y="224" width="121" height="18" fill="#f5f5f5"/><text x="663" y="238" class="arrow-label" text-anchor="middle">请求及优先级</text>
+<rect x="261.5" y="331" width="83" height="18" fill="#f5f5f5"/><text x="303" y="345" class="arrow-label" text-anchor="middle">读所有权</text>
+<rect x="580" y="331" width="102" height="18" fill="#f5f5f5"/><text x="631" y="345" class="arrow-label" text-anchor="middle">分配映射</text>
+<rect x="647" y="454" width="136" height="18" fill="#f5f5f5"/><text x="715" y="468" class="arrow-label" text-anchor="middle">获得工作与配置</text>
+<g id="us12175300b2-fig-1-soft"><rect x="33" y="97" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="33" y="97" width="226" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146" y="123" class="node-name" text-anchor="middle">软件提交 GPU 工作</text><text x="146" y="145" class="node-detail" text-anchor="middle">工作描述与优先级</text></g>
+<g id="us12175300b2-fig-1-slot"><rect x="348" y="97" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="348" y="97" width="226" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="461" y="123" class="node-name" text-anchor="middle">逻辑工作槽</text><text x="461" y="145" class="node-detail" text-anchor="middle">保存任务配置与状态</text></g>
+<g id="us12175300b2-fig-1-csp"><rect x="687" y="97" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="687" y="97" width="231" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="123" class="node-name" text-anchor="middle">控制流处理器</text><text x="802.5" y="145" class="node-detail" text-anchor="middle">确定工作分派范围</text></g>
+<g id="us12175300b2-fig-1-reg"><rect x="33" y="325" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="33" y="325" width="226" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="146" y="351" class="node-name" text-anchor="middle">硬件槽状态</text><text x="146" y="373" class="node-detail" text-anchor="middle">所有者／运行／排空</text></g>
+<g id="us12175300b2-fig-1-dra"><rect x="348" y="325" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="348" y="325" width="226" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="461" y="351" class="node-name" text-anchor="middle">分布式槽资源分配器</text><text x="461" y="373" class="node-detail" text-anchor="middle">按优先级门槛筛选</text></g>
+<g id="us12175300b2-fig-1-ds"><rect x="687" y="325" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="687" y="325" width="231" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="351" class="node-name" text-anchor="middle">目标 dSlot</text><text x="802.5" y="373" class="node-detail" text-anchor="middle">工作队列与配置寄存器</text></g>
+<g id="us12175300b2-fig-1-shader"><rect x="687" y="515" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="687" y="515" width="231" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="802.5" y="541" class="node-name" text-anchor="middle">目标 mGPU 的 shader</text><text x="802.5" y="563" class="node-detail" text-anchor="middle">执行对应槽的工作</text></g>
+<text x="34" y="633" class="legend" text-anchor="start">达到门槛的逻辑槽才有预留槽资格。实际结果依分派范围和当前槽状态决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12175300b2-fig-1-soft">软件提交 GPU 工作</a> 软件接口提交 kick 和优先级。业务优先级不是 shader 指令中的字段。</li><li><a href="#us12175300b2-fig-1-slot">逻辑工作槽</a> 逻辑工作槽持有待处理工作的状态，不预先绑定实际 dSlot。</li><li><a href="#us12175300b2-fig-1-csp">控制流处理器</a> 控制流处理器与请求给出单 mGPU、单组或多组的分派范围，以及可用目标。</li><li><a href="#us12175300b2-fig-1-dra">分布式槽资源分配器</a> 硬件槽分配器应用优先级门槛、预留集合与硬件槽状态筛选候选。</li><li><a href="#us12175300b2-fig-1-reg">硬件槽状态</a> 状态包含分布式槽所有者、运行与排空等。授权第 1 项还规定槽含工作队列及配置寄存器。</li><li><a href="#us12175300b2-fig-1-ds">目标 dSlot</a> 选中的分布式槽负责排队与维持对应工作配置。对应物理位置决定执行 mGPU。</li><li><a href="#us12175300b2-fig-1-shader">目标 mGPU 的 shader</a> 同一 mGPU 的 shader 从该子单元分布式槽处理工作。</li></ul>
+  <p class="figure-evidence">原图 2、3、6、7、9、13、23；说明书归档段 0045、0046、0047、0049、0050、0053、0062、0063、0071、0072、0073、0074、0075、0076、0081、0082、0083、0091、0092、0093、0132、0133、0134、0204、0205、0206、0207、0212；权利要求 1、3、7、8、9、11、15、17、20 <a href="../diagrams/US12175300B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>逻辑工作槽到分布式硬件槽的映射控制</dt><dd>215</dd></div><div><dt>分布式硬件槽</dt><dd>230</dd></div><div><dt>分布式槽资源分配器／控制流处理器</dt><dd>620/630</dd></div></dl></details>
+</figure></section><section id="ready"><h2>工作能提前进入队列，何时能开始执行</h2><p>依赖、配置就绪、硬件槽资源是不同条件。原图 8 在 kernel 依赖解除且对应 kernel 处理器空闲之后请求槽资源。原图 19A、21 的工作槽管理器可提前预取配置值，也能在部分配置写完前将已分配批次排入目标 dSlot。执行仍要等相关配置写入完成。</p><p>图 2 画槽分配请求与已确定槽后的两路动作。主控同时发配置副本和工作描述，而工作队列只在配置通过后开始执行。第 4–6、13–14、19 项覆盖通过软件接口查看等待原因、槽映射和执行时间戳。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　依赖和槽资格满足后，配置写入与工作排队怎样重叠</h3>
+    <p id="fig-2-basis">分配完成后可以同时编程目标槽、发送批次。配置就绪后，目标 mGPU 才开始执行排队工作。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="依赖和槽资格满足后，配置写入与工作排队怎样重叠" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us12175300b2-fig-2-svg-title us12175300b2-fig-2-svg-desc">
+<title id="us12175300b2-fig-2-svg-title">依赖和槽资格满足后，配置写入与工作排队怎样重叠</title>
+<desc id="us12175300b2-fig-2-svg-desc">分配完成后可以同时编程目标槽、发送批次。配置就绪后，目标 mGPU 才开始执行排队工作。</desc>
+<defs><marker id="us12175300b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12175300b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12175300b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12175300b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="262" y="226" width="618" height="154" rx="4" fill="rgba(45,49,66,.02)" style="stroke:rgba(45,49,66,.22)"/>
+<rect x="269" y="220" width="94" height="18" fill="#f5f5f5"/><text x="316" y="234" class="arrow-label" text-anchor="middle">PAR · 可并行</text>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12175300b2-fig-2-dependency"><path d="M 116 120 L 298 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-data)"/><rect x="148.5" y="96" width="117" height="18" fill="#f5f5f5"/><text x="207" y="110" class="arrow-label" text-anchor="middle">允许处理已就绪工作</text></g>
+<g id="us12175300b2-fig-2-request"><path d="M 298 168 L 480 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-data)"/><rect x="356.5" y="144" width="65" height="18" fill="#f5f5f5"/><text x="389" y="158" class="arrow-label" text-anchor="middle">请求目标槽</text></g>
+<g id="us12175300b2-fig-2-allocate"><path d="M 480 216 L 298 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-main)"/><rect x="350" y="192" width="78" height="18" fill="#f5f5f5"/><text x="389" y="206" class="arrow-label" text-anchor="middle">返回已分配槽</text></g>
+<g id="us12175300b2-fig-2-configure"><path d="M 298 264 L 662 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-data)"/><rect x="434.5" y="240" width="91" height="18" fill="#f5f5f5"/><text x="480" y="254" class="arrow-label" text-anchor="middle">通知写目标配置</text></g>
+<g id="us12175300b2-fig-2-queue"><path d="M 298 312 L 844 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-data)"/><rect x="519" y="288" width="104" height="18" fill="#f5f5f5"/><text x="571" y="302" class="arrow-label" text-anchor="middle">可先发送工作描述</text></g>
+<g id="us12175300b2-fig-2-ready"><path d="M 662 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-2-arrow-main)"/><rect x="714" y="336" width="78" height="18" fill="#f5f5f5"/><text x="753" y="350" class="arrow-label" text-anchor="middle">配置写入完成</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">工作槽管理器</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">控制流处理器</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">槽资源分配器</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">寄存器复制单元</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">目标分布式槽</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。控制流可先发送工作消息。shader 等目标槽配置完成后再处理。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12175300b2-fig-2-dependency">允许处理已就绪工作</a> 依赖解除后，控制流处理器可为这个 kernel 请求槽。配置值的预取可发生得更早。</li><li><a href="#us12175300b2-fig-2-request">请求目标槽</a> 请求包括分派范围与工作槽状态。分配过程应用优先级槽资格。</li><li><a href="#us12175300b2-fig-2-allocate">返回已分配槽</a> 资源分配器返回允许使用的目标分布式槽。</li><li><a href="#us12175300b2-fig-2-configure">通知写目标配置</a> 控制逻辑发寄存器写请求，寄存器复制单元可将配置分发给目标子单元。</li><li><a href="#us12175300b2-fig-2-queue">可先发送工作描述</a> 工作描述可以先排到目标槽的队列内，与配置写入重叠。</li><li><a href="#us12175300b2-fig-2-ready">配置写入完成</a> 必要配置写入结束，解除执行前的等待。</li></ul>
+  <p class="figure-evidence">原图 6、8、19A、21、25；说明书归档段 0071、0072、0073、0074、0075、0077、0085、0086、0087、0088、0089、0090、0167、0168、0169、0170、0171、0177、0182、0183、0184、0222、0223、0224、0225、0226、0227；权利要求 1、4、5、6、9、13、14、17、19 <a href="../diagrams/US12175300B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>工作槽管理器／控制流处理器／槽资源分配器／寄存器复制单元</dt><dd>350/630/620/1910</dd></div></dl></details>
+</figure></section><section id="eligibility"><h2>预留槽回答资格，分配器另查可用性</h2><p>原图 13 的预留机制为满足门槛的逻辑槽留专用候选。说明书允许先尝试预留，也允许与通用槽一起参与轮转。表 3 对应候选资格，未指定同等资格时的仲裁细节。</p><p>原图 10A–10C 按单 mGPU、单子单元组和多组分别分派，还可能受软件组约束、允许掩码和分派策略影响。槽正在运行、清缓存或保留时，需要按相应规则处理。优先级满足并不能证明任何时刻都能发批次。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　硬件槽分配资格与状态对照</h3>
+    <p id="fig-3-basis">优先级决定候选资格，槽状态仍限制是否当下可分配。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件</th><th scope="col">槽候选</th><th scope="col">剩余动作</th></tr></thead><tbody><tr id="fig-3-low"><th scope="row">未达到优先级门槛</th><td>仅通用槽</td><td>查是否可用</td></tr><tr id="fig-3-high"><th scope="row">达到优先级门槛</th><td>可考虑预留槽与通用槽</td><td>查目标掩码与当前槽状态</td></tr><tr id="fig-3-unowned"><th scope="row">槽无所有者</th><td>可供合法映射</td><td>分配后准备配置</td></tr><tr id="fig-3-retained"><th scope="row">槽显式保留</th><td>对当前所有者保留</td><td>等待软件释放</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-low">未达到优先级门槛</a> 优先级不足时只能考虑通用槽。若都被占用，等待或遇到获准的回收路径。</li><li><a href="#fig-3-high">达到优先级门槛</a> 达到门槛时可考虑预留槽或符合当前分派规则的通用槽。</li><li><a href="#fig-3-unowned">槽无所有者</a> 无所有者的槽能参与映射，但可能仍需写对应的配置。</li><li><a href="#fig-3-retained">槽显式保留</a> 显式保留映射只在软件释放后可交给另一逻辑槽。</li></ul>
+  <p class="figure-evidence">原图 7、9、10A、10B、10C、13；说明书归档段 0063、0081、0082、0083、0092、0093、0095、0096、0097、0098、0099、0100、0101、0104、0105、0106、0108、0109、0110、0115、0132、0133、0134；权利要求 1、3、7、8、9、11、15、17、20 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>分布式槽所有权及状态</dt><dd>230</dd></div><div><dt>分布式槽资源分配器</dt><dd>620</dd></div></dl></details>
+</figure></section><section id="contention"><h2>低优先级占满通用槽时，哪条分配路径仍存在</h2><p>图 4 设一个 mGPU 提供三个 dSlot。两个通用槽已经被低优先级工作占用，一个满足门槛的预留槽仍可分配。若有高低两个新请求，低优先级继续等待可用通用槽，高优先级可得到预留槽。</p><p>该示例隔离槽分配作用。已经占用槽的任务与新任务可能共享 shader，依赖和上下文配置也会造成额外等待。若要测入队到首个工作组开始执行的收益，应同时记录已有槽占用、配置写入耗时和实际执行资源利用率。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两个通用槽忙时，预留槽只开放给达标请求</h3>
+    <p id="fig-4-basis">示例在同一个 mGPU 上保留一个槽。高优先级新任务仍有可用候选，低优先级新任务等待通用槽。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两个通用槽忙时，预留槽只开放给达标请求" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 648" role="img" aria-labelledby="us12175300b2-fig-4-svg-title us12175300b2-fig-4-svg-desc">
+<title id="us12175300b2-fig-4-svg-title">两个通用槽忙时，预留槽只开放给达标请求</title>
+<desc id="us12175300b2-fig-4-svg-desc">示例在同一个 mGPU 上保留一个槽。高优先级新任务仍有可用候选，低优先级新任务等待通用槽。</desc>
+<defs><marker id="us12175300b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12175300b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12175300b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12175300b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12175300b2-fig-4-high" d="M 260 130 L 294 130 Q 302 130 302 138 L 302 205 Q 302 213 310 213 L 347 213" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-4-arrow-data)"/>
+<path id="us12175300b2-fig-4-low" d="M 260 374 L 296 374 Q 304 374 304 366 L 304 258 Q 304 250 312 250 L 347 250" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-4-arrow-data)"/>
+<path id="us12175300b2-fig-4-res" d="M 574 213 L 619 213 Q 627 213 627 205 L 627 138 Q 627 130 635 130 L 687 130" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-4-arrow-main)"/>
+<path id="us12175300b2-fig-4-gen" d="M 574 247 L 619 247 Q 627 247 627 255 L 627 365 Q 627 373 635 373 L 687 373" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-4-arrow-data)"/>
+<path id="us12175300b2-fig-4-busy" d="M 804 409 L 804 457 Q 804 465 796 465 L 468 465 Q 460 465 460 473 L 460 504" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-4-arrow-return)"/>
+<rect x="188" y="194" width="94" height="18" fill="#f5f5f5"/><text x="235" y="208" class="arrow-label" text-anchor="middle">达到门槛</text>
+<rect x="189.5" y="278" width="89" height="18" fill="#f5f5f5"/><text x="234" y="292" class="arrow-label" text-anchor="middle">低于门槛</text>
+<rect x="574" y="99" width="104" height="18" fill="#f5f5f5"/><text x="626" y="113" class="arrow-label" text-anchor="middle">高优先级可用</text>
+<rect x="631.5" y="288" width="111" height="18" fill="#f5f5f5"/><text x="687" y="302" class="arrow-label" text-anchor="middle">检查通用集合</text>
+<rect x="562.5" y="436" width="121" height="18" fill="#f5f5f5"/><text x="623" y="450" class="arrow-label" text-anchor="middle">通用槽未空出</text>
+<g id="us12175300b2-fig-4-hi"><rect x="34" y="95" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="34" y="95" width="226" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="121" class="node-name" text-anchor="middle">达到门槛的新请求</text><text x="147" y="143" class="node-detail" text-anchor="middle">高优先级逻辑槽</text></g>
+<g id="us12175300b2-fig-4-lo"><rect x="34" y="334" width="226" height="75" rx="6" fill="#f5f5f5"/><rect x="34" y="334" width="226" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="360" class="node-name" text-anchor="middle">未达到门槛的新请求</text><text x="147" y="382" class="node-detail" text-anchor="middle">低优先级逻辑槽</text></g>
+<g id="us12175300b2-fig-4-filter"><rect x="347" y="193" width="227" height="76" rx="6" fill="#f5f5f5"/><rect x="347" y="193" width="227" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="460.5" y="219" class="node-name" text-anchor="middle">筛选可分配 dSlot</text><text x="460.5" y="241" class="node-detail" text-anchor="middle">结合资格与槽状态</text></g>
+<g id="us12175300b2-fig-4-reserved"><rect x="687" y="95" width="232" height="75" rx="6" fill="#f5f5f5"/><rect x="687" y="95" width="232" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803" y="121" class="node-name" text-anchor="middle">预留槽 DS0</text><text x="803" y="143" class="node-detail" text-anchor="middle">本例无所有者</text></g>
+<g id="us12175300b2-fig-4-common"><rect x="687" y="334" width="232" height="75" rx="6" fill="#f5f5f5"/><rect x="687" y="334" width="232" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="360" class="node-name" text-anchor="middle">通用槽 DS1、DS2</text><text x="803" y="382" class="node-detail" text-anchor="middle">已分配给 L0、L1</text></g>
+<g id="us12175300b2-fig-4-wait"><rect x="347" y="504" width="227" height="76" rx="6" fill="#f5f5f5"/><rect x="347" y="504" width="227" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="460.5" y="530" class="node-name" text-anchor="middle">低优先级继续等待</text><text x="460.5" y="552" class="node-detail" text-anchor="middle">无可用通用槽</text></g>
+<text x="35" y="615" class="legend" text-anchor="start">示例只显示分布式槽资格。各槽仍由同一 mGPU 的 shader 处理。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12175300b2-fig-4-hi">达到门槛的新请求</a> 高优先级新工作达到门槛，按照授权主项能参加预留槽的分配。</li><li><a href="#us12175300b2-fig-4-lo">未达到门槛的新请求</a> 低优先级新工作只能从通用槽等待机会。任务优先级与对应 shader 执行时间分开判断。</li><li><a href="#us12175300b2-fig-4-filter">筛选可分配 dSlot</a> 此步先筛允许集合，再按当前 dSlot 状态选择。例子假定依赖和配置可以满足。</li><li><a href="#us12175300b2-fig-4-reserved">预留槽 DS0</a> DS0 无所有者且属于预留集合。高优先级请求可在此例分到 DS0。</li><li><a href="#us12175300b2-fig-4-common">通用槽 DS1、DS2</a> DS1、DS2 是通用槽，但已被 L0 与 L1 的低优先级工作占用。</li><li><a href="#us12175300b2-fig-4-wait">低优先级继续等待</a> 新低优先级工作仍等待通用槽可用。窗口不保证新的高优先级任务马上使用全部 shader 吞吐。</li></ul>
+  <p class="figure-evidence">原图 4、7、9、13、23；说明书归档段 0059、0063、0082、0083、0092、0093、0096、0132、0133、0134、0135、0136、0204、0205、0206、0207；权利要求 1、7、8、9、11、17、20 <a href="../diagrams/US12175300B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>示例中的一个预留槽与两个通用槽</dt><dd>DS0–DS2</dd></div></dl></details>
+</figure></section><section id="reclaim"><h2>通用资源短缺时，怎样回收已排空的低优先级槽</h2><p>原图 11A、11B 说明槽回收与预留是两个决策。资源分配器先看已经在执行缓存清理的槽是否足够。数量不足才看已排空、有明确所有者、该所有者未在保存上下文且没有其他槽正在清理的候选。</p><p>图 5 展开回收条目选择。保留意向低通常说明该旧工作不会再请求槽；更高保留意向按优先级及任务年龄进一步筛选。满足所需槽数量时，回收方发缓存清理及失效操作；回收槽完成清理并成为无所有者状态后，分配器可以再次仲裁。第 10、16 项覆盖更高优先级逻辑槽回收已分给低优先级工作的 dSlot。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　已排空的槽如何经过回收、缓存清理和重新仲裁</h3>
+    <p id="fig-5-basis">筛选只在需要额外槽时发生。回收离开旧所有者后须等待清理完成，再检查新分配。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="已排空的槽如何经过回收、缓存清理和重新仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 668" role="img" aria-labelledby="us12175300b2-fig-5-svg-title us12175300b2-fig-5-svg-desc">
+<title id="us12175300b2-fig-5-svg-title">已排空的槽如何经过回收、缓存清理和重新仲裁</title>
+<desc id="us12175300b2-fig-5-svg-desc">筛选只在需要额外槽时发生。回收离开旧所有者后须等待清理完成，再检查新分配。</desc>
+<defs><marker id="us12175300b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12175300b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12175300b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12175300b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12175300b2-fig-5-begin" d="M 261 131 L 348 131" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-5-arrow-data)"/>
+<path id="us12175300b2-fig-5-adequate" d="M 573 131 L 688 131" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-5-arrow-data)"/>
+<path id="us12175300b2-fig-5-missing" d="M 461 168 L 461 321" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-5-arrow-return)"/>
+<path id="us12175300b2-fig-5-waiting" d="M 348 358 L 261 358" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-5-arrow-return)"/>
+<path id="us12175300b2-fig-5-original-ready" d="M 919 132 L 933 132 Q 941 132 941 140 L 941 542 Q 941 550 933 550 L 919 550" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-5-arrow-return)"/>
+<path id="us12175300b2-fig-5-choice" d="M 573 358 L 688 358" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-5-arrow-main)"/>
+<path id="us12175300b2-fig-5-after" d="M 803 396 L 803 512" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-5-arrow-data)"/>
+<rect x="266" y="101" width="76" height="18" fill="#f5f5f5"/><text x="304" y="115" class="arrow-label" text-anchor="middle">回收检查</text>
+<rect x="579.5" y="101" width="101" height="18" fill="#f5f5f5"/><text x="630" y="115" class="arrow-label" text-anchor="middle">现有数足够</text>
+<rect x="348" y="237" width="102" height="18" fill="#f5f5f5"/><text x="399" y="251" class="arrow-label" text-anchor="middle">还缺目标槽</text>
+<rect x="267.5" y="328" width="75" height="18" fill="#f5f5f5"/><text x="305" y="342" class="arrow-label" text-anchor="middle">仍不足</text>
+<rect x="806.5" y="229" width="109" height="18" fill="#f5f5f5"/><text x="861" y="243" class="arrow-label" text-anchor="middle">原清理结束</text>
+<rect x="573" y="328" width="114" height="18" fill="#f5f5f5"/><text x="630" y="342" class="arrow-label" text-anchor="middle">可回收数足够</text>
+<rect x="674" y="453" width="112" height="18" fill="#f5f5f5"/><text x="730" y="467" class="arrow-label" text-anchor="middle">已完成清理</text>
+<g id="us12175300b2-fig-5-pending"><rect x="34" y="93" width="227" height="75" rx="6" fill="#f5f5f5"/><rect x="34" y="93" width="227" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147.5" y="119" class="node-name" text-anchor="middle">分派范围内缺 dSlot</text><text x="147.5" y="141" class="node-detail" text-anchor="middle">槽请求进入回收检查</text></g>
+<g id="us12175300b2-fig-5-cleaning"><rect x="348" y="93" width="225" height="75" rx="6" fill="#f5f5f5"/><rect x="348" y="93" width="225" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="460.5" y="119" class="node-name" text-anchor="middle">检查正在清理的槽</text><text x="460.5" y="141" class="node-detail" text-anchor="middle">是否足以满足本次请求</text></g>
+<g id="us12175300b2-fig-5-wait"><rect x="688" y="93" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="688" y="93" width="231" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="119" class="node-name" text-anchor="middle">等待原清理完成</text><text x="803.5" y="141" class="node-detail" text-anchor="middle">保留回收范围不变</text></g>
+<g id="us12175300b2-fig-5-eligible"><rect x="348" y="321" width="225" height="75" rx="6" fill="#f5f5f5"/><rect x="348" y="321" width="225" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="460.5" y="347" class="node-name" text-anchor="middle">筛选已排空槽</text><text x="460.5" y="369" class="node-detail" text-anchor="middle">状态、保留意向与优先级</text></g>
+<g id="us12175300b2-fig-5-not-enough"><rect x="34" y="321" width="227" height="75" rx="6" fill="#f5f5f5"/><rect x="34" y="321" width="227" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147.5" y="347" class="node-name" text-anchor="middle">候选不足，继续等待</text><text x="147.5" y="369" class="node-detail" text-anchor="middle">等更多槽可用后仲裁</text></g>
+<g id="us12175300b2-fig-5-reclaim"><rect x="688" y="321" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="688" y="321" width="231" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803.5" y="347" class="node-name" text-anchor="middle">回收选中的槽</text><text x="803.5" y="369" class="node-detail" text-anchor="middle">启动缓存清理及失效</text></g>
+<g id="us12175300b2-fig-5-reorder"><rect x="688" y="512" width="231" height="75" rx="6" fill="#f5f5f5"/><rect x="688" y="512" width="231" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="538" class="node-name" text-anchor="middle">清理结束后重新仲裁</text><text x="803.5" y="560" class="node-detail" text-anchor="middle">无所有者槽可重新分配</text></g>
+<text x="35" y="632" class="legend" text-anchor="start">原图 11B 在回收仍不足时可等待并再次仲裁。回收候选取自已排空槽。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12175300b2-fig-5-pending">分派范围内缺 dSlot</a> 如果目标范围内仍缺足够槽，请求进入回收检查。</li><li><a href="#us12175300b2-fig-5-cleaning">检查正在清理的槽</a> 已经处于清理状态的槽若足够满足请求，先等待其可用，不再扩大回收。</li><li><a href="#us12175300b2-fig-5-wait">等待原清理完成</a> 等待不会立即转移槽所有权。后续仲裁需重新验证实际可用数。</li><li><a href="#us12175300b2-fig-5-eligible">筛选已排空槽</a> 从已排空槽筛选，排除上下文正在保存等情形。保留意向、优先级和年龄决定哪些可以纳入。</li><li><a href="#us12175300b2-fig-5-reclaim">回收选中的槽</a> 候选足以满足所需分派范围时，回收选中 dSlot，并执行缓存清理及失效。</li><li><a href="#us12175300b2-fig-5-reorder">清理结束后重新仲裁</a> 完成清理后，槽可转为无所有者，分配器重新仲裁。</li></ul>
+  <p class="figure-evidence">原图 7、10A、11A、11B、14B、23；说明书归档段 0082、0083、0094、0095、0102、0103、0113、0114、0115、0116、0117、0118、0119、0120、0121、0122、0123、0137、0139、0140、0141、0208；权利要求 9、10、16 <a href="../diagrams/US12175300B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>正在清理槽的筛选／已排空槽的筛选</dt><dd>1110/1120</dd></div><div><dt>按优先级与保留意向进一步筛选</dt><dd>1130/1140</dd></div></dl></details>
+</figure></section><section id="retain"><h2>结束后保留硬件槽，怎样交还资源</h2><p>原图 12 的显式保留为软件采集性能状态等用途。工作已执行完，系统可以完成 kernel 尾部缓存清理，并报告这次工作完成，但保持 dSlot 映射。这个状态可阻止其他逻辑槽回收这些 dSlot。</p><p>图 6 显示软件查询结束后通知释放。主控解除映射，原所有者的分布式槽进入可重新分配状态。第 2、12、18 项要求在软件释放指示后，才把已保留的槽映射给另一逻辑槽。保留没有改变预留槽的优先级门槛。</p><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">图 6　软件保留映射时，GPU 执行结束到槽释放有几个事件</h3>
+    <p id="fig-6-basis">已完成的工作可以保持 dSlot 映射，让软件查询性能信息。收到显式释放后，硬件槽才允许其他逻辑槽分配。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="软件保留映射时，GPU 执行结束到槽释放有几个事件" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 512" role="img" aria-labelledby="us12175300b2-fig-6-svg-title us12175300b2-fig-6-svg-desc">
+<title id="us12175300b2-fig-6-svg-title">软件保留映射时，GPU 执行结束到槽释放有几个事件</title>
+<desc id="us12175300b2-fig-6-svg-desc">已完成的工作可以保持 dSlot 映射，让软件查询性能信息。收到显式释放后，硬件槽才允许其他逻辑槽分配。</desc>
+<defs><marker id="us12175300b2-fig-6-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12175300b2-fig-6-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12175300b2-fig-6-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12175300b2-fig-6-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12175300b2-fig-6-start"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-data)"/><rect x="185" y="96" width="104" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">请求执行并保留槽</text></g>
+<g id="us12175300b2-fig-6-retained"><path d="M 601 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-data)"/><rect x="631.5" y="144" width="182" height="18" fill="#f5f5f5"/><text x="722.5" y="158" class="arrow-label" text-anchor="middle">执行与尾部清理完成，保留映射</text></g>
+<g id="us12175300b2-fig-6-done"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12175300b2-fig-6-arrow-return)"/><rect x="440.5" y="192" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">报告工作完成</text></g>
+<g id="us12175300b2-fig-6-query"><path d="M 116 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-data)"/><rect x="191.5" y="240" width="91" height="18" fill="#f5f5f5"/><text x="237" y="254" class="arrow-label" text-anchor="middle">读取性能与状态</text></g>
+<g id="us12175300b2-fig-6-release"><path d="M 116 312 L 358 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-main)"/><rect x="191.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="237" y="302" class="arrow-label" text-anchor="middle">请求释放硬件槽</text></g>
+<g id="us12175300b2-fig-6-dealloc"><path d="M 358 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-data)"/><rect x="440.5" y="336" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="350" class="arrow-label" text-anchor="middle">下发释放命令</text></g>
+<g id="us12175300b2-fig-6-free"><path d="M 601 408 L 844 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12175300b2-fig-6-arrow-main)"/><rect x="657.5" y="384" width="130" height="18" fill="#f5f5f5"/><text x="722.5" y="398" class="arrow-label" text-anchor="middle">解除映射，可重新分配</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">软件</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">工作槽管理器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">GPU 主控</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">分布式硬件槽</text>
+<text x="28" y="484" class="legend" text-anchor="start">时间向下。工作完成状态与 dSlot 所有权是两个信号。显式释放后才解除槽占用。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12175300b2-fig-6-start">请求执行并保留槽</a> 软件提交工作时要求在执行完成后保留对应硬件槽。</li><li><a href="#us12175300b2-fig-6-done">报告工作完成</a> GPU 完成尾部处理并通知管理器，同时保持映射。</li><li><a href="#us12175300b2-fig-6-query">读取性能与状态</a> 软件在保留阶段读取性能寄存器或其他该工作相关状态。</li><li><a href="#us12175300b2-fig-6-release">请求释放硬件槽</a> 软件提出释放。之前的 dSlot 仍由原逻辑槽拥有。</li><li><a href="#us12175300b2-fig-6-dealloc">下发释放命令</a> 工作槽管理器将释放要求交给 GPU 主控，由主控解除映射。</li><li><a href="#us12175300b2-fig-6-free">解除映射，可重新分配</a> 原图 12 的 dSlot 进入无所有者状态，主控报告解除分配。</li></ul>
+  <p class="figure-evidence">原图 7、12、19A、19B、21；说明书归档段 0082、0083、0124、0125、0126、0127、0128、0129、0130、0131、0166、0167、0172、0174、0177、0182、0185、0186、0210；权利要求 2、4、5、6、12、13、14、18、19 <a href="../diagrams/US12175300B2/fig-6.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>执行完成与尾部清理／报告工作完成且保留槽</dt><dd>1220/1230</dd></div><div><dt>释放指示／解除映射／报告解除分配</dt><dd>1250/1260/1270</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
-  <p class="document-id"><code>US12175300B2</code><span>美国授权专利</span><time datetime="2024-12-24">2024-12-24</time></p>
-  <h1>GPU 为高优先级逻辑槽预留分布式硬件槽</h1>
-  <p class="english-title" lang="en">Software control techniques for graphics hardware that supports logical slots and reservation of graphics hardware based on a priority threshold</p>
-  <p class="document-question">当普通硬件槽被占满，高优先级图形工作怎样获得可分配的执行槽？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">GPU 控制器将工作绑定到逻辑槽，再按软件提供的优先级和门槛选择分布式硬件槽。未达到门槛的工作只能使用非预留槽。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>预留只影响硬件槽资格。高优先级工作仍需满足依赖、配置和可用执行资源等条件。</dd></div><div><dt>验证方法</dt><dd>固定槽位总数和高低优先级的提交序列，比较全部槽共享和保留一部分槽。分别测依赖就绪到槽分配的等待、预留槽闲置比例及低优先级吞吐量。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12175300B2">原文权利要求 1（全文）</a><a href="#fig-4">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">GPU 使用逻辑槽表示提交工作，使用分布式硬件槽保存待运行工作和配置。软件把工作及优先级交给 GPU 控制电路。</p>
-    <p>GPU 按软件给出的优先级将工作绑定到逻辑槽。控制电路为满足阈值的逻辑槽保留一组硬件槽，未满足阈值的逻辑槽只能映射到普通槽。</p>
-    <ol class="walkthrough"><li><h3>接收软件定义的图形工作</h3><p>GPU 接收一组图形工作及其优先级，绑定一个逻辑槽。</p></li><li><h3>等待分派的前置条件</h3><p>逻辑槽可等待依赖、配置数据或硬件槽。权 5 对这三种状态分别作了限定。</p></li><li><h3>按优先级筛选硬件槽</h3><p>满足阈值的逻辑槽可申请预留槽，也可按规则使用普通槽。其他逻辑槽只参与普通槽分配。</p></li><li><h3>将工作送入着色器</h3><p>分派到硬件槽后，该槽所在 GPU 子单元执行工作。若软件要求保留映射，工作完成后须等释放指示才能将其分配给另一个逻辑槽。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 2 允许按软件输入在一项工作完成后保留逻辑槽与硬件槽的映射，因此完成通知和可重新分配不是同一事件。权 5 另列依赖、配置和槽等待状态。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>逻辑槽</dt><dd>保存一组图形工作的标识、控制状态和分派信息。</dd></div><div><dt>分布式硬件槽</dt><dd>由特定 GPU 子单元实现，有局部工作队列和执行配置。</dd></div><div><dt>预留槽</dt><dd>只对达到优先级阈值的逻辑槽开放的硬件槽。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-4">低优先级占满通用槽时仍保留高优先级入口</a></li><li><a href="#fig-1">逻辑槽映射带有优先级门槛</a></li><li><a href="#fig-2">从逻辑槽等待到硬件槽分派</a></li><li><a href="#fig-3">按优先级判断硬件槽资格</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">低优先级占满通用槽时仍保留高优先级入口</h3></div>
-    <a class="paper-open" href="../mechanisms/US12175300B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="低优先级占满通用槽时仍保留高优先级入口">
-    <img class="paper-image native-image" src="../mechanisms/US12175300B2/fig-4/diagram.svg" width="554" height="440"
-         style="--paper-width:554px" alt="低优先级占满通用槽时仍保留高优先级入口。示例中普通槽已满，预留槽仍空闲。假定高优先级工作依赖和配置均已就绪，GPU 可以将其分派到预留槽。">
-  </div>
-  <figcaption>
-    <span>示例中普通槽已满，预留槽仍空闲。假定高优先级工作依赖和配置均已就绪，GPU 可以将其分派到预留槽。</span>
-    <span class="figure-evidence">图 13，权 1 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12175300">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12175300B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">逻辑槽映射带有优先级门槛</h3></div>
-    <a class="paper-open" href="../mechanisms/US12175300B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="逻辑槽映射带有优先级门槛">
-    <img class="paper-image native-image" src="../mechanisms/US12175300B2/fig-1/diagram.svg" width="1083" height="332"
-         style="--paper-width:1083px" alt="逻辑槽映射带有优先级门槛。软件提交工作和优先级。GPU 将逻辑槽映射到合格的硬件槽，再交给该槽所属子单元的着色器。">
-  </div>
-  <figcaption>
-    <span>软件提交工作和优先级。GPU 将逻辑槽映射到合格的硬件槽，再交给该槽所属子单元的着色器。</span>
-    <span class="figure-evidence">图 2、6、13，权 1 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12175300">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12175300B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">从逻辑槽等待到硬件槽分派</h3></div>
-    <a class="paper-open" href="../mechanisms/US12175300B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="从逻辑槽等待到硬件槽分派">
-    <img class="paper-image native-image" src="../mechanisms/US12175300B2/fig-2/diagram.svg" width="920" height="438"
-         style="--paper-width:920px" alt="从逻辑槽等待到硬件槽分派。依赖和配置满足后，GPU 还要检查优先级资格和硬件槽是否空闲。">
-  </div>
-  <figcaption>
-    <span>依赖和配置满足后，GPU 还要检查优先级资格和硬件槽是否空闲。</span>
-    <span class="figure-evidence">图 6–8、13，权 1、5 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12175300">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12175300B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">按优先级判断硬件槽资格</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">工作状态</th><th scope="col">预留槽资格</th><th scope="col">普通槽资格</th></tr></thead><tbody><tr><th scope="row">低于阈值且依赖就绪</th><td>无</td><td>有</td></tr><tr><th scope="row">满足阈值且依赖就绪</th><td>有</td><td>有</td></tr><tr><th scope="row">依赖未就绪</th><td>暂缓分派</td><td>暂缓分派</td></tr></tbody></table>
-  <figcaption>
-    <span>资格表示能够参与分配，仍要满足依赖条件和槽可用性。</span>
-    <span class="figure-evidence">图 7、13，权 1、5 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12175300">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12175300B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>逻辑槽优先级映射</dt><dd>隔离普通槽争用 <span class="subdued">原图 13、23，权 1</span></dd></div><div><dt>完成后保留映射</dt><dd>保留软件控制的槽位 <span class="subdued">原图 12，权 2、12、18</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>高优先级提交时延分成依赖就绪、配置就绪、硬件槽分配和首条 shader 执行。预留直接减少硬件槽竞争，开销可见于通用槽等待和预留闲置。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让高优先级工作的前置依赖一直晚于普通槽释放。若有无预留的首条执行时点相同，但普通工作吞吐下降，预留在该流量下没有缩短关键路径。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>低优先级图形工作陆续占用非预留槽，后来有高优先级工作到达。</dd></div><div><dt>处理结果</dt><dd>低优先级工作不能填入预留槽，因此达到门槛的工作仍能参与其分配。依赖未满足时继续等待。</dd></div><div><dt>结果解读</dt><dd>以 GPU 命令提交到首个执行槽分配为延迟口径。开槽后还需观察实际 shader 启动。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>装置通过逻辑槽和硬件槽映射确定工作发往哪个 GPU 子单元。低于阈值只用普通槽。见原图 2、13、23。</p>
+  <p>装置通过逻辑槽和硬件槽映射确定工作发往哪个 GPU 子单元。低于阈值只用普通槽。见原图 2、13、23。GPU 子单元中保留给符合优先级条件的逻辑槽的物理槽，包含工作队列与配置寄存器。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F1</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=receive%20a%20first%20set%20of%20graphics%20work%20that%20is%20software-specified%20and%20software-indicated%20priority%20information%20for%20the">F2</a></th><td>接收软件提交的图形工作与优先级</td><td>原图 23</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F3</a></th><td>预留槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=are%20mapped%20only%20to%20non-reserved%20distributed%20hardware%20slots">F4</a></th><td>未达到阈值的逻辑槽仅可使用普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=execute%20the%20first%20set%20of%20graphics%20work%20from%20the%20first%20set%20of%20one%20or%20more%20target">F5</a></th><td>由目标硬件槽所在子单元的着色器电路执行工作</td><td>原图 2</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F1</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=receive%20a%20first%20set%20of%20graphics%20work%20that%20is%20software-specified%20and%20software-indicated%20priority%20information%20for%20the">F2</a></th><td>接收软件提交的图形工作与优先级</td><td>原图 23</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F3</a></th><td>预留硬件槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=are%20mapped%20only%20to%20non-reserved%20distributed%20hardware%20slots">F4</a></th><td>未达到阈值的逻辑槽仅可使用普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=execute%20the%20first%20set%20of%20graphics%20work%20from%20the%20first%20set%20of%20one%20or%20more%20target">F5</a></th><td>由目标硬件槽所在子单元的着色器电路执行工作</td><td>原图 2</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-11" aria-labelledby="independent-11-title">
   <h4 id="independent-11-title">权利要求 11</h4>
   <p>存储媒介权项保存定义逻辑槽、分布式硬件槽和预留映射逻辑的电路设计。部署机制见原图 2、13、23。</p>
   <table class="comparison-table" aria-labelledby="independent-11-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F6</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=receive%20a%20first%20set%20of%20graphics%20work%20that%20is%20software-specified%20and%20software-indicated%20priority%20information%20for%20the">F7</a></th><td>接收软件提交的图形工作与优先级</td><td>原图 23</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F8</a></th><td>预留槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=are%20mapped%20only%20to%20non-reserved%20distributed%20hardware%20slots">F9</a></th><td>未达到阈值的逻辑槽仅可使用普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=execute%20the%20first%20set%20of%20graphics%20work%20from%20the%20first%20set%20of%20one%20or%20more%20target">F10</a></th><td>由目标硬件槽所在子单元的着色器电路执行工作</td><td>原图 2</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F6</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=receive%20a%20first%20set%20of%20graphics%20work%20that%20is%20software-specified%20and%20software-indicated%20priority%20information%20for%20the">F7</a></th><td>接收软件提交的图形工作与优先级</td><td>原图 23</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F8</a></th><td>预留硬件槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=are%20mapped%20only%20to%20non-reserved%20distributed%20hardware%20slots">F9</a></th><td>未达到阈值的逻辑槽仅可使用普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=execute%20the%20first%20set%20of%20graphics%20work%20from%20the%20first%20set%20of%20one%20or%20more%20target">F10</a></th><td>由目标硬件槽所在子单元的着色器电路执行工作</td><td>原图 2</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
   <h4 id="independent-17-title">权利要求 17</h4>
   <p>方法权项从工作和优先级输入开始，经预留和映射选择，最终由目标槽所在着色器执行。见原图 23。</p>
   <table class="comparison-table" aria-labelledby="independent-17-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F11</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F12</a></th><td>预留槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=such%20that%20logical%20slots%20whose%20assigned%20graphics%20work%20has%20a%20priority%20level%20that%20does%20not%20meet">F13</a></th><td>未满足阈值的工作只映射到普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=executing%2C%20by%20the%20one%20or%20more%20graphics%20processor%20sub-units%20of%20the%20set%20of%20graphics%20processor%20sub-units%2C">F14</a></th><td>由目标硬件槽所在子单元执行工作</td><td>原图 2 · 原图 23</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20given%20distributed%20hardware%20slot%20includes%20work%20queue%20circuitry%20configured%20to%20store%20graphics%20work%20and%20configuration">F11</a></th><td>每个分布式硬件槽含工作队列和对应配置寄存器</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=a%20set%20of%20reserved%20distributed%20hardware%20slots%20that%20are%20reserved%20for%20logical%20slots%20whose%20assigned%20graphics">F12</a></th><td>预留硬件槽只面向达到阈值的逻辑槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=such%20that%20logical%20slots%20whose%20assigned%20graphics%20work%20has%20a%20priority%20level%20that%20does%20not%20meet">F13</a></th><td>未满足阈值的工作只映射到普通槽</td><td>原图 13</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12175300B2#:~:text=executing%2C%20by%20the%20one%20or%20more%20graphics%20processor%20sub-units%20of%20the%20set%20of%20graphics%20processor%20sub-units%2C">F14</a></th><td>由目标硬件槽所在子单元执行工作</td><td>原图 2 · 原图 23</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>装置通过逻辑槽和硬件槽映射确定工作发往哪个 GPU 子单元。低于阈值只用普通槽。见原图 2、13、23。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>可按软件请求在工作执行完成后保留映射，收到软件释放指示前不把这些槽给其他逻辑槽。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>硬件槽加入迭代电路，子单元加入几何处理电路，并允许不同子单元并行执行多组工作。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>控制电路向软件提供此组工作的状态。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>写明等待依赖、等待配置数据及等待分配硬件槽三种状态。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-4">4</a></td><td>软件状态还包括逻辑槽号、硬件槽号及执行相关的时间戳。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>软件可指定分派到全部或部分子单元，也可指定子单元组。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-7">7</a></td><td>进一步接受可用子单元掩码和调度策略。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>控制流处理器计算分布规则，分布式槽分配器使用软件输入、规则和槽状态确定映射。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>高软件优先级逻辑槽可回收已被较低优先级逻辑槽占用的硬件槽。</td></tr><tr id="claim-11"><th scope="row">11</th><td>独立项</td><td>存储媒介权项保存定义逻辑槽、分布式硬件槽和预留映射逻辑的电路设计。部署机制见原图 2、13、23。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>介质定义的电路可按软件请求在执行完毕后保留槽，等待软件释放才能改分。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>设计包含向软件提供工作状态的功能。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>状态包括逻辑槽、硬件槽标识和相关时间戳。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-11">11</a></td><td>映射可接收可用子单元掩码、调度策略、分派范围及目标组等软件覆盖输入。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-11">11</a></td><td>设计包含高优先级逻辑槽回收低优先级所占硬件槽的操作。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>方法权项从工作和优先级输入开始，经预留和映射选择，最终由目标槽所在着色器执行。见原图 23。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>方法增加完成后保留映射，待软件释放指示才将槽改分。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>将逻辑槽号、分布式硬件槽号和工作执行时间戳提供给软件。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>方法支持子单元掩码、调度策略、分布范围及目标组的软件覆盖配置。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>装置通过逻辑槽和硬件槽映射确定工作发往哪个 GPU 子单元。低于阈值只用普通槽。见原图 2、13、23。GPU 子单元中保留给符合优先级条件的逻辑槽的物理槽，包含工作队列与配置寄存器。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>可按软件请求在工作执行完成后保留映射，收到软件释放指示前不把这些槽给其他逻辑槽。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>硬件槽加入迭代电路，子单元加入几何处理电路，并允许不同子单元并行执行多组工作。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>控制电路向软件提供此组工作的状态。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>写明等待依赖、等待配置数据及等待分配硬件槽三种状态。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-4">4</a></td><td>软件状态还包括逻辑槽号、硬件槽号及执行相关的时间戳。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>软件可指定分派到全部或部分子单元，也可指定子单元组。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-7">7</a></td><td>进一步接受可用子单元掩码和调度策略。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>控制流处理器计算分布规则，分布式硬件槽分配器使用软件输入、规则和槽状态确定映射。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>高软件优先级逻辑槽可回收已被较低优先级逻辑槽占用的硬件槽。</td></tr><tr id="claim-11"><th scope="row">11</th><td>独立项</td><td>存储媒介权项保存定义逻辑槽、分布式硬件槽和预留映射逻辑的电路设计。部署机制见原图 2、13、23。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>介质定义的电路可按软件请求在执行完毕后保留槽，等待软件释放才能改分。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>设计包含向软件提供工作状态的功能。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>状态包括逻辑槽、硬件槽标识和相关时间戳。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-11">11</a></td><td>映射可接收可用子单元掩码、调度策略、分派范围及目标组等软件覆盖输入。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-11">11</a></td><td>设计包含高优先级逻辑槽回收低优先级所占硬件槽的操作。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>方法权项从工作和优先级输入开始，经预留和映射选择，最终由目标槽所在着色器执行。见原图 23。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>方法增加完成后保留映射，待软件释放指示才将槽改分。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>将逻辑槽号、分布式硬件槽号和工作执行时间戳提供给软件。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>方法支持子单元掩码、调度策略、分布范围及目标组的软件覆盖配置。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 2、6、权 1</dt><dd>逻辑槽到分布式硬件槽的映射。</dd></div><div><dt>图 13，权 1、17</dt><dd>高优先级工作可使用的预留槽。</dd></div><div><dt>图 7、12，权 2、5</dt><dd>逻辑槽状态和映射保留条件。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12175300B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12333339B2.html#engineering">GPU 按缓存亲和性分派，并按组进度重分配</a>
-<p>US12175300B2 用软件优先级约束逻辑槽到硬件槽的映射，低优先级工作只能使用未预留槽。US12333339B2 在先有的软件映射上允许 GPU 硬件按分派进度重新分配工作组。对照时注意预留槽影响工作能否映射，重分派影响获准进入的工作交给哪组执行资源。</p></li><li><a href="US12190151B2.html#engineering">GPU 线程分两级分配到通道与执行流水线</a>
-<p>US12175300B2 在 GPU 工作映射阶段检查优先级门槛和硬件槽。US12190151B2 在译码前选择线程，在译码后根据目标流水线选择操作，并把执行流水线的背压反馈给第一级。两件使用的队列和控制量不同，验证时分别记录工作提交到槽映射、线程选择到操作发出的时延。</p></li></ul>
-    <p><a href="../index.html?patent=US12175300B2#knowledge">在全量关系图上定位 US12175300B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-08-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-08-11</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-12-24</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/399,759</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Andrew M. Havlir、Steven Fishwick、Melissa L. Velez</dd></div><div><dt>分类号</dt><dd>G06F9/5066、G06F9/4881、G06F9/5038、G06F9/5044、G06F9/505、G06F9/5055、G06F9/5083、G06F2209/5014、G06F2209/509</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12175300B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12175300B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权专利全文，覆盖 276 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1A、1B、2、3、4、5、6、7、8、9、10A、11A、11B、12、13、14A、14B、15、16、17、18、19A、19B、20、21、22、26、27、28、10、19、1、11、10B、10C、23、24、25。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12175300B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

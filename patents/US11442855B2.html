@@ -1,119 +1,138 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11442855B2 按内容模式选择逐出行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用已驻留的数据模式选择要逐出的缓存行 · US11442855B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11442855B2</code> · <a href="https://patents.google.com/patent/US11442855B2/en">专利全文</a></p>
+<h1>用已驻留的数据模式选择要逐出的缓存行</h1><p class="reading-question">缓存回填没有空位置时，控制器怎样依据旧行的数据模式选择逐出对象？模式信息又怎样影响另一条 TLB 背景读路径？</p>
+<p class="reading-answer">缓存控制器在没有可用位置时，检查已驻留行的模式信息并选择逐出对象。可用对应行的状态位做比较；确定逐出后，按实现处理 writeback，再将新行存入腾出的位置。背景读由另外的 TLB 状态与控制信号决定。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2022-09-13</dd></div><div><dt>申请号</dt><dd>US17/033,587</dd></div><div><dt>最早优先权</dt><dd>2020-09-25</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Michael R. Seningen</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#replace">替换策略比较已驻留的旧行</a></li><li><a href="#storage">在写入时记录模式，省掉逐出阶段的完整行比较</a></li><li><a href="#fill">释放位置后，再将新行写到相同位置</a></li><li><a href="#read">TLB 匹配和背景状态指示共同触发背景访问</a></li><li><a href="#benefit">观测逐出代价时同时统计 miss 和 writeback</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="replace"><h2>替换策略比较已驻留的旧行</h2><p>图 1 左上角的新行触发分配。控制器先判有无空位。满载时，选择逻辑查询已驻留的候选行。原图 9 可选择含背景模式的旧行，也可按数据模式估计候选 writeback 的能耗。</p><p>旧行属于背景模式只说明它的内容符合已知模式。决定保存内容仍需考虑脏状态或是否存在可用的重建路径。授权第 1、7 项写到以在阵列中的旧行模式作选择，第 5、10 项增加判断是否会对后备存储发生 writeback。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　满载时根据驻留行模式得到逐出候选</h3>
+    <p id="fig-1-basis">显示控制电路从阵列和旧行状态取得候选限制，再按策略选出位置。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="满载时根据驻留行模式得到逐出候选" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 603" role="img" aria-labelledby="us11442855b2-fig-1-svg-title us11442855b2-fig-1-svg-desc">
+<title id="us11442855b2-fig-1-svg-title">满载时根据驻留行模式得到逐出候选</title>
+<desc id="us11442855b2-fig-1-svg-desc">显示控制电路从阵列和旧行状态取得候选限制，再按策略选出位置。</desc>
+<defs><marker id="us11442855b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11442855b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11442855b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11442855b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11442855b2-fig-1-avail" d="M 231 153 L 373 153" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-1-arrow-main)"/>
+<path id="us11442855b2-fig-1-space" d="M 706 146 L 587 146" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11442855b2-fig-1-arrow-control)"/>
+<path id="us11442855b2-fig-1-apply" d="M 587 195 L 706 195" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-1-arrow-main)"/>
+<path id="us11442855b2-fig-1-status" d="M 240 379 L 433 379 Q 441 379 441 371 L 441 229" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-1-arrow-data)"/>
+<path id="us11442855b2-fig-1-wb-estimate" d="M 511 410 L 511 229" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11442855b2-fig-1-arrow-control)"/>
+<path id="us11442855b2-fig-1-wb-data" d="M 804 239 L 804 412" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-1-arrow-data)"/>
+<rect x="246.5" y="125" width="111" height="18" fill="#f5f5f5"/><text x="302" y="139" class="arrow-label" text-anchor="middle">新行待分配</text>
+<rect x="601" y="117" width="88" height="18" fill="#f5f5f5"/><text x="645" y="131" class="arrow-label" text-anchor="middle">空间已满</text>
+<rect x="584" y="167" width="118" height="18" fill="#f5f5f5"/><text x="643" y="181" class="arrow-label" text-anchor="middle">指定逐出位置</text>
+<rect x="268.5" y="349" width="145" height="18" fill="#f5f5f5"/><text x="341" y="363" class="arrow-label" text-anchor="middle">读取旧行模式状态</text>
+<rect x="423.5" y="312" width="175" height="18" fill="#f5f5f5"/><text x="511" y="326" class="arrow-label" text-anchor="middle">候选的 writeback 条件</text>
+<rect x="722" y="327" width="166" height="18" fill="#f5f5f5"/><text x="805" y="341" class="arrow-label" text-anchor="middle">旧行按需要 writeback</text>
+<g id="us11442855b2-fig-1-request"><rect x="42" y="105" width="189" height="98" rx="6" fill="#f5f5f5"/><rect x="42" y="105" width="189" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="131" class="node-name" text-anchor="middle">待回填的新行</text><text x="136.5" y="153" class="node-detail" text-anchor="middle">触发存入缓存的请求</text></g>
+<g id="us11442855b2-fig-1-select"><rect x="373" y="116" width="214" height="113" rx="6" fill="#f5f5f5"/><rect x="373" y="116" width="214" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="480" y="142" class="node-name" text-anchor="middle">缓存逐出选择逻辑</text><text x="480" y="164" class="node-detail" text-anchor="middle">空间满时读取候选状态</text><text x="480" y="182" class="node-detail" text-anchor="middle">选出可替换行</text></g>
+<g id="us11442855b2-fig-1-data"><rect x="706" y="117" width="212" height="122" rx="6" fill="#f5f5f5"/><rect x="706" y="117" width="212" height="122" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="812" y="143" class="node-name" text-anchor="middle">缓存数据阵列</text><text x="812" y="165" class="node-detail" text-anchor="middle">保存已驻留行</text><text x="812" y="183" class="node-detail" text-anchor="middle">选出后重用其位置</text></g>
+<g id="us11442855b2-fig-1-mode"><rect x="41" y="334" width="199" height="106" rx="6" fill="#f5f5f5"/><rect x="41" y="334" width="199" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="140.5" y="360" class="node-name" text-anchor="middle">已驻留行模式状态位</text><text x="140.5" y="382" class="node-detail" text-anchor="middle">记录是否含背景模式</text></g>
+<g id="us11442855b2-fig-1-wb"><rect x="706" y="412" width="210" height="104" rx="6" fill="#f5f5f5"/><rect x="706" y="412" width="210" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811" y="438" class="node-name" text-anchor="middle">后备内存层</text><text x="811" y="460" class="node-detail" text-anchor="middle">必要时保存旧行内容</text></g>
+<g id="us11442855b2-fig-1-cost"><rect x="369" y="410" width="219" height="104" rx="6" fill="#f5f5f5"/><rect x="369" y="410" width="219" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="478.5" y="436" class="node-name" text-anchor="middle">可选的 writeback 判断</text><text x="478.5" y="458" class="node-detail" text-anchor="middle">可能结合模式估计能耗</text></g>
+<text x="42" y="57" class="signal-title" text-anchor="start">满载时，已驻留行的模式参与逐出候选选择</text>
+<text x="42" y="568" class="legend" text-anchor="start">原图 1、3、9 的机制。模式状态位描述行内内容，是否有 writeback 需另按本次逐出条件判断。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11442855b2-fig-1-space">阵列已满</a> 无空余位置时，转入逐出选择。</li><li><a href="#us11442855b2-fig-1-status">查询旧行模式状态</a> 检查已驻留内容的分类。</li><li><a href="#us11442855b2-fig-1-wb-estimate">writeback 条件独立确认</a> 可选策略还考虑是否写回以及写回能耗。</li><li><a href="#us11442855b2-fig-1-apply">指定哪个位置腾出</a> 新行随后利用选中的旧行槽位。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、9；说明书归档段 0040、0041、0044、0045、0050、0077、0078、0079、0080；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> <a href="../diagrams/US11442855B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>缓存数据阵列</dt><dd>101</dd></div><div><dt>缓存控制电路</dt><dd>102</dd></div><div><dt>已驻留的缓存行</dt><dd>103</dd></div><div><dt>新缓存行存入请求</dt><dd>105</dd></div><div><dt>待存入的新缓存行</dt><dd>107</dd></div><div><dt>被逐出的缓存行</dt><dd>106</dd></div><div><dt>模式和逐出控制逻辑</dt><dd>201</dd></div><div><dt>后备内存层</dt><dd>401</dd></div></dl></details>
+</figure></section><section id="storage"><h2>在写入时记录模式，省掉逐出阶段的完整行比较</h2><p>图 5 按原图 3 检查同一行内两类单元。数据单元存放旧值，旁边的状态位表明该行是否含背景模式；多模式实现可编码具体模式。说明书允许在写入该行时建立关联状态。</p><p>后续选择器可读状态位得到候选类型，无须读取每条完整数据才判模式。同族 US20250013568A1 也讨论模式，但其核心写操作可直接旁路阵列。这里用图 5 解释已驻留数据的逐出选择。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　写入时怎样建立行模式状态位</h3>
+    <p id="fig-5-basis">从写数据分流到数据单元和比较逻辑，再从模式状态位返回后续逐出选择。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="写入时怎样建立行模式状态位" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 604" role="img" aria-labelledby="us11442855b2-fig-5-svg-title us11442855b2-fig-5-svg-desc">
+<title id="us11442855b2-fig-5-svg-title">写入时怎样建立行模式状态位</title>
+<desc id="us11442855b2-fig-5-svg-desc">从写数据分流到数据单元和比较逻辑，再从模式状态位返回后续逐出选择。</desc>
+<defs><marker id="us11442855b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11442855b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11442855b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11442855b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11442855b2-fig-5-data" d="M 237 145 L 297 145 Q 305 145 305 153 L 305 244 Q 305 252 313 252 L 803 252 Q 811 252 811 244 L 811 210" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-5-arrow-data)"/>
+<path id="us11442855b2-fig-5-compare" d="M 237 172 L 377 172" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-5-arrow-main)"/>
+<path id="us11442855b2-fig-5-update" d="M 594 149 L 646 149 Q 654 149 654 157 L 654 372 Q 654 380 662 380 L 704 380" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-5-arrow-main)"/>
+<path id="us11442855b2-fig-5-metadata" d="M 811 434 L 811 467 Q 811 475 803 475 L 597 475" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-5-arrow-data)"/>
+<rect x="438.5" y="223" width="167" height="18" fill="#f5f5f5"/><text x="522" y="237" class="arrow-label" text-anchor="middle">整行数据进数据单元</text>
+<rect x="247" y="143" width="124" height="18" fill="#f5f5f5"/><text x="309" y="157" class="arrow-label" text-anchor="middle">比较写入内容</text>
+<rect x="583.5" y="291" width="137" height="18" fill="#f5f5f5"/><text x="652" y="305" class="arrow-label" text-anchor="middle">设置对应状态位</text>
+<rect x="635" y="445" width="130" height="18" fill="#f5f5f5"/><text x="700" y="459" class="arrow-label" text-anchor="middle">读取该行模式位</text>
+<g id="us11442855b2-fig-5-write"><rect x="38" y="105" width="199" height="104" rx="6" fill="#f5f5f5"/><rect x="38" y="105" width="199" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137.5" y="131" class="node-name" text-anchor="middle">写入某缓存阵列行</text><text x="137.5" y="153" class="node-detail" text-anchor="middle">数据与对应行地址</text></g>
+<g id="us11442855b2-fig-5-match"><rect x="377" y="104" width="217" height="108" rx="6" fill="#f5f5f5"/><rect x="377" y="104" width="217" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="485.5" y="130" class="node-name" text-anchor="middle">模式匹配逻辑</text><text x="485.5" y="152" class="node-detail" text-anchor="middle">与当前背景模式比较</text></g>
+<g id="us11442855b2-fig-5-row"><rect x="705" y="100" width="213" height="110" rx="6" fill="#f5f5f5"/><rect x="705" y="100" width="213" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="126" class="node-name" text-anchor="middle">这一行的数据单元</text><text x="811.5" y="148" class="node-detail" text-anchor="middle">保持该行的数据内容</text></g>
+<g id="us11442855b2-fig-5-flag"><rect x="704" y="328" width="215" height="106" rx="6" fill="#f5f5f5"/><rect x="704" y="328" width="215" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="811.5" y="354" class="node-name" text-anchor="middle">同一行关联的状态位</text><text x="811.5" y="376" class="node-detail" text-anchor="middle">一位或多个模式码</text></g>
+<g id="us11442855b2-fig-5-pick"><rect x="373" y="419" width="224" height="111" rx="6" fill="#f5f5f5"/><rect x="373" y="419" width="224" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="485" y="445" class="node-name" text-anchor="middle">后续逐出选择</text><text x="485" y="467" class="node-detail" text-anchor="middle">先读取状态位</text><text x="485" y="485" class="node-detail" text-anchor="middle">可免读整行做模式判断</text></g>
+<text x="38" y="56" class="signal-title" text-anchor="start">模式在写入时记录，逐出比较可以只读行旁的状态位</text>
+<text x="38" y="567" class="legend" text-anchor="start">原图 3 示出状态位位于相应行的附加单元。图中不指定 bank 数及状态位编码。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11442855b2-fig-5-compare">比较写入数据</a> 判断将存入的行是否匹配已知模式。</li><li><a href="#us11442855b2-fig-5-row">数据单元保留内容</a> 图 3 的驻留模式示例仍包含缓存行数据。</li><li><a href="#us11442855b2-fig-5-flag">行旁状态位</a> 可表示是否匹配或具体模式码。</li><li><a href="#us11442855b2-fig-5-metadata">逐出时读少量元数据</a> 避免重新扫描整条缓存行来识别模式。</li></ul>
+  <p class="figure-evidence">原图 2、3、9；说明书归档段 0040、0042、0043、0044、0045、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00009" aria-label="原文权利要求 9">9</a> <a href="../diagrams/US11442855B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>缓存控制电路</dt><dd>102</dd></div><div><dt>缓存阵列的 bank</dt><dd>301A–301C</dd></div><div><dt>数据单元</dt><dd>302A–302C</dd></div><div><dt>缓存阵列行</dt><dd>303／304</dd></div><div><dt>bank A 的行模式状态位</dt><dd>305</dd></div><div><dt>bank C 的行模式状态位</dt><dd>306</dd></div><div><dt>数据模式查找表</dt><dd>204</dd></div></dl></details>
+</figure></section><section id="fill"><h2>释放位置后，再将新行写到相同位置</h2><p>图 2 沿一次缺失回填读。后备内存层交付新行后，控制器在空间已满时找出待逐出行，释放位置并写入新行。授权第 6 项进一步明确把对应地址标为可写。</p><p>表 4 的两路比较固定输入和可替换条件。way 0 的背景模式被这套策略先逐出，way 1 保留。用相同候选和请求重放时，只切换两路的模式标志即可交换被逐出的路；只切换脏位会影响 writeback 而不改变此例的背景优先条件。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　选择、逐出、存入新行按顺序发生</h3>
+    <p id="fig-2-basis">把一次缺失回填明确分成收到新行、找候选、释放位置和重写。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="选择、逐出、存入新行按顺序发生" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 459" role="img" aria-labelledby="us11442855b2-fig-2-svg-title us11442855b2-fig-2-svg-desc">
+<title id="us11442855b2-fig-2-svg-title">选择、逐出、存入新行按顺序发生</title>
+<desc id="us11442855b2-fig-2-svg-desc">把一次缺失回填明确分成收到新行、找候选、释放位置和重写。</desc>
+<defs><marker id="us11442855b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11442855b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11442855b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11442855b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11442855b2-fig-2-refill"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-2-arrow-data)"/><rect x="152.5" y="96" width="169" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">缓存缺失后交付待存入的新行</text></g>
+<g id="us11442855b2-fig-2-full"><path d="M 358 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-2-arrow-data)"/><rect x="388.5" y="144" width="182" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">空间已满，读取候选的模式状态</text></g>
+<g id="us11442855b2-fig-2-reply"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11442855b2-fig-2-arrow-return)"/><rect x="401.5" y="192" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">提供每条候选行的模式信息</text></g>
+<g id="us11442855b2-fig-2-pick"><path d="M 358 258 L 382 258 Q 390 258 390 266 L 390 268 Q 390 276 382 276 L 358 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11442855b2-fig-2-arrow-control)"/><rect x="400.5" y="234" width="143" height="18" fill="#f5f5f5"/><text x="472" y="248" class="arrow-label" text-anchor="middle">按策略选出一条已驻留行</text></g>
+<g id="us11442855b2-fig-2-evict"><path d="M 358 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-2-arrow-main)"/><rect x="542.5" y="288" width="117" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">逐出并释放这一位置</text></g>
+<g id="us11442855b2-fig-2-store"><path d="M 358 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-2-arrow-main)"/><rect x="536" y="336" width="130" height="18" fill="#f5f5f5"/><text x="601" y="350" class="arrow-label" text-anchor="middle">在释放的位置写入新行</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">后备内存层</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">缓存控制电路</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">已驻留行元数据</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">缓存数据阵列</text>
+<text x="28" y="436" class="legend" text-anchor="start">依据原图 9。若选中行需 writeback，须按实现先保存旧值，原图未定义额外应答消息。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11442855b2-fig-2-refill">缓存缺失后收到回填</a> 源自后备内存层。</li><li><a href="#us11442855b2-fig-2-full">确定满载并查看驻留行</a> 选择使用旧行模式。</li><li><a href="#us11442855b2-fig-2-evict">逐出旧行</a> 释放对应位置。</li><li><a href="#us11442855b2-fig-2-store">在同一位置填入新行</a> 可能另需维护模式地址映射。</li></ul>
+  <p class="figure-evidence">原图 4、9；说明书归档段 0050、0077、0078、0079、0080；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US11442855B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>后备内存层</dt><dd>401</dd></div><div><dt>回填的新缓存行</dt><dd>408</dd></div><div><dt>缓存控制电路</dt><dd>102</dd></div><div><dt>被逐出的缓存行</dt><dd>106</dd></div><div><dt>待存入的新缓存行</dt><dd>107</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　同一次回填比较两个可逐出的候选</h3>
+    <p id="fig-4-basis">固定一条新行与两路可替换条件，只改变旧行的模式标志。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">候选缓存行</th><th scope="col">已驻留内容</th><th scope="col">本次选择</th><th scope="col">writeback 条件</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">way 0</th><td>带背景模式</td><td>该策略先逐出，位置存入新行</td><td>另查旧值保存要求</td></tr><tr id="fig-4-table-row-2"><th scope="row">way 1</th><td>一般图块</td><td>本次保持</td><td>未发生这个候选的逐出</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-basis">实验只固定模式优先策略</a> writeback 是否需要用额外的旧行状态判定。</li></ul>
+  <p class="figure-evidence">原图 9；说明书归档段 0078、0079、0080；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>已驻留的缓存行</dt><dd>103</dd></div><div><dt>被逐出的缓存行</dt><dd>106</dd></div></dl></details>
+</figure></section><section id="read"><h2>TLB 匹配和背景状态指示共同触发背景访问</h2><p>图 3 从虚拟地址开始。TLB 查到映射后检查对应物理地址的状态位。若该位组指示存储的是背景数据，TLB 可以发送背景控制信号。缓存可停读数据阵列并返回背景数据信号，或者按配置返回 dummy data。</p><p>第 14 项以 TLB 背景访问为独立权项，第 16–19 项分别写控制信号和不同返回形式。第 19 项用两位或更多位编码预定模式。第 11 项才将修改模式地址映射表与逐出动作结合。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　背景状态位决定 TLB 是否发送背景控制信号</h3>
+    <p id="fig-3-basis">对应普通访问路径及命中背景状态时的阵列停读。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="背景状态位决定 TLB 是否发送背景控制信号" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 618" role="img" aria-labelledby="us11442855b2-fig-3-svg-title us11442855b2-fig-3-svg-desc">
+<title id="us11442855b2-fig-3-svg-title">背景状态位决定 TLB 是否发送背景控制信号</title>
+<desc id="us11442855b2-fig-3-svg-desc">对应普通访问路径及命中背景状态时的阵列停读。</desc>
+<defs><marker id="us11442855b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11442855b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11442855b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11442855b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11442855b2-fig-3-va" d="M 216 160 L 358 160" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-3-arrow-main)"/>
+<path id="us11442855b2-fig-3-matched" d="M 463 218 L 463 306" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11442855b2-fig-3-arrow-data)"/>
+<path id="us11442855b2-fig-3-background" d="M 573 362.5 L 625 362.5 Q 633 362.5 633 354.5 L 633 346 Q 633 338 641 338 L 710 338" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11442855b2-fig-3-arrow-main)"/>
+<path id="us11442855b2-fig-3-ordinary" d="M 463 419 L 463 496 Q 463 504 471 504 L 710 504" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11442855b2-fig-3-arrow-control)"/>
+<rect x="220.5" y="132" width="125" height="18" fill="#f5f5f5"/><text x="283" y="146" class="arrow-label" text-anchor="middle">请求虚拟地址</text>
+<rect x="385" y="248" width="168" height="18" fill="#f5f5f5"/><text x="469" y="262" class="arrow-label" text-anchor="middle">找到映射和状态位</text>
+<rect x="603" y="305" width="130" height="18" fill="#f5f5f5"/><text x="668" y="319" class="arrow-label" text-anchor="middle">背景状态有效</text>
+<rect x="495" y="473" width="174" height="18" fill="#f5f5f5"/><text x="582" y="487" class="arrow-label" text-anchor="middle">对应地址不是背景数据</text>
+<g id="us11442855b2-fig-3-request"><rect x="34" y="111" width="182" height="99" rx="6" fill="#f5f5f5"/><rect x="34" y="111" width="182" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="125" y="137" class="node-name" text-anchor="middle">处理器读请求</text><text x="125" y="159" class="node-detail" text-anchor="middle">提供虚拟地址</text></g>
+<g id="us11442855b2-fig-3-tlb"><rect x="358" y="105" width="210" height="113" rx="6" fill="#f5f5f5"/><rect x="358" y="105" width="210" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="463" y="131" class="node-name" text-anchor="middle">TLB 地址匹配</text><text x="463" y="153" class="node-detail" text-anchor="middle">查询映射并读取</text><text x="463" y="171" class="node-detail" text-anchor="middle">对应物理地址的状态位</text></g>
+<g id="us11442855b2-fig-3-bg-test"><polygon points="463,306 573,362.5 463,419 353,362.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="463" y="359.5" class="node-name" text-anchor="middle">指示背景模式？</text><text x="463" y="380.5" class="node-detail" text-anchor="middle">匹配条目之后</text></g>
+<g id="us11442855b2-fig-3-bg"><rect x="710" y="283" width="214" height="111" rx="6" fill="#f5f5f5"/><rect x="710" y="283" width="214" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="309" class="node-name" text-anchor="middle">背景访问</text><text x="817" y="331" class="node-detail" text-anchor="middle">向缓存发背景控制信号</text><text x="817" y="349" class="node-detail" text-anchor="middle">可旁路阵列读取</text></g>
+<g id="us11442855b2-fig-3-normal"><rect x="710" y="455" width="214" height="100" rx="6" fill="#f5f5f5"/><rect x="710" y="455" width="214" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="817" y="481" class="node-name" text-anchor="middle">普通读路径</text><text x="817" y="503" class="node-detail" text-anchor="middle">按物理地址访问数据</text></g>
+<text x="34" y="57" class="signal-title" text-anchor="start">TLB 只在匹配映射且状态位指示背景数据时发背景控制</text>
+<text x="34" y="591" class="legend" text-anchor="start">原图 6、11、12 的独立访问路径。背景控制信号可以使阵列停读，返回形式由实施方式决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11442855b2-fig-3-tlb">先匹配 VA 对应的 PA</a> 在找到映射后读取相关状态位。</li><li><a href="#us11442855b2-fig-3-matched">状态随物理地址一起取得</a> 从属项允许状态位编码在地址中。</li><li><a href="#us11442855b2-fig-3-bg">背景路径</a> 可发送控制信号，缓存可返回背景数据信号或 dummy data。</li><li><a href="#us11442855b2-fig-3-normal">普通缓存读</a> 背景状态不成立时按正常地址访问。</li></ul>
+  <p class="figure-evidence">原图 6、10、11、12；说明书归档段 0060、0062、0063、0083、0084、0086、0087、0088、0089、0091、0092、0093、0094；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US11442855B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>TLB</dt><dd>602</dd></div><div><dt>请求虚拟地址</dt><dd>606</dd></div><div><dt>TLB 背景状态位</dt><dd>610A／610B</dd></div><div><dt>背景控制信号</dt><dd>611</dd></div><div><dt>背景数据信号</dt><dd>409</dd></div></dl></details>
+</figure></section><section id="benefit"><h2>观测逐出代价时同时统计 miss 和 writeback</h2><p>说明书允许依据功耗或性能目标切换替换算法。实验应分别记录候选读取的能耗、带 writeback 的逐出比例、再次访问造成的缓存 miss 和内存流量。偏好逐出背景行可能改变驻留集合。可低耗写回的行是否会很快被再次使用，影响总体性能。</p><p>本文的两路例子仅检查状态与数据路径。源文未报告任何手机 SoC 上的绝对周期或能耗。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US11442855B2</code><span>美国授权专利</span><time datetime="2022-09-13">2022-09-13</time></p>
-  <h1>按内容模式选择逐出行</h1>
-  <p class="english-title" lang="en">Data pattern based cache management</p>
-  <p class="document-question">缓存已满时，行里存的内容怎样影响替换顺序？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">缓存已满时，控制器依据现存行的数据模式挑选逐出对象，腾出位置存放新行。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>权利要求针对插入新行且容量用尽的选择分支。按内容挑选可能改变与传统替换策略相同访问流下的候选顺序。</dd></div><div><dt>验证方法</dt><dd>固定组映射和插入顺序，只改变两个候选行的数据模式。记录候选集合、实际逐出标签和新行插入位置。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11442855B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">两行都可以逐出时，哪一行更容易取回？如果一行的内容能用已知模式重建，搬运或写回它的成本可能更低。</p>
-    <p>缓存控制器在没有空位时依据驻留行的数据模式选出逐出对象，再把新数据写入同一位置。部分实施例按背景模式位挑选候选，也可把写回是否必要计入选择。</p>
-    <ol class="walkthrough"><li><h3>判断缓存是否已满</h3><p>控制电路接到新行写入请求后检查内存阵列。阵列满载时才按权利要求 1 选择替换候选行。</p></li><li><h3>识别能用模式表示的行</h3><p>一种实现在线上保留状态位，并用模式查找表关联背景数据。控制器可按状态位把背景候选单独分组。</p></li><li><h3>判断逐出时是否要写回</h3><p>部分方法权项用状态位标出逐出是否涉及写回，控制器可据此比较候选行的传输和操作成本。</p></li><li><h3>逐出旧行并写入新行</h3><p>控制器清出选中的位置，再将新行写入。同一专利还描述了用地址映射或 TLB 标记处理背景访问的实现。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 针对已满的缓存，允许按现存行的数据模式选逐出对象。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> 另限定由 TLB 使用物理地址关联状态选择背景访问。这两条权项覆盖不同的数据路径。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>背景数据模式</dt><dd>说明书中可由特定状态位或模式编码标记的数据值或重复模式。</dd></div><div><dt>逐出位置复用</dt><dd>释放旧标签和相应缓存阵列位置后，把新行写到原位置。</dd></div><div><dt>背景控制信号</dt><dd>TLB 匹配的物理地址状态指示背景数据时，可向缓存发出的控制信号。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">按数据模式选择替换候选行</a></li><li><a href="#fig-2">缓存已满时怎样插入新行</a></li><li><a href="#fig-3">TLB 条目何时触发背景访问</a></li><li><a href="#fig-4">两条候选行的替换顺序</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">按数据模式选择替换候选行</h3></div>
-    <a class="paper-open" href="../mechanisms/US11442855B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="按数据模式选择替换候选行">
-    <img class="paper-image native-image" src="../mechanisms/US11442855B2/fig-1/diagram.svg" width="506" height="324"
-         style="--paper-width:506px" alt="按数据模式选择替换候选行。控制器遇到满载时根据驻留行的数据模式选出逐出行。采用背景状态位的实现可先用状态位缩小候选范围。">
-  </div>
-  <figcaption>
-    <span>控制器遇到满载时根据驻留行的数据模式选出逐出行。采用背景状态位的实现可先用状态位缩小候选范围。</span>
-    <span class="figure-evidence">图 1–5、图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c9/56/0b/6562ef75c6bd1e/US11442855.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">缓存已满时怎样插入新行</h3></div>
-    <a class="paper-open" href="../mechanisms/US11442855B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="缓存已满时怎样插入新行">
-    <img class="paper-image native-image" src="../mechanisms/US11442855B2/fig-2/diagram.svg" width="560" height="416"
-         style="--paper-width:560px" alt="缓存已满时怎样插入新行。容量不足时，控制器按权利要求 1 的流程选出旧行。清出位置后，才能写入新行。">
-  </div>
-  <figcaption>
-    <span>容量不足时，控制器按权利要求 1 的流程选出旧行。清出位置后，才能写入新行。</span>
-    <span class="figure-evidence">图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c9/56/0b/6562ef75c6bd1e/US11442855.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-3-title">TLB 条目何时触发背景访问</h3></div>
-    <a class="paper-open" href="../mechanisms/US11442855B2/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="TLB 条目何时触发背景访问">
-    <img class="paper-image native-image" src="../mechanisms/US11442855B2/fig-3/diagram.svg" width="722" height="440"
-         style="--paper-width:722px" alt="TLB 条目何时触发背景访问。请求的虚拟地址在 TLB 映射中匹配后，检查对应物理地址的状态位。状态表示背景数据时，触发背景访问；缓存可返回占位数据或背景数据信号。">
-  </div>
-  <figcaption>
-    <span>请求的虚拟地址在 TLB 映射中匹配后，检查对应物理地址的状态位。状态表示背景数据时，触发背景访问；缓存可返回占位数据或背景数据信号。</span>
-    <span class="figure-evidence">原图 11–12；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c9/56/0b/6562ef75c6bd1e/US11442855.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">两条候选行的替换顺序</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">候选</th><th scope="col">数据内容</th><th scope="col">此例选择</th></tr></thead><tbody><tr><th scope="row">路 0</th><td>已登记的背景模式</td><td class="emphasis">优先逐出，复用位置</td></tr><tr><th scope="row">路 1</th><td>一般图块</td><td>本次保留</td></tr></tbody></table>
-  <figcaption>
-    <span>设两路均可逐出，替换策略优先选择背景模式。示例不预设该行的写回条件；需要保存旧数据时仍须按实现处理。</span>
-    <span class="figure-evidence">图 8、图 9，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>；教学对照。 · <a href="https://patentimages.storage.googleapis.com/c9/56/0b/6562ef75c6bd1e/US11442855.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按内容模式选择旧行</dt><dd>优先使用低成本位置 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>；原图 9</span></dd></div><div><dt>TLB 保留背景状态</dt><dd>触发背景数据访问 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>；原图 11–12</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>前一路改变的是替换优先次序，后一路需要保持背景地址的状态可查。两者的收益应分别从逐出路径的流量及背景访问返回路径判定，不能把背景状态位的查询开销漏掉。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若某背景内容极热且普通行很快被覆盖，优先逐出背景行可额外增加重取。这是由替换次序改变推得的反例，权利要求 1 只限定依据数据模式选行。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设缓存组只有两路，且已满。way 0 存着可由已登记模式重建的黑色背景，way 1 存着普通图块。此时又有一个新图块申请分配。</dd></div><div><dt>处理结果</dt><dd>如果实现优先逐出背景行，新图块会写入 way 0，way 1 保留。原背景地址仍需通过写回或模式映射保持可读。</dd></div><div><dt>结果解读</dt><dd>两路容量与背景优先都属于本例设定。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、7、14 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +156,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=a%20cache%20memory%20circuit%20configured%20to%20store%20a%20plurality%20of%20cache%20lines">F10</a></th><td>缓存电路存储多条缓存行。</td><td><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=Turning%20to%20FIG.%2011%20%2C%20a%20flow%20diagram%20depicting%20an%20embodiment%20of%20a%20method%20for%20operating">说明书 0085</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=a%20processor%20circuit%20configured%20to%20generate%20an%20access%20request%20for%20a%20given%20one%20of%20the%20plurality">F11</a></th><td>处理器生成带虚拟地址的缓存行访问。</td><td><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=The%20method%20includes%20receiving%20a%20virtual%20address%20by%20a%20translation%20lookaside%20buffer%20%28block%201102%20%29.%20In">说明书 0086</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=compare%20the%20virtual%20address%20to%20a%20list%20of%20physical%20addresses%20associated%20with%20the%20cache%20memory%20circuit">F12</a></th><td>TLB 查询对应缓存电路的地址映射。</td><td><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=The%20method%20further%20includes%20comparing%20a%20received%20virtual%20address%20to%20a%20list%20of%20physical%20address%20stored">说明书 0087</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=in%20response%20to%20a%20determination%20that%20the%20virtual%20address%20matches%20a%20particular%20physical%20address%20in%20the">F13</a></th><td>映射匹配后检查对应物理地址所关联的状态位。</td><td><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=The%20method%20also%20includes%2C%20in%20response%20to%20determining%20that%20the%20received%20virtual%20address%20has%20a%20match">说明书 0088</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=in%20response%20to%20a%20determination%20that%20the%20status%20bits%20indicate%20that%20data%20stored%20at%20the%20particular">F14</a></th><td>状态指示背景数据时触发缓存的背景访问。</td><td><a href="https://patents.google.com/patent/US11442855B2/en#:~:text=The%20method%20further%20includes%2C%20in%20response%20to%20determining%20that%20the%20status%20bits%20indicate%20that%20the%20data">说明书 0089</a> · 原图 11</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置在存储新行且缓存已满时，控制器按驻留行的数据模式选择并逐出一行，随后复用原阵列位置。见原图 9。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>候选选择进一步考虑已存行是否保存背景数据模式。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>检查多条驻留行的状态位，用状态位识别背景模式。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>同一阵列行中用不同存储单元子集保存行数据和对应状态位。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>选择逐出行时还检查是否需要向原文所称较高层存储器写回。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>逐出时将旧行关联的地址标记为可写。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>方法接收新行存储请求；缓存已满时按已有行的数据模式选行、逐出，再在原位置写入新行。见原图 9。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>先筛出包括背景模式的驻留行子集，再从中选择。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>按行检查指出背景模式匹配的状态位，以确定候选子集。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-7">7</a></td><td>选择旧行时判断其逐出是否带有写回。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-7">7</a></td><td>将旧行的地址标为可写，并从背景模式地址表删除该地址。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-7">7</a></td><td>接收访问的虚拟地址；地址映射匹配后检查对应物理地址的状态位。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>状态位指示背景数据时执行背景访问。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>处理器产生带虚拟地址的访问请求。TLB 找到对应物理地址并检查状态位，若状态表明驻留的是背景数据，就触发背景访问。见原图 11。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>状态位编码在匹配物理地址的一个或多个位中。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>执行背景访问时，TLB 向缓存电路发背景控制信号。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>收到背景控制信号后，缓存向处理器返回占位数据模式。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>收到背景控制信号后，缓存向处理器返回背景数据信号。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>用至少两位编码其中一种背景模式，处理器解码后选用模式。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-14">14</a></td><td>收到新行写入且无空位时，按驻留行的数据模式选一行逐出。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>缓存满时根据现存行的数据模式选出替换候选行。控制器逐出该行，再把新行写到原位置。</dd></div><div><dt>图 2、图 9</dt><dd>图 2 标出控制逻辑、地址映射和模式表，图 9 给出满载替换流程。</dd></div><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11442855B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>从属项增加了背景模式子集、状态位及是否需要写回等条件。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11442855B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20250013568A1.html#engineering">匹配数据模式时跳过写入</a>
-<p>两件文献之间隔着 US17/929,544 和 US18/360,352 两代申请。沿同一份背景值缓存披露，可以对照母案对逐出选择的保护和公开申请权 21 用背景值匹配决定是否实际写数据。</p></li></ul>
-    <p><a href="../index.html?patent=US11442855B2#knowledge">在全量关系图上定位 US11442855B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2020-09-25</dd></div>
-    <div><dt>美国申请日</dt><dd>2020-09-25</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2022-09-13</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/033,587</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Michael R. Seningen</dd></div><div><dt>分类号</dt><dd>G06F12/1027、G06F12/0802、G06F12/1045、G06F2212/60、G06F2212/602、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11442855B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11442855B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 121 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8A、图 8B、图 9、图 10、图 11、图 12。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US20250013568A1.html"><code>US20250013568A1</code> 匹配数据模式时跳过写入</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11442855B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

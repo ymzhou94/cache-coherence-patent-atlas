@@ -1,123 +1,212 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12190151B2 GPU 线程分两级分配到通道与执行流水线 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>执行流水线的背压如何参与 SIMD 组进通道的仲裁 · US12190151B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12190151B2</code> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></p>
+<h1>执行流水线的背压如何参与 SIMD 组进通道的仲裁</h1><p class="reading-question">多个 SIMD 组争用着色器通道与执行流水线时，已检测到的执行拥塞可以在哪个时刻改变调度？</p>
+<p class="reading-answer">第一级根据线程优先级分配硬件通道，第二级在译码和冒险检查后把操作发给相容且可用的执行流水线。执行侧的拥塞状态返回第一级，调整后续分配通道的线程优先级。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-01-07</dd></div><div><dt>申请号</dt><dd>US18/054,376</dd></div><div><dt>最早优先权</dt><dd>2022-09-19</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Benjiman L. Goodman、Anjana Rajendran、Sheenam Jayaswal、Terence M. Potter、Yoong Chert Foo</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#stages">一次为线程组分通道，一次为操作分执行流水线</a></li><li><a href="#pressure">下一次通道仲裁前，可以知道哪些流水线拥塞</a></li><li><a href="#bounds">拥塞权重、同拍端口资格与通道抢占的区别</a></li><li><a href="#when">背压反馈生效的时间边界</a></li><li><a href="#fences">同一 load 依赖遇到命中和缺失，通道如何处理</a></li><li><a href="#units">多个通道同时请求同一类流水线时怎样发射</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="stages"><h2>一次为线程组分通道，一次为操作分执行流水线</h2><p>原图 2 的硬件通道含独立的译码和冒险检查。SIMD 组由第一级选入通道，留在这个通道内推进多条指令。只有适合进入第二级仲裁的已译码操作才竞争多条共享执行流水线。原图 3 把这两级具体落到 SIMD 组调度器、通道管理器和指令发射仲裁器。</p><p>图 1 画两个通道输出汇合的地方。着色器可以为整数、浮点、访存设置各自的执行流水线。指令发射仲裁器检查实际操作类型及流水线可用性，执行侧的反馈则绕过译码和冒险检查，返回 SIMD 组调度器。执行结果写回属于更下游的动作。</p><p>授权第 1、12、18 项分别用装置、方法和系统表述这个组合。线程是硬件调度对象，授权第 4 项具体到 SIMD 组。说明书允许移用于其他处理器，绘出的执行实例对应其着色器。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　着色器通道与共享执行流水线的两次仲裁</h3>
+    <p id="fig-1-basis">第一级授予 SIMD 组进入通道的资格，第二级在译码后授予单条操作执行流水线。反馈从执行侧返回第一级。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="着色器通道与共享执行流水线的两次仲裁" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 626" role="img" aria-labelledby="us12190151b2-fig-1-svg-title us12190151b2-fig-1-svg-desc">
+<title id="us12190151b2-fig-1-svg-title">着色器通道与共享执行流水线的两次仲裁</title>
+<desc id="us12190151b2-fig-1-svg-desc">第一级授予 SIMD 组进入通道的资格，第二级在译码后授予单条操作执行流水线。反馈从执行侧返回第一级。</desc>
+<defs><marker id="us12190151b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12190151b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12190151b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12190151b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12190151b2-fig-1-candidate" d="M 200 168 L 255 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-data)"/>
+<path id="us12190151b2-fig-1-mapa" d="M 441 166 L 495 166" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-data)"/>
+<path id="us12190151b2-fig-1-mapm" d="M 348 206 L 348 318 Q 348 326 356 326 L 495 326" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-data)"/>
+<path id="us12190151b2-fig-1-reada" d="M 685 151 L 735 151" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-data)"/>
+<path id="us12190151b2-fig-1-readm" d="M 685 326 L 699 326 Q 707 326 707 318 L 707 195 Q 707 187 715 187 L 735 187" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-data)"/>
+<path id="us12190151b2-fig-1-issue" d="M 844 206 L 844 409" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-1-arrow-main)"/>
+<path id="us12190151b2-fig-1-pressure" d="M 817 486 L 817 529 Q 817 537 809 537 L 295 537 Q 287 537 287 529 L 287 206" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12190151b2-fig-1-arrow-return)"/>
+<rect x="203" y="136" width="48" height="18" fill="#f5f5f5"/><text x="227" y="150" class="arrow-label" text-anchor="middle">候选</text>
+<rect x="444.5" y="136" width="47" height="18" fill="#f5f5f5"/><text x="468" y="150" class="arrow-label" text-anchor="middle">分配</text>
+<rect x="374" y="295" width="94" height="18" fill="#f5f5f5"/><text x="421" y="309" class="arrow-label" text-anchor="middle">分配通道</text>
+<rect x="687.5" y="120" width="43" height="18" fill="#f5f5f5"/><text x="709" y="134" class="arrow-label" text-anchor="middle">操作</text>
+<rect x="684.5" y="244" width="45" height="18" fill="#f5f5f5"/><text x="707" y="258" class="arrow-label" text-anchor="middle">操作</text>
+<rect x="687.5" y="360" width="151" height="18" fill="#f5f5f5"/><text x="763" y="374" class="arrow-label" text-anchor="middle">发给相容且可用端口</text>
+<rect x="438.5" y="507" width="177" height="18" fill="#f5f5f5"/><text x="527" y="521" class="arrow-label" text-anchor="middle">执行背压返回第一级</text>
+<g id="us12190151b2-fig-1-input"><rect x="24" y="129" width="176" height="77" rx="6" fill="#f5f5f5"/><rect x="24" y="129" width="176" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="112" y="155" class="node-name" text-anchor="middle">SIMD 组</text><text x="112" y="177" class="node-detail" text-anchor="middle">待分配通道</text></g>
+<g id="us12190151b2-fig-1-s1"><rect x="255" y="129" width="186" height="77" rx="6" fill="#f5f5f5"/><rect x="255" y="129" width="186" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="348" y="155" class="node-name" text-anchor="middle">SIMD 组调度器</text><text x="348" y="177" class="node-detail" text-anchor="middle">第一级仲裁</text></g>
+<g id="us12190151b2-fig-1-a"><rect x="495" y="129" width="190" height="77" rx="6" fill="#f5f5f5"/><rect x="495" y="129" width="190" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="590" y="155" class="node-name" text-anchor="middle">通道 A</text><text x="590" y="177" class="node-detail" text-anchor="middle">译码与冒险检查</text></g>
+<g id="us12190151b2-fig-1-m"><rect x="495" y="286" width="190" height="77" rx="6" fill="#f5f5f5"/><rect x="495" y="286" width="190" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="590" y="312" class="node-name" text-anchor="middle">通道 M</text><text x="590" y="334" class="node-detail" text-anchor="middle">译码与冒险检查</text></g>
+<g id="us12190151b2-fig-1-s2"><rect x="735" y="129" width="197" height="77" rx="6" fill="#f5f5f5"/><rect x="735" y="129" width="197" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="833.5" y="155" class="node-name" text-anchor="middle">指令发射仲裁器</text><text x="833.5" y="177" class="node-detail" text-anchor="middle">第二级仲裁</text></g>
+<g id="us12190151b2-fig-1-exec"><rect x="735" y="409" width="197" height="77" rx="6" fill="#f5f5f5"/><rect x="735" y="409" width="197" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="833.5" y="435" class="node-name" text-anchor="middle">共享执行流水线</text><text x="833.5" y="457" class="node-detail" text-anchor="middle">整数／浮点／访存</text></g>
+<text x="37" y="579" class="legend" text-anchor="start">第二级接收已译码的操作。跨越两级的是状态反馈，指令仍沿所在通道推进。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12190151b2-fig-1-s1">SIMD 组调度器</a> 已经就绪的 SIMD 组按线程优先级竞争硬件通道，也可考虑等待重新分配通道的组。</li><li><a href="#us12190151b2-fig-1-a">通道 A</a> 通道 A 自己译码并检查指令间冒险。发射候选保留操作类型。</li><li><a href="#us12190151b2-fig-1-m">通道 M</a> 其他通道并行保持各自的状态。多个通道的可发射操作汇入第二级。</li><li><a href="#us12190151b2-fig-1-s2">指令发射仲裁器</a> 当同类操作请求数大于可用执行流水线数时，第二级按优先级和可用性择一或择数个发出。</li><li><a href="#us12190151b2-fig-1-exec">共享执行流水线</a> 说明书列举了整数、浮点、访存等执行流水线类型。类型以及端口可用性影响能否本次发射。</li><li><a href="#us12190151b2-fig-1-pressure">执行背压返回第一级</a> 反馈表示执行拥塞状态，例如流水线停顿或缓冲的指令数量，用来更新待分配线程的优先级。</li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0060、0061、0065、0066、0067、0068、0069、0070；权利要求 1、4、7、8、12、17、18 <a href="../diagrams/US12190151B2/fig-1.html">打开独立图稿</a></p>
+  
+</figure></section><section id="pressure"><h2>下一次通道仲裁前，可以知道哪些流水线拥塞</h2><p>执行流水线可报告停顿、缓冲指令数或一段时间内的执行状态。原图 4 给出两类独立输入：执行状态来自硬件，编译器提示表明候选线程预计使用哪类流水线。提示可按每种流水线设一位，或用多位字段表达指令分布。提示所预测的资源类型，通常在这个候选线程译码之前就能用于分配决策。</p><p>图 2 追踪状态与提示如何汇合。第一级可把命中低背压条件的候选线程优先级调高，从而让下次获准使用的通道更可能产生可以发射的操作。第二级仍按本次实际译码结果和可用性分配，预测偏离实际时，这次发射决策依赖实际条件。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　执行状态与编译器提示如何影响下一次通道分配</h3>
+    <p id="fig-2-basis">执行拥塞与候选线程的预计资源类型用于第一级优先级。第二级发射使用实际译码结果。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="执行状态与编译器提示如何影响下一次通道分配" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us12190151b2-fig-2-svg-title us12190151b2-fig-2-svg-desc">
+<title id="us12190151b2-fig-2-svg-title">执行状态与编译器提示如何影响下一次通道分配</title>
+<desc id="us12190151b2-fig-2-svg-desc">执行拥塞与候选线程的预计资源类型用于第一级优先级。第二级发射使用实际译码结果。</desc>
+<defs><marker id="us12190151b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12190151b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12190151b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12190151b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12190151b2-fig-2-feedback"><path d="M 844 120 L 298 120" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12190151b2-fig-2-arrow-return)"/><rect x="506" y="96" width="130" height="18" fill="#f5f5f5"/><text x="571" y="110" class="arrow-label" text-anchor="middle">返回各类流水线的背压</text></g>
+<g id="us12190151b2-fig-2-hint"><path d="M 116 168 L 298 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-2-arrow-data)"/><rect x="129" y="144" width="156" height="18" fill="#f5f5f5"/><text x="207" y="158" class="arrow-label" text-anchor="middle">候选组优先用哪类执行单元</text></g>
+<g id="us12190151b2-fig-2-rank"><path d="M 298 210 L 322 210 Q 330 210 330 218 L 330 220 Q 330 228 322 228 L 298 228" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12190151b2-fig-2-arrow-control)"/><rect x="347" y="186" width="130" height="18" fill="#f5f5f5"/><text x="412" y="200" class="arrow-label" text-anchor="middle">按状态调整候选优先级</text></g>
+<g id="us12190151b2-fig-2-bind"><path d="M 298 264 L 480 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-2-arrow-main)"/><rect x="343.5" y="240" width="91" height="18" fill="#f5f5f5"/><text x="389" y="254" class="arrow-label" text-anchor="middle">分配当前空通道</text></g>
+<g id="us12190151b2-fig-2-decode"><path d="M 480 312 L 662 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-2-arrow-data)"/><rect x="525.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="571" y="302" class="arrow-label" text-anchor="middle">提交已译码操作</text></g>
+<g id="us12190151b2-fig-2-real"><path d="M 662 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-2-arrow-main)"/><rect x="694.5" y="336" width="117" height="18" fill="#f5f5f5"/><text x="753" y="350" class="arrow-label" text-anchor="middle">选择可用相容流水线</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">编译器提示</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">SIMD 组调度器</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">硬件通道</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">指令发射仲裁器</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">执行流水线</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。图中以待分配通道的 SIMD 组为例。两级硬件仲裁各自读取当次可用状态。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12190151b2-fig-2-feedback">返回各类流水线的背压</a> 采用独立权项的返回路径。滞留、缓冲指令数等是可选的拥塞指标。</li><li><a href="#us12190151b2-fig-2-hint">候选组优先用哪类执行单元</a> 编译器在着色器代码提供候选组的执行流水线类型提示；图中用整数和浮点举例。</li><li><a href="#us12190151b2-fig-2-rank">按状态调整候选优先级</a> 示例中浮点一侧的背压低，在适用的优先级规则中可以提升候选组。等待年龄仍可参与。</li><li><a href="#us12190151b2-fig-2-decode">提交已译码操作</a> 通道读入新分配的组，并在译码和冒险检查后交出真实操作类型。</li><li><a href="#us12190151b2-fig-2-real">选择可用相容流水线</a> 第二级查执行流水线的实际可用性，发出已译码且满足相容性等条件的操作。</li></ul>
+  <p class="figure-evidence">原图 3、4、14；说明书归档段 0055、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131、0132、0133；权利要求 1、2、3、6、8、12、13、14、16、17、18、19 <a href="../diagrams/US12190151B2/fig-2.html">打开独立图稿</a></p>
+  
+</figure></section><section id="bounds"><h2>拥塞权重、同拍端口资格与通道抢占的区别</h2><p>表 3 区分哪个部件作决定、输入状态在哪里观察、影响的是哪一个资源。线程年龄可以参与第一级的初始优先级；通道优先级可在第二级参与同类操作竞争。原文未给固定权重或使用率门槛。</p><p>第 5、15、20 项另描述更高优先级线程可提前接管已占用通道。重新加权参与仲裁与提前接管通道是两个动作。实现可在通道允许替换时保存原线程状态，再让新线程进通道。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　两级硬件调度与提前接管通道的判定字段</h3>
+    <p id="fig-3-basis">线程组进入通道、操作获准发射、通道提前接管分别检查不同的状态。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">决策</th><th scope="col">读取状态</th><th scope="col">更新对象</th></tr></thead><tbody><tr id="fig-3-entry"><th scope="row">第一级分配通道</th><td>线程优先级、执行侧背压</td><td>硬件通道的线程归属</td></tr><tr id="fig-3-issue"><th scope="row">第二级发射操作</th><td>译码类型、相容流水线可用性</td><td>当前发射批次</td></tr><tr id="fig-3-replace"><th scope="row">提前接管通道</th><td>更高优先级、允许替换条件</td><td>旧线程退出，通道给新线程</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-entry">第一级分配通道</a> 第一级关注当前线程可以进入哪个通道，执行侧反馈可以更改其排序。</li><li><a href="#fig-3-issue">第二级发射操作</a> 第二级发射要求已译码操作有相容且可用的执行流水线。</li><li><a href="#fig-3-replace">提前接管通道</a> 高优先级线程可以提前接管通道是从属权项限定的能力；此动作与是否使用编译器提示无直接依赖。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0056、0057、0058、0059、0065、0066、0067、0068、0069、0070、0128、0129、0130、0131；权利要求 1、2、3、5、6、8、12、15、16、17、18、20 </p>
+  
+</figure></section><section id="when"><h2>背压反馈生效的时间边界</h2><p>图 4 用模型时钟说明控制窗口。第 1 拍开始处理已进入通道的 SIMD 组 A。执行流水线第 3 拍进入拥塞，第 4 拍状态可被第一级读取。第 5 拍有可用通道时，SIMD 组 B 与 C 的优先级才可能按状态重排；已分配给 A 的那次通道仲裁发生在反馈到达前。</p><p>该模型隔离反馈延迟，能回答一次拥塞变化影响哪一次通道分配。实际实现需要观察执行状态的采样点、反馈可见时刻、下一次空通道仲裁及所选组在第二级的发射率。反馈能否改善占用率还取决于候选组是否提供不同类型的操作。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　已有通道分配早于背压返回时，哪次决策会变化</h3>
+    <p id="fig-4-basis">第一级的下一次仲裁读到执行反馈。之前入通道的组仍须用第二级按实际可用性争取发射。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="已有通道分配早于背压返回时，哪次决策会变化" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12190151b2-fig-4-svg-title us12190151b2-fig-4-svg-desc">
+<title id="us12190151b2-fig-4-svg-title">已有通道分配早于背压返回时，哪次决策会变化</title>
+<desc id="us12190151b2-fig-4-svg-desc">第一级的下一次仲裁读到执行反馈。之前入通道的组仍须用第二级按实际可用性争取发射。</desc>
+<defs><marker id="us12190151b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12190151b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12190151b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12190151b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12190151b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="273" y1="76" x2="273" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="273" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="354" y1="76" x2="354" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="435" y1="76" x2="435" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="435" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="597" y1="76" x2="597" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="597" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="678" y1="76" x2="678" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="759" y1="76" x2="759" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="759" y="64" class="arrow-label" text-anchor="middle">7</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">8</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us12190151b2-fig-4-current"><text x="24" y="136" class="node-name" text-anchor="start">SIMD 组 A</text>
+<rect x="273" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="136" class="arrow-label" text-anchor="middle">占用通道并译码</text>
+<rect x="435" y="112" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="597" y="136" class="arrow-label" text-anchor="middle">按实际可用性竞争发射</text>
+<circle cx="273" cy="131" r="5" fill="#4f5d75"/>
+<text x="273" y="171" class="arrow-label" text-anchor="end">A 获准</text></g>
+<g id="us12190151b2-fig-4-int"><text x="24" y="228" class="node-name" text-anchor="start">执行反馈</text>
+<rect x="435" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="475.5" y="228" class="arrow-label" text-anchor="middle">拥塞</text>
+<rect x="516" y="204" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="228" class="arrow-label" text-anchor="middle">第一级可见整数背压</text>
+<circle cx="516" cy="223" r="5" fill="#4f5d75"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">可见</text></g>
+<g id="us12190151b2-fig-4-admit"><text x="24" y="320" class="node-name" text-anchor="start">下一次通道仲裁</text>
+<rect x="354" y="296" width="243" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="475.5" y="320" class="arrow-label" text-anchor="middle">B／C 等待通道</text>
+<rect x="597" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="320" class="arrow-label" text-anchor="middle">C 进通道后译码</text>
+<circle cx="597" cy="315" r="5" fill="#bf4520"/>
+<text x="597" y="355" class="arrow-label" text-anchor="end">C 获准</text></g>
+<g id="us12190151b2-fig-4-real"><text x="24" y="412" class="node-name" text-anchor="start">C 发射</text>
+<rect x="759" y="388" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="799.5" y="412" class="arrow-label" text-anchor="middle">发射</text>
+<circle cx="759" cy="407" r="5" fill="#4f5d75"/>
+<text x="759" y="447" class="arrow-label" text-anchor="end">送出</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">时钟及反馈延迟为分析模型。原图仅规定反馈方向及两个仲裁阶段。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12190151b2-fig-4-current">SIMD 组 A</a> 第 1 拍 A 得到通道，随后在该通道译码。第 4 拍的反馈不属于第 1 拍仲裁的输入。</li><li><a href="#us12190151b2-fig-4-int">执行反馈</a> 示例从第 3 拍观察整数流水线拥塞，第 4 拍在第一级可见。</li><li><a href="#us12190151b2-fig-4-admit">下一次通道仲裁</a> 在第 5 拍有另一个可用通道时，尚待分配的 B 和 C 读取同一反馈；该例挑选预计较少使用拥塞管线的 C。</li><li><a href="#us12190151b2-fig-4-real">C 发射</a> 第 7 拍看到 C 的实际译码类型时，第二级依可用流水线完成当次发射。</li></ul>
+  <p class="figure-evidence">原图 2、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0065、0066、0067、0068、0069、0070、0125、0126、0127、0128、0129、0130、0131；权利要求 1、2、3、8、12、14、17、18 <a href="../diagrams/US12190151B2/fig-4.html">打开独立图稿</a></p>
+  
+</figure></section><section id="fences"><h2>同一 load 依赖遇到命中和缺失，通道如何处理</h2><p>原图 5–7B 用编译器插入的 fence 连接较早的 load i0 和较晚的 copy i1。i0 设置 F2，i1 等待 F2。第一级已经为它们所在的 SIMD 组分配通道，早于这一轮数据缓存访问。执行流水线把 i0 状态送给 fence 管理器，通道队列跟踪尚未收到缓存判定的操作。</p><p>图 5 并列画等待与退出。fence 检查结合活动计数、预计由命中引起的计数递减，和已有命中或缺失状态判断。如果 i0 在数据缓存命中，i1 可保留在通道等待所需结果并继续；缺失时可以让 SIMD 组退出通道，由通道管理器保存必要状态。重新具备条件后可再次参加第一级仲裁。</p><p>第 9 项覆盖根据较早操作的状态决定停顿当前依赖操作或停用其所在通道的线程，第 10、11 项限定由编译器 fence 确认依赖以及活动计数。原图 11–13 另披露取指缓存缺失的可丢弃请求机制；这一图只追踪数据侧操作状态。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　fence 管理器按较早 load 的缓存状态决定是否退出通道</h3>
+    <p id="fig-5-basis">copy 持有依赖。数据缓存命中时可以继续短等；缺失时可保存组状态、交还通道。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="fence 管理器按较早 load 的缓存状态决定是否退出通道" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 656" role="img" aria-labelledby="us12190151b2-fig-5-svg-title us12190151b2-fig-5-svg-desc">
+<title id="us12190151b2-fig-5-svg-title">fence 管理器按较早 load 的缓存状态决定是否退出通道</title>
+<desc id="us12190151b2-fig-5-svg-desc">copy 持有依赖。数据缓存命中时可以继续短等；缺失时可保存组状态、交还通道。</desc>
+<defs><marker id="us12190151b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12190151b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12190151b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12190151b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12190151b2-fig-5-run" d="M 275 139 L 357 139" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-5-arrow-data)"/>
+<path id="us12190151b2-fig-5-depend" d="M 275 307 L 357 307" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-5-arrow-data)"/>
+<path id="us12190151b2-fig-5-status" d="M 478 177 L 478 265" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12190151b2-fig-5-arrow-return)"/>
+<path id="us12190151b2-fig-5-short" d="M 595 289 L 630 289 Q 638 289 638 281 L 638 252 Q 638 244 646 244 L 686 244" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-5-arrow-main)"/>
+<path id="us12190151b2-fig-5-long" d="M 595 324 L 627 324 Q 635 324 635 332 L 635 421 Q 635 429 643 429 L 686 429" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12190151b2-fig-5-arrow-return)"/>
+<path id="us12190151b2-fig-5-rejoin" d="M 804 465 L 804 519 Q 804 527 796 527 L 588 527" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12190151b2-fig-5-arrow-return)"/>
+<rect x="277" y="110" width="78" height="18" fill="#f5f5f5"/><text x="316" y="124" class="arrow-label" text-anchor="middle">发射 i0</text>
+<rect x="276" y="278" width="78" height="18" fill="#f5f5f5"/><text x="315" y="292" class="arrow-label" text-anchor="middle">检查 F2</text>
+<rect x="491" y="210" width="130" height="18" fill="#f5f5f5"/><text x="556" y="224" class="arrow-label" text-anchor="middle">数据访问状态</text>
+<rect x="615.5" y="212" width="45" height="18" fill="#f5f5f5"/><text x="638" y="226" class="arrow-label" text-anchor="middle">命中</text>
+<rect x="607" y="378" width="48" height="18" fill="#f5f5f5"/><text x="631" y="392" class="arrow-label" text-anchor="middle">缺失</text>
+<rect x="635.5" y="496" width="137" height="18" fill="#f5f5f5"/><text x="704" y="510" class="arrow-label" text-anchor="middle">退出后重新候选</text>
+<g id="us12190151b2-fig-5-set"><rect x="42" y="100" width="233" height="77" rx="6" fill="#f5f5f5"/><rect x="42" y="100" width="233" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="158.5" y="126" class="node-name" text-anchor="middle">load i0 设置 F2</text><text x="158.5" y="148" class="node-detail" text-anchor="middle">发射并读取数据缓存</text></g>
+<g id="us12190151b2-fig-5-copy"><rect x="42" y="265" width="233" height="77" rx="6" fill="#f5f5f5"/><rect x="42" y="265" width="233" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="158.5" y="291" class="node-name" text-anchor="middle">copy i1 等待 F2</text><text x="158.5" y="313" class="node-detail" text-anchor="middle">依赖 i0 的 r0 值</text></g>
+<g id="us12190151b2-fig-5-state"><rect x="357" y="100" width="238" height="77" rx="6" fill="#f5f5f5"/><rect x="357" y="100" width="238" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476" y="126" class="node-name" text-anchor="middle">执行流水线</text><text x="476" y="148" class="node-detail" text-anchor="middle">跟踪 i0 缓存访问</text></g>
+<g id="us12190151b2-fig-5-check"><rect x="357" y="265" width="238" height="77" rx="6" fill="#f5f5f5"/><rect x="357" y="265" width="238" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476" y="291" class="node-name" text-anchor="middle">fence 管理器</text><text x="476" y="313" class="node-detail" text-anchor="middle">活动计数／命中或缺失</text></g>
+<g id="us12190151b2-fig-5-hit"><rect x="686" y="207" width="237" height="76" rx="6" fill="#f5f5f5"/><rect x="686" y="207" width="237" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="804.5" y="233" class="node-name" text-anchor="middle">保留通道</text><text x="804.5" y="255" class="node-detail" text-anchor="middle">i1 等到 F2 解除后发射</text></g>
+<g id="us12190151b2-fig-5-miss"><rect x="686" y="389" width="237" height="76" rx="6" fill="#f5f5f5"/><rect x="686" y="389" width="237" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="804.5" y="415" class="node-name" text-anchor="middle">停用 SIMD 组</text><text x="804.5" y="437" class="node-detail" text-anchor="middle">通道管理器保存状态</text></g>
+<g id="us12190151b2-fig-5-again"><rect x="365" y="489" width="223" height="77" rx="6" fill="#f5f5f5"/><rect x="365" y="489" width="223" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476.5" y="515" class="node-name" text-anchor="middle">返回第一级候选</text><text x="476.5" y="537" class="node-detail" text-anchor="middle">组就绪后重新竞争</text></g>
+<text x="39" y="609" class="legend" text-anchor="start">F2 为例中的编译器 fence。两条出口取决于较早操作的状态，后续继续均须满足数据依赖。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12190151b2-fig-5-set">load i0 设置 F2</a> 较早的 load i0 设置 F2，发射后继续经过操作数读取、地址生成和数据缓存查询。</li><li><a href="#us12190151b2-fig-5-copy">copy i1 等待 F2</a> 较晚的 copy i1 需要 i0 写出的 r0 数据，检查同一 fence 以确保顺序。</li><li><a href="#us12190151b2-fig-5-check">fence 管理器</a> 原图 6 同时检查活动 fence 计数、命中或缺失数组和流水线观察。预计能由缓存命中解除的依赖可以较短时间保留原通道。</li><li><a href="#us12190151b2-fig-5-hit">保留通道</a> 原图 7A 等到 i0 的数据缓存命中并满足 fence 后，i1 才送指令发射仲裁。</li><li><a href="#us12190151b2-fig-5-miss">停用 SIMD 组</a> 原图 7B 看到缺失，返回通道退出信号。保存必要线程状态后，通道可给其他组。</li><li><a href="#us12190151b2-fig-5-again">返回第一级候选</a> 退出的组可回第一级候选等待，后续按可运行状态及优先级重新分配。</li></ul>
+  <p class="figure-evidence">原图 3、5、6、7A、7B、15；说明书归档段 0057、0058、0060、0061、0072、0073、0074、0075、0076、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086、0087、0088、0089、0090、0135、0136、0137、0138、0139、0140、0141、0142；权利要求 9、10、11 <a href="../diagrams/US12190151B2/fig-5.html">打开独立图稿</a></p>
+  
+</figure></section><section id="units"><h2>多个通道同时请求同一类流水线时怎样发射</h2><p>图 6 把过量请求的条件拆成相容性与可用性两个判断。两个通道请求同一个可用整数执行流水线，另一个通道请求空闲浮点执行流水线。示例允许这两个类型分别仲裁；哪一条整数操作胜出由所设优先级决定。第 1、8、12、17、18 项覆盖数量不足时的选择与可用性约束。</p><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">图 6　同一类操作超出当拍可用流水线数量时怎样发射</h3>
+    <p id="fig-6-basis">两个整数请求共用一个当前可用整数端口。浮点路径仍可独立择优发射。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一类操作超出当拍可用流水线数量时怎样发射" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 605" role="img" aria-labelledby="us12190151b2-fig-6-svg-title us12190151b2-fig-6-svg-desc">
+<title id="us12190151b2-fig-6-svg-title">同一类操作超出当拍可用流水线数量时怎样发射</title>
+<desc id="us12190151b2-fig-6-svg-desc">两个整数请求共用一个当前可用整数端口。浮点路径仍可独立择优发射。</desc>
+<defs><marker id="us12190151b2-fig-6-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12190151b2-fig-6-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12190151b2-fig-6-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12190151b2-fig-6-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12190151b2-fig-6-hi" d="M 273 139 L 305 139 Q 313 139 313 147 L 313 250 Q 313 258 321 258 L 355 258" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-6-arrow-data)"/>
+<path id="us12190151b2-fig-6-lo" d="M 273 279 L 355 279" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-6-arrow-data)"/>
+<path id="us12190151b2-fig-6-fpr" d="M 273 424 L 305 424 Q 313 424 313 416 L 313 310 Q 313 302 321 302 L 355 302" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12190151b2-fig-6-arrow-data)"/>
+<path id="us12190151b2-fig-6-ig" d="M 600 259 L 636 259 Q 644 259 644 251 L 644 169 Q 644 161 652 161 L 684 161" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-6-arrow-main)"/>
+<path id="us12190151b2-fig-6-fg" d="M 600 300 L 635 300 Q 643 300 643 308 L 643 400 Q 643 408 651 408 L 684 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12190151b2-fig-6-arrow-main)"/>
+<rect x="283" y="109" width="48" height="18" fill="#f5f5f5"/><text x="307" y="123" class="arrow-label" text-anchor="middle">整数</text>
+<rect x="272" y="246" width="48" height="18" fill="#f5f5f5"/><text x="296" y="260" class="arrow-label" text-anchor="middle">整数</text>
+<rect x="283" y="395" width="48" height="18" fill="#f5f5f5"/><text x="307" y="409" class="arrow-label" text-anchor="middle">浮点</text>
+<rect x="599.5" y="213" width="99" height="18" fill="#f5f5f5"/><text x="649" y="227" class="arrow-label" text-anchor="middle">发通道 0</text>
+<rect x="598.5" y="342" width="99" height="18" fill="#f5f5f5"/><text x="648" y="356" class="arrow-label" text-anchor="middle">发通道 2</text>
+<g id="us12190151b2-fig-6-ch0"><rect x="38" y="101" width="235" height="73" rx="6" fill="#f5f5f5"/><rect x="38" y="101" width="235" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="155.5" y="127" class="node-name" text-anchor="middle">通道 0</text><text x="155.5" y="149" class="node-detail" text-anchor="middle">整数操作，较高优先级</text></g>
+<g id="us12190151b2-fig-6-ch1"><rect x="38" y="243" width="235" height="73" rx="6" fill="#f5f5f5"/><rect x="38" y="243" width="235" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="155.5" y="269" class="node-name" text-anchor="middle">通道 1</text><text x="155.5" y="291" class="node-detail" text-anchor="middle">整数操作，较低优先级</text></g>
+<g id="us12190151b2-fig-6-ch2"><rect x="38" y="388" width="235" height="73" rx="6" fill="#f5f5f5"/><rect x="38" y="388" width="235" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="155.5" y="414" class="node-name" text-anchor="middle">通道 2</text><text x="155.5" y="436" class="node-detail" text-anchor="middle">浮点操作</text></g>
+<g id="us12190151b2-fig-6-arb"><rect x="355" y="238" width="245" height="84" rx="6" fill="#f5f5f5"/><rect x="355" y="238" width="245" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477.5" y="264" class="node-name" text-anchor="middle">指令发射仲裁器</text><text x="477.5" y="286" class="node-detail" text-anchor="middle">按相容性与可用性择优</text></g>
+<g id="us12190151b2-fig-6-int"><rect x="684" y="124" width="238" height="73" rx="6" fill="#f5f5f5"/><rect x="684" y="124" width="238" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="150" class="node-name" text-anchor="middle">整数执行流水线</text><text x="803" y="172" class="node-detail" text-anchor="middle">1 条当前可用</text></g>
+<g id="us12190151b2-fig-6-fp"><rect x="684" y="371" width="238" height="73" rx="6" fill="#f5f5f5"/><rect x="684" y="371" width="238" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="397" class="node-name" text-anchor="middle">浮点执行流水线</text><text x="803" y="419" class="node-detail" text-anchor="middle">1 条当前可用</text></g>
+<text x="38" y="531" class="legend" text-anchor="start">图中资源数、通道号和优先级是分析假设。硬件端口资格与候选调度优先级在第二级求交。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12190151b2-fig-6-ch0">通道 0</a> 已译码并通过本通道冒险检查的整数操作请求发射。示例设它的通道优先级较高。</li><li><a href="#us12190151b2-fig-6-ch1">通道 1</a> 同一拍的第二个整数请求面对同一个相容且可用的执行流水线，留待后续仲裁。</li><li><a href="#us12190151b2-fig-6-ch2">通道 2</a> 浮点操作请求与整数操作类型不同。处理该请求需要另有浮点执行流水线可用。</li><li><a href="#us12190151b2-fig-6-arb">指令发射仲裁器</a> 给定一条可用整数流水线和一条可用浮点流水线，第二级分别处理两类请求。原文保留不同硬件可用性和优先级实现。</li><li><a href="#us12190151b2-fig-6-int">整数执行流水线</a> 在图示例条件下，发出来自通道 0 的整数操作。</li><li><a href="#us12190151b2-fig-6-fp">浮点执行流水线</a> 发出来自通道 2 的浮点操作，与整数操作的发射可同拍。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、14；说明书归档段 0044、0045、0046、0047、0048、0049、0050、0051、0058、0059、0065、0066、0067、0068、0069、0070、0127、0128、0129、0130；权利要求 1、7、8、12、17、18 <a href="../diagrams/US12190151B2/fig-6.html">打开独立图稿</a></p>
+  
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
-  <p class="document-id"><code>US12190151B2</code><span>美国授权专利</span><time datetime="2025-01-07">2025-01-07</time></p>
-  <h1>GPU 线程分两级分配到通道与执行流水线</h1>
-  <p class="english-title" lang="en">Multi-stage thread scheduling</p>
-  <p class="document-question">执行流水线繁忙时，如何减少等待它的线程长期占用已分配通道？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">执行流水线把忙碌状态反馈给第一阶段调度器，第一阶段据此修改等待分配到通道的线程优先级。第二阶段仍根据译码结果仲裁执行流水线。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>反馈作用于尚未分配到通道的进入线程。已入通道的操作继续等待第二阶段调度器仲裁。</dd></div><div><dt>验证方法</dt><dd>固定输入线程和各执行流水线的服务能力，比较相同拥塞下有无反压反馈。逐流水线记录通道分配等待、有效分派率，并检查低优先级线程的尾延迟。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12190151B2">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">该披露讨论 GPU 等处理器内的硬件调度。第一阶段把线程分到通道，第二阶段把译码后的操作送往共享执行流水线。</p>
-    <p>第一阶段先按线程优先级分配通道，第二阶段再按译码的操作选择共享执行流水线。执行流水线将反压（backpressure）反馈给第一阶段，改变后续通道申请的优先级。</p>
-    <ol class="walkthrough"><li><h3>线程进入候选集</h3><p>第一阶段在通道译码前根据线程优先级进行仲裁。</p></li><li><h3>通道译码操作</h3><p>译码阶段识别当前指令需要使用的执行流水线。</p></li><li><h3>分派到执行流水线</h3><p>第二阶段在多个通道提出的操作之间选择，候选数可能超过可用流水线数。</p></li><li><h3>把反压反馈给前级</h3><p>执行流水线根据执行状态报告反压，第一阶段调整候选线程的通道分配优先级。权 2 还支持编译器提示。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 2 的编译器提示告知候选线程可能使用的流水线类型，调度决策仍发生在译码前。进入通道以后，指令实际类型由译码确认，再由第二阶段仲裁。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>通道流水线</dt><dd>含译码等阶段，接收第一阶段分配的线程。</dd></div><div><dt>执行流水线</dt><dd>由多个通道共享，用于执行特定类型操作。</dd></div><div><dt>反压（backpressure）</dt><dd>执行端传回的排队或停顿状态，用来影响前级调度决策。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">执行拥塞反馈到下一次通道分配</a></li><li><a href="#fig-1">GPU 执行流水线将反压反馈给通道调度器</a></li><li><a href="#fig-4">依赖未解除时保留还是释放通道</a></li><li><a href="#fig-3">两级仲裁的对象和输出</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">执行拥塞反馈到下一次通道分配</h3></div>
-    <a class="paper-open" href="../mechanisms/US12190151B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="执行拥塞反馈到下一次通道分配">
-    <img class="paper-image native-image" src="../mechanisms/US12190151B2/fig-2/diagram.svg" width="920" height="396"
-         style="--paper-width:920px" alt="执行拥塞反馈到下一次通道分配。执行流水线回报状态后，第一阶段更新待分配线程的优先级。已经占用通道的操作仍由第二阶段仲裁。">
-  </div>
-  <figcaption>
-    <span>执行流水线回报状态后，第一阶段更新待分配线程的优先级。已经占用通道的操作仍由第二阶段仲裁。</span>
-    <span class="figure-evidence">图 2、4，权 1–3 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12190151">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">GPU 执行流水线将反压反馈给通道调度器</h3></div>
-    <a class="paper-open" href="../mechanisms/US12190151B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="GPU 执行流水线将反压反馈给通道调度器">
-    <img class="paper-image native-image" src="../mechanisms/US12190151B2/fig-1/diagram.svg" width="1087" height="179"
-         style="--paper-width:1087px" alt="GPU 执行流水线将反压反馈给通道调度器。执行流水线将反压送给第一阶段，影响下一次线程通道分配。第二阶段仍在已译码操作之间仲裁。">
-  </div>
-  <figcaption>
-    <span>执行流水线将反压送给第一阶段，影响下一次线程通道分配。第二阶段仍在已译码操作之间仲裁。</span>
-    <span class="figure-evidence">图 2、4，权 1–3 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12190151">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-4-title">依赖未解除时保留还是释放通道</h3></div>
-    <a class="paper-open" href="../mechanisms/US12190151B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="依赖未解除时保留还是释放通道">
-    <img class="paper-image native-image" src="../mechanisms/US12190151B2/fig-4/diagram.svg" width="618" height="440"
-         style="--paper-width:618px" alt="依赖未解除时保留还是释放通道。在数据缓存命中的短等待示例，SIMD 组可以保留通道。缓存缺失导致长等待时，通道管理器可以撤销该组的通道占用，将其交回第一阶段。">
-  </div>
-  <figcaption>
-    <span>在数据缓存命中的短等待示例，SIMD 组可以保留通道。缓存缺失导致长等待时，通道管理器可以撤销该组的通道占用，将其交回第一阶段。</span>
-    <span class="figure-evidence">图 2、4，权 1 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12190151">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">两级仲裁的对象和输出</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">环节</th><th scope="col">输入</th><th scope="col">输出</th></tr></thead><tbody><tr><th scope="row">第一阶段</th><td>候选线程和反压</td><td>通道分配</td></tr><tr><th scope="row">通道译码</th><td>当前指令</td><td>目标流水线类型</td></tr><tr><th scope="row">第二阶段</th><td>各通道的候选操作</td><td>共享执行流水线选择</td></tr></tbody></table>
-  <figcaption>
-    <span>按输入、决策和输出明确区分两级电路。</span>
-    <span class="figure-evidence">图 2、4，权 1–3 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12190151">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12190151B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>执行流水线反压</dt><dd>调整下一次通道分配 <span class="subdued">原图 4、14，权 1</span></dd></div><div><dt>按依赖状态释放通道</dt><dd>减少长延迟占用 <span class="subdued">原图 7A、7B、15，权 9</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>将吞吐变化分为前级通道利用率和各执行流水线空闲周期。低反压流水线可能更忙，长期避开高反压资源的线程则可能出现通道分配饥饿。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>构造提示指向轻载流水线、实际主要指令却访问繁忙流水线的着色器。若通道驻留时间增加且有效分派率下降，可用提示误判率和每类反压周期定位失效。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>两个候选线程主要使用不同类型的执行流水线。一个流水线持续向第一阶段报告拥塞。</dd></div><div><dt>处理结果</dt><dd>第一阶段可以降低倾向占用拥塞资源的线程的仲裁优先级。操作进入通道后的分派依然由第二阶段决定。</dd></div><div><dt>结果解读</dt><dd>这些优先级属于 GPU 内部通道仲裁。评价时记录通道占用、指令分派率和候选线程等待时间。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、12、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>装置在译码前把线程分到通道，译码后选共享执行流水线。执行状态反压返回第一阶段。见原图 2、4。</p>
+  <p>装置在译码前把线程分到通道，译码后选共享执行流水线。执行状态反压返回第一阶段。见原图 2、4。第一阶段为线程或 SIMD 组配置译码前通道，第二阶段为已译码指令仲裁共享执行流水线。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=first%20scheduler%20circuitry%20configured%20to%20arbitrate%20among%20threads%2C%20prior%20to%20the%20decode%20stages%20of%20the%20channel">F1</a></th><td>译码前在候选线程间仲裁</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=assignment%20is%20based%20on%20decode%20of%20the%20operation%20by%20the%20decode%20stage">F2</a></th><td>译码后根据操作类型选择执行流水线</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=the%20arbitration%20is%20among%20a%20greater%20number%20of%20operations%20output%20by%20the%20channel%20pipelines%20than%20a">F3</a></th><td>多个通道同时争用同类型的可用执行流水线</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=provide%20backpressure%20information%20to%20the%20first%20scheduler%20circuitry%20based%20on%20execution%20status">F4</a></th><td>把执行状态形成的反压反馈给第一阶段调度器</td><td><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=As%20shown%2C%20execution%20pipelines%20260%20may%20provide%20back-pressure%20information%20to%20stage%201%20schedule%20circuitry.%20In%20other">说明书 0069</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=adjust%20priority%20of%20an%20incoming%20thread%20for%20arbitration%20of%20the%20incoming%20thread%20by%20the%20first%20scheduler">F5</a></th><td>按反压调整新候选线程分配通道的优先级</td><td>原图 4 · 原图 14</td></tr></tbody>
@@ -137,48 +226,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=first%20scheduler%20circuitry%20configured%20to%20arbitrate%20among%20threads%2C%20prior%20to%20the%20decode%20stages%20of%20the%20channel">F10</a></th><td>译码前在候选线程间仲裁</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=assignment%20is%20based%20on%20decode%20of%20the%20operation%20by%20the%20decode%20stage">F11</a></th><td>译码后根据操作类型选择执行流水线</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=the%20arbitration%20is%20among%20a%20greater%20number%20of%20operations%20output%20by%20the%20channel%20pipelines%20than%20a">F12</a></th><td>多个通道同时争用同类型的可用执行流水线</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=provide%20backpressure%20information%20to%20the%20first%20scheduler%20circuitry%20based%20on%20execution%20status">F13</a></th><td>把执行状态形成的反压反馈给第一阶段调度器</td><td><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=As%20shown%2C%20execution%20pipelines%20260%20may%20provide%20back-pressure%20information%20to%20stage%201%20schedule%20circuitry.%20In%20other">说明书 0069</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12190151B2#:~:text=adjust%20priority%20of%20an%20incoming%20thread%20for%20arbitration%20of%20the%20incoming%20thread%20by%20the%20first%20scheduler">F14</a></th><td>按反压调整新候选线程分配通道的优先级</td><td>原图 4 · 原图 14</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>装置在译码前把线程分到通道，译码后选共享执行流水线。执行状态反压返回第一阶段。见原图 2、4。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第一阶段根据编译器提供的目标执行流水线类型提示调整线程优先级。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>提高面向反压低于阈值的流水线的候选线程优先级。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>第一阶段以单指令多数据（SIMD）组为单位分配通道。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>高优先级线程进入时，可在当前线程完成前撤销其通道占用并将通道交给高优先级线程。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>按线程等待时间确定初始优先级，再按反压调整。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>指定整数、浮点和加载流水线。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>第二阶段同时使用通道优先级、请求资源和可用资源作为仲裁输入。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>依赖电路按先前操作的执行状态选择停顿当前操作或撤销其线程在通道内的占用。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>固定功能电路控制执行流水线执行图形着色器或机器学习程序。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-1">1</a></td><td>计算设备还包含显示器、中央处理器和网络接口。</td></tr><tr id="claim-12"><th scope="row">12</th><td>独立项</td><td>方法先对线程分配通道，再对译码后操作仲裁。执行状态反压调整之后候选线程的优先级。见原图 14。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>调优先级时进一步使用编译器给出的目标流水线类型提示。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>提高目标流水线反压低于阈值的线程优先级。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-12">12</a></td><td>当前线程完成前可将其撤出通道，并让更高优先级线程使用该通道。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-12">12</a></td><td>引入按等待时间的仲裁，并修正线程的初始等待优先级。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-12">12</a></td><td>第二阶段按通道优先级及请求、可用硬件资源仲裁。</td></tr><tr id="claim-18"><th scope="row">18</th><td>独立项</td><td>介质保存两级硬件调度和执行端反压的电路设计。见原图 2、4。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括按编译器流水线类型提示调节线程优先级的逻辑。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括通道抢占逻辑，可在原线程完成前改分给更高优先级线程。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>装置在译码前把线程分到通道，译码后选共享执行流水线。执行状态反压返回第一阶段。见原图 2、4。第一阶段为线程或 SIMD 组配置译码前通道，第二阶段为已译码指令仲裁共享执行流水线。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第一阶段根据编译器提供的目标执行流水线类型提示调整线程优先级。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>提高面向反压低于阈值的流水线的候选线程优先级。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>第一阶段以单指令多数据（SIMD）组为单位分配通道。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>高优先级线程进入时，可在当前线程完成前撤销其通道占用并将通道交给高优先级线程。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>按线程等待时间确定初始优先级，再按反压调整。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>指定整数、浮点和加载流水线。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>第二阶段同时使用通道优先级、请求资源和可用资源作为仲裁输入。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>依赖电路按先前操作的执行状态选择停顿当前操作或撤销其线程在通道内的占用。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>固定功能电路控制执行流水线执行图形着色器或机器学习程序。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-1">1</a></td><td>计算设备还包含显示器、中央处理器和网络接口。</td></tr><tr id="claim-12"><th scope="row">12</th><td>独立项</td><td>方法先对线程分配通道，再对译码后操作仲裁。执行状态反压调整之后候选线程的优先级。见原图 14。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>调优先级时进一步使用编译器给出的目标流水线类型提示。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>提高目标流水线反压低于阈值的线程优先级。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-12">12</a></td><td>当前线程完成前可将其撤出通道，并让更高优先级线程使用该通道。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-12">12</a></td><td>引入按等待时间的仲裁，并修正线程的初始等待优先级。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-12">12</a></td><td>第二阶段按通道优先级及请求、可用硬件资源仲裁。</td></tr><tr id="claim-18"><th scope="row">18</th><td>独立项</td><td>介质保存两级硬件调度和执行端反压的电路设计。见原图 2、4。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括按编译器流水线类型提示调节线程优先级的逻辑。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-18">18</a></td><td>制造设计信息包括通道抢占逻辑，可在原线程完成前改分给更高优先级线程。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>说明书 [0008]、图 2、权 1</dt><dd>两级仲裁的边界。</dd></div><div><dt>说明书 [0010]、图 4、权 2–3</dt><dd>编译器提示和反压参与线程级选择。</dd></div><div><dt>图 7A–7B</dt><dd>通道停顿和撤销占用的实施例。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12190151B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12175300B2.html#engineering">GPU 为高优先级逻辑槽预留分布式硬件槽</a>
-<p>US12175300B2 在 GPU 工作映射阶段检查优先级门槛和硬件槽。US12190151B2 在译码前选择线程，在译码后根据目标流水线选择操作，并把执行流水线的背压反馈给第一级。两件使用的队列和控制量不同，验证时分别记录工作提交到槽映射、线程选择到操作发出的时延。</p></li></ul>
-    <p><a href="../index.html?patent=US12190151B2#knowledge">在全量关系图上定位 US12190151B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-09-19</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-11-10</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-01-07</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/054,376</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Benjiman L. Goodman、Anjana Rajendran、Sheenam Jayaswal、Terence M. Potter、Yoong Chert Foo</dd></div><div><dt>分类号</dt><dd>G06F9/4881、G06F9/30079、G06F9/3822、G06F9/3838、G06F9/3851、G06F9/3887、G06F9/3888、G06F9/485</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12190151B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12190151B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权专利全文，覆盖 207 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1A、1B、2、3、4、5、6、7A、8、9A、10、11、12、13、14、18、19、20、7B、9B、15、16、17。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12190151B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

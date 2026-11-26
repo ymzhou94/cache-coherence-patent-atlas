@@ -1,119 +1,218 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12681552B2 两层电源管理处理器约束跨域 DVFS 的中间状态 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>多电源域的性能状态选择与转换顺序 · US12681552B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12681552B2</code> · <a href="https://patents.google.com/patent/US12681552B2/en">专利全文</a></p>
+<h1>多电源域的性能状态选择与转换顺序</h1><p class="reading-question">操作系统已经给出目标性能状态，固件如何排出一条不碰到受限状态的转换路线？</p>
+<p class="reading-answer">OS 控制循环提供每域目标；SoC 专用固件检查单域转换边和跨域状态组合，再安排时钟、稳压与完成确认。显式中间状态既可能用于改道，也可能控制实际电压和频率的稳定顺序。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-07-14</dd></div><div><dt>申请号</dt><dd>US18/540,798</dd></div><div><dt>最早优先权</dt><dd>2023-09-14</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Doron Rajwan、John H. Kelm、Michael Bekerman</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#roles">管理处理器给目标，性能管理电路选择转换路径</a></li><li><a href="#paths">起点和目标固定时，其他域可以否决一个中间状态</a></li><li><a href="#signals">沿路径执行时，频率、供电和稳定条件继续限制次序</a></li><li><a href="#acks">请求所需状态实际到达后，才能返回对应确认</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="roles"><h2>管理处理器给目标，性能管理电路选择转换路径</h2><p>图 1 顺着请求读。电源管理处理器运行 OS 控制循环，根据活动和客户端提交的请求为各电源域选抽象性能状态。性能状态由平台映射到一组实际参数，可包括一个或多个频率与电压。带宽请求可以单独提交；说明书举例让性能管理电路用它分配互连事务能力，也可结合其他请求决定支持互连的电源域状态。</p><p>性能管理电路的第二处理器执行针对具体 SoC 的固件。它查各域当前状态、允许的中间状态及电压／频率映射，再交控制电路执行。正常控制路径可以隐藏实际频率和电压；评估模式可以把转换细节回传，便于量到每一步的等待。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　目标性能状态由上层请求，实际转换由 SoC 侧执行</h3>
+    <p id="fig-1-basis">管理处理器提供每域目标。性能管理电路依据专用固件计算跨域约束，再由控制硬件调整供电和时钟。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="目标性能状态由上层请求，实际转换由 SoC 侧执行" style="--figure-width:1280px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 653" role="img" aria-labelledby="us12681552b2-fig-1-svg-title us12681552b2-fig-1-svg-desc">
+<title id="us12681552b2-fig-1-svg-title">目标性能状态由上层请求，实际转换由 SoC 侧执行</title>
+<desc id="us12681552b2-fig-1-svg-desc">管理处理器提供每域目标。性能管理电路依据专用固件计算跨域约束，再由控制硬件调整供电和时钟。</desc>
+<defs><marker id="us12681552b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12681552b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12681552b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12681552b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12681552b2-fig-1-monitor" d="M 291 154 L 413 154" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-1-arrow-control)"/>
+<path id="us12681552b2-fig-1-target" d="M 673 153 L 903 153" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12681552b2-fig-1-arrow-main)"/>
+<path id="us12681552b2-fig-1-constraints" d="M 1061 285 L 1061 209" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-1-arrow-control)"/>
+<path id="us12681552b2-fig-1-path" d="M 936 209 L 936 255 Q 936 263 928 263 L 829 263 Q 821 263 821 271 L 821 440 Q 821 448 829 448 L 957 448 Q 965 448 965 456 L 965 485" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12681552b2-fig-1-arrow-main)"/>
+<path id="us12681552b2-fig-1-act" d="M 882 535 L 673 535" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12681552b2-fig-1-arrow-main)"/>
+<path id="us12681552b2-fig-1-report" d="M 1046 209 L 1046 229 Q 1046 237 1038 237 L 778 237 Q 770 237 770 245 L 770 426 Q 770 434 762 434 L 306 434" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-1-arrow-return)"/>
+<path id="us12681552b2-fig-1-probe-control" d="M 171 391 L 171 291 Q 171 283 179 283 L 577 283 Q 585 283 585 275 L 585 209" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-1-arrow-return)"/>
+<rect x="294.5" y="127" width="117" height="18" fill="#f5f5f5"/><text x="353" y="141" class="arrow-label" text-anchor="middle">活动及性能请求</text>
+<rect x="710.5" y="126" width="159" height="18" fill="#f5f5f5"/><text x="790" y="140" class="arrow-label" text-anchor="middle">每域抽象目标状态</text>
+<rect x="1083.5" y="236" width="177" height="18" fill="#f5f5f5"/><text x="1172" y="250" class="arrow-label" text-anchor="middle">查 SoC 专用映射和约束</text>
+<rect x="847.5" y="422" width="123" height="18" fill="#f5f5f5"/><text x="909" y="436" class="arrow-label" text-anchor="middle">合法转换路径</text>
+<rect x="702" y="509" width="142" height="18" fill="#f5f5f5"/><text x="773" y="523" class="arrow-label" text-anchor="middle">时钟与供电变化</text>
+<rect x="442.5" y="408" width="175" height="18" fill="#f5f5f5"/><text x="530" y="422" class="arrow-label" text-anchor="middle">评估模式可回传细节</text>
+<rect x="371" y="256" width="94" height="18" fill="#f5f5f5"/><text x="418" y="270" class="arrow-label" text-anchor="middle">转换记录</text>
+<g id="us12681552b2-fig-1-blocks"><rect x="38" y="103" width="253" height="106" rx="6" fill="#f5f5f5"/><rect x="38" y="103" width="253" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="164.5" y="129" class="node-name" text-anchor="middle">受管电路与软件请求</text><text x="164.5" y="151" class="node-detail" text-anchor="middle">CPU、GPU、内存控制器等</text><text x="164.5" y="169" class="node-detail" text-anchor="middle">可报告活动、性能状态和带宽请求</text></g>
+<g id="us12681552b2-fig-1-policy"><rect x="413" y="103" width="260" height="106" rx="6" fill="#f5f5f5"/><rect x="413" y="103" width="260" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="543" y="129" class="node-name" text-anchor="middle">电源管理处理器</text><text x="543" y="151" class="node-detail" text-anchor="middle">执行 OS 控制循环</text><text x="543" y="169" class="node-detail" text-anchor="middle">按电源域决定抽象性能状态</text></g>
+<g id="us12681552b2-fig-1-firmware"><rect x="903" y="103" width="320" height="106" rx="6" fill="#f5f5f5"/><rect x="903" y="103" width="320" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1063" y="129" class="node-name" text-anchor="middle">性能管理电路</text><text x="1063" y="151" class="node-detail" text-anchor="middle">执行 SoC 专用固件</text><text x="1063" y="169" class="node-detail" text-anchor="middle">比对各域状态、选择可行路径</text></g>
+<g id="us12681552b2-fig-1-params"><rect x="903" y="285" width="320" height="99" rx="6" fill="#f5f5f5"/><rect x="903" y="285" width="320" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1063" y="311" class="node-name" text-anchor="middle">平台映射与约束</text><text x="1063" y="333" class="node-detail" text-anchor="middle">性能状态对应频率与电压</text><text x="1063" y="351" class="node-detail" text-anchor="middle">其他电源域状态也会限制路径</text></g>
+<g id="us12681552b2-fig-1-exec"><rect x="882" y="485" width="338" height="94" rx="6" fill="#f5f5f5"/><rect x="882" y="485" width="338" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1051" y="511" class="node-name" text-anchor="middle">硬件控制电路</text><text x="1051" y="533" class="node-detail" text-anchor="middle">状态机、时钟源与稳压器</text><text x="1051" y="551" class="node-detail" text-anchor="middle">按步骤执行并等待稳定</text></g>
+<g id="us12681552b2-fig-1-work"><rect x="403" y="485" width="270" height="91" rx="6" fill="#f5f5f5"/><rect x="403" y="485" width="270" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="538" y="511" class="node-name" text-anchor="middle">目标电源域</text><text x="538" y="533" class="node-detail" text-anchor="middle">时钟频率和供电电压实际改变</text></g>
+<g id="us12681552b2-fig-1-probe"><rect x="38" y="391" width="268" height="87" rx="6" fill="#f5f5f5"/><rect x="38" y="391" width="268" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="172" y="417" class="node-name" text-anchor="middle">评估模式</text><text x="172" y="439" class="node-detail" text-anchor="middle">可记录转换参数并提供给管理处理器</text></g>
+<text x="33" y="46" class="signal-title" text-anchor="start">给目标、选路线、调时钟和供电，由不同部件负责</text>
+<text x="33" y="623" class="legend" text-anchor="start">抽象状态由上层请求。实际频率和电压在平台相关固件与硬件控制电路内决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12681552b2-fig-1-target">每域抽象目标状态</a> OS 控制循环从活动和请求推导每个电源域的目标性能状态。带宽请求可以单独提交，并可参与决策。</li><li><a href="#us12681552b2-fig-1-constraints">查 SoC 专用映射和约束</a> 平台固件知道当前电源域状态、可达的转换边以及抽象状态对应的电压与频率。目标确定后仍需检查路线上每一步。</li><li><a href="#us12681552b2-fig-1-path">合法转换路径</a> 性能管理电路把可用路径交给硬件。硬件控制电路按选定次序控制时钟源和稳压器，并等待必要的稳定条件。</li><li><a href="#us12681552b2-fig-1-report">评估模式可回传细节</a> 正常操作可以把具体电压和频率留在 SoC 专用侧。启用评估模式后可以跟踪并向上层回传转换参数。</li></ul>
+  <p class="figure-evidence">原图 1、5、6、7、8；说明书归档段 0021、0022、0023、0024、0027、0028、0029、0030、0031、0032、0033、0069、0072、0073、0074、0075、0078、0079、0080、0081、0085、0101、0103、0104、0105、0106；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12681552B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>受管电路</dt><dd>FIG. 1 · 120a–120c</dd></div><div><dt>电源管理处理器 / OS 控制循环</dt><dd>FIG. 1 · 110 / 116</dd></div><div><dt>性能管理电路 / SoC 专用固件</dt><dd>FIG. 1 · 101 / 106</dd></div><div><dt>合法转换路径</dt><dd>FIG. 1 · 145</dd></div><div><dt>硬件控制电路</dt><dd>FIG. 1 · 130</dd></div><div><dt>时钟源 / 稳压器</dt><dd>FIG. 7 · 710 / 720</dd></div><div><dt>性能状态请求寄存器 / 带宽请求寄存器</dt><dd>FIG. 6 · 610a–610c / 610m–610o</dd></div></dl></details>
+</figure></section><section id="paths"><h2>起点和目标固定时，其他域可以否决一个中间状态</h2><p>图 2 的 A 域已经选到目标，仍要逐步检查到达目标的路线。在示例约束下，B 域当前状态与 A 的某个中间状态不兼容。性能管理电路不用先试这一步，直接走另一条合法转换边，经过可以与 B 同时运行的中间状态再进目标。</p><p>表 3 用原图 3 指出另一种限制。有向状态图已允许较高状态直降到某个较低状态，低到高却需要通过中间状态。固件既要检查单域转换边，也要检查每个中间状态与其他域的组合。只检查起点和终点会漏掉后者。</p><p>独立权利要求 1 对应当前其他域使中间状态不兼容时的改道。独立权利要求 10 与 16 则从两处理器职责出发，第二个处理器运行专用固件来避开非法中间状态。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同一个目标如何绕开当前跨域组合不允许的中间状态</h3>
+    <p id="fig-2-basis">原图 2 已画出跳过一个 A 域中间状态的路径。将说明书给出的 B 域约束代入，可以看到为何不能沿候选路线经过它。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一个目标如何绕开当前跨域组合不允许的中间状态" style="--figure-width:1230px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1230 634" role="img" aria-labelledby="us12681552b2-fig-2-svg-title us12681552b2-fig-2-svg-desc">
+<title id="us12681552b2-fig-2-svg-title">同一个目标如何绕开当前跨域组合不允许的中间状态</title>
+<desc id="us12681552b2-fig-2-svg-desc">原图 2 已画出跳过一个 A 域中间状态的路径。将说明书给出的 B 域约束代入，可以看到为何不能沿候选路线经过它。</desc>
+<defs><marker id="us12681552b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12681552b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12681552b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12681552b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12681552b2-fig-2-branchbad" d="M 185 273 L 185 156 Q 185 148 193 148 L 402 148" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-2-arrow-control)"/>
+<path id="us12681552b2-fig-2-detected" d="M 921 148 L 689 148" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-2-arrow-return)"/>
+<path id="us12681552b2-fig-2-routegood" d="M 254 309 L 316 309 Q 324 309 324 317 L 324 421 Q 324 429 332 429 L 402 429" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12681552b2-fig-2-arrow-main)"/>
+<path id="us12681552b2-fig-2-bypass" d="M 689 429 L 865 429 Q 873 429 873 421 L 873 327 Q 873 319 881 319 L 963 319" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12681552b2-fig-2-arrow-main)"/>
+<path id="us12681552b2-fig-2-rule" d="M 376 529 L 537 529 Q 545 529 545 521 L 545 474" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12681552b2-fig-2-arrow-control)"/>
+<rect x="253" y="123" width="92" height="18" fill="#f5f5f5"/><text x="299" y="137" class="arrow-label" text-anchor="middle">候选路径</text>
+<rect x="750.5" y="122" width="111" height="18" fill="#f5f5f5"/><text x="806" y="136" class="arrow-label" text-anchor="middle">组合不兼容</text>
+<rect x="270.5" y="371" width="159" height="18" fill="#f5f5f5"/><text x="350" y="385" class="arrow-label" text-anchor="middle">改走支持的转换边</text>
+<rect x="708.5" y="402" width="139" height="18" fill="#f5f5f5"/><text x="778" y="416" class="arrow-label" text-anchor="middle">切换到相同目标</text>
+<rect x="376.5" y="503" width="183" height="18" fill="#f5f5f5"/><text x="468" y="517" class="arrow-label" text-anchor="middle">只提交检查通过的路径</text>
+<g id="us12681552b2-fig-2-start"><rect x="40" y="273" width="214" height="82" rx="6" fill="#f5f5f5"/><rect x="40" y="273" width="214" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="299" class="node-name" text-anchor="middle">A 域起始状态</text><text x="147" y="321" class="node-detail" text-anchor="middle">B 域当前状态保持不变</text></g>
+<g id="us12681552b2-fig-2-bad"><rect x="402" y="107" width="287" height="82" rx="6" fill="#f5f5f5"/><rect x="402" y="107" width="287" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="545.5" y="133" class="node-name" text-anchor="middle">A 域受限中间状态</text><text x="545.5" y="155" class="node-detail" text-anchor="middle">单看目标无法发现这一步冲突</text></g>
+<g id="us12681552b2-fig-2-good"><rect x="402" y="385" width="287" height="89" rx="6" fill="#f5f5f5"/><rect x="402" y="385" width="287" height="89" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="545.5" y="411" class="node-name" text-anchor="middle">A 域替代中间状态</text><text x="545.5" y="433" class="node-detail" text-anchor="middle">从起始可达，允许与 B 共存</text></g>
+<g id="us12681552b2-fig-2-target"><rect x="963" y="273" width="217" height="82" rx="6" fill="#f5f5f5"/><rect x="963" y="273" width="217" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1071.5" y="299" class="node-name" text-anchor="middle">A 域目标状态</text><text x="1071.5" y="321" class="node-detail" text-anchor="middle">经检查的路径到达此处</text></g>
+<g id="us12681552b2-fig-2-bstate"><rect x="921" y="107" width="260" height="82" rx="6" fill="#f5f5f5"/><rect x="921" y="107" width="260" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1051" y="133" class="node-name" text-anchor="middle">B 域当前状态</text><text x="1051" y="155" class="node-detail" text-anchor="middle">干涉的是 A 的中间状态</text></g>
+<g id="us12681552b2-fig-2-check"><rect x="45" y="489" width="331" height="90" rx="6" fill="#f5f5f5"/><rect x="45" y="489" width="331" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="210.5" y="515" class="node-name" text-anchor="middle">性能管理电路</text><text x="210.5" y="537" class="node-detail" text-anchor="middle">检查单域相邻边</text><text x="210.5" y="555" class="node-detail" text-anchor="middle">检查中间状态与其他域能否并存</text></g>
+<text x="33" y="48" class="signal-title" text-anchor="start">电源域 A 的起点和目标不变；改变执行路径</text>
+<text x="34" y="603" class="legend" text-anchor="start">上方候选在发起硬件切换前被拒绝。原图 2 的状态名见来源对照；行距不表示运行时间。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12681552b2-fig-2-detected">组合不兼容</a> 例中 B 域处在与候选中间状态不兼容的状态。性能管理电路检查的是 A 域途经点和其他域当下状态的组合。</li><li><a href="#us12681552b2-fig-2-routegood">改走支持的转换边</a> 允许的边可把 A 直接带到另一个中间状态。起点和最终目标保持不变。此例按原图 2 复原替代路线。</li><li><a href="#us12681552b2-fig-2-bypass">切换到相同目标</a> 经过可并存的状态后再进入目标。沿途的具体电压与频率切换次序由控制电路按图 4 的原则执行。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、8；说明书归档段 0044、0045、0046、0050、0051、0052、0053、0071、0072、0073、0074、0104、0105、0120；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12681552B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>电源域 A / 电源域 B</dt><dd>FIG. 2 · 240a / 240b</dd></div><div><dt>A 域起始状态</dt><dd>FIG. 2 · PS 251a</dd></div><div><dt>A 域受限中间状态</dt><dd>FIG. 2 · PS 252a</dd></div><div><dt>A 域替代中间状态</dt><dd>FIG. 2 · PS 253a</dd></div><div><dt>A 域目标状态</dt><dd>FIG. 2 · PS 254a</dd></div><div><dt>B 域的当前状态示例</dt><dd>FIG. 2 · PS 253b</dd></div><div><dt>改走支持的转换路径</dt><dd>FIG. 2 · 245a</dd></div><div><dt>每个电源域的有向转换图</dt><dd>FIG. 3 · 300a–300c</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　单域有向边和跨域状态组合是两项检查</h3>
+    <p id="fig-3-basis">候选路段必须同时有单域转换边、允许与其他电源域共存。本表列出两项检查各自能否决什么。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">检查对象</th><th scope="col">原文现象</th><th scope="col">执行时影响</th></tr></thead><tbody><tr id="fig-3-edge-only"><th scope="row">单域有向边</th><td>原图 3 的 B 域允许最高状态直接返回某个较低状态，反向不允许直达</td><td>进最高状态需依次通过合法中间状态</td></tr><tr id="fig-3-cross-domain"><th scope="row">跨域状态组合</th><td>原图 2 的 A 域某中间状态可能与 B 或 C 的当前状态冲突</td><td>需改变路径、等待或调整相关域状态</td></tr><tr id="fig-3-voltage-clock"><th scope="row">本域电压／频率组合</th><td>原图 7 的 B 域先暂调时钟，再分步调电压</td><td>确认电压调整结束后，时钟才恢复到初始设定</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-edge-only">单域有向边</a> 原图 3 的 B 域允许从最高状态回到较低起始状态，但没有给出反方向直达边。请求更高状态时须按有向图选中间状态。</li><li><a href="#fig-3-cross-domain">跨域状态组合</a> 图 2 的 A 域候选中间状态与 B 或 C 的部分状态组合可能被禁用。检查全局组合有时会让固件改另一个域的次序。</li><li><a href="#fig-3-voltage-clock">本域电压／频率组合</a> 图 7 的本域电压与频率切换需要检查每一步，包括终态相同的时钟暂调。</li></ul>
+  <p class="figure-evidence">原图 2、3、7；说明书归档段 0045、0046、0050、0051、0052、0053、0086、0087、0088、0089；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>B 域有向转换图</dt><dd>FIG. 3 · 300b</dd></div><div><dt>B 域允许直接返回的边</dt><dd>FIG. 3 · PS 356b → PS 352b</dd></div><div><dt>A 域候选与 B／C 状态冲突示例</dt><dd>FIG. 2 · PS 252a / PS 253b / PS 252c</dd></div><div><dt>B 域时钟及供电轨</dt><dd>FIG. 7 · 715b / 725b</dd></div></dl></details>
+</figure></section><section id="signals"><h2>沿路径执行时，频率、供电和稳定条件继续限制次序</h2><p>图 4 上半是 C 域，先改变频率，确认时钟转换完成后才改变供电。图下半是 B 域，t2 先进入过渡频率，t3 和 t4 分两步调电压，t5 才恢复起始频率。若性能计数器只记录最终频率，会漏掉 B 域这次临时改频和由此产生的等待。</p><p>原图 7 画的是信号设定值的时序。工程测量应分别取控制电路下发转换、时钟就绪、供电稳定和收到请求确认的时点。图上时间轴只用于解释动作顺序。一般的升频前先建立足够供电电压，说明书在原图 2 的讨论中另有披露。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　一次转换先换频率；另一次还需暂调时钟并分两步调压</h3>
+    <p id="fig-4-basis">原图 7 把四条信号放在同一横轴。C 域先完成频率切换才调压；B 域先用过渡频率，电压两次调整完才恢复时钟。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一次转换先换频率；另一次还需暂调时钟并分两步调压" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 548" role="img" aria-labelledby="us12681552b2-fig-4-svg-title us12681552b2-fig-4-svg-desc">
+<title id="us12681552b2-fig-4-svg-title">一次转换先换频率；另一次还需暂调时钟并分两步调压</title>
+<desc id="us12681552b2-fig-4-svg-desc">原图 7 把四条信号放在同一横轴。C 域先完成频率切换才调压；B 域先用过渡频率，电压两次调整完才恢复时钟。</desc>
+<defs><marker id="us12681552b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12681552b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12681552b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12681552b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12681552b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">t0</text>
+<line x1="300" y1="76" x2="300" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">t1 请求</text>
+<line x1="408" y1="76" x2="408" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">t2</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">t3</text>
+<line x1="624" y1="76" x2="624" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">t4</text>
+<line x1="732" y1="76" x2="732" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">t5</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">后续</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us12681552b2-fig-4-clock-c"><text x="24" y="136" class="node-name" text-anchor="start">C 域时钟</text>
+<rect x="192" y="112" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="300" y="136" class="arrow-label" text-anchor="middle">原频率</text>
+<rect x="408" y="112" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="624" y="136" class="arrow-label" text-anchor="middle">新频率</text>
+<circle cx="408" cy="131" r="5" fill="#4f5d75"/>
+<text x="408" y="171" class="arrow-label" text-anchor="end">先换频率</text></g>
+<g id="us12681552b2-fig-4-voltage-c"><text x="24" y="228" class="node-name" text-anchor="start">C 域供电</text>
+<rect x="192" y="204" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="408" y="228" class="arrow-label" text-anchor="middle">原电压</text>
+<rect x="624" y="204" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="732" y="228" class="arrow-label" text-anchor="middle">新电压</text>
+<circle cx="624" cy="223" r="5" fill="#4f5d75"/>
+<text x="624" y="263" class="arrow-label" text-anchor="end">确认时钟后调压</text></g>
+<g id="us12681552b2-fig-4-clock-b"><text x="24" y="320" class="node-name" text-anchor="start">B 域时钟</text>
+<rect x="192" y="296" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="300" y="320" class="arrow-label" text-anchor="middle">起始频率</text>
+<rect x="408" y="296" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="320" class="arrow-label" text-anchor="middle">过渡频率</text>
+<rect x="732" y="296" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="786" y="320" class="arrow-label" text-anchor="middle">恢复频率</text>
+<circle cx="732" cy="315" r="5" fill="#4f5d75"/>
+<text x="732" y="355" class="arrow-label" text-anchor="end">恢复起始频率</text></g>
+<g id="us12681552b2-fig-4-voltage-b"><text x="24" y="412" class="node-name" text-anchor="start">B 域供电</text>
+<rect x="192" y="388" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="412" class="arrow-label" text-anchor="middle">起始电压</text>
+<rect x="516" y="388" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="412" class="arrow-label" text-anchor="middle">过渡电压</text>
+<rect x="624" y="388" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="732" y="412" class="arrow-label" text-anchor="middle">目标电压</text>
+<circle cx="516" cy="407" r="5" fill="#bf4520"/>
+<text x="516" y="447" class="arrow-label" text-anchor="end">第一次调压</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">原图 7 的时点。条带仅编码设定值和转换先后，宽度不代表实测持续时间。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12681552b2-fig-4-clock-c">C 域时钟</a> C 域在 t2 改频率；t2 到 t4 的间隔允许时钟和用钟电路达到转换所需状态。</li><li><a href="#us12681552b2-fig-4-voltage-c">C 域供电</a> t4 确认频率切换完成后，才切换 C 域供电电压。实施例给的是顺序，未给稳定等待的绝对时间。</li><li><a href="#us12681552b2-fig-4-voltage-b">B 域供电</a> B 域的稳压轨先在 t3 到过渡电压，再于 t4 到目标电压。固件可以用这段路线避开本域或跨域的不兼容组合。</li><li><a href="#us12681552b2-fig-4-clock-b">B 域时钟</a> B 在 t2 暂调时钟。t5 的终点频率回到起始设定；仅比较两个端点会漏掉中间动作。</li></ul>
+  <p class="figure-evidence">原图 7；说明书归档段 0046、0084、0085、0086、0087、0088、0089、0090、0091；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12681552B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>时钟源</dt><dd>FIG. 7 · 710</dd></div><div><dt>稳压器</dt><dd>FIG. 7 · 720</dd></div><div><dt>B 域时钟 / C 域时钟</dt><dd>FIG. 7 · 715b / 715c</dd></div><div><dt>B 域供电 / C 域供电</dt><dd>FIG. 7 · 725b / 725c</dd></div><div><dt>B 域过渡频率 / 起始及恢复频率</dt><dd>FIG. 7 · 716 / 718</dd></div><div><dt>B 域起始 / 过渡 / 目标电压（原图标签）</dt><dd>FIG. 7 · 728 / 726 / 729</dd></div><div><dt>C 域原频率 / 新频率</dt><dd>FIG. 7 · 718 / 717</dd></div><div><dt>C 域原电压 / 新电压</dt><dd>FIG. 7 · 727 / 726</dd></div></dl></details>
+</figure></section><section id="acks"><h2>请求所需状态实际到达后，才能返回对应确认</h2><p>图 5 按原图 4 对齐 A、B 两域与两个确认字段。请求方 1 的目标先达到，因此第一确认先发。请求方 2 的更高请求早已写入，仍要等待 A 的第一笔转换完成并继续切换。此例最高状态还有并发约束，B 要先退出最高状态，A 才能进入自己的最高状态。</p><p>确认字段对应请求方及其所需状态。说明书还示例通过中间状态时先确认只请求了该状态的一方。若固件因性能下限主动抬高 C 域，而任何请求方都没有请求这个状态，实施例不会为这个动作发请求确认。正文区分完成确认、转换是否允许和软硬件发起的政策下限。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　两笔请求如何各自确认，最高状态又要等谁先退出</h3>
+    <p id="fig-5-basis">同一 A 域可以有两个请求方。第一笔完成先确认；第二笔在途到达，需等 A 域可进入目标，且 B 域不再占用最高状态。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两笔请求如何各自确认，最高状态又要等谁先退出" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 548" role="img" aria-labelledby="us12681552b2-fig-5-svg-title us12681552b2-fig-5-svg-desc">
+<title id="us12681552b2-fig-5-svg-title">两笔请求如何各自确认，最高状态又要等谁先退出</title>
+<desc id="us12681552b2-fig-5-svg-desc">同一 A 域可以有两个请求方。第一笔完成先确认；第二笔在途到达，需等 A 域可进入目标，且 B 域不再占用最高状态。</desc>
+<defs><marker id="us12681552b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12681552b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12681552b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12681552b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12681552b2-fig-5-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">t0</text>
+<line x1="300" y1="76" x2="300" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">t1</text>
+<line x1="408" y1="76" x2="408" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">t2</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">t3</text>
+<line x1="624" y1="76" x2="624" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">t4</text>
+<line x1="732" y1="76" x2="732" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">t5</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">后续</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us12681552b2-fig-5-domain-a"><text x="24" y="136" class="node-name" text-anchor="start">A 域实际状态</text>
+<rect x="192" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="246" y="136" class="arrow-label" text-anchor="middle">起始状态</text>
+<rect x="300" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="136" class="arrow-label" text-anchor="middle">中间状态</text>
+<rect x="408" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="462" y="136" class="arrow-label" text-anchor="middle">请求 1 的目标</text>
+<rect x="516" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="136" class="arrow-label" text-anchor="middle">第二次过渡</text>
+<rect x="624" y="112" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="732" y="136" class="arrow-label" text-anchor="middle">请求 2 的目标</text>
+<circle cx="624" cy="131" r="5" fill="#bf4520"/>
+<text x="624" y="171" class="arrow-label" text-anchor="end">到达最高状态</text></g>
+<g id="us12681552b2-fig-5-domain-b"><text x="24" y="228" class="node-name" text-anchor="start">B 域实际状态</text>
+<rect x="192" y="204" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="228" class="arrow-label" text-anchor="middle">最高状态</text>
+<rect x="516" y="204" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="228" class="arrow-label" text-anchor="middle">降低中的状态</text>
+<rect x="624" y="204" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="732" y="228" class="arrow-label" text-anchor="middle">低于最高状态</text>
+<circle cx="516" cy="223" r="5" fill="#4f5d75"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">先让 B 降低</text></g>
+<g id="us12681552b2-fig-5-ack-one"><text x="24" y="320" class="node-name" text-anchor="start">请求方 1 确认</text>
+<rect x="192" y="296" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="300" y="320" class="arrow-label" text-anchor="middle">请求已提交，尚未确认</text>
+<rect x="408" y="296" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="462" y="320" class="arrow-label" text-anchor="middle">该目标已达成</text>
+<circle cx="408" cy="315" r="5" fill="#4f5d75"/>
+<text x="408" y="355" class="arrow-label" text-anchor="end">确认请求 1</text></g>
+<g id="us12681552b2-fig-5-ack-two"><text x="24" y="412" class="node-name" text-anchor="start">请求方 2 确认</text>
+<rect x="343.2" y="388" width="280.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="483.6" y="412" class="arrow-label" text-anchor="middle">请求已提交，等待 A 到达所请求状态</text>
+<rect x="624" y="388" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="412" class="arrow-label" text-anchor="middle">该目标已达成</text>
+<circle cx="624" cy="407" r="5" fill="#4f5d75"/>
+<text x="624" y="447" class="arrow-label" text-anchor="end">确认请求 2</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">第二笔请求在 t1 与 t2 之间到达。图将原图 4 的确认状态对齐到各自目标，间距仅表示先后关系。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12681552b2-fig-5-domain-a">A 域实际状态</a> 请求方 2 在 A 第一次转换尚未完成时提交更高状态。图中等第一次达到它的目标后，再开始通向新目标的路径。</li><li><a href="#us12681552b2-fig-5-domain-b">B 域实际状态</a> A、B 同时处于最高状态会触及图示的并发限制。B 退出最高状态后，A 才进入自己的最高状态。</li><li><a href="#us12681552b2-fig-5-ack-one">请求方 1 确认</a> A 达到第一请求方请求的状态时，设置该请求方的确认字段。中间状态若恰好满足某请求，也可以确认该请求方。</li><li><a href="#us12681552b2-fig-5-ack-two">请求方 2 确认</a> 第二请求方等到 A 进入第二请求的目标才见确认。单纯收到请求、写入寄存器或开始转换都不表示已达到目标。</li></ul>
+  <p class="figure-evidence">原图 4、9、12；说明书归档段 0056、0057、0058、0059、0060、0061、0062、0063、0064、0065、0066、0067、0109、0110、0111、0112、0127、0128、0129、0130、0131、0132；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12681552B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求方 1 / 请求方 2 的状态请求寄存器</dt><dd>FIG. 4 · 410a / 410b</dd></div><div><dt>请求方 1 / 请求方 2 的确认字段</dt><dd>FIG. 4 · 420a / 420b</dd></div><div><dt>A 域 / B 域实际状态</dt><dd>FIG. 4 · 240a / 240b</dd></div><div><dt>A 域起始状态 / 中间状态</dt><dd>FIG. 4 · PS 352a / PS 353a</dd></div><div><dt>A 域请求 1 目标 / 请求 2 目标</dt><dd>FIG. 4 · PS 355a / PS 356a</dd></div><div><dt>B 域最高状态 / 退出中的状态 / 低于最高状态</dt><dd>FIG. 4 · PS 356b / PS 353b / PS 355b</dd></div><div><dt>分别确认第一请求 / 第二请求</dt><dd>FIG. 12 · 1210 / 1220</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US12681552B2</code><span>美国授权专利</span><time datetime="2026-07-14">2026-07-14</time></p>
-  <h1>两层电源管理处理器约束跨域 DVFS 的中间状态</h1>
-  <p class="english-title" lang="en">Multi-processor power management circuit</p>
-  <p class="document-question">电源域的目标运行点允许使用，途经的运行点也一定可用吗？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">电源管理处理器提出目标性能状态。执行电路发现候选中间状态与另一电源域的当前状态不兼容时，改用允许的转换路径。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>实验要保留其他域的当前状态。达到同一目标可能需要经过不同中间状态和时钟、电压切换顺序。</dd></div><div><dt>验证方法</dt><dd>固定一个电源域的起点和目标，改变另一个电源域的当前状态。记录被拒绝的中间状态、实际电压与时钟动作及转换完成时间。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12681552B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">高层控制器可以只表达想要的性能等级。同一个目标在不同电源域组合下可能有不同路径，电压、时钟与活动域条件需要由熟悉具体芯片的固件逐步判断。</p>
-    <p>电源管理处理器根据电路块活动提出目标性能状态。执行电路查看各域的当前条件。若候选中间态与另一域现态不兼容，就避开该中间态并让控制电路按新路径转换。</p>
-    <ol class="walkthrough"><li><h3>高层处理器形成目标</h3><p>第一处理器运行操作系统的控制回路，采集电路活动并为各电源域提出目标性能状态。</p></li><li><h3>固件展开候选路径</h3><p>第二处理器执行与具体芯片有关的固件，把目标展开为中间配置，包括时钟频率与供电电压。</p></li><li><h3>检查另一域当时的状态</h3><p>若一个候选中间态与已活动的另一域当前状态不兼容，选择规避该中间态的路径。限制还可能涉及各域同时处在最高性能状态的数量。</p></li><li><h3>按合法顺序执行</h3><p>控制电路按选定路径更新时钟和供电。图 7 的实施例在升频前先提高电压，在降压前先降低频率。验证时分别检查两个动作完成的时点。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> 明确用另一电源域当前状态否决候选中间态。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> 要求芯片专属固件依据当前条件判定合法性。供电电压与时钟的具体升降顺序见原图 7。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>性能状态（performance state）</dt><dd>电源域允许使用的运行配置。说明书把工作电压和时钟频率作为配置的例子。</dd></div><div><dt>中间性能状态（intermediate performance state）</dt><dd>从当前状态过渡到目标状态时会进入的状态，合法性可取决于其他电源域。</dd></div><div><dt>电源域（power domain）</dt><dd>供电或性能状态可独立管理的一组电路。专利的路径约束可能跨多个电源域。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">一条跨域路径在何处被否决</a></li><li><a href="#fig-1">目标运行点与硬件执行序列</a></li><li><a href="#fig-4">升频前先升压，降压前先降频</a></li><li><a href="#fig-3">起点和目标固定时的路径约束</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">一条跨域路径在何处被否决</h3></div>
-    <a class="paper-open" href="../mechanisms/US12681552B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="一条跨域路径在何处被否决">
-    <img class="paper-image native-image" src="../mechanisms/US12681552B2/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="一条跨域路径在何处被否决。原图 2 中 251a 至 254a 的候选路径不可使用 252a 时，执行端选经 253a 的路径。">
-  </div>
-  <figcaption>
-    <span>原图 2 中 251a 至 254a 的候选路径不可使用 252a 时，执行端选经 253a 的路径。</span>
-    <span class="figure-evidence">原图 2–3，说明书 0045–0046、0051–0053，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">目标运行点与硬件执行序列</h3></div>
-    <a class="paper-open" href="../mechanisms/US12681552B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="目标运行点与硬件执行序列">
-    <img class="paper-image native-image" src="../mechanisms/US12681552B2/fig-1/diagram.svg" width="973" height="332"
-         style="--paper-width:973px" alt="目标运行点与硬件执行序列。电源管理处理器发送目标状态。执行端把它与其他域当前状态放在一起检查，随后让控制电路改变电压和时钟。">
-  </div>
-  <figcaption>
-    <span>电源管理处理器发送目标状态。执行端把它与其他域当前状态放在一起检查，随后让控制电路改变电压和时钟。</span>
-    <span class="figure-evidence">原图 1–3，说明书 0028–0033、0045–0046，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">升频前先升压，降压前先降频</h3></div>
-    <a class="paper-open" href="../mechanisms/US12681552B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="升频前先升压，降压前先降频">
-    <img class="paper-image native-image" src="../mechanisms/US12681552B2/fig-4/diagram.svg" width="648" height="564"
-         style="--paper-width:648px" alt="升频前先升压，降压前先降频。原图 7 的实施例先建立支持高频的电压再升频，回退时先降频再降压。横列仅表步骤先后。">
-  </div>
-  <figcaption>
-    <span>原图 7 的实施例先建立支持高频的电压再升频，回退时先降频再降压。横列仅表步骤先后。</span>
-    <span class="figure-evidence">原图 7，说明书 0085–0090，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">起点和目标固定时的路径约束</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">其他域条件</th><th scope="col">候选中间态</th><th scope="col">判断</th></tr></thead><tbody><tr><th scope="row">与 252a 兼容</th><td>251a → 252a → 254a</td><td>此项跨域约束通过</td></tr><tr><th scope="row">与 252a 不兼容，许可 253a</th><td class="emphasis">251a → 253a → 254a</td><td>避开 252a，从 253a 过渡</td></tr></tbody></table>
-  <figcaption>
-    <span>仅列出原图 2 的两个候选中间状态。合法性取决于其他域状态及转换限制。</span>
-    <span class="figure-evidence">原图 2–3，说明书 0045、0053，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>监控电路活动并提出目标状态</dt><dd>使上层策略表达各电源域的性能需求 <span class="subdued">原图 1，说明书 0028–0031，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>检查其他域当前状态</dt><dd>避免经过不兼容的中间组合 <span class="subdued">原图 2–3，说明书 0045、0053，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></span></dd></div><div><dt>按中间状态编排时钟与供电</dt><dd>维持转换期间的可执行配置 <span class="subdued">原图 7，说明书 0085–0090</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>路径检查、等待域间制约解除、供电轨到位和时钟确认各占用一段时间。比较两条可行路径时分别记录这些阶段和转换能量，避免把额外等待误算成稳态性能差异。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让两个域近乎同时请求升档，再撤销其中一个请求。若路径反复重算或从请求到实际转换完成的尾延迟增加，应检查固件采样的其他域状态和命令执行顺序。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>原图 2 中电源域 A 从 251a 到 254a。初选路径经过 252a，在另一电源域处于某个活动状态时该组合不允许。</dd></div><div><dt>处理结果</dt><dd>执行电路可经中间态 253a 到达 254a。图 3 说明固件需要检查中间状态与其他电源域当前状态的组合。</dd></div><div><dt>结果解读</dt><dd>状态号取自原图，未给出具体电压、频率或用时。落地时还要观测各级供电和时钟稳定时间。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -124,63 +223,25 @@
   </table>
 </section><section class="independent-claim" id="independent-10" aria-labelledby="independent-10-title">
   <h4 id="independent-10-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></h4>
-  <p>第一处理器运行控制环并确定多个电源域的请求状态，第二处理器执行芯片专属固件检查并选择避免非法中间态的序列。</p>
+  <p>第一处理器运行控制环并确定多个电源域的请求状态，第二处理器执行芯片专属固件检查并选择避免与当前跨域条件不兼容的中间性能状态的序列。</p>
   <table class="comparison-table" aria-labelledby="independent-10-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=executing%2C%20by%20a%20first%20processor%20circuit%20in%20an%20integrated%20circuit%20%28IC%29%2C%20a%20control%20loop%20to%20monitor">F10</a></th><td>第一处理器在芯片内运行控制环，监视电路块性能。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=As%20illustrated%2C%20power%20management%20processor%20110%20is%20configured%20to%20monitor%20operation%20of%20circuit%20blocks%20120%20in">说明书 0029</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20power%20management%20processor%20110%20may%20include%20a%20computer%20accessible%20storage%20medium%20114%20storing">说明书 0030</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=determining%2C%20by%20the%20first%20processor%20circuit%20executing%20the%20control%20loop%2C%20requested%20performance%20states%20for%20a%20plurality">F11</a></th><td>第一处理器通过控制环确定各电源域的请求性能状态。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=As%20illustrated%2C%20power%20management%20processor%20110%20is%20configured%20to%20monitor%20operation%20of%20circuit%20blocks%20120%20in">说明书 0029</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20power%20management%20processor%20110%20may%20include%20a%20computer%20accessible%20storage%20medium%20114%20storing">说明书 0030</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=executing%2C%20by%20a%20second%20processor%20circuit%20in%20the%20IC%2C%20firmware%20that%20is%20specific%20to%20a%20given">F12</a></th><td>第二处理器执行与该芯片实现相适应的固件。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20performance%20management%20circuit%20101%20may%20include%20a%20computer%20accessible%20storage%20medium%20104%20storing">说明书 0032</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=By%20dividing%20tasks%20associated%20with%20selecting%20performance%20states%20from%20setting%20operating%20parameters%20and%20sequencing%20transitions%20between">说明书 0033</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=identifying%2C%20by%20the%20second%20processor%20circuit%20based%20on%20the%20firmware%2C%20an%20initial%20transition%20path%20for%20a">F13</a></th><td>第二处理器按固件识别含中间态的初始转换路径。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20101%2C%20as%20shown%2C%20may%20be%20configured%20to%20receive%2C%20from%20power%20management%20processor%20110%2C">说明书 0031</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · 图 1 · 图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=determining%2C%20by%20the%20second%20processor%20circuit%20based%20on%20the%20firmware%2C%20that%20the%20intermediate%20performance%20state%20is">F14</a></th><td>第二处理器按芯片当前运行条件确定中间态不允许。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Illegal%20state%20transitions%20include%20transitions%20not%20supported%20by%20ones%20of%20state%20diagrams%20300.%20For%20example%2C%20state">说明书 0053</a> · 图 2 · 图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=selecting%2C%20by%20the%20second%20processor%20circuit%20based%20on%20the%20firmware%2C%20an%20alternate%20transition%20path%20that%20avoids">F15</a></th><td>第二处理器选择跳过该中间态的替代路径。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Illegal%20state%20transitions%20include%20transitions%20not%20supported%20by%20ones%20of%20state%20diagrams%20300.%20For%20example%2C%20state">说明书 0053</a> · 图 2 · 图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=controlling%2C%20by%20the%20second%20processor%20circuit%20using%20the%20alternate%20transition%20path%2C%20sequencing%20of%20performance%20states%20among">F16</a></th><td>第二处理器按替代路径统一安排电源域间的性能状态切换。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=As%20illustrated%2C%20performance%20management%20circuit%20201%20is%20further%20configured%20to%20cause%20control%20circuit%20230%20to%20transition">说明书 0046</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20a%20performance%20management%20circuit%20%28e.g.%2C%20performance%20management%20circuits%20101%20and%2For%20201%29%20includes%20a">说明书 0051</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Illegal%20state%20transitions%20include%20transitions%20not%20supported%20by%20ones%20of%20state%20diagrams%20300.%20For%20example%2C%20state">说明书 0053</a> · 图 2 · 图 3</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-16" aria-labelledby="independent-16-title">
   <h4 id="independent-16-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></h4>
-  <p>两套不能互代的指令和处理器分别运行 OS 控制环与芯片专属固件，执行端负责发现并规避非法中间态。</p>
+  <p>两套分别执行控制环和转换序列选择的指令及处理器分别运行 OS 控制环与芯片专属固件，执行端负责发现并规避与当前跨域条件不兼容的中间性能状态。</p>
   <table class="comparison-table" aria-labelledby="independent-16-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=a%20power%20management%20circuit%20including">F17</a></th><td>装置包含负责电源控制的电路。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Circuits%20and%20techniques%20are%20proposed%20herein%20for%20a%20power%20manager%20circuit%20that%20includes%20a%20power%20management">说明书 0022</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20performance%20management%20circuit%20101%20may%20include%20a%20computer%20accessible%20storage%20medium%20104%20storing">说明书 0032</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=a%20first%20computer%20accessible%20storage%20medium%20storing%20instructions%20comprising%20one%20or%20more%20operating%20system%20control%20loops">F18</a></th><td>第一可访问存储介质保存用于监视和管理系统功率及性能的 OS 控制环。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20power%20management%20processor%20110%20may%20include%20a%20computer%20accessible%20storage%20medium%20114%20storing">说明书 0030</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=wherein%20the%20control%20loops%20establish%20requested%20performance%20states%20for%20a%20plurality%20of%20power%20domains%20in%20the">F19</a></th><td>OS 控制环确定各电源域的请求性能状态。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=As%20illustrated%2C%20power%20management%20processor%20110%20is%20configured%20to%20monitor%20operation%20of%20circuit%20blocks%20120%20in">说明书 0029</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20power%20management%20processor%20110%20may%20include%20a%20computer%20accessible%20storage%20medium%20114%20storing">说明书 0030</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=a%20first%20processor%20configured%20to%20execute%20the%20one%20or%20more%20operating%20system%20control%20loops">F20</a></th><td>第一处理器执行 OS 控制环。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20power%20management%20processor%20110%20may%20include%20a%20computer%20accessible%20storage%20medium%20114%20storing">说明书 0030</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=a%20second%20computer%20accessible%20storage%20medium%20storing%20instructions%20comprising%20firmware%20that%20is%20specific%20to%20a%20given">F21</a></th><td>第二存储介质保存芯片专用固件，依据控制环的请求安排各电源域的状态转换。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20performance%20management%20circuit%20101%20may%20include%20a%20computer%20accessible%20storage%20medium%20104%20storing">说明书 0032</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=By%20dividing%20tasks%20associated%20with%20selecting%20performance%20states%20from%20setting%20operating%20parameters%20and%20sequencing%20transitions%20between">说明书 0033</a> · 图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=a%20second%20processor%20configured%20to%20execute%20the%20firmware%20and%20control%20hardware%20circuitry%20to%20perform%20the%20sequencing">F22</a></th><td>第二处理器执行固件并控制硬件完成状态切换。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=In%20some%20embodiments%2C%20performance%20management%20circuit%20101%20may%20include%20a%20computer%20accessible%20storage%20medium%20104%20storing">说明书 0032</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=As%20illustrated%2C%20performance%20management%20circuit%20201%20is%20further%20configured%20to%20cause%20control%20circuit%20230%20to%20transition">说明书 0046</a> · 图 1 · 图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=identify%2C%20based%20on%20the%20firmware%2C%20an%20initial%20transition%20path%20for%20a%20given%20one%20of%20the%20plurality">F23</a></th><td>第二处理器基于固件识别含中间态的初始转换路径。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20101%2C%20as%20shown%2C%20may%20be%20configured%20to%20receive%2C%20from%20power%20management%20processor%20110%2C">说明书 0031</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · 图 1 · 图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=determine%2C%20based%20on%20the%20firmware%2C%20that%20the%20intermediate%20performance%20state%20is%20illegal%20based%20on%20active%20conditions">F24</a></th><td>第二处理器按固件和当前有效条件判定中间态不允许。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Illegal%20state%20transitions%20include%20transitions%20not%20supported%20by%20ones%20of%20state%20diagrams%20300.%20For%20example%2C%20state">说明书 0053</a> · 图 2 · 图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=select%2C%20based%20on%20the%20firmware%2C%20an%20alternate%20transition%20path%20that%20avoids%20the%20intermediate%20performance%20state">F25</a></th><td>第二处理器选择绕开该中间态的替代转换路径。</td><td><a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Performance%20management%20circuit%20201%20may%20determine%20transition%20path%20245%20a%20based%20on%20a%20variety%20of%20considerations.">说明书 0045</a> · <a href="https://patents.google.com/patent/US12681552B2/en#:~:text=Illegal%20state%20transitions%20include%20transitions%20not%20supported%20by%20ones%20of%20state%20diagrams%20300.%20For%20example%2C%20state">说明书 0053</a> · 图 2 · 图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统根据电路活动确定目标性能状态，候选中间态与另一电源域现态冲突时改道，并让控制电路执行新路径。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>当前活动电路块的受限性能状态也构成非法转换。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>执行层接收一部分电路块各自提出的期望性能状态。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>从另一组电路块接收带宽请求，带宽需求独立于性能状态。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>执行层为电源域选择供电电压，不向电源管理处理器通知所选值。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>最高状态请求数达到阈值后，延后新转换，先将现有最高状态域降档再放行。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>域时钟完成频率切换之后，再执行该域供电电压切换。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>启用评估模式时记录转换参数，再交回电源管理处理器。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>目标状态低于当前最低运行状态时，选择当前状态下限。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>第一处理器运行控制环并确定多个电源域的请求状态，第二处理器执行芯片专属固件检查并选择避免非法中间态的序列。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>第一处理器收集电路块针对各域的请求，确定其中最高性能状态请求。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>固件为请求状态选定电压和频率，第一处理器无法读取这些芯片参数。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>多个电源域的受限性能状态组合也属于非法转换。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>第一处理器接收独立于性能状态的带宽请求，以待传输事务数表达需求。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>最高状态请求数量达门槛时限制转换，有请求方改要较低状态后再放行。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>两套不能互代的指令和处理器分别运行 OS 控制环与芯片专属固件，执行端负责发现并规避非法中间态。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>以时钟频率与供电电压组合定义状态，执行层避开域内不允许的组合。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>先调域时钟频率，随后调整供电电压，最后再次调整时钟频率。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>芯片专用固件含状态映射表，每个映射至少给出频率与供电电压。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>请求状态高于当前运行状态上限时，固件采用该上限。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统根据电路活动确定目标性能状态，候选中间态与另一电源域现态冲突时改道，并让控制电路执行新路径。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>当前活动电路块的受限性能状态也构成非法转换。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>执行层接收一部分电路块各自提出的期望性能状态。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>从另一组电路块接收带宽请求，带宽需求独立于性能状态。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>执行层为电源域选择供电电压，不向电源管理处理器通知所选值。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>最高状态请求数达到阈值后，延后新转换，先将现有最高状态域降档再放行。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>域时钟完成频率切换之后，再执行该域供电电压切换。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>启用评估模式时记录转换参数，再交回电源管理处理器。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>目标状态低于当前最低运行状态时，选择当前状态下限。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>第一处理器运行控制环并确定多个电源域的请求状态，第二处理器执行芯片专属固件检查并选择避免与当前跨域条件不兼容的中间性能状态的序列。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>第一处理器收集电路块针对各域的请求，确定其中最高性能状态请求。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>固件为请求状态选定电压和频率，第一处理器无法读取这些芯片参数。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>多个电源域的受限性能状态组合也属于非法转换。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>第一处理器接收独立于性能状态的带宽请求，以待传输事务数表达需求。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>最高状态请求数量达门槛时限制转换，有请求方改要较低状态后再放行。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>两套分别执行控制环和转换序列选择的指令及处理器分别运行 OS 控制环与芯片专属固件，执行端负责发现并规避与当前跨域条件不兼容的中间性能状态。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>以时钟频率与供电电压组合定义状态，执行层避开域内不允许的组合。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>先调域时钟频率，随后调整供电电压，最后再次调整时钟频率。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>芯片专用固件含状态映射表，每个映射至少给出频率与供电电压。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>请求状态高于当前运行状态上限时，固件采用该上限。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1、4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></dt><dd>检查候选路径而非仅检查初态和终态。</dd></div><div><dt>图 2、10、12，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>请求寄存器与确认属于可进一步隔离请求和实际状态的实施细节。</dd></div><div><dt>图 7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12681552B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>频率和供电电压组合形成性能状态，先后顺序保护中间配置。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12681552B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11579934B2.html#engineering">非对称多处理器的闭环性能控制与热功率约束</a>
-<p>US11579934B2 根据功率映射和控制量上限裁决核簇运行点。US12681552B2 在收到目标性能状态后检查候选中间态，若它与另一电源域当前状态冲突便改用其他路径。若平台串接这两种控制，目标运行点获准之后，执行端仍须确认过渡路径可行。</p></li><li><a href="US20260093309A1.html#engineering">用内部性能状态控制跨电源域的发送时钟</a>
-<p>US20260093309A1 允许电源管理电路使用至少一个请求方无权直接请求的组件状态，并以状态转换许可表管理跨域时钟。US12681552B2 的第二层处理器在转换路径与另一电源域当前状态冲突时，选择绕开非法中间状态的路径。前者说明请求接口的状态集合如何与内部许可区分，后者说明执行阶段如何处理具体冲突。</p></li><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
-<p>US12332723B2 等待读写代理确认缓冲余量足以承受内存停服，再允许该事件发生。US12681552B2 检查候选中间性能状态与其他电源域是否兼容，必要时改走另一条状态路径。进入切换前需要确认的约束分别来自内存服务余量和电源域状态组合。</p></li></ul>
-    <p><a href="../index.html?patent=US12681552B2#knowledge">在全量关系图上定位 US12681552B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-09-14</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-12-14</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-07-14</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/540,798</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Doron Rajwan、John H. Kelm、Michael Bekerman</dd></div><div><dt>分类号</dt><dd>G06F1/3234、G06F1/324、G06F1/3296</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12681552B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12681552B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 172 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12681552B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

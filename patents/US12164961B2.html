@@ -1,130 +1,171 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12164961B2 合并两种能耗估计，约束后台任务执行 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用快慢两路能耗估计控制后台活动准入 · US12164961B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12164961B2</code> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></p>
+<h1>用快慢两路能耗估计控制后台活动准入</h1><p class="reading-question">较准的能耗估计来得慢，操作系统怎样及时阻止后台活动耗尽能量预算？</p>
+<p class="reading-answer">快速引擎及时补上最近一段的能耗，慢速引擎校准较早的累计量。合成时保留同一时刻对齐的两个快速累计值，用差值填补慢速估计尚未覆盖的区间。后台活动准入控制器据合成能耗及预算决定允许、推迟或阻止后台活动。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-12-10</dd></div><div><dt>申请号</dt><dd>US17/481,891</dd></div><div><dt>最早优先权</dt><dd>2021-09-22</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Conor J. O&#x27;Reilly、Arjun S. Vasudevan、Gina B Lu、Kartik R. VENKATRAMAN、Abhinav Pathak</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#inputs">客户端通知、快慢估计和后台活动准入</a></li><li><a href="#coalescing">以慢估计的覆盖终点为界拼接两路能耗</a></li><li><a href="#boundary">预算临界处的准入决定怎样变化</a></li><li><a href="#calibration">电池总耗能怎样校准慢估计中的组件能耗</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="inputs"><h2>客户端通知、快慢估计和后台活动准入</h2><p>操作系统将客户端后台活动的开始和结束通知交给能耗估计系统。快速引擎基于较少模型或输入较早出数，慢速引擎可使用更多功率模型、设备遥测或电池状态校准，更新较早区间内的估计值。</p><p>图 1 将估计值与预算分开流转。预算调节器可按固定周期补充能量预算。后台活动准入控制器从预算中减去合成累计能耗，再决定是否允许进程开始或继续。第 15–17 项用剩余能量小于 0 与大于等于 0 区分动作。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　两路能耗估计进入后台活动准入控制</h3>
+    <p id="fig-1-basis">开始和结束通知定义客户端活动区间。估计系统输出合成累计能耗，预算从独立路径给到准入控制器。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两路能耗估计进入后台活动准入控制" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 570" role="img" aria-labelledby="us12164961b2-fig-1-svg-title us12164961b2-fig-1-svg-desc">
+<title id="us12164961b2-fig-1-svg-title">两路能耗估计进入后台活动准入控制</title>
+<desc id="us12164961b2-fig-1-svg-desc">开始和结束通知定义客户端活动区间。估计系统输出合成累计能耗，预算从独立路径给到准入控制器。</desc>
+<defs><marker id="us12164961b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12164961b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12164961b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12164961b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12164961b2-fig-1-notify" d="M 139 234 L 139 112 Q 139 104 147 104 L 314 104" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-1-arrow-data)"/>
+<path id="us12164961b2-fig-1-intervals" d="M 238 271 L 314 271" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-1-arrow-data)"/>
+<path id="us12164961b2-fig-1-fast_out" d="M 512 104 L 642 104 Q 650 104 650 112 L 650 143 Q 650 151 658 151 L 736 151" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-1-arrow-data)"/>
+<path id="us12164961b2-fig-1-slow_out" d="M 512 271 L 642 271 Q 650 271 650 263 L 650 198 Q 650 190 658 190 L 736 190" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-1-arrow-data)"/>
+<path id="us12164961b2-fig-1-total" d="M 828 216 L 828 422" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12164961b2-fig-1-arrow-main)"/>
+<path id="us12164961b2-fig-1-allocate" d="M 512 457 L 736 457" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12164961b2-fig-1-arrow-control)"/>
+<path id="us12164961b2-fig-1-decision" d="M 828 498 L 828 527 Q 828 535 820 535 L 147 535 Q 139 535 139 527 L 139 308" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12164961b2-fig-1-arrow-return)"/>
+<rect x="158.5" y="73" width="135" height="18" fill="#f5f5f5"/><text x="226" y="87" class="arrow-label" text-anchor="middle">活动开始／结束</text>
+<rect x="240.5" y="241" width="71" height="18" fill="#f5f5f5"/><text x="276" y="255" class="arrow-label" text-anchor="middle">活动区间</text>
+<rect x="517.5" y="74" width="135" height="18" fill="#f5f5f5"/><text x="585" y="88" class="arrow-label" text-anchor="middle">快估计及时间戳</text>
+<rect x="517.5" y="279" width="137" height="18" fill="#f5f5f5"/><text x="586" y="293" class="arrow-label" text-anchor="middle">慢估计及时间戳</text>
+<rect x="825" y="328" width="128" height="18" fill="#f5f5f5"/><text x="889" y="342" class="arrow-label" text-anchor="middle">合成累计能耗</text>
+<rect x="576.5" y="427" width="97" height="18" fill="#f5f5f5"/><text x="625" y="441" class="arrow-label" text-anchor="middle">能量预算</text>
+<rect x="411" y="505" width="144" height="18" fill="#f5f5f5"/><text x="483" y="519" class="arrow-label" text-anchor="middle">继续／推迟／阻止</text>
+<g id="us12164961b2-fig-1-client"><rect x="40" y="234" width="198" height="74" rx="6" fill="#f5f5f5"/><rect x="40" y="234" width="198" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="139" y="260" class="node-name" text-anchor="middle">后台活动客户端</text><text x="139" y="282" class="node-detail" text-anchor="middle">发起请求并通报起止</text></g>
+<g id="us12164961b2-fig-1-fast"><rect x="314" y="68" width="198" height="72" rx="6" fill="#f5f5f5"/><rect x="314" y="68" width="198" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="413" y="94" class="node-name" text-anchor="middle">快速能耗估计引擎</text><text x="413" y="116" class="node-detail" text-anchor="middle">较少模型或输入</text></g>
+<g id="us12164961b2-fig-1-slow"><rect x="314" y="234" width="198" height="74" rx="6" fill="#f5f5f5"/><rect x="314" y="234" width="198" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="413" y="260" class="node-name" text-anchor="middle">慢速能耗估计引擎</text><text x="413" y="282" class="node-detail" text-anchor="middle">模型、遥测与校准</text></g>
+<g id="us12164961b2-fig-1-combine"><rect x="736" y="124" width="184" height="92" rx="6" fill="#f5f5f5"/><rect x="736" y="124" width="184" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="828" y="150" class="node-name" text-anchor="middle">能耗合成器</text><text x="828" y="172" class="node-detail" text-anchor="middle">按覆盖时间戳拼接</text></g>
+<g id="us12164961b2-fig-1-budget"><rect x="314" y="422" width="198" height="76" rx="6" fill="#f5f5f5"/><rect x="314" y="422" width="198" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="413" y="448" class="node-name" text-anchor="middle">预算调节器</text><text x="413" y="470" class="node-detail" text-anchor="middle">定期补充能量额度</text></g>
+<g id="us12164961b2-fig-1-admit"><rect x="736" y="422" width="184" height="76" rx="6" fill="#f5f5f5"/><rect x="736" y="422" width="184" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="828" y="448" class="node-name" text-anchor="middle">后台活动准入控制器</text><text x="828" y="470" class="node-detail" text-anchor="middle">比较剩余额度</text></g>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12164961b2-fig-1-notify">活动开始／结束</a> 后台客户端向操作系统发开始或结束通知。能耗估计系统可据此归因活动。</li><li><a href="#us12164961b2-fig-1-fast">快速能耗估计引擎</a> 快速估计使用较少输入或模型，可及时反映最近增加的 CPU 工作。</li><li><a href="#us12164961b2-fig-1-slow">慢速能耗估计引擎</a> 慢速估计可用更多模型，并利用遥测或电池状态校准较早区间。</li><li><a href="#us12164961b2-fig-1-combine">能耗合成器</a> 每路输出都带覆盖截止时刻。合成器在同一时间坐标上拼接历史与近期。</li><li><a href="#us12164961b2-fig-1-budget">预算调节器</a> 预算调节器独立补充可用能量。准入控制器用该预算减去后台活动累计能耗。</li><li><a href="#us12164961b2-fig-1-decision">继续／推迟／阻止</a> 已有活动在余额不足时可被要求推迟；尚未开始的活动可被阻止。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5；说明书归档段 0026、0027、0034、0035、0036、0037、0038、0039、0040、0041、0042、0043、0044、0045、0047、0048、0049；权利要求 1、2、6、7、10、11、14、15、16、17 <a href="../diagrams/US12164961B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>后台活动客户端</dt><dd>202</dd></div><div><dt>后台活动准入控制器</dt><dd>206</dd></div><div><dt>快速能耗估计引擎</dt><dd>302</dd></div><div><dt>慢速能耗估计引擎</dt><dd>308</dd></div><div><dt>能耗合成器</dt><dd>316</dd></div><div><dt>合成累计能耗</dt><dd>318</dd></div><div><dt>系统能量预算／预算调节器</dt><dd>320/322</dd></div><div><dt>快累计估计／慢累计估计</dt><dd>324/326</dd></div><div><dt>活动开始和结束通知</dt><dd>332/334/336</dd></div><div><dt>推迟和阻止信号</dt><dd>338/340</dd></div></dl></details>
+</figure></section><section id="coalescing"><h2>以慢估计的覆盖终点为界拼接两路能耗</h2><p>记最新慢估计覆盖到 tS，当前快速估计覆盖到 tC。只采用初始时刻到 tS 的慢估计，再加上快速累计量在 tS 到 tC 之间的增量。图 2 对齐接收时间戳与查询两端估计的逻辑顺序；图 4 用共享横轴展示慢估计更新前后的覆盖关系。</p><p>第 19 项描述同一历史区间的两种估计及其后的快速估计。原图 8C 将最新慢估计截止向右推进，快估计只保留未覆盖尾段。同一历史区间不会在合成结果里重复累计。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　取得慢估计时刻，再取两端的快速累计值</h3>
+    <p id="fig-2-basis">从当前快速累计值减去历史端点的快速累计值，得到只有慢估计尚未覆盖的一段。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="取得慢估计时刻，再取两端的快速累计值" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-labelledby="us12164961b2-fig-2-svg-title us12164961b2-fig-2-svg-desc">
+<title id="us12164961b2-fig-2-svg-title">取得慢估计时刻，再取两端的快速累计值</title>
+<desc id="us12164961b2-fig-2-svg-desc">从当前快速累计值减去历史端点的快速累计值，得到只有慢估计尚未覆盖的一段。</desc>
+<defs><marker id="us12164961b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12164961b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12164961b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12164961b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12164961b2-fig-2-slow"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-2-arrow-data)"/><rect x="178.5" y="96" width="117" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">慢累计值与覆盖时刻</text></g>
+<g id="us12164961b2-fig-2-range"><path d="M 358 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-2-arrow-data)"/><rect x="395" y="144" width="169" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">查 tS 与 tC 累计值</text></g>
+<g id="us12164961b2-fig-2-fast"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12164961b2-fig-2-arrow-return)"/><rect x="427.5" y="192" width="104" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">返回两端快累计值</text></g>
+<g id="us12164961b2-fig-2-combine"><path d="M 358 258 L 382 258 Q 390 258 390 266 L 390 268 Q 390 276 382 276 L 358 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12164961b2-fig-2-arrow-control)"/><rect x="407" y="234" width="130" height="18" fill="#f5f5f5"/><text x="472" y="248" class="arrow-label" text-anchor="middle">将快增量拼接到慢估计</text></g>
+<g id="us12164961b2-fig-2-report"><path d="M 358 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12164961b2-fig-2-arrow-main)"/><rect x="549" y="288" width="104" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">发送合成累计能耗</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">慢速估计引擎</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">能耗合成器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">快速估计引擎</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">后台活动准入控制器</text>
+<text x="28" y="388" class="legend" text-anchor="start">信号方向表达取数和合成依赖。原图允许按能耗变化阈值决定何时报告。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12164961b2-fig-2-slow">慢累计值与覆盖时刻</a> 接收最新可用的慢速累计值及其覆盖终点 tS。终点用同一时间坐标表示。</li><li><a href="#us12164961b2-fig-2-range">查 tS 与 tC 累计值</a> 快速引擎准备 tS、tC 两个端点的累计能耗。两者相减得到 tS 至 tC 的区间能耗。</li><li><a href="#us12164961b2-fig-2-combine">将快增量拼接到慢估计</a> 拼接规则为慢速累计值加上两个快速累计值之差。</li><li><a href="#us12164961b2-fig-2-report">发送合成累计能耗</a> 合成量发给后台活动准入控制器。它可据新的累计量改变下一次决定。</li></ul>
+  <p class="figure-evidence">原图 4、6、7、8C；说明书归档段 0037、0043、0044、0052、0053、0054、0055、0056、0057；权利要求 1、4、5、10、11、12、13、19、20 <a href="../diagrams/US12164961B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>快估计与慢估计的时间戳</dt><dd>328/330</dd></div><div><dt>接收历史快速值、慢值与当前快速值</dt><dd>702/704/706</dd></div><div><dt>合成累计能耗</dt><dd>708</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　新慢估计推进覆盖终点，快估计只保留尾段</h3>
+    <p id="fig-4-basis">对齐原图 8C 的时间戳。更新后使用 16.7 mWh 的慢估计，再补 5 mWh 的快增量。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="新慢估计推进覆盖终点，快估计只保留尾段" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12164961b2-fig-4-svg-title us12164961b2-fig-4-svg-desc">
+<title id="us12164961b2-fig-4-svg-title">新慢估计推进覆盖终点，快估计只保留尾段</title>
+<desc id="us12164961b2-fig-4-svg-desc">对齐原图 8C 的时间戳。更新后使用 16.7 mWh 的慢估计，再补 5 mWh 的快增量。</desc>
+<defs><marker id="us12164961b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12164961b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12164961b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12164961b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12164961b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="354" y1="76" x2="354" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="678" y1="76" x2="678" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">4</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us12164961b2-fig-4-old"><text x="24" y="136" class="node-name" text-anchor="start">旧慢覆盖</text>
+<rect x="192" y="112" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="273" y="136" class="arrow-label" text-anchor="middle">旧慢估计</text>
+<circle cx="354" cy="131" r="5" fill="#4f5d75"/>
+<text x="354" y="171" class="arrow-label" text-anchor="end">旧 tS</text></g>
+<g id="us12164961b2-fig-4-latest"><text x="24" y="228" class="node-name" text-anchor="start">新慢覆盖</text>
+<rect x="192" y="204" width="486" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="228" class="arrow-label" text-anchor="middle">慢估计 16.7 mWh</text>
+<circle cx="678" cy="223" r="5" fill="#4f5d75"/>
+<text x="678" y="263" class="arrow-label" text-anchor="end">新 tS</text></g>
+<g id="us12164961b2-fig-4-fast"><text x="24" y="320" class="node-name" text-anchor="start">原始快累计</text>
+<rect x="192" y="296" width="648" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="320" class="arrow-label" text-anchor="middle">全区间快估计 18 mWh</text>
+<circle cx="840" cy="315" r="5" fill="#4f5d75"/>
+<text x="840" y="355" class="arrow-label" text-anchor="end">tC</text></g>
+<g id="us12164961b2-fig-4-fused"><text x="24" y="412" class="node-name" text-anchor="start">合成累计</text>
+<rect x="192" y="388" width="486" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="412" class="arrow-label" text-anchor="middle">取新慢估计 16.7 mWh</text>
+<rect x="678" y="388" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="412" class="arrow-label" text-anchor="middle">快增量 5 mWh</text>
+<circle cx="840" cy="407" r="5" fill="#bf4520"/>
+<text x="840" y="447" class="arrow-label" text-anchor="end">21.7 mWh</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">轴上显示覆盖时刻的先后，不量化物理时长；能量值据原图 8C。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12164961b2-fig-4-old">旧慢覆盖</a> 旧慢覆盖时刻之后的累计增量由快估计承担，直到新的慢估计覆盖更多历史区间。</li><li><a href="#us12164961b2-fig-4-latest">新慢覆盖</a> 原图 8C 的第二个慢覆盖时刻先于当前时刻。它把整个较早区间替换为新慢累计量。</li><li><a href="#us12164961b2-fig-4-fused">合成累计</a> 合成结果的前一段取慢值 16.7 mWh，后段取快增量 5 mWh。两段不重叠，和为 21.7 mWh。</li><li><a href="#us12164961b2-fig-4-axis">时间刻度</a> 0、1、3、4 分别表示初始、旧慢覆盖、更新后慢覆盖和当前。阶段间距为示意。</li></ul>
+  <p class="figure-evidence">原图 6、8A、8B、8C；说明书归档段 0052、0053、0054、0055、0056、0057；权利要求 1、3、4、5、11、12、13、19、20 <a href="../diagrams/US12164961B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>初始时刻</dt><dd>602</dd></div><div><dt>旧慢估计覆盖终点</dt><dd>604</dd></div><div><dt>新慢估计覆盖终点</dt><dd>802</dd></div><div><dt>当前时刻</dt><dd>606</dd></div></dl></details>
+</figure></section><section id="boundary"><h2>预算临界处的准入决定怎样变化</h2><p>图表 3 用同一段活动做算例。预算为 16 mJ 时，早段若暂用 11 mJ 快估计，加后段 4 mJ 得 15 mJ。收到覆盖同窗的 14 mJ 慢估计后，合成值改为 18 mJ，剩余额度从 +1 mJ 变成 −2 mJ。</p><p>实际控制还受快速估计偏差和更新延迟影响。若新的短时后台负载未包含在快速模型输入中，这一路也可能低估能耗。说明书给出的原图 8A–8C 使用 mWh；表里的 mJ 是另设预算的教学输入。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　对同一个后台活动区间，准入结果可能在校准后改变</h3>
+    <p id="fig-3-basis">固定教学预算 16 mJ，早段由快估计改为慢估计。近期数据保持相同，合成量跨过预算。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">当时可用信息</th><th scope="col">早段能耗</th><th scope="col">近期能耗</th><th scope="col">合成量</th><th scope="col">预算剩余</th></tr></thead><tbody><tr id="fig-3-fast"><th scope="row">只收到快估计</th><td>11 mJ</td><td>4 mJ</td><td>15 mJ</td><td>+1 mJ</td></tr><tr id="fig-3-slow"><th scope="row">收到早段慢估计</th><td>14 mJ</td><td>4 mJ</td><td>18 mJ</td><td>−2 mJ</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-fast">只收到快估计</a> 只有两段快估计时，合成 15 mJ，剩余 +1 mJ。</li><li><a href="#fig-3-slow">收到早段慢估计</a> 同一早段改用慢估计后增加 3 mJ，合成 18 mJ，剩余 −2 mJ。活动已起则可推迟，未开始则可阻止。</li></ul>
+  <p class="figure-evidence">原图 5、8C；说明书归档段 0035、0047、0048、0049、0053、0054、0057；权利要求 14、15、16、17、19 </p>
+  
+</figure></section><section id="calibration"><h2>电池总耗能怎样校准慢估计中的组件能耗</h2><p>原图 3 的慢速估计在功率模型以外还可用设备遥测和电池电量检测。组件功率模型给出同一历史窗口内各组件的消耗估计，电池提供该窗口的总耗能参照。原文允许比较两者并校正功率模型。组件遥测配合客户端活动起止，帮助估计其中属于后台活动的能耗。</p><p>图 5 区分总量参照与软件归因。电池总耗能含前台和后台等工作，输出给合成器的是归属于后台活动的慢累计估计。说明书没有给出按客户端分配总耗能的具体公式。校准所用的设备信号和处理窗口可解释为何这一条路径覆盖到较早的时间。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　慢估计的校准与后台活动归因怎样分工</h3>
+    <p id="fig-5-basis">电池测量给出同一窗口的总量参照。组件活动遥测和后台活动时间段用于分解估计，得到慢累计能耗。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="慢估计的校准与后台活动归因怎样分工" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 590" role="img" aria-labelledby="us12164961b2-fig-5-svg-title us12164961b2-fig-5-svg-desc">
+<title id="us12164961b2-fig-5-svg-title">慢估计的校准与后台活动归因怎样分工</title>
+<desc id="us12164961b2-fig-5-svg-desc">电池测量给出同一窗口的总量参照。组件活动遥测和后台活动时间段用于分解估计，得到慢累计能耗。</desc>
+<defs><marker id="us12164961b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12164961b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12164961b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12164961b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12164961b2-fig-5-models" d="M 594 119 L 717 119" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-5-arrow-data)"/>
+<path id="us12164961b2-fig-5-adjust" d="M 717 153 L 594 153" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12164961b2-fig-5-arrow-return)"/>
+<path id="us12164961b2-fig-5-baseline" d="M 141 95 L 141 65 Q 141 57 149 57 L 810 57 Q 818 57 818 65 L 818 95" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12164961b2-fig-5-arrow-main)"/>
+<path id="us12164961b2-fig-5-interval" d="M 252 442 L 370 442" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-5-arrow-data)"/>
+<path id="us12164961b2-fig-5-corrected" d="M 780 168 L 780 301 Q 780 309 772 309 L 496 309 Q 488 309 488 317 L 488 405" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12164961b2-fig-5-arrow-main)"/>
+<path id="us12164961b2-fig-5-send" d="M 594 442 L 717 442" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12164961b2-fig-5-arrow-data)"/>
+<rect x="611" y="89" width="86" height="18" fill="#f5f5f5"/><text x="654" y="103" class="arrow-label" text-anchor="middle">模型估算</text>
+<rect x="609.5" y="123" width="89" height="18" fill="#f5f5f5"/><text x="654" y="137" class="arrow-label" text-anchor="middle">校正模型</text>
+<rect x="389.5" y="26" width="137" height="18" fill="#f5f5f5"/><text x="458" y="40" class="arrow-label" text-anchor="middle">窗口总耗能参照</text>
+<rect x="252.5" y="412" width="113" height="18" fill="#f5f5f5"/><text x="309" y="426" class="arrow-label" text-anchor="middle">组件活动与时间</text>
+<rect x="561" y="277" width="148" height="18" fill="#f5f5f5"/><text x="635" y="291" class="arrow-label" text-anchor="middle">校准后的组件估计</text>
+<rect x="600.5" y="411" width="99" height="18" fill="#f5f5f5"/><text x="650" y="425" class="arrow-label" text-anchor="middle">后台累计量</text>
+<g id="us12164961b2-fig-5-battery"><rect x="35" y="95" width="217" height="73" rx="6" fill="#f5f5f5"/><rect x="35" y="95" width="217" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="143.5" y="121" class="node-name" text-anchor="middle">电池电量检测</text><text x="143.5" y="143" class="node-detail" text-anchor="middle">同历史窗口的总耗能</text></g>
+<g id="us12164961b2-fig-5-model"><rect x="370" y="95" width="224" height="73" rx="6" fill="#f5f5f5"/><rect x="370" y="95" width="224" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="482" y="121" class="node-name" text-anchor="middle">组件功率模型</text><text x="482" y="143" class="node-detail" text-anchor="middle">CPU、显示等组件模型</text></g>
+<g id="us12164961b2-fig-5-calibrate"><rect x="717" y="95" width="213" height="73" rx="6" fill="#f5f5f5"/><rect x="717" y="95" width="213" height="73" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="823.5" y="121" class="node-name" text-anchor="middle">慢引擎中的模型校准</text><text x="823.5" y="143" class="node-detail" text-anchor="middle">与设备总耗能比较</text></g>
+<g id="us12164961b2-fig-5-activity"><rect x="35" y="405" width="217" height="75" rx="6" fill="#f5f5f5"/><rect x="35" y="405" width="217" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="143.5" y="431" class="node-name" text-anchor="middle">设备遥测及活动区间</text><text x="143.5" y="453" class="node-detail" text-anchor="middle">组件状态与客户端起止</text></g>
+<g id="us12164961b2-fig-5-attribute"><rect x="370" y="405" width="224" height="75" rx="6" fill="#f5f5f5"/><rect x="370" y="405" width="224" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="482" y="431" class="node-name" text-anchor="middle">后台能耗归因</text><text x="482" y="453" class="node-detail" text-anchor="middle">估计客户端的组件消耗</text></g>
+<g id="us12164961b2-fig-5-slow"><rect x="717" y="405" width="213" height="75" rx="6" fill="#f5f5f5"/><rect x="717" y="405" width="213" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="823.5" y="431" class="node-name" text-anchor="middle">慢累计估计与时间戳</text><text x="823.5" y="453" class="node-detail" text-anchor="middle">供历史覆盖区间合成</text></g>
+<text x="36" y="535" class="legend" text-anchor="start">电池总量用于校准。慢引擎对后台活动的输出仍是模型估计。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12164961b2-fig-5-battery">电池电量检测</a> 电池电量检测器能记录所用窗口的总耗能。其观测范围覆盖设备，并不提供独立进程的实际能耗读数。</li><li><a href="#us12164961b2-fig-5-calibrate">慢引擎中的模型校准</a> 将组件模型的估计与电池总耗能对照。说明书允许用差异调整模型，没有给固定比例算法。</li><li><a href="#us12164961b2-fig-5-activity">设备遥测及活动区间</a> 设备遥测和客户端活动起止为归因提供活动窗口，组件能耗由模型估计。</li><li><a href="#us12164961b2-fig-5-slow">慢累计估计与时间戳</a> 输出是后台活动慢累计估计与覆盖时刻。图 2、图 4 使用这个时刻区分快值与慢值。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0037、0038、0039、0040、0041、0043、0044、0045；权利要求 1、2、6、7、10、11、14、19 <a href="../diagrams/US12164961B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>慢速能耗估计引擎</dt><dd>308</dd></div><div><dt>组件功率模型</dt><dd>310</dd></div><div><dt>设备遥测</dt><dd>312</dd></div><div><dt>电池电量检测</dt><dd>314</dd></div><div><dt>慢累计估计与覆盖时刻</dt><dd>326/330</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
-  <p class="document-id"><code>US12164961B2</code><span>美国授权专利</span><time datetime="2024-12-10">2024-12-10</time></p>
-  <h1>合并两种能耗估计，约束后台任务执行</h1>
-  <p class="english-title" lang="en">Fast energy accounting system</p>
-  <p class="document-question">较慢的能耗估计尚未更新时，调度器用什么判断后台任务能否执行？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">能耗引擎为较早时窗提供精细与快速两份估计，为接续时窗提供快速估计。动态活动调度器用跨窗合成结果管理后台执行。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>较早两份估计覆盖同一时窗。后续快速估计从该窗结束开始，合成时要区分校正历史与追加后续能耗。</dd></div><div><dt>验证方法</dt><dd>重放同一后台工作及采样到达时序，对照只有快速估计与加入历史校正。按外部能量采样比较累计偏差、估计更新滞后、预算超额时长和误暂停次数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12164961B2">原文权利要求 19（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">系统按时间窗口约束后台应用的累计能耗。较慢的模型尚未更新时，调度器使用较快模型估计新增能耗，以免连续批准已接近预算上限的后台任务。</p>
-    <p>快速引擎较早提供时窗估计，慢速引擎用更多资源输入或模型覆盖部分历史时窗。后台活动调度器使用合成的累计能耗估计决定活动准入。</p>
-    <ol class="walkthrough"><li><h3>先让快速引擎估计近期活动</h3><p>从较少的资源用量输入或模型得出同一批后台进程的时间窗能耗。</p></li><li><h3>等更细的估计到达</h3><p>慢速引擎使用更多输入或更多模型。重合的窗要分别保存覆盖区间和出值时间。</p></li><li><h3>合并历史和接续区间</h3><p>权 19 用同窗两份估计和紧接其后的估计求累计值。图 8C 的实施例用精细结果更新历史段，保留仅有快估计的后续段。</p></li><li><h3>用累计能耗判断后台活动</h3><p>动态活动调度器据此放行或阻止后台进程，预算判断会随估计更新。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 19 的前两条输入覆盖同一时间段，第三份从前段结束处开始，而且沿用第二份的较少资源输入。按图 8C 合成时要保留估计的覆盖时间与到达时间。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>快速能耗估计（fast energy estimate）</dt><dd>用较少资源用量输入或模型及时计算某段后台能耗。</dd></div><div><dt>慢速能耗估计（slow energy estimate）</dt><dd>可用较多资源用量输入或模型估计已经发生的活动，更新频度可不同。</dd></div><div><dt>动态活动调度器（dynamic activity scheduler）</dt><dd>根据能耗估计决定允许或阻止客户端的后台活动。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">先给出快估计，慢估计再更新历史</a></li><li><a href="#fig-1">两种估计汇入后台活动调度器</a></li><li><a href="#fig-4">估计覆盖时间和到达时间为何不同</a></li><li><a href="#fig-3">快估计和同窗更新怎样改变准入</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">先给出快估计，慢估计再更新历史</h3></div>
-    <a class="paper-open" href="../mechanisms/US12164961B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="先给出快估计，慢估计再更新历史">
-    <img class="paper-image native-image" src="../mechanisms/US12164961B2/fig-2/diagram.svg" width="560" height="371"
-         style="--paper-width:560px" alt="先给出快估计，慢估计再更新历史。慢估计只覆盖已算过的区间时，图 8C 的合成用它更新历史段，继续纳入快估计所覆盖的新增段。">
-  </div>
-  <figcaption>
-    <span>慢估计只覆盖已算过的区间时，图 8C 的合成用它更新历史段，继续纳入快估计所覆盖的新增段。</span>
-    <span class="figure-evidence">原图 8A–8C，说明书 [0052]–[0056]，权利要求 19 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12164961">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">两种估计汇入后台活动调度器</h3></div>
-    <a class="paper-open" href="../mechanisms/US12164961B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="两种估计汇入后台活动调度器">
-    <img class="paper-image native-image" src="../mechanisms/US12164961B2/fig-1/diagram.svg" width="685" height="420"
-         style="--paper-width:685px" alt="两种估计汇入后台活动调度器。快慢两条估计通路提供不同复杂度的信息。调度器据估计管理后台运行。">
-  </div>
-  <figcaption>
-    <span>快慢两条估计通路提供不同复杂度的信息。调度器据估计管理后台运行。</span>
-    <span class="figure-evidence">原图 3–6，权利要求 1、10 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12164961">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">估计覆盖时间和到达时间为何不同</h3></div>
-    <a class="paper-open" href="../mechanisms/US12164961B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="估计覆盖时间和到达时间为何不同">
-    <img class="paper-image native-image" src="../mechanisms/US12164961B2/fig-4/diagram.svg" width="688" height="440"
-         style="--paper-width:688px" alt="估计覆盖时间和到达时间为何不同。原图 8 的三幅时间窗以不同更新时点展示合成结果。当慢估计到达后，已经滑动到后继窗的快估计仍然有效。图示只有顺序，没有物理时长。">
-  </div>
-  <figcaption>
-    <span>原图 8 的三幅时间窗以不同更新时点展示合成结果。当慢估计到达后，已经滑动到后继窗的快估计仍然有效。图示只有顺序，没有物理时长。</span>
-    <span class="figure-evidence">原图 8A–8C，说明书 [0054]–[0056]，权利要求 19 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12164961">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">快估计和同窗更新怎样改变准入</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">观察时点</th><th scope="col">第一窗</th><th scope="col">后续窗</th><th scope="col">累计估计</th><th scope="col">与 16 mJ 的关系</th></tr></thead><tbody><tr><th scope="row">仅快估计可用</th><td>11 mJ</td><td>4 mJ</td><td class="emphasis">15 mJ</td><td>低于预算</td></tr><tr><th scope="row">收到第一窗慢估计</th><td>14 mJ</td><td>4 mJ</td><td class="emphasis">18 mJ</td><td>超过预算</td></tr></tbody></table>
-  <figcaption>
-    <span>假设预算为 16 mJ。表中分别列出同窗估计与合成能耗，供核对算术并明确时窗覆盖。</span>
-    <span class="figure-evidence">原图 5、8C，权利要求 15–17、19，教学算例 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12164961">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12164961B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>使用少量输入先估计</dt><dd>预算判断能使用尚无精细结果的近期能耗 <span class="subdued">原图 3–6，权利要求 1、10</span></dd></div><div><dt>同窗比较并合成顺接时窗</dt><dd>避免把历史更新和新增工作能耗混为一项 <span class="subdued">原图 8A–8C，说明书 [0052]–[0056]，权利要求 19</span></dd></div><div><dt>累计能耗用于后台准入</dt><dd>接近或超过约束时可暂停后台活动 <span class="subdued">原图 5，权利要求 10、15–17</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>在同一测量口径内比较累计能量偏差、快慢估计的到达间隔、后台活动开始或暂停的时间。能量估计更准的时点可能晚于本次准入。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让后台任务在慢估计返回前结束，再在修正结果到达前申请启动同类任务。如果整段累计误差下降但错误放行率未降，需查估计更新时间是否错过了准入判决。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>这个算例的能耗预算为 16 mJ。首个窗口的快速估计为 11 mJ，较慢模型给出 14 mJ。后续窗口只有 4 mJ 的快速估计。</dd></div><div><dt>处理结果</dt><dd>两个窗口的快速估计合计为 15 mJ，尚低于预算。用 14 mJ 替换首个窗口的 11 mJ 后，累计估计升至 18 mJ，超过预算。</dd></div><div><dt>结果解读</dt><dd>这里的数值用于演示估计更新如何改变调度判断。误差取决于两种模型的准确度和较慢估计的到达时间。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、19 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>非暂态介质以两个复杂度不同的模型估计后台进程能耗，将合成估计送给动态活动调度器。</p>
+  <p>非暂态介质以两个复杂度不同的模型估计后台进程能耗，将合成估计送给后台活动准入控制器。操作系统服务接收客户端的后台活动请求，依据累计能耗估计作出准入决定。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20first%20estimate%20of%20an%20amount%20of%20energy%20consumed%20by%20a%20plurality%20of%20background%20processes%20for">F1</a></th><td>估计多个后台进程在第一时窗的能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=using%20a%20first%20set%20of%20resource%20usage%20inputs%2C%20a%20first%20set%20of%20models%2C%20or%20both">F2</a></th><td>第一估计使用第一组资源用量输入或第一组模型。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20estimate%20of%20the%20amount%20of%20energy%20consumed%20by%20the%20plurality%20of%20background%20processes%20for">F3</a></th><td>估计相同后台进程在第二时窗的能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20set%20of%20resource%20usage%20inputs%20that%20are%20greater%20in%20number">F4</a></th><td>第二估计使用较多资源用量输入、较多模型，或者两者。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=an%20aggregate%20estimate%20of%20the%20amount%20of%20energy%20consumed%20by%20the%20plurality%20of%20the%20background%20processes">F5</a></th><td>以两种估计合成累计能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Similar%20to%20the%20slow%20accounting%20engine%20308%2C%20the%20fast%20accounting%20engine%20302%20may%20determine%20a%20fast">说明书 0040</a> · 原图 6 · 原图 8A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=send%20the%20aggregate%20estimate%20to%20a%20dynamic%20activity%20scheduler">F6</a></th><td>把合成数值交给动态活动调度器。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20of%20a%20software%20system%20200%20of%20the%20electronic%20device%2010">说明书 0034</a> · 原图 5</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20first%20estimate%20of%20an%20amount%20of%20energy%20consumed%20by%20a%20plurality%20of%20background%20processes%20for">F1</a></th><td>估计多个后台进程在第一时窗的能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=using%20a%20first%20set%20of%20resource%20usage%20inputs%2C%20a%20first%20set%20of%20models%2C%20or%20both">F2</a></th><td>第一估计使用第一组资源用量输入或第一组模型。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20estimate%20of%20the%20amount%20of%20energy%20consumed%20by%20the%20plurality%20of%20background%20processes%20for">F3</a></th><td>估计相同后台进程在第二时窗的能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 4 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20set%20of%20resource%20usage%20inputs%20that%20are%20greater%20in%20number">F4</a></th><td>第二估计使用较多资源用量输入、较多模型，或者两者。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=an%20aggregate%20estimate%20of%20the%20amount%20of%20energy%20consumed%20by%20the%20plurality%20of%20the%20background%20processes">F5</a></th><td>以两种估计合成累计能耗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Similar%20to%20the%20slow%20accounting%20engine%20308%2C%20the%20fast%20accounting%20engine%20302%20may%20determine%20a%20fast">说明书 0040</a> · 原图 6 · 原图 8A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=send%20the%20aggregate%20estimate%20to%20a%20dynamic%20activity%20scheduler">F6</a></th><td>把合成数值交给后台活动准入控制器。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20of%20a%20software%20system%20200%20of%20the%20electronic%20device%2010">说明书 0034</a> · 原图 5</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-10" aria-labelledby="independent-10-title">
   <h4 id="independent-10-title">权利要求 10</h4>
-  <p>OS 具有快慢两个能耗估计引擎。动态活动调度器基于两份估计允许或阻止客户端继续处理后台进程。</p>
+  <p>OS 具有快慢两个能耗估计引擎。后台活动准入控制器基于两份估计允许或阻止客户端继续处理后台进程。</p>
   <table class="comparison-table" aria-labelledby="independent-10-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=memory%20configured%20to%20store%20a%20plurality%20of%20client%20applications%20configured%20to%20execute%20background%20processes">F7</a></th><td>存储器保存可执行后台进程的客户端应用。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=In%20another%20embodiment%2C%20a%20software%20system%20may%20include%20one%20or%20more%20client%20applications%20configured%20to%20execute">说明书 0010</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=processing%20circuitry%20configured%20to%20execute%20an%20operating%20system%20and%20the%20plurality%20of%20client%20applications">F8</a></th><td>处理电路执行 OS 和多个客户端应用。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=The%20disclosure%20relates%20generally%20to%20energy%20distribution%20in%20electronic%20devices%2C%20more%20particularly%2C%20energy%20distribution%20as%20it">说明书 0002</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20fast%20energy%20accounting%20engine%20configured%20to%20determine%20a%20first%20energy%20usage%20estimate">F9</a></th><td>OS 内的快速引擎用第一组输入或模型估计第一时窗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20slow%20energy%20accounting%20engine%20configured%20to%20determine%20a%20second%20energy%20usage%20estimate">F10</a></th><td>慢速引擎以更多资源输入或更多模型估计第二时窗。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=allow%20the%20plurality%20of%20client%20applications%20to%20execute%20the%20background%20processes%20or%20prevent%20the%20plurality%20of">F11</a></th><td>调度器以两份估计为依据，决定是否允许应用执行后台进程。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20of%20a%20software%20system%20200%20of%20the%20electronic%20device%2010">说明书 0034</a> · 原图 5 · 原图 7</td></tr></tbody>
@@ -137,49 +178,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20first%20estimate%20of%20an%20amount%20of%20energy%20consumed%20by%20a%20plurality%20of%20background%20processes%20for">F12</a></th><td>接收第一时间段内多个后台进程的首份估计。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=The%20slow%20accounting%20engine%20308%20may%20also%20utilize%20on-device%20telemetry%20312%20to%20increase%20accuracy%20of%20slow">说明书 0038</a> · 原图 8A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20estimate%20of%20the%20amount%20of%20energy%20consumed%20by%20the%20plurality%20of%20background%20processes%20for">F13</a></th><td>第二份估计仍覆盖该批后台进程的第一时间段。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Similar%20to%20the%20slow%20accounting%20engine%20308%2C%20the%20fast%20accounting%20engine%20302%20may%20determine%20a%20fast">说明书 0040</a> · 原图 8A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20set%20of%20resource%20usage%20inputs%20that%20are%20lesser%20in%20number">F14</a></th><td>第二份以数量较少的资源输入或较少模型计算。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=Embodiments%20herein%20provide%20various%20apparatuses%20and%20techniques%20to%20reduce%20excess%20power%20expenditure%20by%20implementing%20into%20an">说明书 0026</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=a%20second%20time%20period%20starting%20from%20an%20end%20of%20the%20first%20time%20period%20using%20the%20second">F15</a></th><td>第三份用第二组资源输入，覆盖从第一时窗结束开始的第二时间段。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=FIG.%208C%20is%20a%20timing%20diagram%20illustrating%20determining%20the%20energy%20usage%20318%20based%20on%20the%20fast">说明书 0057</a> · 原图 8C</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=based%20on%20the%20first%20estimate%2C%20the%20second%20estimate%2C%20and%20the%20third%20estimate">F16</a></th><td>合成后台总能耗时使用三份估计。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=In%20process%20block%20402%2C%20the%20fast%20accounting%20engine%20302%20may%20determine%20the%20fast%20energy%20usage%20324">说明书 0043</a> · 原图 8A–8C</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=managing%20the%20plurality%20of%20background%20processes%20based%20on%20the%20aggregate%20estimate">F17</a></th><td>基于合成估计管理这些后台进程。</td><td><a href="https://eureka.patsnap.com/patent/US12164961B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20of%20a%20software%20system%20200%20of%20the%20electronic%20device%2010">说明书 0034</a> · 原图 5 · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>非暂态介质以两个复杂度不同的模型估计后台进程能耗，将合成估计送给动态活动调度器。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第二组资源使用输入或模型包括第一组中的相应输入或模型。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>合成估计覆盖初始时刻至当前时刻，限定两个时段与首尾的关系。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>额外求初始至当前估计及第一时段估计，以两者计算第二估计。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>具体用第三估计减第四估计求得第二估计。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>用电子设备组件或子系统的本机遥测确定第二估计。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>将第二估计与电池电量检测器提供的电池状态数据比较。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>两组输入或模型另分别预测其对应时段的后台进程能耗。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>将两路预测合成为总能耗预测，并向动态活动调度器报告。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>OS 具有快慢两个能耗估计引擎。动态活动调度器基于两份估计允许或阻止客户端继续处理后台进程。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>以能耗合并算法计算并发送两路估计的结果至动态活动调度器。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>另取得初始至当前和首段的估计，用其决定第二估计。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>固定为用第三估计减第四估计来得到第二估计。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>引入能量预算分配模块，按预算与已用能量差计算剩余量。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td>能量预算余量为负时阻止未运行客户的对应后台进程。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td>能量预算余量为负时让已运行的后台进程推迟到更晚。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td>预算剩余不为负时允许对应后台进程开始或继续运行。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-14">14</a></td><td>分配给后台进程的能量额度为预先确定的固定值。</td></tr><tr id="claim-19"><th scope="row">19</th><td>独立项</td><td>接收同窗两份复杂度不同的估计和后一时间窗的快速估计，合成三份输入后管理后台进程。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>明确累计估计涵盖从初始时刻到当前时刻。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>非暂态介质以两个复杂度不同的模型估计后台进程能耗，将合成估计送给后台活动准入控制器。操作系统服务接收客户端的后台活动请求，依据累计能耗估计作出准入决定。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第二组资源使用输入或模型包括第一组中的相应输入或模型。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>合成估计覆盖初始时刻至当前时刻，限定两个时段与首尾的关系。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>额外求初始至当前估计及第一时段估计，以两者计算第二估计。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>具体用第三估计减第四估计求得第二估计。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>用电子设备组件或子系统的本机遥测确定第二估计。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>将第二估计与电池电量检测器提供的电池状态数据比较。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>两组输入或模型另分别预测其对应时段的后台进程能耗。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>将两路预测合成为总能耗预测，并向后台活动准入控制器报告。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>OS 具有快慢两个能耗估计引擎。后台活动准入控制器基于两份估计允许或阻止客户端继续处理后台进程。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>以能耗合并算法计算并发送两路估计的结果至后台活动准入控制器。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>另取得初始至当前和首段的估计，用其决定第二估计。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>固定为用第三估计减第四估计来得到第二估计。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-10">10</a></td><td>引入能量预算分配模块，按预算与已用能量差计算剩余量。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-14">14</a></td><td>能量预算余量为负时阻止未运行客户的对应后台进程。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-14">14</a></td><td>能量预算余量为负时让已运行的后台进程推迟到更晚。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-14">14</a></td><td>预算剩余不为负时允许对应后台进程开始或继续运行。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-14">14</a></td><td>分配给后台进程的能量额度为预先确定的固定值。</td></tr><tr id="claim-19"><th scope="row">19</th><td>独立项</td><td>接收同窗两份复杂度不同的估计和后一时间窗的快速估计，合成三份输入后管理后台进程。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>明确累计估计涵盖从初始时刻到当前时刻。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 1、10</dt><dd>明确快慢引擎的输入或模型数量差，以及后端调度的使用方式。</dd></div><div><dt>图 3–6</dt><dd>说明快速、慢速两路能量估计及活动调度器的合流。</dd></div><div><dt>权 19 与图 8A–8C</dt><dd>在共用第一窗口和较新窗口之间对齐估计时间。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12164961B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20240053410A1.html#engineering">按外电剩余窗口和电网状态安排后台任务</a>
-<p>US20240053410A1 的说明书按预计外电窗口和电网条件，决定何时执行或抑制后台处理。US12164961B2 权 10 用输入或模型数量不同的两份能耗估计，由动态活动调度器判断是否允许后台进程运行。两件分别使用供电时段和后台能耗作为准入输入。</p></li><li><a href="US11809256B2.html#engineering">按服务质量等级收紧热功耗预算</a>
-<p>US12164961B2 的动态活动调度器据两份资源输入或模型数量不同的能耗估计，决定是否允许后台进程运行。US11809256B2 根据当前热状态独立改变各 QoS 层的功率预算，并调整该层任务取得处理器的频度。比较时分别观察后台准入结果与各层获得 CPU 服务的间隔。</p></li></ul>
-    <p><a href="../index.html?patent=US12164961B2#knowledge">在全量关系图上定位 US12164961B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-09-22</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-09-22</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-12-10</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/481,891</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Conor J. O&#x27;Reilly、Arjun S. Vasudevan、Gina B Lu、Kartik R. VENKATRAMAN、Abhinav Pathak</dd></div><div><dt>分类号</dt><dd>G06F9/4893、G06F9/5005、G06F1/3228、G06F1/329、G06N20/00、H02J7/0048、H02J7/82</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12164961B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12164961B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权全文，覆盖 59 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8A、8B、8C。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12164961B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

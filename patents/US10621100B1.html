@@ -1,123 +1,152 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US10621100B1 多级缓存共用访问图预取器 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>由一份访问图组织多级缓存预取 · US10621100B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US10621100B1</code> · <a href="https://patents.google.com/patent/US10621100B1/en">专利全文</a></p>
+<h1>由一份访问图组织多级缓存预取</h1><p class="reading-question">同一条需求访问如何为近处的数据缓存和外层缓存产生不同的预取，控制器又如何扩大访问图的覆盖范围？</p>
+<p class="reading-answer">预取器把区域内的访存记录对齐到当前访问位置，再用预置模式选择各缓存层的候选。在同一地址区域中，AQF 和 BQF 分别控制两路预取；持续匹配较长访问模式时，控制器可用较粗的粒度重新建立该区域的访问图。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2020-04-14</dd></div><div><dt>申请号</dt><dd>US16/210,129</dd></div><div><dt>最早优先权</dt><dd>2016-04-07</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Stephan G. Meier、Tyler J. Huberty、Gerard R. Williams, III、Pradeep Kanapathipillai</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#topology">两个目的缓存，共用一份访问历史</a></li><li><a href="#match">先对齐访问位置，再分配预取目的缓存</a></li><li><a href="#granularity">越过长度阈值后，旧位图何时清除</a></li><li><a href="#quality">AQF 和 BQF 的事件方向</a></li><li><a href="#address">访问图查找和移位分别消耗哪些地址位</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="topology"><h2>两个目的缓存，共用一份访问历史</h2><p>原图 1 的核内数据缓存与核外缓存各有请求路径。预取器与数据缓存同时接收选出的访存操作。近层候选入近层预取队列，再与需求访存一起进入数据缓存的仲裁。直接投向外层的候选进入外部接口单元的预取队列，绕过核内数据缓存，再进入外层缓存的请求队列。</p><p>每份访问图（access map）记录一个虚拟区域内各缓存块的访问符号。一种实现每个位置用三位编码。外层缓存可以是 L2，也可以在核内另设 L2 时成为 L3。原图 2 的输入筛选缓冲可把同一访问图的请求合并，并用稍后抵达的物理地址生成外层请求。图 1 的两条输出因此既分填充层级，也分请求仲裁路径。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　近层预取经数据缓存，外层预取经外部接口</h3>
+    <p id="fig-1-basis">在匹配控制器处分流。P 候选经过核内数据缓存仲裁，L 候选可直接由外部接口发送。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="近层预取经数据缓存，外层预取经外部接口" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 587" role="img" aria-labelledby="us10621100b1-fig-1-svg-title us10621100b1-fig-1-svg-desc">
+<title id="us10621100b1-fig-1-svg-title">近层预取经数据缓存，外层预取经外部接口</title>
+<desc id="us10621100b1-fig-1-svg-desc">在匹配控制器处分流。P 候选经过核内数据缓存仲裁，L 候选可直接由外部接口发送。</desc>
+<defs><marker id="us10621100b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10621100b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10621100b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10621100b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us10621100b1-fig-1-inputs" d="M 238 114 L 364 114" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-1-arrow-data)"/>
+<path id="us10621100b1-fig-1-p" d="M 398 150 L 398 203 Q 398 211 390 211 L 149 211 Q 141 211 141 219 L 141 276" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-1-arrow-main)"/>
+<path id="us10621100b1-fig-1-l" d="M 558 150 L 558 203 Q 558 211 566 211 L 800 211 Q 808 211 808 219 L 808 276" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-1-arrow-main)"/>
+<path id="us10621100b1-fig-1-ds" d="M 141 349 L 141 460" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-1-arrow-data)"/>
+<path id="us10621100b1-fig-1-ext" d="M 808 349 L 808 460" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-1-arrow-data)"/>
+<path id="us10621100b1-fig-1-result" d="M 264 497 L 470 497 Q 478 497 478 489 L 478 150" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10621100b1-fig-1-arrow-return)"/>
+<rect x="251.5" y="82" width="99" height="18" fill="#f5f5f5"/><text x="301" y="96" class="arrow-label" text-anchor="middle">送当前访问</text>
+<rect x="219" y="182" width="66" height="18" fill="#f5f5f5"/><text x="252" y="196" class="arrow-label" text-anchor="middle">P 候选</text>
+<rect x="655" y="182" width="66" height="18" fill="#f5f5f5"/><text x="688" y="196" class="arrow-label" text-anchor="middle">L 候选</text>
+<rect x="154.5" y="389" width="85" height="18" fill="#f5f5f5"/><text x="197" y="403" class="arrow-label" text-anchor="middle">参与仲裁</text>
+<rect x="826.5" y="389" width="109" height="18" fill="#f5f5f5"/><text x="881" y="403" class="arrow-label" text-anchor="middle">绕过数据缓存</text>
+<rect x="306.5" y="466" width="125" height="18" fill="#f5f5f5"/><text x="369" y="480" class="arrow-label" text-anchor="middle">近层命中／缺失</text>
+<g id="us10621100b1-fig-1-in"><rect x="32" y="78" width="206" height="72" rx="6" fill="#f5f5f5"/><rect x="32" y="78" width="206" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="135" y="104" class="node-name" text-anchor="middle">访存请求与访问结果</text><text x="135" y="126" class="node-detail" text-anchor="middle">虚拟区域、偏移、命中</text></g>
+<g id="us10621100b1-fig-1-ctl"><rect x="364" y="78" width="230" height="72" rx="6" fill="#f5f5f5"/><rect x="364" y="78" width="230" height="72" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479" y="104" class="node-name" text-anchor="middle">访问图预取器</text><text x="479" y="126" class="node-detail" text-anchor="middle">对齐模式，按层筛选候选</text></g>
+<g id="us10621100b1-fig-1-near"><rect x="40" y="276" width="201" height="73" rx="6" fill="#f5f5f5"/><rect x="40" y="276" width="201" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140.5" y="302" class="node-name" text-anchor="middle">近层预取队列</text><text x="140.5" y="324" class="node-detail" text-anchor="middle">P：数据缓存目标</text></g>
+<g id="us10621100b1-fig-1-far"><rect x="698" y="276" width="221" height="73" rx="6" fill="#f5f5f5"/><rect x="698" y="276" width="221" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="808.5" y="302" class="node-name" text-anchor="middle">外部接口预取队列</text><text x="808.5" y="324" class="node-detail" text-anchor="middle">L：外层缓存目标</text></g>
+<g id="us10621100b1-fig-1-cache"><rect x="40" y="460" width="224" height="76" rx="6" fill="#f5f5f5"/><rect x="40" y="460" width="224" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="152" y="486" class="node-name" text-anchor="middle">核内数据缓存</text><text x="152" y="508" class="node-detail" text-anchor="middle">近层队列与需求访问仲裁</text></g>
+<g id="us10621100b1-fig-1-outer"><rect x="698" y="460" width="221" height="76" rx="6" fill="#f5f5f5"/><rect x="698" y="460" width="221" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="808.5" y="486" class="node-name" text-anchor="middle">外层缓存与请求队列</text><text x="808.5" y="508" class="node-detail" text-anchor="middle">接收外层预取及其他请求</text></g>
+<text x="38" y="565" class="legend" text-anchor="start">普通数据缓存缺失经外部接口处理，这一路在原图 1 中独立于 L 候选。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10621100b1-fig-1-ctl">访问图预取器</a> 同一访问图的状态服务于两个缓存层。控制器按模式和两个质量因子挑选发哪一路。</li><li><a href="#us10621100b1-fig-1-near">近层预取队列</a> 近层队列会与访问load、store 等来源共享核内数据缓存的访问多路器。</li><li><a href="#us10621100b1-fig-1-far">外部接口预取队列</a> 外部接口的预取队列能接收 L 候选而无需先查核内数据缓存。</li><li><a href="#us10621100b1-fig-1-outer">外层缓存与请求队列</a> 外层请求队列同样可接收普通缺失等请求。外层缓存是否为 L2 或 L3 由实施例决定。</li></ul>
+  <p class="figure-evidence">原图 1、2、6；说明书归档段 0026、0032、0034、0035、0037、0038、0039、0040、0043、0044、0045、0046、0074、0075；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00012" aria-label="原文权利要求 12">12</a> <a href="../diagrams/US10621100B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>访存执行单元</dt><dd>18A–18N</dd></div><div><dt>访问图预取器</dt><dd>20</dd></div><div><dt>近层预取队列</dt><dd>26</dd></div><div><dt>数据缓存访问多路器</dt><dd>28</dd></div><div><dt>核内数据缓存</dt><dd>30</dd></div><div><dt>外部接口单元</dt><dd>32</dd></div><div><dt>外层缓存</dt><dd>34</dd></div><div><dt>外层请求队列</dt><dd>36</dd></div><div><dt>外部接口预取队列</dt><dd>38</dd></div></dl></details>
+</figure></section><section id="match"><h2>先对齐访问位置，再分配预取目的缓存</h2><p>访问的虚拟地址分出区域标签和块偏移。标签查找命中时，移位器把当前访问偏移对齐到模式的访问点 AP，前向、后向或不规则模式才在同一坐标下比较。说明书的原图 3 对密集顺序访问列出混合模式，AP 之后第 1–3 个缓存块发近层候选 P，第 4–5 个发外层候选 L。图 2 标出这两个输出。近层命中反馈沿图 1 的虚线返回。</p><p>A 记需求访问，P/L 区分预取目标，S 记已经被需求访问使用的预取，点号表示当前位图没有访问记录。控制器可以屏蔽位图内已生成的同位置预取；可选的在途符号也能防止重发。若访问图刚缺失，先分配表项并在当前访问位置记 A，等待后续访问积累证据。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　虚拟地址的偏移怎样形成不同层级的候选</h3>
+    <p id="fig-2-basis">当前访问点对齐后，匹配模式给出相对位置和目标缓存层。已生成的预取可由访问图过滤。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="虚拟地址的偏移怎样形成不同层级的候选" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 512" role="img" aria-labelledby="us10621100b1-fig-2-svg-title us10621100b1-fig-2-svg-desc">
+<title id="us10621100b1-fig-2-svg-title">虚拟地址的偏移怎样形成不同层级的候选</title>
+<desc id="us10621100b1-fig-2-svg-desc">当前访问点对齐后，匹配模式给出相对位置和目标缓存层。已生成的预取可由访问图过滤。</desc>
+<defs><marker id="us10621100b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10621100b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10621100b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10621100b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us10621100b1-fig-2-read"><path d="M 116 120 L 298 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-data)"/><rect x="142" y="96" width="130" height="18" fill="#f5f5f5"/><text x="207" y="110" class="arrow-label" text-anchor="middle">按虚拟区域标签查位图</text></g>
+<g id="us10621100b1-fig-2-align"><path d="M 298 168 L 480 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-data)"/><rect x="304.5" y="144" width="169" height="18" fill="#f5f5f5"/><text x="389" y="158" class="arrow-label" text-anchor="middle">按块偏移对齐 AP 后比较</text></g>
+<g id="us10621100b1-fig-2-symbols"><path d="M 480 216 L 662 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-main)"/><rect x="473.5" y="192" width="195" height="18" fill="#f5f5f5"/><text x="571" y="206" class="arrow-label" text-anchor="middle">模式：前三个 P，随后两个 L</text></g>
+<g id="us10621100b1-fig-2-dedup"><path d="M 298 264 L 662 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-data)"/><rect x="415" y="240" width="130" height="18" fill="#f5f5f5"/><text x="480" y="254" class="arrow-label" text-anchor="middle">排除位图已记录的候选</text></g>
+<g id="us10621100b1-fig-2-enqueue-near"><path d="M 662 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-main)"/><rect x="668.5" y="288" width="169" height="18" fill="#f5f5f5"/><text x="753" y="302" class="arrow-label" text-anchor="middle">P：AP +1、+2、+3</text></g>
+<g id="us10621100b1-fig-2-enqueue-outer"><path d="M 662 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-2-arrow-main)"/><rect x="688" y="336" width="130" height="18" fill="#f5f5f5"/><text x="753" y="350" class="arrow-label" text-anchor="middle">L：AP +4、+5</text></g>
+<g id="us10621100b1-fig-2-update"><path d="M 662 408 L 298 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10621100b1-fig-2-arrow-return)"/><rect x="408.5" y="384" width="143" height="18" fill="#f5f5f5"/><text x="480" y="398" class="arrow-label" text-anchor="middle">记录本次访问和获准预取</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">访存输入筛选</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">访问图与移位器</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">模式存储器</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">分层预取控制</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">两路预取队列</text>
+<text x="28" y="484" class="legend" text-anchor="start">以原图 3 的混合模式为例，AP 偏移以当前访问图的缓存块单位计。各箭头的时间间隔未给定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10621100b1-fig-2-read">按虚拟区域标签查位图</a> 表项以虚拟区域标签查找。这里进入图 5 的命中支路，另一支路分配新表项。</li><li><a href="#us10621100b1-fig-2-align">按块偏移对齐 AP 后比较</a> 将当前块的偏移对齐到模式的 AP。模式比较可查 AP 前后。</li><li><a href="#us10621100b1-fig-2-symbols">模式：前三个 P，随后两个 L</a> 原图 3 的混合模式给出三个近层符号与两个外层符号。图示保持原有相对位置。</li><li><a href="#us10621100b1-fig-2-enqueue-outer">L：AP +4、+5</a> 外层的相对位置换算成目标地址后进入外部接口队列。物理地址可迟于虚拟地址到达。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5；说明书归档段 0043、0044、0045、0046、0047、0048、0050、0052、0053、0054、0055、0056、0058、0067、0068、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US10621100B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>虚拟区域标签阵列／访问图阵列</dt><dd>40A/40B</dd></div><div><dt>访问点对齐移位器</dt><dd>42</dd></div><div><dt>模式存储器</dt><dd>44</dd></div><div><dt>分层预取控制</dt><dd>46</dd></div><div><dt>输入筛选缓冲（原图 2）／通配符示例（原图 3）</dt><dd>48</dd></div><div><dt>查表、分配或对齐匹配、更新位图</dt><dd>50–64</dd></div></dl></details>
+</figure></section><section id="granularity"><h2>越过长度阈值后，旧位图何时清除</h2><p>原图 9 采用两次读之间的“待切换”状态。某次读取看到模式满足条件时，只为同一表项置待切换。后续读取发现已有待切换状态，清除细粒度的访问符号、按粗粒度重新使用该表项，并使覆盖重叠区域的其他表项失效。独立权利要求 1 选定长度超过阈值这一条件，从属权利要求 6 另加单位步长。</p><p>原文以 64 B 和 128 B 为例。每个符号改记两个相邻的 64 B 块，符号数不变时同一位图覆盖的字节区间翻倍。对于稳定顺序访问，同偏移的候选可以领先更远；切换时旧符号被清除，短暂阶段要重新学习，较粗粒度也可能把实际只需要一半的数据一起预取。原文未给定应用的准确率或平均延迟。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　越过长度阈值后，先置待切换再重置位图</h3>
+    <p id="fig-3-basis">触发条件与执行切换发生在不同的位图读取。清除旧符号后，以新的块单位重新训练。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="越过长度阈值后，先置待切换再重置位图" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 602" role="img" aria-labelledby="us10621100b1-fig-3-svg-title us10621100b1-fig-3-svg-desc">
+<title id="us10621100b1-fig-3-svg-title">越过长度阈值后，先置待切换再重置位图</title>
+<desc id="us10621100b1-fig-3-svg-desc">触发条件与执行切换发生在不同的位图读取。清除旧符号后，以新的块单位重新训练。</desc>
+<defs><marker id="us10621100b1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10621100b1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10621100b1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10621100b1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us10621100b1-fig-3-yes" d="M 635 126 L 722 126" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-3-arrow-main)"/>
+<path id="us10621100b1-fig-3-no" d="M 472 182 L 472 238" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-3-arrow-data)"/>
+<path id="us10621100b1-fig-3-steady" d="M 635 291 L 722 291" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-3-arrow-data)"/>
+<path id="us10621100b1-fig-3-apply" d="M 472 344 L 472 407" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-3-arrow-main)"/>
+<path id="us10621100b1-fig-3-covers" d="M 472 476 L 472 507" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-3-arrow-main)"/>
+<rect x="664" y="95" width="32" height="18" fill="#f5f5f5"/><text x="680" y="109" class="arrow-label" text-anchor="middle">是</text>
+<rect x="485" y="200" width="32" height="18" fill="#f5f5f5"/><text x="501" y="214" class="arrow-label" text-anchor="middle">否</text>
+<rect x="664" y="261" width="32" height="18" fill="#f5f5f5"/><text x="680" y="275" class="arrow-label" text-anchor="middle">否</text>
+<rect x="485.5" y="362" width="31" height="18" fill="#f5f5f5"/><text x="501" y="376" class="arrow-label" text-anchor="middle">是</text>
+<rect x="509" y="481" width="108" height="18" fill="#f5f5f5"/><text x="563" y="495" class="arrow-label" text-anchor="middle">重设覆盖范围</text>
+<g id="us10621100b1-fig-3-potential"><polygon points="472.5,70 635,126 472.5,182 310,126" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="472.5" y="123" class="node-name" text-anchor="middle">本次读触发切换条件？</text><text x="472.5" y="144" class="node-detail" text-anchor="middle">长度越阈值且未待切换</text></g>
+<g id="us10621100b1-fig-3-pending"><rect x="722" y="91" width="204" height="70" rx="6" fill="#f5f5f5"/><rect x="722" y="91" width="204" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="824" y="117" class="node-name" text-anchor="middle">只置待切换</text><text x="824" y="139" class="node-detail" text-anchor="middle">保持现有细粒度位图</text></g>
+<g id="us10621100b1-fig-3-already"><polygon points="472.5,238 635,291 472.5,344 310,291" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="472.5" y="288" class="node-name" text-anchor="middle">先前已置待切换？</text><text x="472.5" y="309" class="node-detail" text-anchor="middle">读取本表项的状态</text></g>
+<g id="us10621100b1-fig-3-nochange"><rect x="722" y="256" width="204" height="70" rx="6" fill="#f5f5f5"/><rect x="722" y="256" width="204" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="824" y="282" class="node-name" text-anchor="middle">保留现有粒度</text><text x="824" y="304" class="node-detail" text-anchor="middle">本次读取结束</text></g>
+<g id="us10621100b1-fig-3-clear"><rect x="344" y="407" width="257" height="69" rx="6" fill="#f5f5f5"/><rect x="344" y="407" width="257" height="69" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="472.5" y="433" class="node-name" text-anchor="middle">清除旧访问符号</text><text x="472.5" y="455" class="node-detail" text-anchor="middle">重用表项，设为粗粒度</text></g>
+<g id="us10621100b1-fig-3-invalidate"><rect x="344" y="507" width="257" height="69" rx="6" fill="#f5f5f5"/><rect x="344" y="507" width="257" height="69" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="472.5" y="533" class="node-name" text-anchor="middle">使重叠位图失效</text><text x="472.5" y="555" class="node-detail" text-anchor="middle">适用于覆盖扩大的区域</text></g>
+<text x="38" y="552" class="legend" text-anchor="start">说明书实例：64 B → 128 B</text>
+<text x="38" y="576" class="legend" text-anchor="start">阈值可配置；单位步长是另加条件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10621100b1-fig-3-potential">本次读触发切换条件？</a> 长度超过阈值是独立权项的条件。原图的实施例还可要求单位步长，且原先没有处于待切换状态。</li><li><a href="#us10621100b1-fig-3-pending">只置待切换</a> 只记录待切换状态。当前位图的细粒度符号还没有被清除。</li><li><a href="#us10621100b1-fig-3-already">先前已置待切换？</a> 另一次读取时若不再满足触发分支，但该位图已待切换，则走清除分支。</li><li><a href="#us10621100b1-fig-3-invalidate">使重叠位图失效</a> 指定更粗粒度后，同样多的符号覆盖更大的区域。重叠表项失效，重用原存储位置。</li></ul>
+  <p class="figure-evidence">原图 6、9；说明书归档段 0049、0074、0087、0088、0089、0090；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US10621100B1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>检测粒度切换条件</dt><dd>90</dd></div><div><dt>置待切换</dt><dd>92</dd></div><div><dt>检查是否待切换</dt><dd>94</dd></div><div><dt>清除细粒度访问符号</dt><dd>96</dd></div><div><dt>重用表项并设置粗粒度</dt><dd>98</dd></div><div><dt>使重叠访问图失效</dt><dd>100</dd></div></dl></details>
+</figure></section><section id="quality"><h2>AQF 和 BQF 的事件方向</h2><p>近层以准确性质量因子（AQF）限制预取数量，外层以带宽质量因子（BQF）限制。它们是每份访问图的控制额度。说明书的原图 7、8 允许外层预取同时消耗两种额度。表 4 还区分已在缓存的重复预取、需求访问合并到在途预取、实际使用已回填预取三个结果。</p><p>原图 7 以位图长度是否低于质量因子阈值决定要不要查额度。它的分支与图 3 的粒度切换条件相互独立。原文给出按预取事件加减额度的示例值，也明确允许改变额度上限和初值。在布置验证时可分别观察两层发出的预取数、两层需求命中、近层缺失后的外层响应时间，以及外层请求带宽。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　近层与外层分别在什么情况下恢复预取额度</h3>
+    <p id="fig-4-basis">表中加减对应原图 8 的实施例。外层预取可同时消耗两类额度。各事件的具体步长由实现决定。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">原图 8 的事件</th><th scope="col">AQF</th><th scope="col">BQF</th></tr></thead><tbody><tr id="fig-4-allocate"><th scope="row">初次分配访问图</th><td>增加／初始化</td><td>不变</td></tr><tr id="fig-4-near-issue"><th scope="row">生成核内数据缓存的 load 或 store 预取</th><td>减少</td><td>不变</td></tr><tr id="fig-4-near-demand"><th scope="row">需求访问使用了已回填的核内预取</th><td>增加</td><td>不变</td></tr><tr id="fig-4-near-pending"><th scope="row">需求访问并入在途的核内预取</th><td>增加</td><td>不变</td></tr><tr id="fig-4-hit"><th scope="row">预取请求本身命中核内数据缓存</th><td>减少</td><td>不变</td></tr><tr id="fig-4-outer-miss"><th scope="row">外层的初次或后续预取缺失</th><td>不变</td><td>增加</td></tr><tr id="fig-4-outer-issue"><th scope="row">生成指向外层的 load 或 store 预取</th><td>减少</td><td>减少</td></tr><tr id="fig-4-outer-used"><th scope="row">需求访问或核内预取使用已经回填的外层预取</th><td>增加</td><td>不变</td></tr><tr id="fig-4-outer-pending"><th scope="row">需求访问并入在途的外层预取</th><td>增加</td><td>不变</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-near-demand">需求访问使用了已回填的核内预取</a> 需求访问命中核内数据缓存中已预取的块才是该行反馈的依据。原文举例 AQF 恢复约两倍近层 load 预取额度。</li><li><a href="#fig-4-outer-miss">外层的初次或后续预取缺失</a> 外层初次预取缺失可初始化 BQF，后续缺失可增加 BQF。该反馈与需求命中是两个不同观察位置。</li><li><a href="#fig-4-outer-issue">生成指向外层的 load 或 store 预取</a> 以原图 8 表为例，外层预取占用 AQF 与 BQF。权利要求 10 要求按两个值控制两层预取数量，双扣条件是实施例。</li></ul>
+  <p class="figure-evidence">原图 6、7、8；说明书归档段 0074、0075、0076、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>按位图长度选择是否查额度</dt><dd>72</dd></div><div><dt>检查候选</dt><dd>76</dd></div><div><dt>检查额度</dt><dd>78</dd></div><div><dt>消耗额度</dt><dd>82</dd></div><div><dt>检测预取被使用并恢复额度</dt><dd>84–86</dd></div></dl></details>
+</figure></section><section id="address"><h2>访问图查找和移位分别消耗哪些地址位</h2><p>原图 2 将虚拟地址拆开使用。高段 VA[M:P+1] 用作区域标签，进入标签阵列；低一段 VA[P:N] 标识该区域内的缓存块，进入对齐移位器。更低的块内偏移未参与缓存块级访问图匹配。图 5 显示两路如何会合。</p><p>原图 2 的实施例先按标签选出访问图与状态，然后把命中的访问图移位，令当前块落在 AP。模式匹配器比较对齐后的符号，可能再从多个命中模式中选最长项。原文允许按需把后到的物理地址登记给外层请求。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　一条虚拟地址分成标签查找与块偏移对齐两路</h3>
+    <p id="fig-5-basis">区域标签选择访问图，块偏移选择图内的当前访问位置。两路在移位器会合，使模式按相对位置比较。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一条虚拟地址分成标签查找与块偏移对齐两路" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 568" role="img" aria-labelledby="us10621100b1-fig-5-svg-title us10621100b1-fig-5-svg-desc">
+<title id="us10621100b1-fig-5-svg-title">一条虚拟地址分成标签查找与块偏移对齐两路</title>
+<desc id="us10621100b1-fig-5-svg-desc">区域标签选择访问图，块偏移选择图内的当前访问位置。两路在移位器会合，使模式按相对位置比较。</desc>
+<defs><marker id="us10621100b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10621100b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10621100b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10621100b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us10621100b1-fig-5-high" d="M 264 120 L 374 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-data)"/>
+<path id="us10621100b1-fig-5-select" d="M 599 120 L 711 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-data)"/>
+<path id="us10621100b1-fig-5-low" d="M 147 156 L 147 338" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-data)"/>
+<path id="us10621100b1-fig-5-extract" d="M 264 376 L 374 376" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-main)"/>
+<path id="us10621100b1-fig-5-symbols" d="M 817 156 L 817 240 Q 817 248 809 248 L 497 248 Q 489 248 489 256 L 489 338" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-main)"/>
+<path id="us10621100b1-fig-5-aligned" d="M 599 376 L 711 376" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10621100b1-fig-5-arrow-main)"/>
+<rect x="274.5" y="90" width="89" height="18" fill="#f5f5f5"/><text x="319" y="104" class="arrow-label" text-anchor="middle">区域标签</text>
+<rect x="597.5" y="89" width="115" height="18" fill="#f5f5f5"/><text x="655" y="103" class="arrow-label" text-anchor="middle">标签命中且有效</text>
+<rect x="154" y="224" width="72" height="18" fill="#f5f5f5"/><text x="190" y="238" class="arrow-label" text-anchor="middle">块偏移</text>
+<rect x="263.5" y="346" width="111" height="18" fill="#f5f5f5"/><text x="319" y="360" class="arrow-label" text-anchor="middle">选择当前位置</text>
+<rect x="602.5" y="216" width="113" height="18" fill="#f5f5f5"/><text x="659" y="230" class="arrow-label" text-anchor="middle">访问图符号</text>
+<rect x="598.5" y="345" width="113" height="18" fill="#f5f5f5"/><text x="655" y="359" class="arrow-label" text-anchor="middle">已对齐的符号</text>
+<g id="us10621100b1-fig-5-va"><rect x="38" y="86" width="226" height="70" rx="6" fill="#f5f5f5"/><rect x="38" y="86" width="226" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="112" class="node-name" text-anchor="middle">虚拟地址 VA[M:N]</text><text x="151" y="134" class="node-detail" text-anchor="middle">来自访存输入筛选</text></g>
+<g id="us10621100b1-fig-5-tag"><rect x="374" y="86" width="225" height="70" rx="6" fill="#f5f5f5"/><rect x="374" y="86" width="225" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="486.5" y="112" class="node-name" text-anchor="middle">区域标签阵列</text><text x="486.5" y="134" class="node-detail" text-anchor="middle">查 VA[M:P+1] 的匹配项</text></g>
+<g id="us10621100b1-fig-5-map"><rect x="711" y="86" width="216" height="70" rx="6" fill="#f5f5f5"/><rect x="711" y="86" width="216" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819" y="112" class="node-name" text-anchor="middle">访问图阵列与状态</text><text x="819" y="134" class="node-detail" text-anchor="middle">读出所选区域的访问图</text></g>
+<g id="us10621100b1-fig-5-offset"><rect x="38" y="338" width="226" height="73" rx="6" fill="#f5f5f5"/><rect x="38" y="338" width="226" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="364" class="node-name" text-anchor="middle">区域内的块偏移</text><text x="151" y="386" class="node-detail" text-anchor="middle">VA[P:N]</text></g>
+<g id="us10621100b1-fig-5-shift"><rect x="374" y="338" width="225" height="73" rx="6" fill="#f5f5f5"/><rect x="374" y="338" width="225" height="73" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="486.5" y="364" class="node-name" text-anchor="middle">访问点对齐移位器</text><text x="486.5" y="386" class="node-detail" text-anchor="middle">把当前块对齐到 AP</text></g>
+<g id="us10621100b1-fig-5-compare"><rect x="711" y="338" width="216" height="73" rx="6" fill="#f5f5f5"/><rect x="711" y="338" width="216" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819" y="364" class="node-name" text-anchor="middle">模式存储器及比较</text><text x="819" y="386" class="node-detail" text-anchor="middle">比较 AP 前后的访问符号</text></g>
+<text x="37" y="515" class="legend" text-anchor="start">缓存块内偏移 VA[N−1:0] 不进入该块粒度匹配。</text>
+<text x="37" y="540" class="legend" text-anchor="start">权利要求约束按地址区域记录和匹配；上图是说明书中的具体组织。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10621100b1-fig-5-tag">区域标签阵列</a> 原图 2 的高段 VA[M:P+1] 与区域标签比较。CAM 是全相联实施例中的一种实现。</li><li><a href="#us10621100b1-fig-5-map">访问图阵列与状态</a> 标签命中且有效时读出对应访问图和状态。区域内符号可用三位编码。</li><li><a href="#us10621100b1-fig-5-offset">区域内的块偏移</a> VA[P:N] 是当前访问的缓存块偏移，用于对齐原图 3 的 AP。</li><li><a href="#us10621100b1-fig-5-compare">模式存储器及比较</a> 模式存储器与匹配控制比较 AP 前后多个符号，输出命中模式给控制器。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0044、0045、0046、0047、0048、0050、0052、0053、0054、0055、0056、0057、0070、0071、0072、0074；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> <a href="../diagrams/US10621100B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>区域标签阵列</dt><dd>40A</dd></div><div><dt>访问图阵列与状态</dt><dd>40B</dd></div><div><dt>访问点对齐移位器</dt><dd>42</dd></div><div><dt>模式存储器及比较</dt><dd>44</dd></div><div><dt>访存输入筛选（原图 2）</dt><dd>48</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US10621100B1</code><span>美国授权专利</span><time datetime="2020-04-14">2020-04-14</time></p>
-  <h1>多级缓存共用访问图预取器</h1>
-  <p class="english-title" lang="en">Unified prefetch circuit for multi-level caches</p>
-  <p class="document-question">同一份访问历史怎样让预取器向不同缓存层发出不同请求？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">统一预取器用区域访问图匹配既有模式，模式长度越过阈值后，改用不同粒度表示该区域。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>单元粒度决定每一位访问类别覆盖多少块。阈值按相应模式定义，控制各层发出量是另一条件。</dd></div><div><dt>验证方法</dt><dd>固定访问图容量与发出额度，在相同跨块访问轨迹上比较固定小粒度和越阈值后变更粒度。记录覆盖的地址范围、生成的唯一预取地址和各层及时命中数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US10621100B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-3">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">近层和远层各有预取器时，两套电路可能各自学习同一批访问。统一电路可以复用区域历史，再按不同层的条件决定请求发往哪里。</p>
-    <p>预取器按地址区域维护访问图，并将它与候选模式比较，给本地数据缓存和外层缓存生成预取。独权 1 以模式长度触发粒度切换。独权 10 另要求为同一张图记录两种准确度信息，分别控制两个目的层的请求数量。</p>
-    <ol class="walkthrough"><li><h3>在区域图上标记访问</h3><p>预取器先确定请求所属的地址区域，再在图中为对应块记录一次访问。说明书的 access map 按偏移记下不同的访问类型。</p></li><li><h3>按历史匹配候选模式</h3><p>预取器拿历史片段与模式表比较，再根据匹配结果决定预取哪些后续块、送近层还是送外层。</p></li><li><h3>先挂起，再切换访问图粒度</h3><p>原图 9 先设置待切换状态。后续访问发现该状态时，控制器清空并重新分配原表项，合并覆盖范围后使重叠图失效。权利要求 3 所述新粒度为原缓存块大小的整数倍。</p></li><li><h3>发出候选前检查两种质量因子</h3><p>独权 10 为同一区域图分别记录两个目的层的预取准确度。原图 7–8 给出令牌式实现。近层候选查询 AQF，外层候选可同时消耗 AQF 和 BQF。较长的访问图也可以不受质量因子限制。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 允许把访问图粒度改为下一级缓存的块大小。权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00005" aria-label="原文权利要求 5">5</a> 明确一种做法是清除旧图并按新粒度重新分配，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00006" aria-label="原文权利要求 6">6</a> 还可要求该图表现出单位步长。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>访问图</dt><dd>按一个地址区域内各块的偏移记录需求访问和预取类别。</dd></div><div><dt>预取信用</dt><dd>生成预取会消耗信用。不同实施例按需求命中、等待预取或下层缺失等事件更新信用。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-3">模式超阈值后，访问图分两步切换粒度</a></li><li><a href="#fig-1">同一张访问图向两个缓存层提供预取</a></li><li><a href="#fig-2">匹配访问模式后，按目的层发预取</a></li><li><a href="#fig-4">不同候选检查哪些信用</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-3-title">模式超阈值后，访问图分两步切换粒度</h3></div>
-    <a class="paper-open" href="../mechanisms/US10621100B1/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="模式超阈值后，访问图分两步切换粒度">
-    <img class="paper-image native-image" src="../mechanisms/US10621100B1/fig-3/diagram.svg" width="548" height="440"
-         style="--paper-width:548px" alt="模式超阈值后，访问图分两步切换粒度。原图 9 先记待切换，再在后续访问时清空并重新分配原表项。覆盖范围增大后，控制器会使重叠图失效。各列是逻辑阶段。">
-  </div>
-  <figcaption>
-    <span>原图 9 先记待切换，再在后续访问时清空并重新分配原表项。覆盖范围增大后，控制器会使重叠图失效。各列是逻辑阶段。</span>
-    <span class="figure-evidence">图 6、9，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00003" aria-label="原文权利要求 3">3</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c6/23/01/8d75a0c72e5a8a/US10621100.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">同一张访问图向两个缓存层提供预取</h3></div>
-    <a class="paper-open" href="../mechanisms/US10621100B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="同一张访问图向两个缓存层提供预取">
-    <img class="paper-image native-image" src="../mechanisms/US10621100B1/fig-1/diagram.svg" width="1054" height="420"
-         style="--paper-width:1054px" alt="同一张访问图向两个缓存层提供预取。一次需求访问更新所在区域的访问图。预取器按匹配结果生成两级候选。采用原图 7 的信用控制时，外层发出条件可同时依赖 AQF 与 BQF。">
-  </div>
-  <figcaption>
-    <span>一次需求访问更新所在区域的访问图。预取器按匹配结果生成两级候选。采用原图 7 的信用控制时，外层发出条件可同时依赖 AQF 与 BQF。</span>
-    <span class="figure-evidence">图 1–3、6–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c6/23/01/8d75a0c72e5a8a/US10621100.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">匹配访问模式后，按目的层发预取</h3></div>
-    <a class="paper-open" href="../mechanisms/US10621100B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="匹配访问模式后，按目的层发预取">
-    <img class="paper-image native-image" src="../mechanisms/US10621100B1/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="匹配访问模式后，按目的层发预取。一次匹配可标出多个要预取的块。原图 7 的流程可让已发出的候选去重并检查剩余信用，外层请求还可绕过数据缓存。">
-  </div>
-  <figcaption>
-    <span>一次匹配可标出多个要预取的块。原图 7 的流程可让已发出的候选去重并检查剩余信用，外层请求还可绕过数据缓存。</span>
-    <span class="figure-evidence">图 3–5、7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/c6/23/01/8d75a0c72e5a8a/US10621100.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">不同候选检查哪些信用</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">候选</th><th scope="col">所查信用</th><th scope="col">目的层</th></tr></thead><tbody><tr><th scope="row">近层候选 P</th><td>AQF</td><td>数据缓存</td></tr><tr><th scope="row">外层候选 L</th><td class="emphasis">BQF，一种实施例还查 AQF</td><td>外层缓存</td></tr><tr><th scope="row">长访问图候选</th><td class="emphasis">超过质量因子阈值时可免查</td><td>按模式指定的缓存</td></tr></tbody></table>
-  <figcaption>
-    <span>表中列出原图 7 的实现选项。已发出的候选可被去重，信用耗用取决于请求类型和目的层。</span>
-    <span class="figure-evidence">图 7–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>。工程示意。 · <a href="https://patentimages.storage.googleapis.com/c6/23/01/8d75a0c72e5a8a/US10621100.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>多层共用访问图</dt><dd>复用区域访问历史 <span class="subdued">原图 1–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></span></dd></div><div><dt>切换访问图粒度</dt><dd>扩大同表覆盖范围 <span class="subdued">原图 9，说明书 0087–0090</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>更新到粗粒度可用同样数量的符号表示更远范围，但清除和重新分配会丢掉累积细节。是否值得取决于新粒度下仍能否预测真正要读的相邻块。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>长访问模式也可能只触碰每个大区块的一半。例如经过一段连续热身后改成隔行读，粗粒度会把已访问及未访问的小块合在一起，增加仅被预取的字节。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定访问图起初每单元覆盖一条缓存行，模式长度阈值为四次需求访问，且允许改成每单元两行。输入是一段连续访问。</dd></div><div><dt>处理结果</dt><dd>连续模式达到算例条件后，控制器先标记待切换，后续处理时清空图并以每单元两行重建。若近层候选受到 AQF 限制，同一实现中的外层候选也可能受影响。</dd></div><div><dt>结果解读</dt><dd>两行和四次需求访问是算例参数。原图 7 的外层候选可以同时受两个质量因子约束；原图 9 的粒度切换是另一流程。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>权利要求 1。原图 3、6、9 分别给出模式匹配、区域历史及粒度变更。</p>
+  <p>原图 3、6、9 分别给出模式匹配、区域历史及粒度变更。该项要求相应访问图的模式长度超过阈值时改变粒度。两级预取按各自效果指标限制数量见独立权利要求 10。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=a%20data%20cache%2C%20and%20a%20prefetch%20circuit%20coupled%20to%20the%20data%20cache%3B%20a%20second%20cache%20coupled">F1</a></th><td>处理器连接数据缓存和第二缓存，且有与数据缓存相连的统一预取器。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20first%20three%20patterns%20in%20FIG.%203%20illustrate%20patterns%20that%20a%20stride-based%20prefetcher%20may%20be%20able">说明书 0062</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20description%20of%20FIG.%207%20below%20refers%20to%20a%20quality%20factor.%20The%20same%20set%20of%20operations">说明书 0079</a> · 原图 1 · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=each%20access%20map%20of%20the%20plurality%20of%20access%20maps%20recording%20accesses%20to%20a%20plurality%20of%20cache">F2</a></th><td>每张访问图记录一个地址区域内多个缓存块的访问。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=In%20some%20embodiments%2C%20the%20state%20field%20in%20each%20access%20map%20entry%20may%20store%20one%20or%20more">说明书 0074</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=generate%20one%20or%20more%20prefetch%20requests%20responsive%20to%20the%20plurality%20of%20access%20maps%20and%20a%20plurality">F3</a></th><td>预取器按访问图和访问模式生成一个或多个请求。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20first%20three%20patterns%20in%20FIG.%203%20illustrate%20patterns%20that%20a%20stride-based%20prefetcher%20may%20be%20able">说明书 0062</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=change%20a%20granularity%20of%20a%20first%20access%20map%20responsive%20to%20a%20pattern%20length%20corresponding%20to%20the">F4</a></th><td>相应模式长度超过阈值时切换访问图粒度。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=As%20mentioned%20above%2C%20some%20embodiments%20may%20implement%20multiple%20granularities%20of%20access%20maps.%20For%20example%2C%20the%20initial">说明书 0087</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=During%20an%20access%20map%20read%2C%20the%20prefetch%20circuit%2020%20may%20detect%20whether%20or%20not%20there%20is">说明书 0089</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=If%20the%20conditions%20for%20initiating%20a%20granularity%20switch%20are%20not%20met%20%28%20decision%20block%2090%20%2C">说明书 0090</a> · 原图 6 · 原图 9</td></tr></tbody>
@@ -130,50 +159,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=each%20access%20map%20of%20the%20plurality%20of%20access%20maps%20recording%20accesses%20to%20a%20plurality%20of%20cache">F5</a></th><td>每张图记录一个地址区域内多个块的访问情况。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=In%20some%20embodiments%2C%20the%20state%20field%20in%20each%20access%20map%20entry%20may%20store%20one%20or%20more">说明书 0074</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=generate%20one%20or%20more%20prefetch%20requests%20responsive%20to%20the%20plurality%20of%20access%20maps%20and%20a%20plurality">F6</a></th><td>控制器用区域图比较访问模式并生成预取候选。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20first%20three%20patterns%20in%20FIG.%203%20illustrate%20patterns%20that%20a%20stride-based%20prefetcher%20may%20be%20able">说明书 0062</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=track%20a%20first%20value%20indicating%20an%20accuracy%20of%20prefetching%20into%20the%20data%20cache%20for%20a%20first">F7</a></th><td>对同一访问图，预取器分别维护近层和第二缓存的预取准确度值。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=In%20an%20embodiment%2C%20the%20quality%20factor%20may%20be%20a%20token-based%20or%20credit-based%20mechanism.%20The%20tokens%2Fcredits%20may">说明书 0077</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20description%20of%20FIG.%207%20below%20refers%20to%20a%20quality%20factor.%20The%20same%20set%20of%20operations">说明书 0079</a> · 原图 7 · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=control%20a%20first%20number%20of%20prefetches%20generated%20from%20the%20first%20access%20map%20for%20the%20data%20cache">F8</a></th><td>用第一值控制发往数据缓存的预取量。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20description%20of%20FIG.%207%20below%20refers%20to%20a%20quality%20factor.%20The%20same%20set%20of%20operations">说明书 0079</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=If%20the%20access%20map%20length%20is%20greater%20than%20the%20quality%20factor%20threshold%20%28%20decision%20block%2072">说明书 0080</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=control%20a%20second%20number%20of%20prefetches%20generated%20from%20the%20first%20access%20map%20to%20the%20second%20cache">F9</a></th><td>用第二值控制发往第二缓存的预取量。</td><td><a href="https://patents.google.com/patent/US10621100B1/en#:~:text=The%20description%20of%20FIG.%207%20below%20refers%20to%20a%20quality%20factor.%20The%20same%20set%20of%20operations">说明书 0079</a> · <a href="https://patents.google.com/patent/US10621100B1/en#:~:text=If%20the%20access%20map%20length%20is%20greater%20than%20the%20quality%20factor%20threshold%20%28%20decision%20block%2072">说明书 0080</a> · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>权利要求 1。原图 3、6、9 分别给出模式匹配、区域历史及粒度变更。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>以首个访问模式里的需求访问次数决定模式长度。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>访问图单元初始为一个数据缓存块，切换后为其大小的整数倍。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>把图粒度从数据缓存块大小改为更大的第二缓存块大小。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>切换粒度时清空旧图，用新粒度重分配。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>进一步要求访问图表现为单位步长。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>预取请求包含投向数据缓存和第二缓存的各一项。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>发往第二缓存的请求绕过数据缓存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>默认模式只发往第二缓存，排除数据缓存预取。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>用同一访问图匹配模式，分别跟踪两级预取准确度并据此控制各级预取量。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>外层请求绕过数据缓存，先进入外部接口的队列。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将外层预取送到第二缓存本身的请求队列。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>以需求访问数定义模式长度，超过阈值时切换图的粒度。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>图单元初始为数据缓存块大小，切换后为其整数倍。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>粒度变化时清空旧图并按新粒度重分配。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>默认访问模式只标记要向第二缓存预取的块。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 3、6、9 分别给出模式匹配、区域历史及粒度变更。该项要求相应访问图的模式长度超过阈值时改变粒度。两级预取按各自效果指标限制数量见独立权利要求 10。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>以首个访问模式里的需求访问次数决定模式长度。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>访问图单元初始为一个数据缓存块，切换后为其大小的整数倍。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>把图粒度从数据缓存块大小改为更大的第二缓存块大小。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>切换粒度时清空旧图，用新粒度重分配。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>进一步要求访问图表现为单位步长。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>预取请求包含投向数据缓存和第二缓存的各一项。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>发往第二缓存的请求绕过数据缓存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>默认模式只发往第二缓存，排除数据缓存预取。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>用同一访问图匹配模式，分别跟踪两级预取准确度并据此控制各级预取量。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>外层请求绕过数据缓存，先进入外部接口的队列。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>将外层预取送到第二缓存本身的请求队列。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>以需求访问数定义模式长度，超过阈值时切换图的粒度。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>图单元初始为数据缓存块大小，切换后为其整数倍。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>粒度变化时清空旧图并按新粒度重分配。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>默认访问模式只标记要向第二缓存预取的块。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>一项权利要求用模式长度触发粒度变化。另一项按近层和外层各自的预取准确度控制发出量。</dd></div><div><dt>图 6、图 7–9</dt><dd>图中给出访问图字段、质量令牌更新和改变粒度的过程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10621100B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>模式长度与需求访问次数相关，访问图单元的粒度可以从一个块改为块大小的整数倍。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US10621100B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11176045B2.html#engineering">次预取器回报覆盖，主预取器限量</a>
-<p>多级预取从同一访问图得到候选，用近层和外层各自的准确度调节各自的发出量。另一件专利让主预取器的跟踪缺失调用另一套机制，次机制报出足够置信度后，主机制把同次需求关联的请求数降到较小的非零值。一边分配两个目的层的发出量，一边协调同一数据缓存前的两个预测器。</p></li><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
-<p>US10621100B1 用访问图匹配访问模式，为两个缓存层生成预取候选。US12306762B1 在数据缓存逐出未使用的预取行后按地址更新限制表，活动条目可否决以后同址的预取。对照候选覆盖与重复发出的无用请求时，可一并记录需求命中率和下层流量。</p></li><li><a href="US12572473B1.html#engineering">预取访问图被逐出后压缩保存</a>
-<p>US12572473B1 的专利参考文献列出 US10621100B1。</p></li></ul>
-    <p><a href="../index.html?patent=US10621100B1#knowledge">在全量关系图上定位 US10621100B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2016-04-07</dd></div>
-    <div><dt>美国申请日</dt><dd>2018-12-05</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2020-04-14</dd></div>
-    <div><dt>美国申请号</dt><dd>US16/210,129</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Stephan G. Meier、Tyler J. Huberty、Gerard R. Williams, III、Pradeep Kanapathipillai</dd></div><div><dt>分类号</dt><dd>G06F12/0862、G06F12/0811、G06F2212/283、G06F2212/6026、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US10621100B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US10621100B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 95 个说明书段落、16 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US10621100B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

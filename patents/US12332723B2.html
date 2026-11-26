@@ -1,119 +1,186 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12332723B2 多 die 内存暂停前的读写容忍确认 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US12332723B2</code><span>美国授权专利</span><time datetime="2025-06-17">2025-06-17</time></p>
-  <h1>多 die 内存暂停前的读写容忍确认</h1>
-  <p class="english-title" lang="en">Blocking latency events in multi-die architecture</p>
-  <p class="document-question">改变内存状态之前，如何确认另一颗 die 上的显示和写入代理不会缺数或溢出？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">主裸片对即将发生的内存暂停给出读、写容忍时间，收到远端代理确认具备余量后才允许事件开始。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>读代理依赖已缓冲的数据，写代理依赖仍可用的缓冲空间。两条路径用同一个预计暂停时间来检查。</dd></div><div><dt>验证方法</dt><dd>固定暂停时长，独立改变远端读缓冲占用和写缓冲空位。记录最后一个确认、实际暂停起止和流量恢复前的读缓冲下溢或写缓冲溢出。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12332723B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">DRAM 可用性暂停会同时冲击不同方向的缓冲。读代理需要足够已存数据，写代理需要足够空位。哪个条件真正限制暂停，要看所有相关代理中最紧的一项。</p>
-    <p>第一裸片确定影响共享内存可用性的待执行事件，并向第二裸片发送分别计算的读、写容忍要求。第二裸片关联的代理达到要求后回确认，主端才能解除对事件的阻塞。</p>
-    <ol class="walkthrough"><li><h3>估算暂停对读写的最低要求</h3><p>主裸片 检测影响共享内存可用性的事件。电源协调逻辑估算此次暂停所需的最小读、写容忍时间。</p></li><li><h3>汇总不同方向的可承受间隔</h3><p>代理报告不再补充数据时可读多久，或不能向内存排出时还能写多久。实施例先收集各裸片 的最小值，再汇总为系统值。</p></li><li><h3>容忍不足时延迟并准备</h3><p>读代理可以先多取数据增加缓冲深度，写代理可以先写回腾出空间。预备方向相反，两者都要满足该事件需要。</p></li><li><h3>拿到确认后再开始事件</h3><p>主裸片 将门槛送给从裸片，并在收到至少必要确认前暂停事件。确认来自代理更新后的可承受值。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 分开管理读缓冲已存数据和写缓冲剩余空间。允许切换的是能度过暂停的保守余量，同样的周期数会对应不同消费速率和写入速率。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>事件容忍要求</dt><dd>由主 PMGR 计算，表示这次事件要求代理在内存无法正常服务时应能持续多久。</dd></div><div><dt>代理读／写容忍值</dt><dd>当前缓冲下可持续供数或吸收写入的延迟。从端可用这些值判断是否达到事件要求。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">收到远端确认后才放行内存暂停</a></li><li><a href="#fig-1">事件门槛与代理当前容忍值走反向路径</a></li><li><a href="#fig-4">准备一拍推迟暂停，四拍服务缺口保持不变</a></li><li><a href="#fig-3">读缓冲和写缓冲的暂停条件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">收到远端确认后才放行内存暂停</h3></div>
-    <a class="paper-open" href="../mechanisms/US12332723B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="收到远端确认后才放行内存暂停">
-    <img class="paper-image native-image" src="../mechanisms/US12332723B2/fig-2/diagram.svg" width="920" height="468"
-         style="--paper-width:920px" alt="收到远端确认后才放行内存暂停。事件尚未开始时，读代理可先取入数据，写代理可先排出待写数据。两类代理报告更新的容忍时长，从端确认满足门槛后才回送事件确认。该图中的读、写准备可并行。">
-  </div>
-  <figcaption>
-    <span>事件尚未开始时，读代理可先取入数据，写代理可先排出待写数据。两类代理报告更新的容忍时长，从端确认满足门槛后才回送事件确认。该图中的读、写准备可并行。</span>
-    <span class="figure-evidence">原图 5，说明书 0038–0039，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8b/0c/d4/53bbe0aadfcfb1/US12332723B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">事件门槛与代理当前容忍值走反向路径</h3></div>
-    <a class="paper-open" href="../mechanisms/US12332723B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="事件门槛与代理当前容忍值走反向路径">
-    <img class="paper-image native-image" src="../mechanisms/US12332723B2/fig-1/diagram.svg" width="781" height="284"
-         style="--paper-width:781px" alt="事件门槛与代理当前容忍值走反向路径。主 PMGR 240 发送事件所需的读、写容忍值 530。代理将当前可承受值 510 交给从 PMGR 245。后者评估后回确认，主端收到确认才可解除对事件的阻塞。">
-  </div>
-  <figcaption>
-    <span>主 PMGR 240 发送事件所需的读、写容忍值 530。代理将当前可承受值 510 交给从 PMGR 245。后者评估后回确认，主端收到确认才可解除对事件的阻塞。</span>
-    <span class="figure-evidence">原图 5，说明书 0035–0039，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8b/0c/d4/53bbe0aadfcfb1/US12332723B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">准备一拍推迟暂停，四拍服务缺口保持不变</h3></div>
-    <a class="paper-open" href="../mechanisms/US12332723B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="准备一拍推迟暂停，四拍服务缺口保持不变">
-    <img class="paper-image native-image" src="../mechanisms/US12332723B2/fig-4/diagram.svg" width="790" height="652"
-         style="--paper-width:790px" alt="准备一拍推迟暂停，四拍服务缺口保持不变。模型初始有 6 个可读项、6 个写缓冲空闲项。每拍读 2、写 1，待暂停 4 拍。立即暂停在 t4 累计欠供 2 项。确认策略在 t1 把读数据补到 8 项，再停 4 拍，到 t5 恢复时没有欠供。图中的 t 是同一模型拍边界。">
-  </div>
-  <figcaption>
-    <span>模型初始有 6 个可读项、6 个写缓冲空闲项。每拍读 2、写 1，待暂停 4 拍。立即暂停在 t4 累计欠供 2 项。确认策略在 t1 把读数据补到 8 项，再停 4 拍，到 t5 恢复时没有欠供。图中的 t 是同一模型拍边界。</span>
-    <span class="figure-evidence">原图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>，模型算例 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8b/0c/d4/53bbe0aadfcfb1/US12332723B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">读缓冲和写缓冲的暂停条件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">对象</th><th scope="col">暂停时占用变化</th><th scope="col">暂停前的动作</th><th scope="col">可承受时长的模型口径</th></tr></thead><tbody><tr><th scope="row">读代理</th><td>已存数据减少</td><td class="emphasis">提前填充可读项</td><td>可用数据量 ÷ 消费率</td></tr><tr><th scope="row">写代理</th><td>空闲项减少</td><td class="emphasis">先写回积压项</td><td>空闲项数 ÷ 写入速率</td></tr><tr><th scope="row">主 PMGR</th><td>等待从端确认</td><td>阻塞内存事件</td><td>两方向均达到此次要求</td></tr></tbody></table>
-  <figcaption>
-    <span>在固定读消费和写产生速率的模型里，读端用可用数据量折算可持续时长，写端用空闲项折算。第 3、4 项分别限定预填和排空。</span>
-    <span class="figure-evidence">原图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> · <a href="https://patentimages.storage.googleapis.com/8b/0c/d4/53bbe0aadfcfb1/US12332723B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预填读缓冲数据</dt><dd>避免暂停期间读下溢 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>，说明书 0038–0039</span></dd></div><div><dt>先排出待写数据</dt><dd>避免写缓冲溢出 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>，说明书 0038–0039</span></dd></div><div><dt>确认前阻塞内存事件</dt><dd>保留代理准备时间 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>，原图 5</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>等待确认期间，读侧预取占用内存带宽，写侧提前排空增加写请求。需分开统计暂停准备时间、真正停服时间，以及切换前对争用事务带来的等待。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>确认后增加读代理消费速率或写入突发，但保持暂停时长相同。若停服期间发生下溢或溢出，代理采用的速率假设失效，可用缓冲水位轨迹定位。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>模型每拍读取 2 项，读缓冲初始有 6 项。每拍产生 1 项写入，写缓冲初始剩 6 个空闲项。预计内存暂停 4 拍。</dd></div><div><dt>处理结果</dt><dd>读缓冲须有 8 项，写缓冲须留 4 个空闲项。停服前用一拍把读缓冲补到 8 项。按确认放行后不会在这四拍内欠供。</dd></div><div><dt>结果解读</dt><dd>准备阶段内存仍可访问。模型假设读端净补充速度每拍 2 项，确认传播延迟为零。随后内存暂停仍为 4 拍。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#memory-pause">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内存暂停前，用读写缓冲余量做跨裸片确认 · US12332723B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12332723B2</code> · <a href="https://patents.google.com/patent/US12332723B2/en">专利全文</a></p>
+<h1>内存暂停前，用读写缓冲余量做跨裸片确认</h1><p class="reading-question">内存即将短暂不可用时，主电源管理器怎样判断另一裸片的代理能撑过暂停？</p>
+<p class="reading-answer">主电源管理器先下发本次事件所需的读、写容忍时长。从端通过代理上报确认两个方向都能满足，主端才解除阻塞。暂停前，读侧可预填数据，写侧可先排出积压。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-06-17</dd></div><div><dt>申请号</dt><dd>US18/438,665</dd></div><div><dt>最早优先权</dt><dd>2021-06-07</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Inder M. Sodhi、Achmed R. Zahir、Lior Zimet、Liran FISHEL、Omri Flint、Ami Schwartzman</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#requirements">先分清容忍时长与事件门槛</a></li><li><a href="#readiness">准备动作结束才返回确认</a></li><li><a href="#boundary">多等一拍，为什么能消除读欠供</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="requirements"><h2>先分清容忍时长与事件门槛</h2><p>内存变频等事件可能让一段时间内的共享内存不可用。读代理仍会消耗已缓冲的数据，写代理仍可能产生待写数据。两种资源耗尽的时刻分别约束暂停长度，代理只要有一个方向不足，就应保留事件阻塞。</p><p>图 1 把三组时长分开。各代理先申报当前容忍时长。从电源管理器分别对读、写取最小后，把裸片级容忍时长送给主端。事件要求时长由主端针对本次事件计算。最小读值和最小写值可以来自不同代理。段 0038 允许主端先比较系统最小值再下发，也允许直接广播本次门槛。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　本次要求下发，当前余量上报</h3>
+    <p id="fig-1-basis">事件要求时长向下发，裸片级容忍时长向上报。主端另等从端的就绪确认。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="本次要求下发，当前余量上报" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" role="img" aria-labelledby="us12332723b2-fig-1-svg-title us12332723b2-fig-1-svg-desc">
+<title id="us12332723b2-fig-1-svg-title">本次要求下发，当前余量上报</title>
+<desc id="us12332723b2-fig-1-svg-desc">事件要求时长向下发，裸片级容忍时长向上报。主端另等从端的就绪确认。</desc>
+<defs><marker id="us12332723b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12332723b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12332723b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12332723b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12332723b2-fig-1-detect" d="M 132 116 L 132 164" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-1-arrow-data)"/>
+<path id="us12332723b2-fig-1-req" d="M 224 192 L 364 192" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-1-arrow-data)"/>
+<path id="us12332723b2-fig-1-summary" d="M 364 228 L 224 228" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-1-arrow-return)"/>
+<path id="us12332723b2-fig-1-ack" d="M 364 264 L 224 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-1-arrow-return)"/>
+<path id="us12332723b2-fig-1-relay" d="M 564 192 L 724 192" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-1-arrow-data)"/>
+<path id="us12332723b2-fig-1-report" d="M 724 240 L 564 240" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-1-arrow-return)"/>
+<path id="us12332723b2-fig-1-release" d="M 132 284 L 132 340" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12332723b2-fig-1-arrow-main)"/>
+<rect x="136" y="126" width="116" height="18" fill="#f5f5f5"/><text x="194" y="140" class="arrow-label" text-anchor="middle">检测待执行事件</text>
+<rect x="239.5" y="163" width="109" height="18" fill="#f5f5f5"/><text x="294" y="177" class="arrow-label" text-anchor="middle">事件要求时长</text>
+<rect x="231" y="199" width="126" height="18" fill="#f5f5f5"/><text x="294" y="213" class="arrow-label" text-anchor="middle">裸片级容忍时长</text>
+<rect x="237" y="235" width="114" height="18" fill="#f5f5f5"/><text x="294" y="249" class="arrow-label" text-anchor="middle">从端就绪确认</text>
+<rect x="578" y="163" width="132" height="18" fill="#f5f5f5"/><text x="644" y="177" class="arrow-label" text-anchor="middle">下发事件要求时长</text>
+<rect x="591.5" y="211" width="105" height="18" fill="#f5f5f5"/><text x="644" y="225" class="arrow-label" text-anchor="middle">代理容忍时长</text>
+<rect x="140" y="301" width="112" height="18" fill="#f5f5f5"/><text x="196" y="315" class="arrow-label" text-anchor="middle">满足确认条件</text>
+<g id="us12332723b2-fig-1-event"><rect x="44" y="52" width="180" height="64" rx="6" fill="#f5f5f5"/><rect x="44" y="52" width="180" height="64" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="78" class="node-name" text-anchor="middle">内存暂停事件</text><text x="134" y="100" class="node-detail" text-anchor="middle">例如内存变频</text></g>
+<g id="us12332723b2-fig-1-primary"><rect x="44" y="164" width="180" height="120" rx="6" fill="#f5f5f5"/><rect x="44" y="164" width="180" height="120" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="134" y="190" class="node-name" text-anchor="middle">主电源管理器</text><text x="134" y="212" class="node-detail" text-anchor="middle">汇总系统容忍值</text></g>
+<g id="us12332723b2-fig-1-secondary"><rect x="364" y="164" width="200" height="120" rx="6" fill="#f5f5f5"/><rect x="364" y="164" width="200" height="120" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="464" y="190" class="node-name" text-anchor="middle">从电源管理器</text><text x="464" y="212" class="node-detail" text-anchor="middle">分别求读、写最小值</text></g>
+<g id="us12332723b2-fig-1-agents"><rect x="724" y="164" width="192" height="120" rx="6" fill="#f5f5f5"/><rect x="724" y="164" width="192" height="120" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="820" y="190" class="node-name" text-anchor="middle">远端代理</text><text x="820" y="212" class="node-detail" text-anchor="middle">读缓冲、写缓冲</text></g>
+<g id="us12332723b2-fig-1-service"><rect x="44" y="340" width="180" height="64" rx="6" fill="#f5f5f5"/><rect x="44" y="340" width="180" height="64" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="134" y="366" class="node-name" text-anchor="middle">放行内存暂停</text><text x="134" y="388" class="node-detail" text-anchor="middle">满足确认条件才启动</text></g>
+<text x="44" y="424" class="legend" text-anchor="start">实线  请求、数据或决定    虚线  回送或可选动作</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12332723b2-fig-1-req">事件要求时长</a> 事件要求时长由主端按暂停需要计算，作为每个相关代理要达到的门槛。</li><li><a href="#us12332723b2-fig-1-summary">裸片级容忍时长</a> 裸片级容忍时长先在各裸片按读、写分别求最小值，再由从电源管理器送主电源管理器。</li><li><a href="#us12332723b2-fig-1-report">代理容忍时长</a> 代理分别上报当前估计的读、写容忍时长。读侧由已有数据估算，写侧由可用空位估算。</li><li><a href="#us12332723b2-fig-1-ack">从端就绪确认</a> 独权要求主端收到至少必要的远端确认后才能解除阻塞，段 0039 将确认和周期性容忍值上报区别开来。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0007、0018、0019、0035、0036、0037、0038、0039；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US12332723B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存暂停事件</dt><dd>525</dd></div><div><dt>主电源管理器</dt><dd>240</dd></div><div><dt>从电源管理器</dt><dd>245</dd></div><div><dt>代理容忍时长</dt><dd>510</dd></div><div><dt>裸片级容忍时长</dt><dd>520</dd></div><div><dt>事件要求时长</dt><dd>530</dd></div></dl></details>
+</figure></section><section id="readiness"><h2>准备动作结束才返回确认</h2><p>主端发出门槛后仍维持阻塞。图 5 分别画出读侧怎样趁内存可用预填数据，写侧怎样把积压送出以释放条目。进入暂停后，代理仍可从本地读缓冲取数据，也可把新写入留在本地。两个方向分别计到可用数据或空位耗尽。</p><p>准备动作改变代理估计的读、写容忍时长。从电源管理器读取更新后的报告，确定所需方向均能承受后回送就绪确认。该确认用于放行内存事件。电源状态机的中间同步点、最终转换完成各有独立的确认。</p><p>第 1、11 项都约束主端在收到至少必要的远端确认前阻塞事件。第 2 项补上从端下发、收集和确认的职责，第 3、4 项分别补上预填与排空，第 6、7 项限定裸片和系统最小值的汇总与触发。图 3 的容量换算采用固定生产与消费速率，是便于理解的模型。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　内存暂停时，读缓冲消耗数据，写缓冲消耗空位</h3>
+    <p id="fig-5-basis">准备期间，读代理可以通过互连预填数据，写代理可以把积压送往内存以腾出空位。内存服务暂停后，代理的生产或消费在本地缓冲端继续。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="内存暂停时，读缓冲消耗数据，写缓冲消耗空位" style="--figure-width:1152px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1152 533" role="img" aria-labelledby="us12332723b2-fig-5-svg-title us12332723b2-fig-5-svg-desc">
+<title id="us12332723b2-fig-5-svg-title">内存暂停时，读缓冲消耗数据，写缓冲消耗空位</title>
+<desc id="us12332723b2-fig-5-svg-desc">准备期间，读代理可以通过互连预填数据，写代理可以把积压送往内存以腾出空位。内存服务暂停后，代理的生产或消费在本地缓冲端继续。</desc>
+<defs><marker id="us12332723b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12332723b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12332723b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12332723b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12332723b2-fig-5-mem-read" d="M 200 251 L 270 251" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-5-arrow-control)"/>
+<path id="us12332723b2-fig-5-mem-write" d="M 270 308 L 200 308" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-5-arrow-control)"/>
+<path id="us12332723b2-fig-5-prefill" d="M 455 231 L 510 231 Q 518 231 518 223 L 518 158 Q 518 150 526 150 L 585 150" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-5-arrow-control)"/>
+<path id="us12332723b2-fig-5-drain" d="M 585 424 L 526 424 Q 518 424 518 416 L 518 326 Q 518 318 510 318 L 455 318" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-5-arrow-control)"/>
+<path id="us12332723b2-fig-5-consume" d="M 799 150 L 938 150" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12332723b2-fig-5-arrow-main)"/>
+<path id="us12332723b2-fig-5-produce" d="M 938 424 L 799 424" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12332723b2-fig-5-arrow-main)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="475.5" y="120" width="103" height="18" fill="#f5f5f5"/><text x="527" y="134" class="arrow-label" text-anchor="middle">预填读数据</text>
+<rect x="477.5" y="392" width="103" height="18" fill="#f5f5f5"/><text x="529" y="406" class="arrow-label" text-anchor="middle">写数据排出</text>
+<rect x="808" y="120" width="122" height="18" fill="#f5f5f5"/><text x="869" y="134" class="arrow-label" text-anchor="middle">消费读缓冲数据</text>
+<rect x="818" y="395" width="104" height="18" fill="#f5f5f5"/><text x="870" y="409" class="arrow-label" text-anchor="middle">生成待写数据</text>
+<g id="us12332723b2-fig-5-dram"><rect x="29" y="225" width="171" height="100" rx="6" fill="#f5f5f5"/><rect x="29" y="225" width="171" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="114.5" y="251" class="node-name" text-anchor="middle">共享内存</text><text x="114.5" y="273" class="node-detail" text-anchor="middle">变频等事件期间</text><text x="114.5" y="291" class="node-detail" text-anchor="middle">可暂时不可访问</text></g>
+<g id="us12332723b2-fig-5-memory-path"><rect x="270" y="199" width="185" height="151" rx="6" fill="#f5f5f5"/><rect x="270" y="199" width="185" height="151" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="362.5" y="225" class="node-name" text-anchor="middle">内存访问路径</text><text x="362.5" y="247" class="node-detail" text-anchor="middle">暂停事件阻断两向</text><text x="362.5" y="265" class="node-detail" text-anchor="middle">服务可用时预填或排空</text></g>
+<g id="us12332723b2-fig-5-read-buffer"><rect x="585" y="94" width="214" height="111" rx="6" fill="#f5f5f5"/><rect x="585" y="94" width="214" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="692" y="120" class="node-name" text-anchor="middle">读缓冲</text><text x="692" y="142" class="node-detail" text-anchor="middle">已缓存的数据供本地消费</text><text x="692" y="160" class="node-detail" text-anchor="middle">暂停期间数据减少</text></g>
+<g id="us12332723b2-fig-5-write-buffer"><rect x="585" y="369" width="214" height="114" rx="6" fill="#f5f5f5"/><rect x="585" y="369" width="214" height="114" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="692" y="395" class="node-name" text-anchor="middle">写缓冲</text><text x="692" y="417" class="node-detail" text-anchor="middle">空闲项用于接收新写入</text><text x="692" y="435" class="node-detail" text-anchor="middle">暂停期间空位减少</text></g>
+<g id="us12332723b2-fig-5-consumer"><rect x="938" y="94" width="180" height="111" rx="6" fill="#f5f5f5"/><rect x="938" y="94" width="180" height="111" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1028" y="120" class="node-name" text-anchor="middle">读侧代理</text><text x="1028" y="142" class="node-detail" text-anchor="middle">从本地缓冲消费</text></g>
+<g id="us12332723b2-fig-5-producer"><rect x="938" y="369" width="180" height="114" rx="6" fill="#f5f5f5"/><rect x="938" y="369" width="180" height="114" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1028" y="395" class="node-name" text-anchor="middle">写侧代理</text><text x="1028" y="417" class="node-detail" text-anchor="middle">产生待写入数据</text></g>
+<text x="31" y="50" class="signal-title" text-anchor="start">读、写各有一个不同的资源耗尽边界</text>
+<text x="30" y="509" class="legend" text-anchor="start">虚线为准备阶段的内存侧传输。橙线为暂停期间可以继续的代理侧数据流。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12332723b2-fig-5-read-buffer">读方向看已有数据</a> 暂停期间无外部供数，本地读代理继续从缓冲取数据。读容忍时长从暂停开始计至现有数据耗尽。</li><li><a href="#us12332723b2-fig-5-write-buffer">写方向看空闲条目</a> 暂停期间写缓冲不能向内存排出，但仍接收代理产生的数据。写容忍时长从暂停开始计至空闲条目用尽。</li><li><a href="#us12332723b2-fig-5-memory-path">准备动作只在内存服务仍可用时执行</a> 主端暂时阻止事件，代理在这段时间增加读缓冲数据或释放写缓冲条目。可承受时长重新上报后，从端决定何时确认。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0035、0036、0037、0038、0039、0043；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12332723B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>示例代理电路（CPU、GPU、外围电路）</dt><dd>222／224／226</dd></div><div><dt>代理的读写容忍时长上报</dt><dd>510</dd></div><div><dt>影响内存可用性的事件</dt><dd>525</dd></div><div><dt>本次事件要求的读写容忍时长</dt><dd>530</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　就绪确认晚于读侧预填和写侧排空</h3>
+    <p id="fig-2-basis">时序终点是主端取消阻塞。读写准备可并行，图中列出的两份更新不规定彼此的先后。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="就绪确认晚于读侧预填和写侧排空" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us12332723b2-fig-2-svg-title us12332723b2-fig-2-svg-desc">
+<title id="us12332723b2-fig-2-svg-title">就绪确认晚于读侧预填和写侧排空</title>
+<desc id="us12332723b2-fig-2-svg-desc">时序终点是主端取消阻塞。读写准备可并行，图中列出的两份更新不规定彼此的先后。</desc>
+<defs><marker id="us12332723b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12332723b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12332723b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12332723b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="322" y="178" width="558" height="202" rx="4" fill="rgba(45,49,66,.02)" style="stroke:rgba(45,49,66,.22)"/>
+<rect x="329" y="172" width="94" height="18" fill="#f5f5f5"/><text x="376" y="186" class="arrow-label" text-anchor="middle">PAR · 可并行</text>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12332723b2-fig-2-block"><path d="M 116 114 L 140 114 Q 148 114 148 122 L 148 124 Q 148 132 140 132 L 116 132" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-2-arrow-data)"/><rect x="171.5" y="90" width="117" height="18" fill="#f5f5f5"/><text x="230" y="104" class="arrow-label" text-anchor="middle">检测事件，保持阻塞</text></g>
+<g id="us12332723b2-fig-2-need"><path d="M 116 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-2-arrow-data)"/><rect x="185" y="144" width="104" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">发送事件要求时长</text></g>
+<g id="us12332723b2-fig-2-request-r"><path d="M 358 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-2-arrow-data)"/><rect x="447" y="192" width="65" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">下发读门槛</text></g>
+<g id="us12332723b2-fig-2-request-w"><path d="M 358 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12332723b2-fig-2-arrow-data)"/><rect x="568.5" y="240" width="65" height="18" fill="#f5f5f5"/><text x="601" y="254" class="arrow-label" text-anchor="middle">下发写门槛</text></g>
+<g id="us12332723b2-fig-2-read"><path d="M 601 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-2-arrow-return)"/><rect x="421" y="288" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">预填后更新容忍时长</text></g>
+<g id="us12332723b2-fig-2-write"><path d="M 844 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-2-arrow-return)"/><rect x="542.5" y="336" width="117" height="18" fill="#f5f5f5"/><text x="601" y="350" class="arrow-label" text-anchor="middle">排空后更新容忍时长</text></g>
+<g id="us12332723b2-fig-2-ready"><path d="M 358 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12332723b2-fig-2-arrow-return)"/><rect x="191.5" y="384" width="91" height="18" fill="#f5f5f5"/><text x="237" y="398" class="arrow-label" text-anchor="middle">确认两方向达标</text></g>
+<g id="us12332723b2-fig-2-release"><path d="M 116 450 L 140 450 Q 148 450 148 458 L 148 460 Q 148 468 140 468 L 116 468" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12332723b2-fig-2-arrow-main)"/><rect x="191" y="426" width="78" height="18" fill="#f5f5f5"/><text x="230" y="440" class="arrow-label" text-anchor="middle">解除事件阻塞</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">主电源管理器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">从电源管理器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">读代理</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">写代理</text>
+<text x="28" y="532" class="legend" text-anchor="start">时间向下。两方向的缓冲准备可并行，主端收到从端确认后才放行。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12332723b2-fig-2-block">检测事件，保持阻塞</a> 待执行事件先保持阻塞。在可选先比较分支，两列门槛和当前裸片最小容忍时长都已在手。</li><li><a href="#us12332723b2-fig-2-read">预填后更新容忍时长</a> 读侧报告更新的时长前，可以趁服务仍可用补入可读数据。</li><li><a href="#us12332723b2-fig-2-write">排空后更新容忍时长</a> 写侧报告更新的时长前，可以趁服务仍可用排出积压写。</li><li><a href="#us12332723b2-fig-2-release">解除事件阻塞</a> 收到符合要求的从端确认之后，主端解除这个事件的阻塞。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0035、0036、0038、0039；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12332723B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>主电源管理器</dt><dd>240</dd></div><div><dt>从电源管理器</dt><dd>245</dd></div><div><dt>代理容忍时长</dt><dd>510</dd></div><div><dt>事件要求时长</dt><dd>530</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　暂停前检查的数据与空间</h3>
+    <p id="fig-3-basis">模型假定在暂停区间内没有补读和排写。暂停能撑多久，取决于不同方向初始资源与消耗速率。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">对象</th><th scope="col">暂停中减少的量</th><th scope="col">暂停前可做什么</th><th scope="col">固定速率模型</th></tr></thead><tbody><tr id="fig-3-read"><th scope="row">读代理</th><td>可读数据量</td><td>预填缓冲</td><td>可读项数 ÷ 每拍消费项数</td></tr><tr id="fig-3-write"><th scope="row">写代理</th><td>可写空位</td><td>先排出积压</td><td>空位项数 ÷ 每拍产生的写入项数</td></tr><tr id="fig-3-sync"><th scope="row">从电源管理器</th><td>读写余量分别比较</td><td>确认各相关代理可承受</td><td>任一要求未达，不返回就绪确认</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-read">读代理</a> 暂停前可以预填，从已有可供数据换算时长。</li><li><a href="#fig-3-write">写代理</a> 暂停前可以排写，从剩余空位换算时长。</li><li><a href="#fig-3-sync">从电源管理器</a> 确认针对两个方向所需时长，读侧够用不会替代写侧。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0036、0037、0038、0039；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> </p>
+  
+</figure></section><section id="boundary"><h2>多等一拍，为什么能消除读欠供</h2><p>模型把同一个四拍暂停放到两个位置。立即暂停时，初始 6 项够消费三拍，第四拍欠供 2 项。等待确认时，内存在 t0–t1 仍提供服务，读侧净补至 8 项，然后从 t1 起暂停四拍。在 t5 恢复前读缓冲恰好降到 0，过程没有欠供。写入速率为每拍 1 项，初始 6 个空位满足四拍所需的 4 项，决定是否延迟的是读侧。</p><p>推迟启动并未改变暂停服务的四拍长度。若某侧的总缓冲容量低于事件需要，预填或排空也达不到门槛，这个模型中的事件会一直保持阻塞。原文没有给出产品缓冲大小、流量速率或超时策略。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　等一拍再暂停，读缓冲从欠供变成刚好够用</h3>
+    <p id="fig-4-basis">两种方案各暂停四拍。等确认方案在 t0–t1 补读缓冲，写缓冲两种方案都保留足够空位。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="等一拍再暂停，读缓冲从欠供变成刚好够用" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12332723b2-fig-4-svg-title us12332723b2-fig-4-svg-desc">
+<title id="us12332723b2-fig-4-svg-title">等一拍再暂停，读缓冲从欠供变成刚好够用</title>
+<desc id="us12332723b2-fig-4-svg-desc">同一刻度展示两段服务缺口，都是四拍。第二条路径用 t0–t1 保留的服务先把读缓冲补足。</desc>
+<defs><marker id="us12332723b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12332723b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12332723b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12332723b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12332723b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="321.6" y1="76" x2="321.6" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="451.2" y1="76" x2="451.2" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="580.8" y1="76" x2="580.8" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="710.4" y1="76" x2="710.4" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">5</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us12332723b2-fig-4-baseline-service"><text x="24" y="136" class="node-name" text-anchor="start">立即暂停／内存服务</text>
+<rect x="192" y="112" width="518.4" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="451.2" y="136" class="arrow-label" text-anchor="middle">暂停</text>
+<rect x="710.4" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="136" class="arrow-label" text-anchor="middle">已恢复</text>
+<circle cx="710.4" cy="131" r="5" fill="#4f5d75"/>
+<text x="710.4" y="171" class="arrow-label" text-anchor="end">恢复</text></g>
+<g id="us12332723b2-fig-4-baseline-buffer"><text x="24" y="228" class="node-name" text-anchor="start">立即暂停／读缓冲</text>
+<rect x="192" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="228" class="arrow-label" text-anchor="middle">6 项</text>
+<rect x="321.6" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="228" class="arrow-label" text-anchor="middle">4 项</text>
+<rect x="451.2" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="228" class="arrow-label" text-anchor="middle">2 项</text>
+<rect x="580.8" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="228" class="arrow-label" text-anchor="middle">0 项</text>
+<circle cx="710.4" cy="223" r="5" fill="#4f5d75"/>
+<text x="710.4" y="263" class="arrow-label" text-anchor="end">累计欠供 2 项</text></g>
+<g id="us12332723b2-fig-4-confirmed-service"><text x="24" y="320" class="node-name" text-anchor="start">等确认／内存服务</text>
+<rect x="192" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="320" class="arrow-label" text-anchor="middle">预填</text>
+<rect x="321.6" y="296" width="518.4" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="580.8" y="320" class="arrow-label" text-anchor="middle">确认后暂停</text>
+<circle cx="840" cy="315" r="5" fill="#4f5d75"/>
+<text x="840" y="355" class="arrow-label" text-anchor="end">恢复</text></g>
+<g id="us12332723b2-fig-4-confirmed-buffer"><text x="24" y="412" class="node-name" text-anchor="start">等确认／读缓冲</text>
+<rect x="192" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="412" class="arrow-label" text-anchor="middle">6 项</text>
+<rect x="321.6" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="412" class="arrow-label" text-anchor="middle">8 项</text>
+<rect x="451.2" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="412" class="arrow-label" text-anchor="middle">6 项</text>
+<rect x="580.8" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="412" class="arrow-label" text-anchor="middle">4 项</text>
+<rect x="710.4" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="412" class="arrow-label" text-anchor="middle">2 项</text>
+<circle cx="840" cy="407" r="5" fill="#bf4520"/>
+<text x="840" y="447" class="arrow-label" text-anchor="end">0 项，无欠供</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">固定速率教学模型。初始可读 6 项，写缓冲空位 6 项，每拍读 2 项、写 1 项。预填一拍使读缓冲净增加 2 项。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12332723b2-fig-4-baseline-service">立即暂停／内存服务</a> 基线暂停从 t0 开始，t4 恢复服务。</li><li><a href="#us12332723b2-fig-4-baseline-buffer">立即暂停／读缓冲</a> 边界 t0 至 t3 的读缓冲为 6、4、2、0，t3–t4 的需求尚有 2 项，成为欠供。</li><li><a href="#us12332723b2-fig-4-confirmed-service">等确认／内存服务</a> 等确认方案让 t0–t1 保持内存服务，t1 才开始同样的四拍暂停。</li><li><a href="#us12332723b2-fig-4-confirmed-buffer">等确认／读缓冲</a> 预填结果在 t1 边界为 8，消费到 t5 恰为 0。写速率每拍 1 项，6 项空位足以承受这段暂停。</li></ul>
+  <p class="figure-evidence">原图 5；说明书归档段 0036、0037、0038、0039；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> <a href="../diagrams/US12332723B2/fig-4.html">打开独立图稿</a></p>
+  
+</figure></section></div>
+<p><a class="lab-link" href="../lab.html#memory-pause">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,50 +204,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=design%20information%20that%20specifies%20a%20circuit%20design%20in%20a%20format%20recognized%20by%20a%20fabrication%20system">F14</a></th><td>非暂态介质保存可由制造系统识别的集成电路设计信息</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=a%20first%20and%20a%20second%20integrated%20circuit%20die%20that%20include%20respective%20processor%20circuitry">F15</a></th><td>第一和第二裸片各有处理器电路</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=Turning%20now%20to%20FIG.%205%20%2C%20a%20block%20diagram%20of%20example%20elements%20relating%20to%20a%20latency">说明书 0035</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=the%20second%20integrated%20circuit%20die%20is%20associated%20with%20a%20set%20of%20peripheral%20circuits">F16</a></th><td>第二裸片关联多组外围电路</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=Turning%20now%20to%20FIG.%205%20%2C%20a%20block%20diagram%20of%20example%20elements%20relating%20to%20a%20latency">说明书 0035</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=the%20first%20integrated%20circuit%20includes%20a%20first%20power%20manager%20circuit">F17</a></th><td>第一裸片内有电源管理电路</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=Turning%20now%20to%20FIG.%205%20%2C%20a%20block%20diagram%20of%20example%20elements%20relating%20to%20a%20latency">说明书 0035</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=detect%20a%20latency%20event%20to%20be%20performed%20that%20affects%20an%20availability%20of%20a%20memory">F18</a></th><td>检测将影响内存可用性的待执行事件</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=Turning%20now%20to%20FIG.%205%20%2C%20a%20block%20diagram%20of%20example%20elements%20relating%20to%20a%20latency">说明书 0035</a> · <a href="https://patents.google.com/patent/US12332723B2/en#:~:text=When%20a%20latency%20event%20525%20is%20to%20occur%2C%20in%20some%20embodiments%2C%20SOC%20primary%20PMGR%20240%20receives">说明书 0038</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=determine%20read%20and%20write%20tolerance%20values%20for%20the%20latency%20event">F19</a></th><td>分别计算此次事件要求的读、写容忍时间</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=When%20a%20latency%20event%20525%20is%20to%20occur%2C%20in%20some%20embodiments%2C%20SOC%20primary%20PMGR%20240%20receives">说明书 0038</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=send%20the%20read%20and%20write%20tolerance%20values%20to%20the%20second%20integrated%20circuit%20die">F20</a></th><td>将两项要求发送给第二裸片</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=When%20a%20latency%20event%20525%20is%20to%20occur%2C%20in%20some%20embodiments%2C%20SOC%20primary%20PMGR%20240%20receives">说明书 0038</a> · <a href="https://patents.google.com/patent/US12332723B2/en#:~:text=While%20the%20latency%20event%20525%20is%20being%20delayed%2C%20the%20agents%20in%20dies%20110%20are%20provided%20with">说明书 0039</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=the%20latency%20event%20until%20at%20least%20an%20acknowledgment%20is%20received%20from%20the%20second%20integrated%20circuit%20die">F21</a></th><td>在收到来自第二裸片的确认前，阻塞该内存事件</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=When%20a%20latency%20event%20525%20is%20to%20occur%2C%20in%20some%20embodiments%2C%20SOC%20primary%20PMGR%20240%20receives">说明书 0038</a> · <a href="https://patents.google.com/patent/US12332723B2/en#:~:text=While%20the%20latency%20event%20525%20is%20being%20delayed%2C%20the%20agents%20in%20dies%20110%20are%20provided%20with">说明书 0039</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=the%20set%20of%20peripheral%20circuits%20is%20able%20to%20tolerate%20latencies%20corresponding%20to%20the%20read%20and%20write">F22</a></th><td>确认表示关联外围电路可同时承受此次事件所要求的读写延迟</td><td><a href="https://patents.google.com/patent/US12332723B2/en#:~:text=When%20a%20latency%20event%20525%20is%20to%20occur%2C%20in%20some%20embodiments%2C%20SOC%20primary%20PMGR%20240%20receives">说明书 0038</a> · <a href="https://patents.google.com/patent/US12332723B2/en#:~:text=While%20the%20latency%20event%20525%20is%20being%20delayed%2C%20the%20agents%20in%20dies%20110%20are%20provided%20with">说明书 0039</a> · 原图 5</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>多裸片装置在第一裸片计算并发送两类事件门槛。只有收到第二裸片给出的关联代理确认，阻塞才可解除。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>第二裸片向代理广播值，按返回的容忍信息判定并生成确认。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>代理读缓冲增储足够数据，避免延迟事件造成欠载。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>代理按写容忍门槛腾出足够缓冲空间，以避免溢出。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>一个代理向第二裸片分别上报其可容忍的读、写暂停时间。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>第二裸片从各代理求得裸片读、写容忍下界并上报第一裸片。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>第一裸片求系统读、写容忍下界；不足所需阈值时才下发新门槛。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>还将第三裸片上报的读、写容忍量纳入系统下界。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>由两裸片各自的电源管理电路执行握手，主侧还负责同步电源状态。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>两裸片各为一颗至少含 CPU 与 GPU 的系统芯片。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>方法权项明确计算读写容忍值以避免缓冲下溢、溢出，从第二裸片收到确认后才可放行。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>第一裸片求系统容忍下界，并只在不足目标时发送事件门槛。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>方法由第一裸片上的电源管理电路执行，该电路本身能改变裸片电源状态。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>主电源管理电路另请求第二裸片电源状态切换，完成跨裸片同步。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>软件例程面对逻辑单一系统，硬件中的两裸片对其透明。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>将扰动内存可用性的事件限定为内存频率变化。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-11">11</a></td><td>请求代理集合中包含至少一个外围电路。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>非暂态介质保存制造系统可识别的设计信息。该设计指定第一电源管理电路以及面向第二裸片外设的门控控制。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>第二裸片电源管理电路转发门槛，根据外围容忍信息确认。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>第一裸片与第二裸片采用同一电路设计的副本。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></dt><dd>独立项将读与写两个要求同时纳入跨裸片 事件批准。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>从裸片 转交门槛，读端预填、写端排空。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12332723B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>各代理、各裸片 和系统层级汇总最低容忍值。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12332723B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12609141B2.html#engineering">用客户端状态约束共享内存的门控深度</a>
-<p>US12609141B2 根据异构客户端的运行参数，为共享内存资源设定最低允许的电源状态，并限制实际门控。US12332723B2 在内存服务可能暂时中断前，等远端确认读写代理能承受相应暂停时长。把两种机制用于同一平台时，需要同时核对门控深度和本次停服的容忍时长。</p></li><li><a href="US11592889B2.html#engineering">跨 die 互连按本地和全局状态门控</a>
-<p>US11592889B2 交换互连活动状态。仍有在途事务的对端可以延迟批准，或拒绝本轮门控。US12332723B2 需要远端确认读写代理能承受指定停服时长。其从属方案可提前补充读缓冲数据或腾出写缓冲空间。事务变少并不能单独证明暂停期间的缓冲充足。</p></li><li><a href="US12444474B2.html#engineering">内存供电切换期间重复校准接口时序</a>
-<p>US12444474B2 处理电压过渡期间的接口时序，用多次测量调整时钟或选通延迟。US12332723B2 处理会暂时阻断内存服务的事件，用读写缓冲余量决定是否获准执行。接口能在过渡期间传输多少数据，与外设能容忍多久无服务，是两项不同验证。</p></li></ul>
-    <p><a href="../index.html?patent=US12332723B2#knowledge">在全量关系图上定位 US12332723B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-06-07</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-02-12</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-06-17</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/438,665</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Inder M. Sodhi、Achmed R. Zahir、Lior Zimet、Liran FISHEL、Omri Flint、Ami Schwartzman</dd></div><div><dt>分类号</dt><dd>G06F1/28、G06F1/3296、G06F1/3206、G06F1/3225、G06F1/3275、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12332723B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12332723B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 78 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12332723B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

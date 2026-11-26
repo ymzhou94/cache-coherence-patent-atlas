@@ -1,119 +1,163 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US9201796B2 查标签期间提前准备 SLC 缺失队列 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US9201796B2</code><span>美国授权专利</span><time datetime="2015-12-01">2015-12-01</time></p>
-  <h1>查标签期间提前准备 SLC 缺失队列</h1>
-  <p class="english-title" lang="en">System cache with speculative read engine</p>
-  <p class="document-question">标签检查还在进行时，SLC 可以提前完成缺失处理的哪些步骤？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">标签查询还未完成时，推测读已进入 SLC 缺失队列，确认缺失后才允许发外存请求。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>提前的是缺失队列准备，标签命中时应撤销对应的推测项。</dd></div><div><dt>验证方法</dt><dd>用相同地址流交替比较提前与串行入队。分别记录标签结果、队列分配或撤销、首笔外存请求发出的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9201796B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">SLC 缺失后总要准备下层请求。串行处理需要先等标签出结果，再准备缺失队列。有空位时，可以在标签检查尚未结束的阶段先准备，但要等确认后才允许对外发出。</p>
-    <p>在系统缓存标签查询结束前，可把推测读放进缺失队列。权利要求 1 要求收到缺失确认后才能访问外部存储，权利要求 7 加入命中时撤销队列项。</p>
-    <ol class="walkthrough"><li><h3>收到读请求，启动标签检查</h3><p>控制器触发 SLC 的 tag lookup，确认数据是否已在片上。</p></li><li><h3>筛选哪些读可以预占队列</h3><p>候选资格依权项或实施策略而定，可以考虑低延迟 QoS、读写依赖、未完成推测数或同组历史命中率。</p></li><li><h3>准备队列条目并等待结果</h3><p>合格读在 tag lookup 结束前进入缺失队列。条目要保持到标签给出结果，此时尚未访问外部内存。</p></li><li><h3>按命中结果撤销或允许下发</h3><p>命中时取消准备好的条目。缺失确认后才能送下层。资格如果提前被取消，也可丢弃准备项或回到通常流程。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 将资格检查与缺失队列中等待并行，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 增加低延迟 QoS、无读后写依赖及在途推测数限制。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> 的推测引擎则可在入队前完成筛选。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>缺失确认</dt><dd>标签查询结果为缺失时发给缺失队列的许可，可带请求标识。它只授予发送资格，何时实际发送还要受下游流控。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">队列就绪后仍要等标签结果</a></li><li><a href="#fig-1">标签检查与缺失队列准备重叠</a></li><li><a href="#fig-4">确认和撤销怎样各自定位请求</a></li><li><a href="#fig-3">哪些推测读能提前，结果怎样处理</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-2-title">队列就绪后仍要等标签结果</h3></div>
-    <a class="paper-open" href="../mechanisms/US9201796B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="队列就绪后仍要等标签结果">
-    <img class="paper-image native-image" src="../mechanisms/US9201796B2/fig-2/diagram.svg" width="524" height="1060"
-         style="--paper-width:524px" alt="队列就绪后仍要等标签结果。标签在 t0 开始检查，t4 给出结果。提前准备从 t1 到 t3，缺失确认后可在 t4 发出。顺序准备等到 t4 才开始，到 t6 可发。若 t4 确认为命中，控制器撤销队列项。">
-  </div>
-  <figcaption>
-    <span>标签在 t0 开始检查，t4 给出结果。提前准备从 t1 到 t3，缺失确认后可在 t4 发出。顺序准备等到 t4 才开始，到 t6 可发。若 t4 确认为命中，控制器撤销队列项。</span>
-    <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>；同轴教学对照，和实验室的 t1 启动条件一致。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">标签检查与缺失队列准备重叠</h3></div>
-    <a class="paper-open" href="../mechanisms/US9201796B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="标签检查与缺失队列准备重叠">
-    <img class="paper-image native-image" src="../mechanisms/US9201796B2/fig-1/diagram.svg" width="995" height="488"
-         style="--paper-width:995px" alt="标签检查与缺失队列准备重叠。控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。">
-  </div>
-  <figcaption>
-    <span>控制器可以在标签检查期间预占缺失队列。片外读仍要等标签给出缺失结果。</span>
-    <span class="figure-evidence">图 3、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">确认和撤销怎样各自定位请求</h3></div>
-    <a class="paper-open" href="../mechanisms/US9201796B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="确认和撤销怎样各自定位请求">
-    <img class="paper-image native-image" src="../mechanisms/US9201796B2/fig-4/diagram.svg" width="920" height="432"
-         style="--paper-width:920px" alt="确认和撤销怎样各自定位请求。A、B 的推测读都在缺失队列。标签确认 A 缺失后只允许 A 访问外存，确认 B 命中后只删除 B。">
-  </div>
-  <figcaption>
-    <span>A、B 的推测读都在缺失队列。标签确认 A 缺失后只允许 A 访问外存，确认 B 命中后只删除 B。</span>
-    <span class="figure-evidence">原图 6–7，说明书 0078、0083–0084，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">哪些推测读能提前，结果怎样处理</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件或结果</th><th scope="col">队列动作</th><th scope="col">外部访问</th></tr></thead><tbody><tr><th scope="row">资格通过且结果未出</th><td>提前进入并保持</td><td class="emphasis">尚不发送</td></tr><tr><th scope="row">低价值／依赖等筛掉</th><td>不加或取消</td><td>通常路径处理</td></tr><tr><th scope="row">确认 hit</th><td>撤销条目</td><td>不发送这条读</td></tr><tr><th scope="row">确认 miss</th><td>转为可发</td><td class="emphasis">可以请求外部内存</td></tr></tbody></table>
-  <figcaption>
-    <span>部分权项按 QoS、读写依赖或未完成数筛选。标签确认命中时撤销，确认缺失时允许送往外存。</span>
-    <span class="figure-evidence">图 8，权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>。 · <a href="https://patentimages.storage.googleapis.com/98/c7/20/3dc8c431ab3536/US9201796.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>查询时准备缺失队列</dt><dd>重叠下发准备 <span class="subdued">原图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>按标识确认或撤销</dt><dd>隔离请求决策 <span class="subdued">说明书 0078，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>重叠能减少标签结果出来后才开始的队列准备。观测标签完成、是否有同址在途写、入队、确认或撤销和实际发出，能区分收益与额外排队。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>同址过往写尚未完成且新读有依赖时，要求无 RAW 的实施路径不能提前送这笔读。缓存整体缺失率再高，也无法消除该依赖。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>标签查询用 4 个时间单位，队列准备需 2 个，且队列有空位。标签在 t0 开始检查。合格的读于 t1 开始准备队列，t3 就绪。</dd></div><div><dt>处理结果</dt><dd>若标签确认缺失且没有别的仲裁等待，顺序准备从 t4 开始，到 t6 可发。提前准备在 t4 就能取得发送资格。若 t4 的结果是命中，控制器在此时撤销条目，外存读不会发出。</dd></div><div><dt>结果解读</dt><dd>时点用于比较准备有多少可以重叠。实际等待还取决于队列调度、命中率和撤销成本。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#probe-ahead">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、12、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>系统缓存先准备推测读，确认缺失后才访问外存 · US9201796B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US9201796B2</code> · <a href="https://patents.google.com/patent/US9201796B2/en">专利全文</a></p>
+<h1>系统缓存先准备推测读，确认缺失后才访问外存</h1><p class="reading-question">系统缓存还没有查完标签，能否先为可能的外存读取做准备？如果标签随后命中，如何保证外存没有看到这笔请求？</p>
+<p class="reading-answer">把缓存标签查询与外存候选准备拆成两条并行路径。合格的候选先驻留缺失队列，标签缺失的确认消息才允许指定项向外存推进。标签命中则取消候选并走片上响应。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2015-12-01</dd></div><div><dt>申请号</dt><dd>US13/629,172</dd></div><div><dt>最早优先权</dt><dd>2012-09-27</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#split-paths">标签查找和外存候选准备可以重叠</a></li><li><a href="#filtering">按组命中率限制引擎活动，按请求检查发送条件</a></li><li><a href="#keyed-release">用事务标识把标签结果送回对应候选</a></li><li><a href="#bounded-overlap">缩短的是确认后到下游发出的等待</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="split-paths"><h2>标签查找和外存候选准备可以重叠</h2><p>图 1 把入口请求队列一分为二。缓存控制单元查询标签，推测读引擎准备可能需要的外存访问。缺失队列位于控制器内部，候选入队只是取得一个等待位置。直到标签确认缺失，这笔推测读都没有向外存发出。</p><p>原图 6 的入口可同时发给标签控制单元和准备侧。权利要求 1、9 进一步描述了三个时点：先启动标签查找，然后把候选放入缺失队列，最后在标签结果确认后才允许访问外存。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　标签查找和外存请求准备在缓存内并行</h3>
+    <p id="fig-1-basis">两条路径处理的是同一个推测读。候选先进入缓存内的缺失队列，直到标签确认缺失才有资格发到外存。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="标签查找和外存请求准备在缓存内并行" style="--figure-width:1410px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1410 684" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">标签查找和外存请求准备在缓存内并行</title>
+<desc id="fig-1-svg-desc">两条路径处理的是同一个推测读。候选先进入缓存内的缺失队列，直到标签确认缺失才有资格发到外存。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-in" d="M 225 309 L 320 309" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-up" d="M 441 249 L 441 151 Q 441 143 449 143 L 657 143" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-low" d="M 441 369 L 441 466 Q 441 474 449 474 L 657 474" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-tag-hit" d="M 930 132 L 1091 132" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-confirm-cancel" d="M 809 212 L 809 312 Q 809 320 817 320 L 1058 320" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-prepare" d="M 930 479 L 972 479 Q 980 479 980 471 L 980 356 Q 980 348 988 348 L 1058 348" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-commit" d="M 1225 387 L 1225 516" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="523" y="105" width="56" height="18" fill="#f5f5f5"/><text x="551" y="119" class="arrow-label" text-anchor="middle">标签侧</text>
+<rect x="522" y="434" width="56" height="18" fill="#f5f5f5"/><text x="550" y="448" class="arrow-label" text-anchor="middle">准备侧</text>
+<rect x="976" y="94" width="70" height="18" fill="#f5f5f5"/><text x="1011" y="108" class="arrow-label" text-anchor="middle">标签命中</text>
+<rect x="857" y="281" width="216" height="18" fill="#f5f5f5"/><text x="965" y="295" class="arrow-label" text-anchor="middle">按 ID 送 confirm 或 cancel</text>
+<rect x="987" y="434" width="102" height="18" fill="#f5f5f5"/><text x="1038" y="448" class="arrow-label" text-anchor="middle">准入后排队</text>
+<rect x="1246" y="437" width="150" height="18" fill="#f5f5f5"/><text x="1321" y="451" class="arrow-label" text-anchor="middle">收到本项 confirm</text>
+<g id="fig-1-source"><rect x="45" y="260" width="180" height="100" rx="6" fill="#f5f5f5"/><rect x="45" y="260" width="180" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="135" y="286" class="node-name" text-anchor="middle">请求方</text><text x="135" y="308" class="node-detail" text-anchor="middle">CPU、GPU 或缓存等</text></g>
+<g id="fig-1-entry"><rect x="320" y="249" width="221" height="120" rx="6" fill="#f5f5f5"/><rect x="320" y="249" width="221" height="120" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="430.5" y="275" class="node-name" text-anchor="middle">入口请求队列</text><text x="430.5" y="297" class="node-detail" text-anchor="middle">保存地址和事务 ID</text><text x="430.5" y="315" class="node-detail" text-anchor="middle">并行分发两条路径</text></g>
+<g id="fig-1-tags"><rect x="657" y="90" width="273" height="122" rx="6" fill="#f5f5f5"/><rect x="657" y="90" width="273" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="793.5" y="116" class="node-name" text-anchor="middle">缓存控制单元</text><text x="793.5" y="138" class="node-detail" text-anchor="middle">发起系统缓存标签查找</text><text x="793.5" y="156" class="node-detail" text-anchor="middle">命中可取片上数据</text></g>
+<g id="fig-1-engine"><rect x="657" y="422" width="273" height="107" rx="6" fill="#f5f5f5"/><rect x="657" y="422" width="273" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="793.5" y="448" class="node-name" text-anchor="middle">推测读引擎</text><text x="793.5" y="470" class="node-detail" text-anchor="middle">检查 QoS、RAW 等准入条件</text></g>
+<g id="fig-1-hit"><rect x="1091" y="80" width="272" height="109" rx="6" fill="#f5f5f5"/><rect x="1091" y="80" width="272" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1227" y="106" class="node-name" text-anchor="middle">命中数据响应</text><text x="1227" y="128" class="node-detail" text-anchor="middle">返回请求方</text><text x="1227" y="146" class="node-detail" text-anchor="middle">另发 cancel 回收候选</text></g>
+<g id="fig-1-hold"><rect x="1058" y="274" width="305" height="113" rx="6" fill="#f5f5f5"/><rect x="1058" y="274" width="305" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1210.5" y="300" class="node-name" text-anchor="middle">缺失队列：先等待</text><text x="1210.5" y="322" class="node-detail" text-anchor="middle">队列为外存访问存候选</text><text x="1210.5" y="340" class="node-detail" text-anchor="middle">当前项仍被禁止外发</text></g>
+<g id="fig-1-mem"><rect x="1091" y="516" width="272" height="109" rx="6" fill="#f5f5f5"/><rect x="1091" y="516" width="272" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1227" y="542" class="node-name" text-anchor="middle">外存路径</text><text x="1227" y="564" class="node-detail" text-anchor="middle">仅可接收经确认的缺失</text><text x="1227" y="582" class="node-detail" text-anchor="middle">经内存控制器下游发出</text></g>
+<text x="45" y="44" class="signal-title" text-anchor="start">外存端口在确认之前看不到候选</text>
+<text x="44" y="658" class="signal-title" text-anchor="start">图中分开标签查找、候选准备和外存发出三个时点。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-entry">入口队列分发一份请求</a> 组 ID 和 QoS 随请求进入系统缓存。投机路径和缓存标签路径携带能够唯一识别事务的标识。</li><li><a href="#fig-1-tags">标签路径决定 confirm 或 cancel</a> 控制单元从标签阵列得到命中或缺失。命中可直接从系统缓存返回数据。</li><li><a href="#fig-1-hold">缺失队列中的等待项还不能发出</a> 投机引擎通过准入判断后先准备候选。队列识别本项的 confirm，随后才允许向外存发出。</li></ul>
+  <p class="figure-evidence">原图 1、3、5、6、7；说明书归档段 0049、0050、0071、0072、0073、0075、0077、0078、0081、0082、0083、0084；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US9201796B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>入口请求队列</dt><dd>122</dd></div><div><dt>控制单元和标签阵列</dt><dd>124、126</dd></div><div><dt>推测读引擎</dt><dd>128</dd></div><div><dt>等待确认的缺失队列</dt><dd>130</dd></div></dl></details>
+</figure></section><section id="filtering"><h2>按组命中率限制引擎活动，按请求检查发送条件</h2><p>沿图 2 的上方直接路径，标签查找继续处理每笔请求。可选的命中率门只影响推测引擎。控制单元按 group ID 统计系统缓存命中率。原图 8 的高命中率例中，跳过推测引擎可以省去候选准备活动。权利要求 22 明确写了低于阈值才准入。</p><p>通过组判断后，原图 6、7 的引擎还可以检查低延迟 QoS（LLT）、写后读依赖（RAW）、在途推测读数和总在途数。这里的 RAW 指读依赖尚未生效的旧写。是否组合所有条件取决于实施例。权利要求 2、3 另覆盖候选已在队列中时检查，失败后丢弃的顺序；权利要求 12 则写了 LLT 对入队的控制。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　先按请求组的命中率筛选，再判断单笔请求能否提前准备</h3>
+    <p id="fig-2-basis">命中率判断可省去高命中率组的推测引擎活动。RAW 和队列阈值约束具体请求，标签查找仍处理每笔请求。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="先按请求组的命中率筛选，再判断单笔请求能否提前准备" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 692" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">先按请求组的命中率筛选，再判断单笔请求能否提前准备</title>
+<desc id="fig-2-svg-desc">命中率判断可省去高命中率组的推测引擎活动。RAW 和队列阈值约束具体请求，标签查找仍处理每笔请求。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-must" d="M 294 144 L 718 144" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-sample" d="M 166 195 L 166 295 Q 166 303 174 303 L 398 303" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-hot" d="M 398 323 L 357 323 Q 349 323 349 331 L 349 473 Q 349 481 341 481 L 294 481" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-cold" d="M 674 298 L 757 298" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-allow" d="M 1094 318 L 1153 318" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-reject" d="M 918 396 L 918 480" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="480" y="102" width="70" height="18" fill="#f5f5f5"/><text x="515" y="116" class="arrow-label" text-anchor="middle">所有请求</text>
+<rect x="231" y="263" width="84" height="18" fill="#f5f5f5"/><text x="273" y="277" class="arrow-label" text-anchor="middle">按组读统计</text>
+<rect x="255" y="378" width="70" height="18" fill="#f5f5f5"/><text x="290" y="392" class="arrow-label" text-anchor="middle">门限挡住</text>
+<rect x="687" y="261" width="56" height="18" fill="#f5f5f5"/><text x="715" y="275" class="arrow-label" text-anchor="middle">组允许</text>
+<rect x="1100" y="281" width="46" height="18" fill="#f5f5f5"/><text x="1123" y="295" class="arrow-label" text-anchor="middle">满足</text>
+<rect x="936" y="427" width="56" height="18" fill="#f5f5f5"/><text x="964" y="441" class="arrow-label" text-anchor="middle">未满足</text>
+<g id="fig-2-entry"><rect x="43" y="92" width="251" height="103" rx="6" fill="#f5f5f5"/><rect x="43" y="92" width="251" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168.5" y="118" class="node-name" text-anchor="middle">接收推测读</text><text x="168.5" y="140" class="node-detail" text-anchor="middle">取 group ID、QoS、地址</text></g>
+<g id="fig-2-tag-always"><rect x="718" y="85" width="278" height="105" rx="6" fill="#f5f5f5"/><rect x="718" y="85" width="278" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="857" y="111" class="node-name" text-anchor="middle">常规标签查找</text><text x="857" y="133" class="node-detail" text-anchor="middle">始终保留这条路径</text></g>
+<g id="fig-2-rat"><rect x="398" y="251" width="276" height="105" rx="6" fill="#f5f5f5"/><rect x="398" y="251" width="276" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="536" y="277" class="node-name" text-anchor="middle">命中率统计与比较</text><text x="536" y="299" class="node-detail" text-anchor="middle">按 group ID 读统计值</text><text x="536" y="317" class="node-detail" text-anchor="middle">门限可限制引擎活动</text></g>
+<g id="fig-2-block"><rect x="43" y="427" width="251" height="107" rx="6" fill="#f5f5f5"/><rect x="43" y="427" width="251" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168.5" y="453" class="node-name" text-anchor="middle">跳过推测读引擎</text><text x="168.5" y="475" class="node-detail" text-anchor="middle">高命中率组</text><text x="168.5" y="493" class="node-detail" text-anchor="middle">仍等待标签结果</text></g>
+<g id="fig-2-accept"><rect x="757" y="247" width="337" height="149" rx="6" fill="#f5f5f5"/><rect x="757" y="247" width="337" height="149" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="925.5" y="273" class="node-name" text-anchor="middle">推测读引擎的准入条件</text><text x="925.5" y="295" class="node-detail" text-anchor="middle">低延迟 QoS（LLT）</text><text x="925.5" y="313" class="node-detail" text-anchor="middle">无 RAW 依赖</text><text x="925.5" y="331" class="node-detail" text-anchor="middle">在途推测请求、总在途数等门限</text></g>
+<g id="fig-2-enqueue"><rect x="1153" y="263" width="196" height="119" rx="6" fill="#f5f5f5"/><rect x="1153" y="263" width="196" height="119" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1251" y="289" class="node-name" text-anchor="middle">候选进入缺失队列</text><text x="1251" y="311" class="node-detail" text-anchor="middle">有资格提前准备</text><text x="1251" y="329" class="node-detail" text-anchor="middle">等确认结果</text></g>
+<g id="fig-2-deny"><rect x="757" y="480" width="337" height="105" rx="6" fill="#f5f5f5"/><rect x="757" y="480" width="337" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="925.5" y="506" class="node-name" text-anchor="middle">该推测候选不进入缺失队列</text><text x="925.5" y="528" class="node-detail" text-anchor="middle">标签路径继续，不从此路径外发</text></g>
+<text x="43" y="48" class="signal-title" text-anchor="start">命中率门与事务准入门</text>
+<text x="43" y="642" class="signal-title" text-anchor="start">图示为原图 6–8 所述实施例。权利要求 2–3 另描述入队后并行检查并可丢弃的路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-rat">命中率统计按 group ID</a> 请求分组可跨发起方。超过门限的组跳过推测读引擎；权利要求 22 明确只允许低于门限的组。</li><li><a href="#fig-2-accept">LLT、RAW 和资源检查各管不同条件</a> LLT 是请求自身的低延迟 QoS 属性。RAW 检查避免把读越过先前尚未生效的同地址写。队列门限防止占用过多候选资源。</li><li><a href="#fig-2-tag-always">标签查找一路不经命中率门</a> 原图 7、8 即使挡住提前准备，标签查询仍进行。文献未规定这些条件未满足时普通访问如何重试。</li></ul>
+  <p class="figure-evidence">原图 5、6、7、8；说明书归档段 0068、0072、0073、0075、0076、0077、0081、0082、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a> <a href="../diagrams/US9201796B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>按组跟踪系统缓存命中率的单元</dt><dd>125</dd></div><div><dt>逐笔检查条件的推测读引擎</dt><dd>128</dd></div><div><dt>准入条件判定</dt><dd>146</dd></div><div><dt>按组统计并控制是否开推测引擎</dt><dd>172、176、178</dd></div></dl></details>
+</figure></section><section id="keyed-release"><h2>用事务标识把标签结果送回对应候选</h2><p>图 3 的缺失队列同时持有 A 和 B。A 的标签缺失产生 confirm〈A〉，只让 A 具备发往外存的资格。B 的标签命中产生 cancel〈B〉，只取消 B 的外存候选，并由系统缓存返回 B 的数据。队列可按事务 ID 匹配，在需要时也用发起方 ID。</p><p>说明书还允许发起方单独送确认或取消，取消可被实现为更高优先级。队列容量、占用时间以及候选与标签结果不同到达顺序的具体握手，在原图中没有展开。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　confirm、cancel 只改变对应 ID 的队列项</h3>
+    <p id="fig-3-basis">缺失队列可同时暂存多项。缓存控制单元按标签结果改变指定项，请求方也可能另发取消。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="confirm、cancel 只改变对应 ID 的队列项" style="--figure-width:1380px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 690" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">confirm、cancel 只改变对应 ID 的队列项</title>
+<desc id="fig-3-svg-desc">缺失队列可同时暂存多项。缓存控制单元按标签结果改变指定项，请求方也可能另发取消。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-ma" d="M 321 129 L 365 129 Q 373 129 373 137 L 373 259 Q 373 267 381 267 L 434 267" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-mb" d="M 321 341 L 434 341" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-ext" d="M 321 558 L 568 558 Q 576 558 576 550 L 576 357" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-moveA" d="M 714 267 L 769 267 Q 777 267 777 259 L 777 166 Q 777 158 785 158 L 840 158" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-moveB" d="M 714 325 L 771 325 Q 779 325 779 333 L 779 434 Q 779 442 787 442 L 840 442" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-mem" d="M 1086 155 L 1145 155" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-free" d="M 1086 440 L 1145 440" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="380" y="519" width="126" height="18" fill="#f5f5f5"/><text x="443" y="533" class="arrow-label" text-anchor="middle">可选高优先级取消</text>
+<rect x="734" y="113" width="72" height="18" fill="#f5f5f5"/><text x="770" y="127" class="arrow-label" text-anchor="middle">只更改 A</text>
+<rect x="741" y="456" width="72" height="18" fill="#f5f5f5"/><text x="777" y="470" class="arrow-label" text-anchor="middle">只更改 B</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-3-tagA"><rect x="45" y="81" width="276" height="102" rx="6" fill="#f5f5f5"/><rect x="45" y="81" width="276" height="102" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="183" y="107" class="node-name" text-anchor="middle">标签结果 A：缺失</text><text x="183" y="129" class="node-detail" text-anchor="middle">发送 confirm〈A〉</text></g>
+<g id="fig-3-tagB"><rect x="45" y="292" width="276" height="103" rx="6" fill="#f5f5f5"/><rect x="45" y="292" width="276" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="183" y="318" class="node-name" text-anchor="middle">标签结果 B：命中</text><text x="183" y="340" class="node-detail" text-anchor="middle">发送 cancel〈B〉</text><text x="183" y="358" class="node-detail" text-anchor="middle">缓存数据走响应通路</text></g>
+<g id="fig-3-agent"><rect x="45" y="510" width="276" height="92" rx="6" fill="#f5f5f5"/><rect x="45" y="510" width="276" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="183" y="536" class="node-name" text-anchor="middle">请求方可另发取消</text><text x="183" y="558" class="node-detail" text-anchor="middle">事务标识与条件已知</text></g>
+<g id="fig-3-identify"><rect x="434" y="229" width="280" height="128" rx="6" fill="#f5f5f5"/><rect x="434" y="229" width="280" height="128" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="574" y="255" class="node-name" text-anchor="middle">匹配控制消息的标识</text><text x="574" y="277" class="node-detail" text-anchor="middle">从等待项查 ID</text><text x="574" y="295" class="node-detail" text-anchor="middle">也可带发起方 ID</text></g>
+<g id="fig-3-qa"><rect x="840" y="103" width="246" height="107" rx="6" fill="#f5f5f5"/><rect x="840" y="103" width="246" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="963" y="129" class="node-name" text-anchor="middle">候选 A 被确认</text><text x="963" y="151" class="node-detail" text-anchor="middle">仅 A 获得外存发出资格</text></g>
+<g id="fig-3-qb"><rect x="840" y="382" width="246" height="110" rx="6" fill="#f5f5f5"/><rect x="840" y="382" width="246" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="963" y="408" class="node-name" text-anchor="middle">候选 B 被取消</text><text x="963" y="430" class="node-detail" text-anchor="middle">回收 B 对应的队列项</text></g>
+<g id="fig-3-go"><rect x="1145" y="107" width="195" height="97" rx="6" fill="#f5f5f5"/><rect x="1145" y="107" width="195" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1242.5" y="133" class="node-name" text-anchor="middle">A 发到外存</text><text x="1242.5" y="155" class="node-detail" text-anchor="middle">请求经下游互连</text></g>
+<g id="fig-3-drop"><rect x="1145" y="388" width="195" height="98" rx="6" fill="#f5f5f5"/><rect x="1145" y="388" width="195" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1242.5" y="414" class="node-name" text-anchor="middle">B 不发到外存</text><text x="1242.5" y="436" class="node-detail" text-anchor="middle">请求方可用缓存值</text></g>
+<text x="45" y="43" class="signal-title" text-anchor="start">两个并行候选收到不同的标签结果</text>
+<text x="45" y="655" class="signal-title" text-anchor="start">A 与 B 只是队列中的两个示例项。是否使用显式取消和标识格式取决于实现。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-identify">控制消息必须标明是哪一笔</a> 示例暂存 A、B。A 的 confirm 不改变 B 的状态。事务 ID 只在发起方范围内唯一时，标识还需纳入发起方。</li><li><a href="#fig-3-go">本项 confirm 之后才外发</a> A 缺失时准许 A 从队列继续送到内存控制器下游。</li><li><a href="#fig-3-drop">命中或取消时回收候选</a> 如果另一个请求 B 命中，则向请求方提供缓存响应并取消 B 的下游候选。请求方取消可在该实现中具有更高优先级。</li></ul>
+  <p class="figure-evidence">原图 5、6、7；说明书归档段 0072、0075、0078、0079、0082、0083、0084；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US9201796B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>事务 ID，也可叫请求 ID</dt><dd>96</dd></div><div><dt>发送 confirm 与 cancel 的缓存控制单元</dt><dd>124</dd></div><div><dt>按标识管理多笔等待项的缺失队列</dt><dd>130</dd></div><div><dt>确认、取消、匹配结果和下游发送</dt><dd>156、158、160、162</dd></div></dl></details>
+</figure></section><section id="bounded-overlap"><h2>缩短的是确认后到下游发出的等待</h2><p>图 4 的两条路径使用相同模型输入。标签从 t0 查到 t3，资格判断和候选准备耗时两周期。提前准备在 t2 就有等待项，标签缺失时最早 t3 发到下游；若等缺失确认才从 t3 开始准备，要到 t5。若标签命中，则 t3 删除等待项，外存没有出现请求。</p><p>按相同假设复算，候选准备比标签查找长时，提前路径仍要等候选就绪。标签查找早于候选时，推测准备无法把下游发出时点提前到两者之前。计时止于下游发出，DRAM 服务时长与实际拥塞未纳入。对高命中率的组，主要代价是准备后又取消造成的本地队列活动。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　可重叠的是候选准备，外存出发仍等缺失确认</h3>
+    <p id="fig-4-basis">用相同的三周期标签查找和两周期队列准备比较。提前准备在 t2 已有队列项，t3 标签确认缺失即可发出。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="可重叠的是候选准备，外存出发仍等缺失确认" style="--figure-width:1340px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 596" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">可重叠的是候选准备，外存出发仍等缺失确认</title>
+<desc id="fig-4-svg-desc">用相同的三周期标签查找和两周期队列准备比较。提前准备在 t2 已有队列项，t3 标签确认缺失即可发出。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">教学时序｜同一笔有准入资格的推测读</text>
+<g id="fig-4-held"><rect x="644" y="176" width="176" height="85" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="730" y="186" class="arrow-label" text-anchor="middle">队列候选不能外发</text></g>
+<line x1="292" x2="292" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="292" y="64" class="arrow-label" text-anchor="middle">t0 查标签</text>
+<line x1="468" x2="468" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="468" y="64" class="arrow-label" text-anchor="middle">t1</text>
+<line x1="644" x2="644" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="644" y="64" class="arrow-label" text-anchor="middle">t2 候选就绪</text>
+<line x1="820" x2="820" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="820" y="64" class="arrow-label" text-anchor="middle">t3 标签结果</text>
+<line x1="996" x2="996" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="996" y="64" class="arrow-label" text-anchor="middle">t4</text>
+<line x1="1172" x2="1172" y1="73" y2="540" stroke="#4f5d75" opacity=".18"/>
+<text x="1172" y="64" class="arrow-label" text-anchor="middle">t5</text>
+<g id="fig-4-tag"><text x="24" y="138" class="node-name" text-anchor="start">标签查找</text>
+<polyline points="235,150 292,150 292,112 820,112 820,150 1268,150" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="fig-4-prepare"><text x="24" y="232" class="node-name" text-anchor="start">候选准备与等待</text>
+<polyline points="235,250 292,250 292,204 644,204 644,250 1268,250" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="fig-4-io"><text x="24" y="326" class="node-name" text-anchor="start">缺失：提前准备后发出</text>
+<polyline points="235,345 820,345 820,307 1268,307" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="fig-4-cache-hit"><text x="24" y="420" class="node-name" text-anchor="start">命中：外存无请求</text>
+<polyline points="235,427 1268,427" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-4-later"><text x="24" y="511" class="node-name" text-anchor="start">缺失：串行准备后发出</text>
+<polyline points="235,522 1172,522 1172,484 1268,484" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-4-enqueue"><circle cx="644" cy="250" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="657.5" y="253" width="119" height="18" fill="#f5f5f5"/><text x="717" y="267" class="arrow-label" text-anchor="middle">等待缺失确认</text></g>
+<g id="fig-4-confirm"><circle cx="820" cy="307" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="844" y="271" width="140" height="18" fill="#f5f5f5"/><text x="914" y="285" class="arrow-label" text-anchor="middle">发出已确认缺失</text></g>
+<g id="fig-4-cancel"><circle cx="820" cy="427" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="840" y="389" width="128" height="18" fill="#f5f5f5"/><text x="904" y="403" class="arrow-label" text-anchor="middle">删除队列候选</text></g>
+<g id="fig-4-serial"><circle cx="1172" cy="484" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="1141.5" y="453" width="85" height="18" fill="#f5f5f5"/><text x="1184" y="467" class="arrow-label" text-anchor="middle">发往外存</text></g>
+<text x="24" y="572" class="legend" text-anchor="start">从请求开始标签查找计到向下游发出；不计 DRAM 服务时间、外部仲裁或排队拥塞。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-enqueue">候选在标签返回前准备完成</a> 提前准备路径把资格检查和队列建立放在 t0–t2。此时仍是本地等待项。</li><li><a href="#fig-4-confirm">外存最早在 t3 得到请求</a> 本例 t3 收到缺失确认后才发。若同一时点收到命中，删除等待项且不产生外存动作。</li><li><a href="#fig-4-serial">等标签缺失后再准备，最早 t5 发出</a> 对照保持同一个队列准备耗时。两周期之差来自准备工作和标签查找重叠。</li></ul>
+  <p class="figure-evidence">原图 6、7；说明书归档段 0075、0077、0078、0081、0082、0083、0084；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US9201796B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>入口队列，模型对齐的请求时点</dt><dd>122</dd></div><div><dt>允许提前保存的缺失候选</dt><dd>130</dd></div><div><dt>控制发出的缺失确认与命中取消</dt><dd>156、158</dd></div></dl></details>
+</figure></section></div>
+<p><a class="lab-link" href="../lab.html#probe-ahead">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -144,50 +188,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=the%20first%20queue%20is%20configured%20to%20simultaneously%20convey%20the%20speculative%20read%20request%20to%20the%20control%20unit">F14</a></th><td>首个队列同时将该请求交给控制单元与推测读引擎</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=In%20one%20embodiment%2C%20the%20system%20cache%20may%20support%20speculative%20read%20requests%20issued%20by%20a%20requesting%20agent.">说明书 0009</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=access%20the%20system%20cache%20responsive%20to%20receiving%20the%20speculative%20read%20request">F15</a></th><td>控制单元访问系统缓存得到标签结果</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=When%20a%20speculative%20read%20request%20is%20conveyed%20to%20miss%20queue%20130%20%2C%20the%20request%20may%20be">说明书 0078</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=send%20an%20indication%20to%20the%20second%20queue%20to%20convey%20the%20speculative%20read%20request%20to%20a%20system">F16</a></th><td>标签缺失后通知第二队列允许将其送到系统内存</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=When%20a%20speculative%20read%20request%20is%20conveyed%20to%20miss%20queue%20130%20%2C%20the%20request%20may%20be">说明书 0078</a> · <a href="https://patents.google.com/patent/US9201796B2/en#:~:text=After%20block%20152%20%2C%20the%20miss%20queue%20may%20receive%20a%20confirm%20or%20cancel%20signal%20from%20the">说明书 0084</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=send%20an%20indication%20to%20the%20second%20queue%20to%20discard%20the%20speculative%20read%20request">F17</a></th><td>标签命中后让第二队列撤销该请求</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=When%20a%20speculative%20read%20request%20is%20conveyed%20to%20miss%20queue%20130%20%2C%20the%20request%20may%20be">说明书 0078</a> · <a href="https://patents.google.com/patent/US9201796B2/en#:~:text=After%20block%20152%20%2C%20the%20miss%20queue%20may%20receive%20a%20confirm%20or%20cancel%20signal%20from%20the">说明书 0084</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=convey%20the%20speculative%20read%20request%20to%20the%20second%20queue%20for%20holding%20until%20receiving%20an%20indication%20from">F18</a></th><td>推测引擎确认满足条件时送第二队列等待控制单元指示</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=If%20the%20speculative%20read%20request%20meets%20the%20one%20or%20more%20conditions%20%28%20conditional%20block%20146%20%2C">说明书 0082</a> · 原图 6–7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=prevent%20the%20speculative%20read%20request%20from%20being%20conveyed%20to%20the%20second%20queue">F19</a></th><td>不满足条件则阻止该请求送到第二队列</td><td><a href="https://patents.google.com/patent/US9201796B2/en#:~:text=If%20the%20speculative%20read%20request%20meets%20the%20one%20or%20more%20conditions%20%28%20conditional%20block%20146%20%2C">说明书 0082</a> · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>方法项在标签检查已经开始但未结束时把推测读送入缺失队列，外存访问等到缺失确认。原图 6–7。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>请求在缺失队列等待时，同时检查是否满足发内存条件。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>若未满足全部输送条件，就从缺失队列丢弃该推测读。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>候选条件加入请求带低延迟 LLT 服务质量参数。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>候选条件另要求没有读后写 RAW 依赖。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>候选还要求在途推测读数量低于预设阈值。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>若标签命中，从缺失队列删除先前准备的推测读请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>在收到缺失确认后将推测读从缺失队列发往外存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>缓存和缺失队列的装置项分别负责启动查标签、提前送队列和等缺失确认。原图 3、6–7。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>标签缺失时向队列提供带请求标识的确认信号。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>标签命中时向队列提供带请求标识的撤销信号。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>独立方法项限定 LLT 的选路判据，与标签查找并行的 QoS 判断决定是否送到缺失队列。原图 6–7。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>标签查找前先把请求放进前端请求队列。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>推测请求留在缺失队列直到标签给出结果。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>标签命中通知到达后，撤销相应推测请求。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>标签缺失通知到达后，缺失队列才把请求发往外存。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>控制器项用首个队列向标签和推测引擎并行分发，经筛后等待标签对第二队列发确认或撤销。原图 6–7。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>推测引擎核对请求是否带低延迟 LLT 服务质量参数。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>推测引擎核对请求有无读后写依赖。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>限制所有在途请求数量低于预设阈值。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-17">17</a></td><td>限制在途推测读数量低于预设阈值。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-17">17</a></td><td>控制器按组统计命中率，只有发起组低于阈值时才送进推测读引擎。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>方法项在标签检查已经开始但未结束时把推测读送入缺失队列，外存访问等到缺失确认。原图 6–7。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>请求在缺失队列等待时，同时检查是否满足发内存条件。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>若未满足全部输送条件，就从缺失队列丢弃该推测读。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>候选条件加入请求带低延迟 LLT 服务质量参数。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>候选条件另要求不存在同址写后读（RAW）依赖。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>候选还要求在途推测读数量低于预设阈值。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>若标签命中，从缺失队列删除先前准备的推测读请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>在收到缺失确认后将推测读从缺失队列发往外存。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>缓存和缺失队列的装置项分别负责启动查标签、提前送队列和等缺失确认。原图 3、6–7。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>标签缺失时向队列提供带请求标识的确认信号。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>标签命中时向队列提供带请求标识的撤销信号。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>独立方法项限定 LLT 的选路判据，与标签查找并行的 QoS 判断决定是否送到缺失队列。原图 6–7。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>标签查找前先把请求放进前端请求队列。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>推测请求留在缺失队列直到标签给出结果。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>标签命中通知到达后，撤销相应推测请求。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>标签缺失通知到达后，缺失队列才把请求发往外存。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>控制器项用首个队列向标签和推测引擎并行分发，经筛后等待标签对第二队列发确认或撤销。原图 6–7。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>推测引擎核对请求是否带低延迟 LLT 服务质量参数。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>推测引擎核对请求有无写后读依赖。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-17">17</a></td><td>限制所有在途请求数量低于预设阈值。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-17">17</a></td><td>限制在途推测读数量低于预设阈值。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td><a href="#claim-17">17</a></td><td>控制器按组统计命中率，只有发起组低于阈值时才送进推测读引擎。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>控制器在标签检查开始后、完成前把请求送到缺失队列，待缺失确认后才访问外部内存。</dd></div><div><dt>图 6–8</dt><dd>图 6–8 给出推测路径、结果确认和候选筛选。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9201796B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></dt><dd>从属项约束低延迟 QoS、依赖与未完成量等筛选条件，以及命中撤销和缺失转发。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US9201796B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12619558B2.html#engineering">仅预留命中所需的内存控制器资源</a>
-<p>US9201796B2 权 1 在标签结束前把推测读放入缺失队列，确认缺失后才可访问外存；权 7 加入命中时撤销。US12619558B2 权 1 先预留命中组的全部必要条目，确认缺失后才申请缺失组。两种安排改变的是不同资源的占用时点。</p></li><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
-<p>顺序流水线等待 A 的数据时可推测执行后续指令，先发 B 的缺失请求，之后从 A 按序重执行。在下层 SLC，合格的推测读可趁标签未出先排进缺失队列，片外读仍等缺失确认。放在同一条访存路径上看，前者提前发出第二笔请求，后者提前准备这一笔请求到外存的队列资源。</p></li><li><a href="US9454486B2.html#engineering">预取与需求读共享待处理请求槽</a>
-<p>US9201796B2 让标签查找与缺失条目准备重叠，确认缺失后才可发片外读。US9454486B2 权 7 把等待同一缓存行的需求读记入尚未完成的预取条目，并利用预取返回数据重放。前者改变提前占位的时机，后者让两笔同地址请求共享已有访存。</p></li></ul>
-    <p><a href="../index.html?patent=US9201796B2#knowledge">在全量关系图上定位 US9201796B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2012-09-27</dd></div>
-    <div><dt>美国申请日</dt><dd>2012-09-27</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2015-12-01</dd></div>
-    <div><dt>美国申请号</dt><dd>US13/629,172</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sukalpa Biswas、Shinye Shiu</dd></div><div><dt>分类号</dt><dd>G06F12/0862、G06F1/3225、G06F1/3275、Y02B60/1225、Y02B60/1228、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US9201796B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US9201796B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 公布全文与图文说明，覆盖 91 个说明书段落、22 项权利要求。</p>
-  <p>核对过的图号为 图 3、图 6、图 7、图 8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US9201796B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

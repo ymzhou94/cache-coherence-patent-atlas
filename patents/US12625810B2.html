@@ -1,122 +1,125 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12625810B2 缓存覆盖写可取消待处理失效 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>操作数缓存何时可以取消向下一层发失效 · US12625810B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12625810B2</code> · <a href="https://patents.google.com/patent/US12625810B2/en">专利全文</a></p>
+<h1>操作数缓存何时可以取消向下一层发失效</h1><p class="reading-question">一次读取注明最后使用了旧结果。若后续计算很快重用同一位置，下一层缓存还需要收到那条失效吗？</p>
+<p class="reading-answer">靠近执行单元的缓存先记录待失效。后续操作先覆盖同一位置时，只清标记，由写回缓存机制跟踪新值与旧副本。若替换先逐出仍带标记的条目，就让下一层对应条目失效。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-05-12</dd></div><div><dt>申请号</dt><dd>US18/911,588</dd></div><div><dt>最早优先权</dt><dd>2024-09-20</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>David K. Li、Yoong Chert Foo、Benjiman L. Goodman、Chance C. Coats</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#fields">先设置待失效，保留独立的有效状态</a></li><li><a href="#overwrite">覆盖先到，为什么只需清标记</a></li><li><a href="#evict">逐出先到，失效才传播到 DL0</a></li><li><a href="#compiler">编译器怎样提高同位置覆盖机会</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="fields"><h2>先设置待失效，保留独立的有效状态</h2><p>图 1 采用原图 2 的两级边界。在原图 3 的 GPU 例里，靠近执行数据通路的是操作数缓存，下一层是 DL0。条目同时保存有效状态和待失效字段 Need LU。指令的 last-use 表示旧操作数之后不再读取。执行单元在返回旧值之后记录待失效，控制电路暂不向 DL0 发失效。</p><p>说明书允许标记为单独一位或其他编码，机制以已设／已清区分。操作数缓存可以按寄存器标识索引；包含性和写回属性在权利要求 10、12 有明确约束。GPU 是详细示例，权利要求 7、16 还写到按地址 load 的情况。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　Need LU 由哪一级保存</h3>
+    <p id="fig-1-basis">待失效字段属于近端缓存。覆盖同一位置时清除；仍被标记的条目逐出时，控制电路使下一层对应项失效。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="Need LU 由哪一级保存" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 549" role="img" aria-labelledby="us12625810b2-fig-1-svg-title us12625810b2-fig-1-svg-desc">
+<title id="us12625810b2-fig-1-svg-title">Need LU 由哪一级保存</title>
+<desc id="us12625810b2-fig-1-svg-desc">待失效字段属于近端缓存。覆盖同一位置时清除；仍被标记的条目逐出时，控制电路使下一层对应项失效。</desc>
+<defs><marker id="us12625810b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625810b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625810b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625810b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12625810b2-fig-1-read" d="M 208 175 L 348 175" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-1-arrow-data)"/>
+<path id="us12625810b2-fig-1-mark" d="M 453 388 L 453 232" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625810b2-fig-1-arrow-main)"/>
+<path id="us12625810b2-fig-1-read-pending" d="M 390 232 L 390 274 Q 390 282 382 282 L 290 282 Q 282 282 282 290 L 282 404 Q 282 412 274 412 L 209 412" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-1-arrow-control)"/>
+<path id="us12625810b2-fig-1-evict" d="M 209 455 L 348 455" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-1-arrow-control)"/>
+<path id="us12625810b2-fig-1-invalidate" d="M 569 445 L 817 445 Q 825 445 825 437 L 825 221" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-1-arrow-control)"/>
+<rect x="216.5" y="146" width="123" height="18" fill="#f5f5f5"/><text x="278" y="160" class="arrow-label" text-anchor="middle">读取 A，带 lu</text>
+<rect x="450" y="286" width="152" height="18" fill="#f5f5f5"/><text x="526" y="300" class="arrow-label" text-anchor="middle">设置或清除 Need LU</text>
+<rect x="269" y="256" width="132" height="18" fill="#f5f5f5"/><text x="335" y="270" class="arrow-label" text-anchor="middle">条目待失效状态</text>
+<rect x="228.5" y="428" width="101" height="18" fill="#f5f5f5"/><text x="279" y="442" class="arrow-label" text-anchor="middle">逐出选中项</text>
+<rect x="602" y="416" width="192" height="18" fill="#f5f5f5"/><text x="698" y="430" class="arrow-label" text-anchor="middle">待失效项先逐出，才传播失效</text>
+<g id="us12625810b2-fig-1-exec"><rect x="32" y="135" width="176" height="84" rx="6" fill="#f5f5f5"/><rect x="32" y="135" width="176" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="120" y="161" class="node-name" text-anchor="middle">执行数据通路</text><text x="120" y="183" class="node-detail" text-anchor="middle">读取操作数位置 A</text><text x="120" y="201" class="node-detail" text-anchor="middle">接收 last-use 指示</text></g>
+<g id="us12625810b2-fig-1-operand"><rect x="348" y="121" width="221" height="111" rx="6" fill="#f5f5f5"/><rect x="348" y="121" width="221" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="458.5" y="147" class="node-name" text-anchor="middle">操作数缓存</text><text x="458.5" y="169" class="node-detail" text-anchor="middle">位置 A 的条目</text><text x="458.5" y="187" class="node-detail" text-anchor="middle">有效状态和 Need LU 分开</text></g>
+<g id="us12625810b2-fig-1-next"><rect x="717" y="130" width="209" height="91" rx="6" fill="#f5f5f5"/><rect x="717" y="130" width="209" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="821.5" y="156" class="node-name" text-anchor="middle">下一层缓存（DL0 例）</text><text x="821.5" y="178" class="node-detail" text-anchor="middle">位置 A 对应条目</text><text x="821.5" y="196" class="node-detail" text-anchor="middle">另有有效状态</text></g>
+<g id="us12625810b2-fig-1-ctrl"><rect x="348" y="388" width="221" height="106" rx="6" fill="#f5f5f5"/><rect x="348" y="388" width="221" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="458.5" y="414" class="node-name" text-anchor="middle">缓存控制电路</text><text x="458.5" y="436" class="node-detail" text-anchor="middle">读后设 Need LU</text><text x="458.5" y="454" class="node-detail" text-anchor="middle">覆盖时清除，逐出时传播</text></g>
+<g id="us12625810b2-fig-1-policy"><rect x="34" y="394" width="175" height="88" rx="6" fill="#f5f5f5"/><rect x="34" y="394" width="175" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="121.5" y="420" class="node-name" text-anchor="middle">替换控制</text><text x="121.5" y="442" class="node-detail" text-anchor="middle">可用待失效状态选逐出项</text></g>
+<text x="32" y="54" class="signal-title" text-anchor="start">待失效状态保存在较近的缓存条目</text>
+<text x="32" y="525" class="legend" text-anchor="start">覆盖优先分支见图 2。替换先逐出时才向下一层传播失效，见图 3。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625810b2-fig-1-operand">两种字段各自作用</a> Need LU 表示后续可能需要失效。有效状态显示当前条目的实际状态，说明书示例可暂不更改有效位。</li><li><a href="#us12625810b2-fig-1-ctrl">近端控制选择分支</a> 由覆盖和逐出确认是否还需失效。</li><li><a href="#us12625810b2-fig-1-invalidate">下一层失效出口</a> 只有图中的待失效先逐出分支传播，上层的新值覆盖另见图 2。</li></ul>
+  <p class="figure-evidence">原图 2、3、5；说明书归档段 0033、0034、0035、0036、0037、0038、0039、0040、0044、0057、0058；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US12625810B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>执行数据通路</dt><dd>210/310</dd></div><div><dt>操作数缓存或近端缓存</dt><dd>220/320</dd></div><div><dt>近端缓存位置 A</dt><dd>225</dd></div><div><dt>下一层缓存（DL0 例）</dt><dd>230/330</dd></div><div><dt>下一层对应条目</dt><dd>235</dd></div><div><dt>缓存控制电路</dt><dd>240</dd></div><div><dt>替换控制和待失效条目专用逐出端口</dt><dd>520/530</dd></div></dl></details>
+</figure></section><section id="overwrite"><h2>覆盖先到，为什么只需清标记</h2><p>图 2 跟踪原图 3 的 r1。加法指令 i0 写 r1。i1 加 r1 和 r2，在 r1 的输入上带 lu。i2 在程序顺序中随后执行，将 r3 与 r4 的和写入同一个 r1 位置。</p><p>覆盖写使原位置驻留新结果并可标为修改。此后下一层旧副本按写回协议视为陈旧。权利要求 4、14 对紧接的覆盖提供保证。说明书 0045 还讨论实现可向编译器保证有限指令窗口内的覆盖；没有给出统一窗口大小。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同位置覆盖取消向 DL0 发失效</h3>
+    <p id="fig-2-basis">i1 设 r1 的 Need LU。i2 及时写同一位置，清除标记。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同位置覆盖取消向 DL0 发失效" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 455" role="img" aria-labelledby="us12625810b2-fig-2-svg-title us12625810b2-fig-2-svg-desc">
+<title id="us12625810b2-fig-2-svg-title">同位置覆盖取消向 DL0 发失效</title>
+<desc id="us12625810b2-fig-2-svg-desc">i1 设 r1 的 Need LU。i2 及时写同一位置，清除标记。</desc>
+<defs><marker id="us12625810b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625810b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625810b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625810b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12625810b2-fig-2-initial"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-2-arrow-data)"/><rect x="220" y="96" width="156" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">i0 向 r1 写入旧值</text></g>
+<g id="us12625810b2-fig-2-last-use"><path d="M 116 168 L 480 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-2-arrow-data)"/><rect x="207" y="144" width="182" height="18" fill="#f5f5f5"/><text x="298" y="158" class="arrow-label" text-anchor="middle">i1 读取 r1，标记 lu</text></g>
+<g id="us12625810b2-fig-2-result"><path d="M 480 216 L 116 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-2-arrow-return)"/><rect x="239.5" y="192" width="117" height="18" fill="#f5f5f5"/><text x="298" y="206" class="arrow-label" text-anchor="middle">返回 r1 的旧值</text></g>
+<g id="us12625810b2-fig-2-pending"><path d="M 480 258 L 504 258 Q 512 258 512 266 L 512 268 Q 512 276 504 276 L 480 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12625810b2-fig-2-arrow-control)"/><rect x="535.5" y="234" width="117" height="18" fill="#f5f5f5"/><text x="594" y="248" class="arrow-label" text-anchor="middle">设 Need LU</text></g>
+<g id="us12625810b2-fig-2-overwrite"><path d="M 116 312 L 480 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625810b2-fig-2-arrow-main)"/><rect x="200.5" y="288" width="195" height="18" fill="#f5f5f5"/><text x="298" y="302" class="arrow-label" text-anchor="middle">i2 向同一 r1 位置写新值</text></g>
+<g id="us12625810b2-fig-2-suppress"><path d="M 480 354 L 504 354 Q 512 354 512 362 L 512 364 Q 512 372 504 372 L 480 372" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12625810b2-fig-2-arrow-control)"/><rect x="457.5" y="330" width="273" height="18" fill="#f5f5f5"/><text x="594" y="344" class="arrow-label" text-anchor="middle">清 Need LU，抑制到 DL0 的失效</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">执行数据通路</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">操作数缓存</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">DL0 缓存</text>
+<text x="28" y="436" class="legend" text-anchor="start">所画 i0、i1、i2 来自原图 3。同位置覆盖在待失效项被逐出前发生。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625810b2-fig-2-last-use">i1 标记 r1 的末次使用</a> 旧值返回后不再使用，但标记仍跟踪该缓存位置之后的处理。</li><li><a href="#us12625810b2-fig-2-overwrite">i2 写入同一 r1 位置</a> 用新结果覆盖已标记条目。</li><li><a href="#us12625810b2-fig-2-suppress">只清近端标记</a> DL0 的失效消息被抑制。脏状态使缓存层能区分数据版本。</li></ul>
+  <p class="figure-evidence">原图 3；说明书归档段 0041、0042、0043、0044、0045、0046、0048、0062、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US12625810B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>执行数据通路</dt><dd>310</dd></div><div><dt>操作数缓存</dt><dd>320</dd></div><div><dt>DL0 缓存</dt><dd>330</dd></div><div><dt>待失效字段</dt><dd>Need LU</dd></div></dl></details>
+</figure></section><section id="evict"><h2>逐出先到，失效才传播到 DL0</h2><p>图 3 固定 r1 还带 Need LU，且 i2 尚未覆盖。替换控制可把待失效项列为优先逐出候选。若该项先被逐出，控制电路再使 DL0 对应条目失效。</p><p>原图 5 的可选实现为待失效项设置单独逐出端口，可和其他读端口并行。权利要求 9、11 分别覆盖候选优先级与专用端口。权利要求 1 写了逐出和覆盖两支，权利要求 12 只要求覆盖时取消失效及包含式写回的下一层。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　待失效条目先被逐出，DL0 仍要失效</h3>
+    <p id="fig-3-basis">同一条目尚未被重用时，替换命中 Need LU 要保留向下一层发失效的动作。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="待失效条目先被逐出，DL0 仍要失效" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 407" role="img" aria-labelledby="us12625810b2-fig-3-svg-title us12625810b2-fig-3-svg-desc">
+<title id="us12625810b2-fig-3-svg-title">待失效条目先被逐出，DL0 仍要失效</title>
+<desc id="us12625810b2-fig-3-svg-desc">同一条目尚未被重用时，替换命中 Need LU 要保留向下一层发失效的动作。</desc>
+<defs><marker id="us12625810b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625810b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625810b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625810b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12625810b2-fig-3-last"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-3-arrow-data)"/><rect x="146" y="96" width="182" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">最后一次读 r1 附带 lu</text></g>
+<g id="us12625810b2-fig-3-set"><path d="M 358 162 L 382 162 Q 390 162 390 170 L 390 172 Q 390 180 382 180 L 358 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12625810b2-fig-3-arrow-control)"/><rect x="413.5" y="138" width="117" height="18" fill="#f5f5f5"/><text x="472" y="152" class="arrow-label" text-anchor="middle">置 Need LU</text></g>
+<g id="us12625810b2-fig-3-inputs"><path d="M 358 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-3-arrow-return)"/><rect x="408" y="192" width="143" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">待失效状态参与替换选择</text></g>
+<g id="us12625810b2-fig-3-select"><path d="M 601 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-3-arrow-data)"/><rect x="408" y="240" width="143" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">覆盖前选中并逐出 r1</text></g>
+<g id="us12625810b2-fig-3-propagate"><path d="M 601 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625810b2-fig-3-arrow-main)"/><rect x="638" y="288" width="169" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">使 DL0 的对应条目失效</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">执行数据通路</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">操作数缓存</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">替换／缓存控制</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">DL0 缓存</text>
+<text x="28" y="388" class="legend" text-anchor="start">选中的是仍带 Need LU 的条目。独权 1 覆盖这一分支，独权 12 的覆盖路径不要求发生逐出。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625810b2-fig-3-inputs">替换可读取待失效状态</a> 可选策略优先处理已标记的候选。在专用端口实现中，还可并行处理其他逐出。</li><li><a href="#us12625810b2-fig-3-select">覆盖之前发生逐出</a> Need LU 未清，逐出会让近端不再保存旧条目。</li><li><a href="#us12625810b2-fig-3-propagate">向 DL0 传播失效</a> 让关联的下一层条目失效。该过程不同于把新写结果逐出写回。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0040、0047、0055、0056、0057、0058、0061、0062、0068；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US12625810B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>替换控制</dt><dd>520</dd></div><div><dt>待失效项专用逐出端口</dt><dd>530</dd></div><div><dt>近端与下一层的对应条目</dt><dd>225/235</dd></div></dl></details>
+</figure></section><section id="compiler"><h2>编译器怎样提高同位置覆盖机会</h2><p>原图 4 在找到末次读取后，为指令设置 last-use。随后检查有没有合法的目的操作数能放回释放的位置。若有，选择重用该位置。若没有，继续默认编译。若重排微操作，会先检查依赖。</p><p>权利要求 19 把编译出的两条操作与硬件检测联结。工程上可以统计每次 last-use 触发后，覆盖和逐出谁先发生。相关失效消息减少量由先覆盖的次数决定，DL0 的队列等待还取决于其他事务。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　编译器何时安排同一个目的位置</h3>
+    <p id="fig-4-basis">找到合法的后续写入后，编译器可复用发生 last-use 的操作数位置。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="编译器何时安排同一个目的位置" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 645" role="img" aria-labelledby="us12625810b2-fig-4-svg-title us12625810b2-fig-4-svg-desc">
+<title id="us12625810b2-fig-4-svg-title">编译器何时安排同一个目的位置</title>
+<desc id="us12625810b2-fig-4-svg-desc">找到合法的后续写入后，编译器可复用发生 last-use 的操作数位置。</desc>
+<defs><marker id="us12625810b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12625810b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12625810b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12625810b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12625810b2-fig-4-first" d="M 480 141 L 480 187" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-4-arrow-data)"/>
+<path id="us12625810b2-fig-4-second" d="M 480 260 L 480 313" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12625810b2-fig-4-arrow-data)"/>
+<path id="us12625810b2-fig-4-none" d="M 657 368 L 717 368" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12625810b2-fig-4-arrow-control)"/>
+<path id="us12625810b2-fig-4-yes" d="M 480 423 L 480 489" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12625810b2-fig-4-arrow-main)"/>
+<rect x="500.5" y="156" width="111" height="18" fill="#f5f5f5"/><text x="556" y="170" class="arrow-label" text-anchor="middle">识别末次使用</text>
+<rect x="498" y="279" width="118" height="18" fill="#f5f5f5"/><text x="557" y="293" class="arrow-label" text-anchor="middle">检查后续指令</text>
+<rect x="665" y="341" width="38" height="18" fill="#f5f5f5"/><text x="684" y="355" class="arrow-label" text-anchor="middle">无</text>
+<rect x="499.5" y="453" width="101" height="18" fill="#f5f5f5"/><text x="550" y="467" class="arrow-label" text-anchor="middle">有可用候选</text>
+<g id="us12625810b2-fig-4-find"><rect x="312" y="68" width="336" height="73" rx="6" fill="#f5f5f5"/><rect x="312" y="68" width="336" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480" y="94" class="node-name" text-anchor="middle">定位目的操作数的最后一次读取</text><text x="480" y="116" class="node-detail" text-anchor="middle">分析指令窗口内的操作数使用</text></g>
+<g id="us12625810b2-fig-4-mark-lu"><rect x="312" y="187" width="336" height="73" rx="6" fill="#f5f5f5"/><rect x="312" y="187" width="336" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480" y="213" class="node-name" text-anchor="middle">给读取操作加 last-use 指示</text><text x="480" y="235" class="node-detail" text-anchor="middle">如 i1 读取 r1.lu</text></g>
+<g id="us12625810b2-fig-4-candidate"><polygon points="480,313 657,368 480,423 303,368" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="480" y="365" class="node-name" text-anchor="middle">后续指令能重用该位置？</text><text x="480" y="386" class="node-detail" text-anchor="middle">检查依赖和其他编译限制</text></g>
+<g id="us12625810b2-fig-4-default"><rect x="717" y="330" width="207" height="76" rx="6" fill="#f5f5f5"/><rect x="717" y="330" width="207" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="820.5" y="356" class="node-name" text-anchor="middle">继续默认编译</text><text x="820.5" y="378" class="node-detail" text-anchor="middle">仍可保留 last-use 指示</text></g>
+<g id="us12625810b2-fig-4-reuse"><rect x="314" y="489" width="332" height="86" rx="6" fill="#f5f5f5"/><rect x="314" y="489" width="332" height="86" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="480" y="515" class="node-name" text-anchor="middle">选择同一目的操作数位置</text><text x="480" y="537" class="node-detail" text-anchor="middle">例如把 i2 的结果放回 r1</text></g>
+<text x="36" y="44" class="signal-title" text-anchor="start">编译器在指令窗口内找同位置覆盖</text>
+<text x="36" y="622" class="legend" text-anchor="start">可选重排需要通过依赖检查。硬件保证取决于写入距离与具体权项。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12625810b2-fig-4-candidate">检查合法的后续写</a> 原图 4 的决定点问有没有可用指令。寄存器分配及依赖关系决定可行性。</li><li><a href="#us12625810b2-fig-4-reuse">重用目的操作数位置</a> 选择 i2 向 r1 写入，把机会交给图 2 的硬件路径。</li></ul>
+  <p class="figure-evidence">原图 4；说明书归档段 0049、0050、0051、0052、0053、0054、0065、0067；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12625810B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>识别最后一次使用</dt><dd>410</dd></div><div><dt>加 last-use 指示</dt><dd>420</dd></div><div><dt>寻找可用的覆盖写</dt><dd>430</dd></div><div><dt>选择原位置为目的操作数</dt><dd>440</dd></div><div><dt>执行默认编译</dt><dd>450</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US12625810B2</code><span>美国授权专利</span><time datetime="2026-05-12">2026-05-12</time></p>
-  <h1>缓存覆盖写可取消待处理失效</h1>
-  <p class="english-title" lang="en">Delayed cache entry invalidation update for potential overwrite re-use</p>
-  <p class="document-question">读指令声明旧数据失效后，操作数缓存什么时候才向下一层发失效？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">上级缓存设置待失效位后，覆盖写先到就清位，逐出先到才使下级对应条目失效。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>竞争的两项操作须针对同一个上级条目，后一条下级失效取决于逐出时该位仍被置位。</dd></div><div><dt>验证方法</dt><dd>固定上级读后失效的地址，交换同址覆盖写和替换触发的先后。记录待失效位、逐出状态与下级失效信号。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12625810B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-4">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">执行单元读完一个暂存值后，可以声明该值不再有效。如果同一条目很快被新值覆盖，立即向下一级传播失效可能产生可以省下的协议操作。</p>
-    <p>上一级缓存先设置待失效位。后续操作覆盖同一条目时清除该位。如果替换策略先逐出该条目，控制逻辑才使下一级的对应条目失效。</p>
-    <ol class="walkthrough"><li><h3>读出旧值</h3><p>执行单元从上一级缓存读数据，同时送出失效信号。</p></li><li><h3>登记待失效位</h3><p>上一级缓存的控制逻辑保留待传播状态。</p></li><li><h3>处理覆盖写</h3><p>后续操作覆盖同一条目时清除待失效位，不触发下一级失效。</p></li><li><h3>处理替换逐出</h3><p>若该条目在待失效状态下先被逐出，控制逻辑使下一级对应条目失效。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的实施例把上级定义为操作数缓存、下级定义为寄存器堆或寄存器数据缓存。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 保证紧随其后的同条目覆盖可以抑制下级失效。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>末次使用（last use）</dt><dd>本次读取后不再需要源操作数的原值。带该标记的读操作可对相关缓存条目发出失效指示。</dd></div><div><dt>操作数缓存</dt><dd>执行单元近端保存寄存器值等操作数的小缓存。原图 3 用它连接运算数据通路与 DL0。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-4">编译器如何安排同一个覆盖目的地</a></li><li><a href="#fig-1">待失效状态保存在上一级条目中</a></li><li><a href="#fig-2">覆盖写发生在逐出之前</a></li><li><a href="#fig-3">逐出发生在覆盖写之前</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-4-title">编译器如何安排同一个覆盖目的地</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625810B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="编译器如何安排同一个覆盖目的地">
-    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-4/diagram.svg" width="790" height="316"
-         style="--paper-width:790px" alt="编译器如何安排同一个覆盖目的地。先标记操作数末次使用，再检查是否有合法的后续指令可写回同一位置。无候选时沿默认路径编译。">
-  </div>
-  <figcaption>
-    <span>先标记操作数末次使用，再检查是否有合法的后续指令可写回同一位置。无候选时沿默认路径编译。</span>
-    <span class="figure-evidence">原图 4，说明书 [0050]–[0053]，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">待失效状态保存在上一级条目中</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625810B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="待失效状态保存在上一级条目中">
-    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-1/diagram.svg" width="955" height="176"
-         style="--paper-width:955px" alt="待失效状态保存在上一级条目中。覆盖写和替换逐出都读取该状态，只有逐出分支需要向下级传播失效。">
-  </div>
-  <figcaption>
-    <span>覆盖写和替换逐出都读取该状态，只有逐出分支需要向下级传播失效。</span>
-    <span class="figure-evidence">原图 2、图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">覆盖写发生在逐出之前</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625810B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="覆盖写发生在逐出之前">
-    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-2/diagram.svg" width="560" height="402"
-         style="--paper-width:560px" alt="覆盖写发生在逐出之前。该顺序下，下一级对应条目保持现有状态。">
-  </div>
-  <figcaption>
-    <span>该顺序下，下一级对应条目保持现有状态。</span>
-    <span class="figure-evidence">原图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-3-title">逐出发生在覆盖写之前</h3></div>
-    <a class="paper-open" href="../mechanisms/US12625810B2/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="逐出发生在覆盖写之前">
-    <img class="paper-image native-image" src="../mechanisms/US12625810B2/fig-3/diagram.svg" width="920" height="386"
-         style="--paper-width:920px" alt="逐出发生在覆盖写之前。替换触发时仍有待失效位，必须推进下一级失效。">
-  </div>
-  <figcaption>
-    <span>替换触发时仍有待失效位，必须推进下一级失效。</span>
-    <span class="figure-evidence">原图 5、图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>同位置覆盖写</dt><dd>取消向下失效 <span class="subdued">原图 3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></span></dd></div><div><dt>编译选择覆盖目的地</dt><dd>增加复用机会 <span class="subdued">原图 4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>编译器可选后续结果的目的操作数，使其复用原位置。核对收益时须对齐实际执行顺序、目的条目匹配和控制器是否外发失效。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>相邻的读、写若在寄存器分配或重命名后指向不同条目，不能触发同条目取消。此为按权利要求推得的应用边界。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学示例中，指令读 A 并声明 A 失效。下一条指令覆盖同一缓存条目。</dd></div><div><dt>处理结果</dt><dd>上一级缓存清除待失效位，下一级对应条目不因第一次声明而失效。如果期间发生替换逐出，则走传播失效分支。</dd></div><div><dt>结果解读</dt><dd>结果区分覆盖取消与逐出传播两条路径。原文未给出命中率或功耗变化。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、12、19 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -140,49 +143,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=compiling%20a%20program%20for%20execution%20by%20a%20processor%20that%20includes%20a%20first-level%20cache%20and%20a%20second-level">F10</a></th><td>介质指令用于为含两级缓存的处理器编译程序</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%204%20is%20a%20flow%20diagram%20illustrating%20an%20example%20compiler%20method%20for%20re-use%2C%20according%20to%20some">说明书 0049</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=generating%20a%20first%20operation%20that%20reads%20first%20data%20and%20signals%20an%20invalidation%20of%20the%20first%20data">F11</a></th><td>编译产生读取原数据并带失效指示的操作</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20410%2C%20in%20the%20illustrated%20example%2C%20the%20compiler%20detects%20last%20use%20of%20a%20read%20operand.%20This">说明书 0050</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20420%2C%20in%20the%20illustrated%20example%2C%20the%20compiler%20sets%20a%20last-use%20indication%20for%20the%20operand%20in">说明书 0051</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=selecting%20a%20destination%20for%20the%20second%20operation%20to%20overwrite%20the%20first%20data">F12</a></th><td>为程序顺序中的后续操作选覆盖旧数据的目的位置</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=At%20430%2C%20the%20compiler%20determines%20whether%20there%20is%20a%20subsequent%20instruction%20available%20that%20could%20target%20the">说明书 0052</a> · <a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=If%20a%20candidate%20instruction%20is%20identified%20at%20430%2C%20flow%20proceeds%20to%20440%20and%20the%20compiler%20selects">说明书 0053</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=set%20an%20indicator%2C%20in%20response%20to%20the%20first%20operation">F13</a></th><td>处理器收到首操作时把该条目标成待失效</td><td><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=FIG.%202%20is%20a%20block%20diagram%20illustrating%20example%20cache%20circuitry%20that%20supports%20an%20invalidate-pending%20status%2C%20according">说明书 0033</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12625810B2#:~:text=clear%20the%20indicator%20without%20invalidating%20a%20corresponding%20entry%20in%20the%20second-level%20cache">F14</a></th><td>后续实际覆盖时清除标志，保留下一层对应条目的现有状态</td><td>原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置权项规定两级缓存、读后失效、同一位置覆盖后的取消及替换逐出后的传播。原图 2、5–6。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>上级限定为操作数缓存，下级为寄存器文件或寄存器数据缓存，读操作带末次使用提示。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>同一操作数缓存可保存图形程序多个 SIMT 组的线程寄存器数据。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>若紧随其后的操作覆盖该条目，硬件保证抑制原失效的下传。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>所执行程序由编译器安排读后失效指令后的操作数位置复用。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>第一级缓存限定为最靠近执行单元的层级。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>触发失效的是指定内存地址的 load 指令。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>第一级缓存条目另带有效状态。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>替换控制优先逐出设有待失效位的第一级条目。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>第二级采用写回，并包含第一级覆盖的地址。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>新增逐出端口，仅处理处于待失效状态的第一级条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>方法项把受益路径限定为同条目覆盖抑制失效。第二级使用写回并含第一级缓存覆盖的位置。原图 2–3、6。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>把两级限定为操作数缓存与寄存器堆或寄存器数据缓存，并用末次使用指示。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-12">12</a></td><td>若紧随其后的操作覆盖同一条目，保证省去第二级失效。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>编译时为紧随其后的操作选定覆盖旧条目的目的位置。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-12">12</a></td><td>首操作为带内存地址的 load 指令。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-12">12</a></td><td>在替换选择中优先考虑待失效条目。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-12">12</a></td><td>再次明示第二级写回且包含第一级覆盖地址，父项已列相同限定。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td>独立项</td><td>介质项的编译器安排程序顺序中的读后失效与同位置覆盖，处理器控制电路用待失效位取消外发操作。原图 3–4。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></dt><dd>规定待失效、覆盖与逐出的分支，其中权利要求 12 另限定下层缓存属性。</dd></div><div><dt>原图 2、图 3、图 6</dt><dd>依次给出状态字段、指令级复用和控制流程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12625810B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、图 4</dt><dd>给出由编译器选择覆盖写目的的实施方式。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12625810B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11630771B2.html#engineering">用待失效标记推迟缓存失效</a>
-<p>US12625810B2 用上级缓存的待失效位区分两条路径，覆盖写先到时清位，上级逐出先到时才失效下级的对应条目。US11630771B2 接收其他处理器的失效命令，作用域匹配时延迟实际失效，直到关联同步事件到达。两种方案都记录待失效状态，状态终止事件分别是缓存行操作和处理器同步。</p></li><li><a href="US12625821B2.html#engineering">用锁位保护数据缓存中的寄存器操作数</a>
-<p>US12625821B2 用线程的寄存器锁位阻止逐出含锁定操作数的数据缓存行。复位时将操作数缓存中带末次使用指示的条目写往存储层级，再清理该组锁位。US12625810B2 在读操作发出失效指示时设置上级条目的待失效位，覆盖写先到则清标记，替换逐出先到才使下级对应条目失效。</p></li></ul>
-    <p><a href="../index.html?patent=US12625810B2#knowledge">在全量关系图上定位 US12625810B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2024-09-20</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-10-10</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-05-12</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/911,588</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>David K. Li、Yoong Chert Foo、Benjiman L. Goodman、Chance C. Coats</dd></div><div><dt>分类号</dt><dd>G06F12/0808、G06F12/0811、G06F12/0815、G06F12/0875、G06F12/0891、G06F12/0895、G06F9/3887</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12625810B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12625810B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 127 个说明书段落、19 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12625810B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

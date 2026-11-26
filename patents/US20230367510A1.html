@@ -1,119 +1,166 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20230367510A1 用可编程多粒度地址散列选择内存控制器 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>可编程地址 hash 决定页内块经哪条互连到哪个内存控制器 · US20230367510A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20230367510A1</code> · <a href="https://patents.google.com/patent/US20230367510A1/en">专利全文</a></p>
+<h1>可编程地址 hash 决定页内块经哪条互连到哪个内存控制器</h1><p class="reading-question">一个物理页的相邻块怎样被映射到多个内存控制器？控制器内部省去部分物理地址位之后，怎样在需要时重建原地址？</p>
+<p class="reading-answer">互连按可编程 mask 对同一物理地址的多个子集做 hash，结果定位 die、slice、row 和 side。目标控制器可继续选择 plane、pipe 等，并在内部缓冲只存压缩地址。需要完整地址时，从已知路由结果和保留位反推出省略位。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-11-16</dd></div><div><dt>申请号</dt><dd>US18/318,672</dd></div><div><dt>最早优先权</dt><dd>2021-04-26</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Steven Fishwick、Lior Zimet、Harshavardhan Kaushikkar</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#levels">同一个物理地址并行输入多个层级的 hash</a></li><li><a href="#routing">互连送达目标控制器，控制器可继续选择本地通道</a></li><li><a href="#topology">相邻页块的落点按真实 die 和互连段对照</a></li><li><a href="#compact">压缩地址利用已知 hash 结果恢复省略的位</a></li><li><a href="#scope">页内分布、恢复以及低功耗折叠对应不同技术条件</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="levels"><h2>同一个物理地址并行输入多个层级的 hash</h2><p>图 1 左侧是一条请求的物理地址和一组内存位置配置寄存器（MLC）。配置为每层选择参与 hash 的地址位，并可反转结果。示例对各层的选中位做 XOR reduction，得到 die、slice、row、side 的选择结果。原图 3 虽以树形列出层级，说明书 ¶0043 允许各选择并行求值。</p><p>用 die 字段作例子，mask 全零时 XOR 输出 0。若该层的反转位也为 0，所有相关地址的这一维都选择 0；反转位置 1 后，这一维固定为 1。不同层可以采用不同 mask。公开第 35 和 36 项分别限定地址位选择和结果反转。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　各层从同一完整地址独立取位并生成控制器位置</h3>
+    <p id="fig-1-basis">将原树状层级展开为物理可并行的四条 hash，配置字段先选择地址位，再按对应层形成结果。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="各层从同一完整地址独立取位并生成控制器位置" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 627" role="img" aria-labelledby="us20230367510a1-fig-1-svg-title us20230367510a1-fig-1-svg-desc">
+<title id="us20230367510a1-fig-1-svg-title">各层从同一完整地址独立取位并生成控制器位置</title>
+<desc id="us20230367510a1-fig-1-svg-desc">将原树状层级展开为物理可并行的四条 hash，配置字段先选择地址位，再按对应层形成结果。</desc>
+<defs><marker id="us20230367510a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20230367510a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20230367510a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20230367510a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20230367510a1-fig-1-params" d="M 212 132 L 339 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20230367510a1-fig-1-arrow-control)"/>
+<path id="us20230367510a1-fig-1-hash0" d="M 211 272 L 278 272 Q 286 272 286 264 L 286 174 Q 286 166 294 166 L 339 166" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-hash1" d="M 211 286 L 339 286" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-hash2" d="M 211 311 L 261 311 Q 269 311 269 319 L 269 385 Q 269 393 277 393 L 339 393" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-hash3" d="M 211 343 L 242 343 Q 250 343 250 351 L 250 505 Q 250 513 258 513 L 339 513" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-die-id" d="M 538 149 L 658 149 Q 666 149 666 157 L 666 283 Q 666 291 674 291 L 710 291" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-main)"/>
+<path id="us20230367510a1-fig-1-slice-id" d="M 538 269 L 630 269 Q 638 269 638 277 L 638 304 Q 638 312 646 312 L 710 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-row-id" d="M 538 389 L 612 389 Q 620 389 620 381 L 620 346 Q 620 338 628 338 L 710 338" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<path id="us20230367510a1-fig-1-side-id" d="M 538 514 L 656 514 Q 664 514 664 506 L 664 367 Q 664 359 672 359 L 710 359" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-1-arrow-data)"/>
+<rect x="224.5" y="105" width="95" height="18" fill="#f5f5f5"/><text x="272" y="119" class="arrow-label" text-anchor="middle">配置示例</text>
+<rect x="239" y="139" width="92" height="18" fill="#f5f5f5"/><text x="285" y="153" class="arrow-label" text-anchor="middle">原地址位</text>
+<rect x="271" y="260" width="0" height="18" fill="#f5f5f5"/><text x="271" y="274" class="arrow-label" text-anchor="middle"></text>
+<rect x="286" y="366" width="0" height="18" fill="#f5f5f5"/><text x="286" y="380" class="arrow-label" text-anchor="middle"></text>
+<rect x="299" y="486" width="0" height="18" fill="#f5f5f5"/><text x="299" y="500" class="arrow-label" text-anchor="middle"></text>
+<rect x="568" y="121" width="70" height="18" fill="#f5f5f5"/><text x="603" y="135" class="arrow-label" text-anchor="middle">die bit</text>
+<rect x="543.5" y="241" width="83" height="18" fill="#f5f5f5"/><text x="585" y="255" class="arrow-label" text-anchor="middle">slice bit</text>
+<rect x="539.5" y="360" width="71" height="18" fill="#f5f5f5"/><text x="575" y="374" class="arrow-label" text-anchor="middle">row bit</text>
+<rect x="560" y="486" width="80" height="18" fill="#f5f5f5"/><text x="600" y="500" class="arrow-label" text-anchor="middle">side bit</text>
+<g id="us20230367510a1-fig-1-pa"><rect x="35" y="254" width="176" height="113" rx="6" fill="#f5f5f5"/><rect x="35" y="254" width="176" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="123" y="280" class="node-name" text-anchor="middle">请求中的物理地址</text><text x="123" y="302" class="node-detail" text-anchor="middle">同一位串可供多个层使用</text></g>
+<g id="us20230367510a1-fig-1-cfg"><rect x="38" y="96" width="174" height="89" rx="6" fill="#f5f5f5"/><rect x="38" y="96" width="174" height="89" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="125" y="122" class="node-name" text-anchor="middle">MLC 配置</text><text x="125" y="144" class="node-detail" text-anchor="middle">逐层配置 mask</text><text x="125" y="162" class="node-detail" text-anchor="middle">和反转位</text></g>
+<g id="us20230367510a1-fig-1-die"><rect x="339" y="105" width="199" height="87" rx="6" fill="#f5f5f5"/><rect x="339" y="105" width="199" height="87" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="438.5" y="131" class="node-name" text-anchor="middle">die hash</text><text x="438.5" y="153" class="node-detail" text-anchor="middle">掩码选位，XOR，按需反转</text></g>
+<g id="us20230367510a1-fig-1-slice"><rect x="339" y="227" width="199" height="87" rx="6" fill="#f5f5f5"/><rect x="339" y="227" width="199" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="438.5" y="253" class="node-name" text-anchor="middle">slice hash</text><text x="438.5" y="275" class="node-detail" text-anchor="middle">用本层 mask 选一组地址位</text></g>
+<g id="us20230367510a1-fig-1-row"><rect x="339" y="348" width="199" height="87" rx="6" fill="#f5f5f5"/><rect x="339" y="348" width="199" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="438.5" y="374" class="node-name" text-anchor="middle">row hash</text><text x="438.5" y="396" class="node-detail" text-anchor="middle">用本层 mask 选一组地址位</text></g>
+<g id="us20230367510a1-fig-1-side"><rect x="339" y="470" width="199" height="87" rx="6" fill="#f5f5f5"/><rect x="339" y="470" width="199" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="438.5" y="496" class="node-name" text-anchor="middle">side hash</text><text x="438.5" y="518" class="node-detail" text-anchor="middle">给出 east 或 west</text></g>
+<g id="us20230367510a1-fig-1-loc"><rect x="710" y="264" width="214" height="107" rx="6" fill="#f5f5f5"/><rect x="710" y="264" width="214" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="290" class="node-name" text-anchor="middle">目标控制器位置</text><text x="817" y="312" class="node-detail" text-anchor="middle">由 die、slice、row、side</text><text x="817" y="330" class="node-detail" text-anchor="middle">标识共同确定</text></g>
+<text x="35" y="58" class="signal-title" text-anchor="start">各 hash 从同一个物理地址取位，输出合成控制器位置</text>
+<text x="35" y="599" class="legend" text-anchor="start">MLC 配置示例箭头只画 die。每一级有各自字段，地址位可重叠，hash 可以并行运行。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20230367510a1-fig-1-cfg">配置按层选择地址位</a> 每层有自己的 mask；反转位可改变本层输出。</li><li><a href="#us20230367510a1-fig-1-pa">物理地址提供公共输入</a> 图中四条 hash 可以并行，位集合可以重叠。</li><li><a href="#us20230367510a1-fig-1-die-id">每条输出给出本层位置</a> 选择结果组合为控制器落点。</li><li><a href="#us20230367510a1-fig-1-loc">控制器目标</a> 对应指定 die、slice、row 和 side 中的一个控制器。</li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0033、0035、0038、0039、0041、0042、0043、0048、0049、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00027" aria-label="原文权利要求 27">27</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00032" aria-label="原文权利要求 32">32</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00035" aria-label="原文权利要求 35">35</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00036" aria-label="原文权利要求 36">36</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00043" aria-label="原文权利要求 43">43</a> <a href="../diagrams/US20230367510A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>12A–12H</dd></div><div><dt>内存位置配置寄存器（MLC）</dt><dd>22A–22H、22J–22N、22P</dd></div><div><dt>die 选择</dt><dd>40</dd></div><div><dt>slice 选择</dt><dd>42</dd></div><div><dt>row 选择</dt><dd>44</dd></div><div><dt>side 选择</dt><dd>46</dd></div><div><dt>各层 hash 配置寄存器</dt><dd>60</dd></div><div><dt>地址位掩码字段</dt><dd>68</dd></div><div><dt>反转字段</dt><dd>66</dd></div></dl></details>
+</figure></section><section id="routing"><h2>互连送达目标控制器，控制器可继续选择本地通道</h2><p>沿图 2 的请求方向追踪。互连得到目标位置后，把请求传到相应内存控制器。控制器随后可以用 plane、pipe、bank group 和 bank 的配置继续选择其内部资源或所连 DRAM。本文的 row 指控制器物理布局在一个 slice 内的排布，DRAM row 是内存阵列行。</p><p>表 3 并排给出各层的输入、输出和可执行部件。说明书 ¶0051 允许具有不同 MLC 字段的硬件代理。部分代理只算到内存控制器，有的可提前选择 plane 或 pipe。OS 页表给出物理地址，互连 hash 使用这个地址进行路由。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　互连路由到控制器后，设备选择仍可继续</h3>
+    <p id="fig-2-basis">逐阶段追踪硬件代理、互连、控制器和 DRAM 的职责。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="互连路由到控制器后，设备选择仍可继续" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 518" role="img" aria-labelledby="us20230367510a1-fig-2-svg-title us20230367510a1-fig-2-svg-desc">
+<title id="us20230367510a1-fig-2-svg-title">互连路由到控制器后，设备选择仍可继续</title>
+<desc id="us20230367510a1-fig-2-svg-desc">逐阶段追踪硬件代理、互连、控制器和 DRAM 的职责。</desc>
+<defs><marker id="us20230367510a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20230367510a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20230367510a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20230367510a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us20230367510a1-fig-2-req"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-2-arrow-data)"/><rect x="159" y="96" width="156" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">发出带完整物理地址的请求</text></g>
+<g id="us20230367510a1-fig-2-ids"><path d="M 358 162 L 382 162 Q 390 162 390 170 L 390 172 Q 390 180 382 180 L 358 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-2-arrow-control)"/><rect x="329" y="138" width="286" height="18" fill="#f5f5f5"/><text x="472" y="152" class="arrow-label" text-anchor="middle">并行求 die、slice、row、side</text></g>
+<g id="us20230367510a1-fig-2-fwd"><path d="M 358 216 L 601 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-2-arrow-main)"/><rect x="401.5" y="192" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">选中路径并把请求送到目标</text></g>
+<g id="us20230367510a1-fig-2-deeper"><path d="M 601 258 L 625 258 Q 633 258 633 266 L 633 268 Q 633 276 625 276 L 601 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-2-arrow-control)"/><rect x="526.5" y="234" width="377" height="18" fill="#f5f5f5"/><text x="715" y="248" class="arrow-label" text-anchor="middle">按剩余 mask 选择 plane、pipe 或 bank</text></g>
+<g id="us20230367510a1-fig-2-execute"><path d="M 601 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-2-arrow-main)"/><rect x="664" y="288" width="117" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">向目标器件发出访问</text></g>
+<g id="us20230367510a1-fig-2-response"><path d="M 844 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20230367510a1-fig-2-arrow-return)"/><rect x="690" y="336" width="65" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">返回读数据</text></g>
+<g id="us20230367510a1-fig-2-readout"><path d="M 601 408 L 116 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20230367510a1-fig-2-arrow-return)"/><rect x="313" y="384" width="91" height="18" fill="#f5f5f5"/><text x="358.5" y="398" class="arrow-label" text-anchor="middle">按请求返回数据</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">硬件代理</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">互连路由逻辑</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">目标内存控制器</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">所选 DRAM 器件</text>
+<text x="28" y="484" class="legend" text-anchor="start">顺序图表示请求走过的硬件边界。各层 hash 可并行；部分代理可提前计算 plane、pipe 等更细层级。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20230367510a1-fig-2-ids">互连生成路由位置结果</a> 不同粒度可并行运算。</li><li><a href="#us20230367510a1-fig-2-fwd">互连送往目标控制器</a> 在流经互连时按 hash 结果选择目标。</li><li><a href="#us20230367510a1-fig-2-deeper">选择更细层级</a> 本地可继续 decode plane、pipe、bank；有的代理可预先计算其中一部分。</li><li><a href="#us20230367510a1-fig-2-execute">访问选定的 DRAM 器件</a> 数据储存在控制器连接的器件上。</li></ul>
+  <p class="figure-evidence">原图 6、7、12；说明书归档段 0058、0059、0060、0061、0084、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00032" aria-label="原文权利要求 32">32</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00033" aria-label="原文权利要求 33">33</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00043" aria-label="原文权利要求 43">43</a> <a href="../diagrams/US20230367510A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存位置配置寄存器（MLC）</dt><dd>22A–22H、22J–22N、22P</dd></div><div><dt>内存控制器</dt><dd>12A–12H</dd></div><div><dt>plane 选择</dt><dd>48</dd></div><div><dt>pipe 选择</dt><dd>50</dd></div><div><dt>DRAM 器件</dt><dd>28</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　映射的各层级分别需要哪些地址信息</h3>
+    <p id="fig-3-basis">分列对照控制器目标选择、内部设备选择及压缩的地址表示。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">选择层级</th><th scope="col">输入和结果</th><th scope="col">可执行选择的部件</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">die／slice／row／side</th><td>完整物理地址和各层 MLC mask → 控制器落点</td><td>互连或具备相关配置的硬件代理</td></tr><tr id="fig-3-table-row-2"><th scope="row">plane／pipe</th><td>完整地址与相应 mask → 控制器内并行 plane 和 pipe</td><td>控制器；部分代理可提前选择</td></tr><tr id="fig-3-table-row-3"><th scope="row">bank group／bank</th><td>相关地址位 → DRAM 内部访问子结构</td><td>控制器或设计中固定的映射逻辑</td></tr><tr id="fig-3-table-row-4"><th scope="row">压缩 pipe 地址</th><td>drop mask 和选定的路径上下文 → 内部地址表示</td><td>目标控制器内部缓冲与地址逻辑</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">同一个物理地址贯穿各层</a> 不同层可由不同硬件确定。最后一行是内部存放地址的方法。</li></ul>
+  <p class="figure-evidence">原图 3、4、7；说明书归档段 0039、0042、0051、0053、0061；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00032" aria-label="原文权利要求 32">32</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00033" aria-label="原文权利要求 33">33</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>die 选择</dt><dd>40</dd></div><div><dt>plane 选择</dt><dd>48</dd></div><div><dt>pipe 选择</dt><dd>50</dd></div><div><dt>各层 hash 配置寄存器</dt><dd>60</dd></div><div><dt>drop mask 寄存器</dt><dd>62</dd></div></dl></details>
+</figure></section><section id="topology"><h2>相邻页块的落点按真实 die 和互连段对照</h2><p>图 5 将原图 2 示例的前四个块按目标 die 和 side 摆放。按偏移读，块 0 到 die 0 的西侧控制器 A，块 1 到 die 1 的东侧控制器 G，块 2 到 die 1 的西侧控制器 D，块 3 到 die 0 的东侧控制器 F。顺序访问因此能在短时间内抵达几个物理位置不同的控制器。</p><p>不同目标可分摊控制器请求和部分互连段的流量。完整路径是否重合，还取决于发起代理及具体互连。公开第 29 和 40 项限定两条完整路径不重叠；主权项所述页内分散本身没有要求所有路径都物理独立。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　前四个连续块的目标以实际 die 和互连段排布</h3>
+    <p id="fig-5-basis">同时对照原图 2 的落点、侧和 slice。图中的路由段是目标侧，源路径另由实际系统决定。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="前四个连续块的目标以实际 die 和互连段排布" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 690" role="img" aria-labelledby="us20230367510a1-fig-5-svg-title us20230367510a1-fig-5-svg-desc">
+<title id="us20230367510a1-fig-5-svg-title">前四个连续块的目标以实际 die 和互连段排布</title>
+<desc id="us20230367510a1-fig-5-svg-desc">同时对照原图 2 的落点、侧和 slice。图中的路由段是目标侧，源路径另由实际系统决定。</desc>
+<defs><marker id="us20230367510a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20230367510a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20230367510a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20230367510a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20230367510a1-fig-5-p0w0" d="M 232 160 L 367 160" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-main)"/>
+<path id="us20230367510a1-fig-5-p3e0" d="M 232 298 L 367 298" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-data)"/>
+<path id="us20230367510a1-fig-5-p2w1" d="M 232 436 L 367 436" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-data)"/>
+<path id="us20230367510a1-fig-5-p1e1" d="M 232 574 L 367 574" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-main)"/>
+<path id="us20230367510a1-fig-5-go0" d="M 563 160 L 707 160" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-main)"/>
+<path id="us20230367510a1-fig-5-go3" d="M 563 298 L 707 298" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-data)"/>
+<path id="us20230367510a1-fig-5-go2" d="M 563 436 L 707 436" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-data)"/>
+<path id="us20230367510a1-fig-5-go1" d="M 563 574 L 707 574" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-5-arrow-main)"/>
+<rect x="233.5" y="132" width="131" height="18" fill="#f5f5f5"/><text x="299" y="146" class="arrow-label" text-anchor="middle">按落点进入西侧</text>
+<rect x="233.5" y="270" width="131" height="18" fill="#f5f5f5"/><text x="299" y="284" class="arrow-label" text-anchor="middle">按落点进入东侧</text>
+<rect x="233.5" y="408" width="131" height="18" fill="#f5f5f5"/><text x="299" y="422" class="arrow-label" text-anchor="middle">按落点进入西侧</text>
+<rect x="233.5" y="546" width="131" height="18" fill="#f5f5f5"/><text x="299" y="560" class="arrow-label" text-anchor="middle">按落点进入东侧</text>
+<rect x="568.5" y="132" width="129" height="18" fill="#f5f5f5"/><text x="633" y="146" class="arrow-label" text-anchor="middle">目标 die 的终段</text>
+<rect x="568.5" y="270" width="129" height="18" fill="#f5f5f5"/><text x="633" y="284" class="arrow-label" text-anchor="middle">目标 die 的终段</text>
+<rect x="568.5" y="408" width="129" height="18" fill="#f5f5f5"/><text x="633" y="422" class="arrow-label" text-anchor="middle">目标 die 的终段</text>
+<rect x="568.5" y="546" width="129" height="18" fill="#f5f5f5"/><text x="633" y="560" class="arrow-label" text-anchor="middle">目标 die 的终段</text>
+<g id="us20230367510a1-fig-5-p0"><rect x="41" y="109" width="191" height="97" rx="6" fill="#f5f5f5"/><rect x="41" y="109" width="191" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="135" class="node-name" text-anchor="middle">连续块偏移 0</text><text x="136.5" y="157" class="node-detail" text-anchor="middle">目标 die 0，west</text></g>
+<g id="us20230367510a1-fig-5-p3"><rect x="41" y="247" width="191" height="97" rx="6" fill="#f5f5f5"/><rect x="41" y="247" width="191" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="273" class="node-name" text-anchor="middle">连续块偏移 3</text><text x="136.5" y="295" class="node-detail" text-anchor="middle">目标 die 0，east</text></g>
+<g id="us20230367510a1-fig-5-p2"><rect x="41" y="385" width="191" height="97" rx="6" fill="#f5f5f5"/><rect x="41" y="385" width="191" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="411" class="node-name" text-anchor="middle">连续块偏移 2</text><text x="136.5" y="433" class="node-detail" text-anchor="middle">目标 die 1，west</text></g>
+<g id="us20230367510a1-fig-5-p1"><rect x="41" y="523" width="191" height="97" rx="6" fill="#f5f5f5"/><rect x="41" y="523" width="191" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="549" class="node-name" text-anchor="middle">连续块偏移 1</text><text x="136.5" y="571" class="node-detail" text-anchor="middle">目标 die 1，east</text></g>
+<g id="us20230367510a1-fig-5-w0"><rect x="367" y="109" width="196" height="97" rx="6" fill="#f5f5f5"/><rect x="367" y="109" width="196" height="97" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="465" y="135" class="node-name" text-anchor="middle">die 0 · west</text><text x="465" y="157" class="node-detail" text-anchor="middle">西侧互连段</text></g>
+<g id="us20230367510a1-fig-5-e0"><rect x="367" y="247" width="196" height="97" rx="6" fill="#f5f5f5"/><rect x="367" y="247" width="196" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="465" y="273" class="node-name" text-anchor="middle">die 0 · east</text><text x="465" y="295" class="node-detail" text-anchor="middle">东侧互连段</text></g>
+<g id="us20230367510a1-fig-5-w1"><rect x="367" y="385" width="196" height="97" rx="6" fill="#f5f5f5"/><rect x="367" y="385" width="196" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="465" y="411" class="node-name" text-anchor="middle">die 1 · west</text><text x="465" y="433" class="node-detail" text-anchor="middle">西侧互连段</text></g>
+<g id="us20230367510a1-fig-5-e1"><rect x="367" y="523" width="196" height="97" rx="6" fill="#f5f5f5"/><rect x="367" y="523" width="196" height="97" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="465" y="549" class="node-name" text-anchor="middle">die 1 · east</text><text x="465" y="571" class="node-detail" text-anchor="middle">东侧互连段</text></g>
+<g id="us20230367510a1-fig-5-m0"><rect x="707" y="109" width="213" height="97" rx="6" fill="#f5f5f5"/><rect x="707" y="109" width="213" height="97" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="813.5" y="135" class="node-name" text-anchor="middle">西侧控制器 A</text><text x="813.5" y="157" class="node-detail" text-anchor="middle">die 0 · slice 0 · row 0</text></g>
+<g id="us20230367510a1-fig-5-m3"><rect x="707" y="247" width="213" height="97" rx="6" fill="#f5f5f5"/><rect x="707" y="247" width="213" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="273" class="node-name" text-anchor="middle">东侧控制器 F</text><text x="813.5" y="295" class="node-detail" text-anchor="middle">die 0 · slice 0 · row 1</text></g>
+<g id="us20230367510a1-fig-5-m2"><rect x="707" y="385" width="213" height="97" rx="6" fill="#f5f5f5"/><rect x="707" y="385" width="213" height="97" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="411" class="node-name" text-anchor="middle">西侧控制器 D</text><text x="813.5" y="433" class="node-detail" text-anchor="middle">die 1 · slice 1 · row 1</text></g>
+<g id="us20230367510a1-fig-5-m1"><rect x="707" y="523" width="213" height="97" rx="6" fill="#f5f5f5"/><rect x="707" y="523" width="213" height="97" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="813.5" y="549" class="node-name" text-anchor="middle">东侧控制器 G</text><text x="813.5" y="571" class="node-detail" text-anchor="middle">die 1 · slice 1 · row 0</text></g>
+<text x="41" y="58" class="signal-title" text-anchor="start">相邻页内块实际分散到不同 die、不同侧及不同控制器</text>
+<text x="41" y="93" class="legend" text-anchor="start">die 0 的两个目标</text>
+<text x="41" y="369" class="legend" text-anchor="start">die 1 的两个目标</text>
+<text x="41" y="660" class="legend" text-anchor="start">按 die、侧分组展示，发出仍按偏移 0、1、2、3。只画目标侧互连段，源到目标的完整路由取决于源代理。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20230367510a1-fig-5-m0">块 0 的本 die 示例落点</a> 偏移 0 对应 die 0 西侧控制器 A。</li><li><a href="#us20230367510a1-fig-5-m1">相邻块 1 分散至另一 die 的东侧</a> 偏移 1 对应 die 1 东侧控制器 G。</li><li><a href="#us20230367510a1-fig-5-m2">块 2 位于 die 1 西侧</a> 路径最后一段在 west，与块 1 目标侧不同。</li><li><a href="#us20230367510a1-fig-5-m3">块 3 回到 die 0 的东侧</a> 块 3 的控制器在 die 0 的 slice 0、row 1。</li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0022、0024、0029、0032、0038、0044、0045、0046、0047；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00028" aria-label="原文权利要求 28">28</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00029" aria-label="原文权利要求 29">29</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00030" aria-label="原文权利要求 30">30</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00031" aria-label="原文权利要求 31">31</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00037" aria-label="原文权利要求 37">37</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00039" aria-label="原文权利要求 39">39</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00040" aria-label="原文权利要求 40">40</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00041" aria-label="原文权利要求 41">41</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00042" aria-label="原文权利要求 42">42</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00044" aria-label="原文权利要求 44">44</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00045" aria-label="原文权利要求 45">45</a> <a href="../diagrams/US20230367510A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>SoC die</dt><dd>10</dd></div><div><dt>west 互连</dt><dd>20A</dd></div><div><dt>east 互连</dt><dd>20B</dd></div><div><dt>die 0 的西侧控制器 A</dt><dd>原图 2：MC0 / 12A</dd></div><div><dt>die 1 的东侧控制器 G</dt><dd>原图 2：MC1 / 12G</dd></div><div><dt>die 1 的西侧控制器 D</dt><dd>原图 2：MC2 / 12D</dd></div><div><dt>die 0 的东侧控制器 F</dt><dd>原图 2：MC3 / 12F</dd></div></dl></details>
+</figure></section><section id="compact"><h2>压缩地址利用已知 hash 结果恢复省略的位</h2><p>图 4 用可复算的两级 XOR 例子说明可逆性。设 die 结果 D = a XOR c XOR 1，slice 结果 S = b XOR c。由于 a 只出现在 die hash、b 只出现在 slice hash，控制器用落点对应的 D、S 和保留的 c 就能分别解出 a、b，再插回原位置。内部缓冲只记 c、d。</p><p>枚举四位输入的 16 种组合，检查压缩的 c、d 与选定的 D、S 是否唯一决定原输入，全部可逆。比如输入 a、b、c、d = 1、0、1、1 时，D、S = 1、1，代回分别得到 a = 1、b = 0。多个地址位可跨层共享。为了在该示例中独立恢复，实际省去的位在各自 hash 中是唯一的。</p><p>公开第 34 项限定恢复参与 hash 的地址位。说明书进一步披露内部缓冲使用 compacted pipe address，必要时例如生成带完整地址的 snoop 时再恢复。影响面积和功耗的是每项内部保存的位数及读写活动，同时要计入恢复逻辑。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　省掉的地址位由路由结果和保留位重建</h3>
+    <p id="fig-4-basis">以两级 XOR 展开位选择、压缩 pipe 地址和后续恢复，说明已知结果怎样替代存储位。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="省掉的地址位由路由结果和保留位重建" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 585" role="img" aria-labelledby="us20230367510a1-fig-4-svg-title us20230367510a1-fig-4-svg-desc">
+<title id="us20230367510a1-fig-4-svg-title">省掉的地址位由路由结果和保留位重建</title>
+<desc id="us20230367510a1-fig-4-svg-desc">以两级 XOR 展开位选择、压缩 pipe 地址和后续恢复，说明已知结果怎样替代存储位。</desc>
+<defs><marker id="us20230367510a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20230367510a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20230367510a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20230367510a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20230367510a1-fig-4-orig" d="M 231 160 L 364 160" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-4-arrow-data)"/>
+<path id="us20230367510a1-fig-4-compression" d="M 590 161 L 704 161" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-4-arrow-main)"/>
+<path id="us20230367510a1-fig-4-stored" d="M 799 215 L 799 299 Q 799 307 791 307 L 514 307 Q 506 307 506 315 L 506 383" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-4-arrow-data)"/>
+<path id="us20230367510a1-fig-4-known-path" d="M 244 441 L 366 441" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20230367510a1-fig-4-arrow-control)"/>
+<path id="us20230367510a1-fig-4-restore" d="M 592 443 L 704 443" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20230367510a1-fig-4-arrow-main)"/>
+<rect x="237.5" y="131" width="123" height="18" fill="#f5f5f5"/><text x="299" y="145" class="arrow-label" text-anchor="middle">传入完整位串</text>
+<rect x="598" y="132" width="98" height="18" fill="#f5f5f5"/><text x="647" y="146" class="arrow-label" text-anchor="middle">仅写保留位</text>
+<rect x="602" y="277" width="102" height="18" fill="#f5f5f5"/><text x="653" y="291" class="arrow-label" text-anchor="middle">读回 c 和 d</text>
+<rect x="255.5" y="413" width="101" height="18" fill="#f5f5f5"/><text x="306" y="427" class="arrow-label" text-anchor="middle">D、S 可取</text>
+<rect x="602" y="415" width="92" height="18" fill="#f5f5f5"/><text x="648" y="429" class="arrow-label" text-anchor="middle">补齐 a、b</text>
+<g id="us20230367510a1-fig-4-pa"><rect x="38" y="111" width="193" height="96" rx="6" fill="#f5f5f5"/><rect x="38" y="111" width="193" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="134.5" y="137" class="node-name" text-anchor="middle">示例输入位</text><text x="134.5" y="159" class="node-detail" text-anchor="middle">a、b、c、d</text></g>
+<g id="us20230367510a1-fig-4-drop"><rect x="364" y="102" width="226" height="113" rx="6" fill="#f5f5f5"/><rect x="364" y="102" width="226" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477" y="128" class="node-name" text-anchor="middle">drop mask 选位</text><text x="477" y="150" class="node-detail" text-anchor="middle">a 只在 die hash</text><text x="477" y="168" class="node-detail" text-anchor="middle">b 只在 slice hash</text></g>
+<g id="us20230367510a1-fig-4-compact"><rect x="704" y="102" width="219" height="113" rx="6" fill="#f5f5f5"/><rect x="704" y="102" width="219" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="128" class="node-name" text-anchor="middle">内部缓冲</text><text x="813.5" y="150" class="node-detail" text-anchor="middle">存压缩 pipe 地址</text><text x="813.5" y="168" class="node-detail" text-anchor="middle">保留 c、d</text></g>
+<g id="us20230367510a1-fig-4-known"><rect x="38" y="383" width="206" height="127" rx="6" fill="#f5f5f5"/><rect x="38" y="383" width="206" height="127" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="141" y="409" class="node-name" text-anchor="middle">已选择的路径</text><text x="141" y="431" class="node-detail" text-anchor="middle">die bit 为 D</text><text x="141" y="449" class="node-detail" text-anchor="middle">slice bit 为 S</text></g>
+<g id="us20230367510a1-fig-4-xor"><rect x="366" y="383" width="226" height="127" rx="6" fill="#f5f5f5"/><rect x="366" y="383" width="226" height="127" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479" y="409" class="node-name" text-anchor="middle">并行恢复省略位</text><text x="479" y="431" class="node-detail" text-anchor="middle">a = D XOR c XOR 1</text><text x="479" y="449" class="node-detail" text-anchor="middle">b = S XOR c</text></g>
+<g id="us20230367510a1-fig-4-full"><rect x="704" y="383" width="219" height="127" rx="6" fill="#f5f5f5"/><rect x="704" y="383" width="219" height="127" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="409" class="node-name" text-anchor="middle">重组物理地址</text><text x="813.5" y="431" class="node-detail" text-anchor="middle">将 a、b 插回原位置</text><text x="813.5" y="449" class="node-detail" text-anchor="middle">发 snoop 等需要时使用</text></g>
+<text x="38" y="57" class="signal-title" text-anchor="start">内部缓冲省去两位，已知路由结果后用 XOR 恢复</text>
+<text x="38" y="555" class="legend" text-anchor="start">说明性两级例子：D = a XOR c XOR 1，S = b XOR c。反转字段为 1 体现在 die hash。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20230367510a1-fig-4-drop">按 drop mask 删除指定地址位</a> 此例删除 a、b，各来自一个独立 hash。</li><li><a href="#us20230367510a1-fig-4-stored">从缓冲读回保留位</a> 内部只存 c、d；需要复原地址时使用它们。</li><li><a href="#us20230367510a1-fig-4-known-path">使用已知选择结果</a> D、S 随控制器选择已确定。</li><li><a href="#us20230367510a1-fig-4-xor">并行解出各省略位</a> 示例的两条恢复公式共用 c，彼此不依赖。</li></ul>
+  <p class="figure-evidence">原图 4、7、13；说明书归档段 0036、0041、0052、0053、0054、0061、0087、0088、0089；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00034" aria-label="原文权利要求 34">34</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00035" aria-label="原文权利要求 35">35</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00036" aria-label="原文权利要求 36">36</a> <a href="../diagrams/US20230367510A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制电路</dt><dd>24</dd></div><div><dt>控制器内部缓冲</dt><dd>26</dd></div><div><dt>内存位置配置寄存器（MLC）</dt><dd>22A–22H、22J–22N、22P</dd></div><div><dt>drop mask 寄存器</dt><dd>62</dd></div><div><dt>各层 hash 配置寄存器</dt><dd>60</dd></div><div><dt>反转字段</dt><dd>66</dd></div></dl></details>
+</figure></section><section id="scope"><h2>页内分布、恢复以及低功耗折叠对应不同技术条件</h2><p>按这份 A1 公开文本，第 1–25 项已取消，本文以公开第 26、38、43 项和对应从属项分析。三项都写到页内块分布、互连对规定地址位执行多层 hash，以及配置寄存器的粒度字段。原图 8–11 另披露监控访问率、迁移活跃页与停用 slice 的折叠机制。</p><p>在手机 SoC 中验证地址映射的实际效果，需要按内存控制器分别计数，观察同一请求流在互连段的重叠，以及行局部性、跨 die 链路负载和延迟变化。跨控制器地址分布是本专利的机制，图中的布局与寄存器例子属于说明书实施方式。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US20230367510A1</code><span>美国公开申请</span><time datetime="2023-11-16">2023-11-16</time></p>
-  <h1>用可编程多粒度地址散列选择内存控制器</h1>
-  <p class="english-title" lang="en">Address Hashing in a Multiple Memory Controller System</p>
-  <p class="document-question">同一物理页的不同块应分配到哪些内存控制器，才能利用多个通道？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">互连查阅各粒度的配置字段选择参与散列的地址位，由散列结果把请求路由到内存控制器。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>给定地址仍须唯一对应一个物理内存位置，修改配置会改变地址与控制器之间的映射。</dd></div><div><dt>验证方法</dt><dd>用相同页内连续地址和固定步长读流比较两套寄存器配置。记录每笔请求选中的控制器、各控制器的请求计数和队列占用时间。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038">原文权利要求 38</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">页级的虚拟到物理地址翻译确定物理位置。进入内存互连后仍需要确定由哪个内存控制器服务。公开申请允许按不同粒度对物理地址位进行散列，使一个页的多个块可跨控制器分布。</p>
-    <p>互连使用配置寄存器字段选择各粒度参与散列的地址位，并路由到计算出的控制器。页内的多个块可落到两个或更多控制器，映射仍须让给定地址唯一对应内存位置。</p>
-    <ol class="walkthrough"><li><h3>定位物理页中的块</h3><p>硬件代理以物理地址访问同一页中的不同块。</p></li><li><h3>读取各散列层的选位配置</h3><p>配置寄存器为裸片、分片等层级选择不同的物理地址位。</p></li><li><h3>生成目标控制器标识</h3><p>原图 3 的二叉树表达选择关系。各层选位与散列可以并行计算。</p></li><li><h3>在控制器中定位器件</h3><p>控制器还可继续解析 plane、pipe 或 DRAM bank 所需的地址粒度。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00029" aria-label="原文权利要求 29">29</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00031" aria-label="原文权利要求 31">31</a> 把路由约束推进到互连拓扑。相邻块可分配给物理位置相隔的内存控制器，并经过互连的不同部分。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00029" aria-label="原文权利要求 29">29</a> 单独限定两条不重叠的路径。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>地址散列</dt><dd>按配置掩码选择物理地址位，组合为裸片、内存控制器或内部资源选择结果。原图 4 实施例可用异或规约并选择是否取反。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">按粒度选择地址位再路由请求</a></li><li><a href="#fig-1">物理地址进入互连后决定控制器</a></li><li><a href="#fig-4">控制器如何恢复内部地址省略的位</a></li><li><a href="#fig-3">地址翻译、路由与设备定位的区别</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">按粒度选择地址位再路由请求</h3></div>
-    <a class="paper-open" href="../mechanisms/US20230367510A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="按粒度选择地址位再路由请求">
-    <img class="paper-image native-image" src="../mechanisms/US20230367510A1/fig-2/diagram.svg" width="920" height="386"
-         style="--paper-width:920px" alt="按粒度选择地址位再路由请求。无需在该步骤修改请求的虚拟地址映射。">
-  </div>
-  <figcaption>
-    <span>无需在该步骤修改请求的虚拟地址映射。</span>
-    <span class="figure-evidence">原图 6、图 12，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/16/e7/a3/6887d53a0ca4eb/US20230367510A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">物理地址进入互连后决定控制器</h3></div>
-    <a class="paper-open" href="../mechanisms/US20230367510A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="物理地址进入互连后决定控制器">
-    <img class="paper-image native-image" src="../mechanisms/US20230367510A1/fig-1/diagram.svg" width="726" height="488"
-         style="--paper-width:726px" alt="物理地址进入互连后决定控制器。配置字段影响各粒度使用哪些物理地址位。">
-  </div>
-  <figcaption>
-    <span>配置字段影响各粒度使用哪些物理地址位。</span>
-    <span class="figure-evidence">原图 3–4，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/16/e7/a3/6887d53a0ca4eb/US20230367510A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">控制器如何恢复内部地址省略的位</h3></div>
-    <a class="paper-open" href="../mechanisms/US20230367510A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="控制器如何恢复内部地址省略的位">
-    <img class="paper-image native-image" src="../mechanisms/US20230367510A1/fig-4/diagram.svg" width="539" height="688"
-         style="--paper-width:539px" alt="控制器如何恢复内部地址省略的位。原地址省略已经用于确定控制器的部分地址位。需恢复时，用压缩地址、寄存器掩码以及已知散列结果重建物理地址。">
-  </div>
-  <figcaption>
-    <span>原地址省略已经用于确定控制器的部分地址位。需恢复时，用压缩地址、寄存器掩码以及已知散列结果重建物理地址。</span>
-    <span class="figure-evidence">原图 4、7，说明书 0036、0061，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00034" aria-label="原文权利要求 34">34</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/16/e7/a3/6887d53a0ca4eb/US20230367510A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">地址翻译、路由与设备定位的区别</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">步骤</th><th scope="col">输入</th><th scope="col">输出</th></tr></thead><tbody><tr><th scope="row">地址翻译</th><td>进程虚拟地址和页表</td><td>系统物理地址</td></tr><tr><th scope="row">互连路由</th><td>物理地址和散列配置</td><td>目标内存控制器</td></tr><tr><th scope="row">设备访问</th><td>控制器接收的请求</td><td>对应内存位置的数据</td></tr></tbody></table>
-  <figcaption>
-    <span>比较同一虚拟页内块时应控制物理地址。</span>
-    <span class="figure-evidence">原图 3、图 7，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a>。 · <a href="https://patentimages.storage.googleapis.com/16/e7/a3/6887d53a0ca4eb/US20230367510A1.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按粒度配置地址散列</dt><dd>分布页内块 <span class="subdued">原图 3–4，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a></span></dd></div><div><dt>从落点恢复地址位</dt><dd>缩短内部地址 <span class="subdued">原图 7，公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00034" aria-label="原文权利要求 34">34</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>端点分散和链路分散应分别观测。前者影响各控制器的请求并发，后者影响共享链路的排队。可按物理块地址关联目标控制器与逐跳链路计数，并观察方向上是否仍有热点。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>原图 2 的说明允许部分路径重叠。若两个目标控制器仍共用发起代理到第一个路由器的限速链路，地址分布变均匀后，吞吐量仍可能受该链路限制。逐链路利用率可区分这两种情形。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学配置把同一物理页中的连续块分散到 C0 与 C1。两个线程分别扫描同一页中交错的块。</dd></div><div><dt>处理结果</dt><dd>只要地址与配置不变，重访某一块时仍选择同一控制器。相邻块可能分发到不同控制器。</dd></div><div><dt>结果解读</dt><dd>是否分散热点取决于访问步长和参与散列的地址位。验证要控制相同的物理页分配与访问模式。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 26、38、43 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-26" aria-labelledby="independent-26-title">
   <h4 id="independent-26-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a></h4>
@@ -137,49 +184,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=a%20given%20memory%20address%20specifies%20a%20location%20in%20a%20particular%20one%20of%20the%20plurality%20of%20memory">F12</a></th><td>系统内存的地址对应某个具体器件中的存储位置</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=a%20given%20page%20in%20the%20address%20space%20comprises%20a%20plurality%20of%20blocks%20that%20are%20distributed%20over">F13</a></th><td>一个页的块跨至少两个控制器</td><td><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=In%20an%20embodiment%2C%20the%20MLC%20registers%20may%20be%20programmed%20to%20map%20adjacent%20blocks%20of%20a%20page">说明书 0032</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=a%20communication%20fabric%20coupled%20between%20the%20plurality%20of%20memory%20controllers%20and%20the%20plurality%20of%20hardware%20agent">F14</a></th><td>互连连接硬件代理与多个控制器，并路由请求</td><td><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=FIG.%206%20is%20a%20flowchart%20illustrating%20operation%20of%20various%20SOC%20components%20to%20determine%20the%20route%20for">说明书 0058</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=hash%20address%20bits%20of%20the%20first%20memory%20address%20to%20direct%20the%20first%20memory%20request%20to%20the">F15</a></th><td>对选定散列粒度计算目标控制器落点</td><td><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=FIG.%203%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20binary%20decision%20tree%20to%20determine">说明书 0042</a> · <a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=The%20binary%20decision%20tree%20illustrated%20in%20FIG.%203%20is%20not%20intended%20to%20imply%20that%20the%20determinations">说明书 0043</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=hash%20selected%20ones%20of%20the%20address%20bits%20of%20the%20first%20memory%20address%20for%20a%20respective%20level">F16</a></th><td>在每个粒度按相应寄存器字段选择地址位再散列</td><td><a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=FIG.%204%20is%20a%20block%20diagram%20illustrating%20one%20embodiment%20of%20a%20plurality%20of%20memory%20location%20configuration">说明书 0048</a> · <a href="https://patents.google.com/patent/US20230367510A1/en#:~:text=The%20die%20register%20is%20shown%20in%20exploded%20view%20for%20one%20embodiment%2C%20and%20other%20registers%2060%20may">说明书 0049</a> · 原图 4</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-26"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a></th><td>独立项</td><td>系统项规定物理地址唯一标识设备位置、页内块跨控制器、互连按多个配置粒度选择物理地址位。原图 2–4。</td></tr><tr id="claim-27"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00027" aria-label="原文权利要求 27">27</a></th><td><a href="#claim-26">26</a></td><td>分别把两组配置寄存器放入内存控制器和硬件代理电路。</td></tr><tr id="claim-28"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00028" aria-label="原文权利要求 28">28</a></th><td><a href="#claim-26">26</a></td><td>配置允许相邻块地址落到相隔较远的两个控制器，所用粒度为配置层级之一。</td></tr><tr id="claim-29"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00029" aria-label="原文权利要求 29">29</a></th><td><a href="#claim-28">28</a></td><td>两笔对相邻粒度地址的请求在互连中走互不重叠的路径。</td></tr><tr id="claim-30"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00030" aria-label="原文权利要求 30">30</a></th><td><a href="#claim-26">26</a></td><td>用寄存器配置把连续地址请求路由给不同内存控制器。</td></tr><tr id="claim-31"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00031" aria-label="原文权利要求 31">31</a></th><td><a href="#claim-30">30</a></td><td>连续地址按跨远端控制器的模式分布，以利用不同互连部分。</td></tr><tr id="claim-32"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00032" aria-label="原文权利要求 32">32</a></th><td><a href="#claim-26">26</a></td><td>列出可编程粒度，包括裸片、侧、行、控制器内部通路和设备。</td></tr><tr id="claim-33"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00033" aria-label="原文权利要求 33">33</a></th><td><a href="#claim-26">26</a></td><td>至少两个配置寄存器分别实现不同的粒度集合。</td></tr><tr id="claim-34"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00034" aria-label="原文权利要求 34">34</a></th><td><a href="#claim-26">26</a></td><td>控制器能够由散列结果复原当初参加散列的地址位。</td></tr><tr id="claim-35"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00035" aria-label="原文权利要求 35">35</a></th><td><a href="#claim-26">26</a></td><td>配置寄存器用掩码逐位指定哪些地址位参与散列。</td></tr><tr id="claim-36"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00036" aria-label="原文权利要求 36">36</a></th><td><a href="#claim-26">26</a></td><td>配置字段可令某级散列结果取反，并据取反状态路由。</td></tr><tr id="claim-37"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00037" aria-label="原文权利要求 37">37</a></th><td><a href="#claim-26">26</a></td><td>内存控制器分布在多个集成电路裸片。</td></tr><tr id="claim-38"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a></th><td>独立项</td><td>方法项以多控制器和硬件代理访问内存，按配置对多个粒度散列，互连据此路由。原图 6、12。</td></tr><tr id="claim-39"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00039" aria-label="原文权利要求 39">39</a></th><td><a href="#claim-38">38</a></td><td>把一给定粒度的相邻地址路由到位置相隔的两个内存控制器。</td></tr><tr id="claim-40"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00040" aria-label="原文权利要求 40">40</a></th><td><a href="#claim-39">39</a></td><td>相邻地址的两笔请求进一步采用互不重叠的互连路由。</td></tr><tr id="claim-41"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00041" aria-label="原文权利要求 41">41</a></th><td><a href="#claim-38">38</a></td><td>按配置把连续地址的多笔请求分给不同内存控制器。</td></tr><tr id="claim-42"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00042" aria-label="原文权利要求 42">42</a></th><td><a href="#claim-41">41</a></td><td>在连续地址分布中进一步选择相隔控制器以使用不同互连部分。</td></tr><tr id="claim-43"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00043" aria-label="原文权利要求 43">43</a></th><td>独立项</td><td>装置项规定内存控制器、代理、互连和多粒度配置寄存器。互连按每个寄存器字段指示的位散列，并把请求发往对应控制器。原图 3–4。</td></tr><tr id="claim-44"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00044" aria-label="原文权利要求 44">44</a></th><td><a href="#claim-43">43</a></td><td>使指定粒度相邻地址的请求落到物理位置相隔的控制器。</td></tr><tr id="claim-45"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00045" aria-label="原文权利要求 45">45</a></th><td><a href="#claim-43">43</a></td><td>连续请求跨相隔控制器分配，使用互连的不同部分。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>公开权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00026" aria-label="原文权利要求 26">26</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00038" aria-label="原文权利要求 38">38</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20230367510A1/en#CLM-00043" aria-label="原文权利要求 43">43</a></dt><dd>规定不同散列粒度选位与跨控制器分配页内块。</dd></div><div><dt>原图 3–4</dt><dd>给出用于选择内存控制器的分级树和对应配置寄存器字段。</dd></div><div><dt>原图 5–7、图 12</dt><dd>给出启动配置、请求路由和地址散列流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20230367510A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12737296B2.html#engineering">统一地址空间中分散的相邻内存块</a>
-<p>US12737296B2 的统一地址架构把同一页中的相邻块分布到多个内存控制器。US20230367510A1 公开权 26 也规定页内块分布，并进一步说明互连怎样按可编程字段选择各粒度的地址位，通过散列找到目标控制器。可分别检查页内布局与单个物理请求的目标控制器。</p></li><li><a href="US11567861B2.html#engineering">按页访问率迁移热页，使部分物理内存进入自刷新</a>
-<p>两份文献的说明书均列出美国临时申请 63/179,666，各自的继续申请链经过不同母案。US20230367510A1 的公开权利要求 26 涉及页内分散和多粒度散列，US11567861B2 的权利要求 1 涉及迁移高访问率的页、更新虚拟地址映射并停用原内存切片。</p></li></ul>
-    <p><a href="../index.html?patent=US20230367510A1#knowledge">在全量关系图上定位 US20230367510A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-04-26</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-05-16</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2023-11-16</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/318,672</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Steven Fishwick、Lior Zimet、Harshavardhan Kaushikkar</dd></div><div><dt>分类号</dt><dd>G06F3/0655、G06F12/0238、G06F12/0284、G06F12/04、G06F12/0646、G06F12/0871、G06F12/0882、G06F12/1018、G06F12/1054、G06F12/1063、G06F12/1072、G06F12/109、G06F13/1668、G06F3/0604、G06F3/061、G06F3/0611、G06F3/0613、G06F3/0659、G06F3/0683、G06F2212/1024、G06F2212/657</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20230367510A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20230367510A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国公开申请全文，覆盖 123 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14、15。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US11567861B2.html"><code>US11567861B2</code> 按页访问率迁移热页，使部分物理内存进入自刷新</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20230367510A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

@@ -1,119 +1,179 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12354674B2 用闪存活动信号门控供电复位 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>闪存仍在编程时，PMIC 怎样推迟供电复位 · US12354674B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12354674B2</code> · <a href="https://patents.google.com/patent/US12354674B2/en">专利全文</a></p>
+<h1>闪存仍在编程时，PMIC 怎样推迟供电复位</h1><p class="reading-question">复位请求到了，闪存电源轨能否立刻掉电？多片共轨时谁可以阻止掉电？</p>
+<p class="reading-answer">电源管理集成电路（PMIC）收到复位请求时先读闪存的忙闲输出。空闲时允许电源轨复位，忙时保持供电。随后可以等忙转闲再复位，也可在预设超时到期后退出等待。多片共轨时，只要受判断的片仍忙，就可能挡住整组复位。供电复位指关闭存储电源轨后重新供电。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-07-08</dd></div><div><dt>申请号</dt><dd>US17/874,100</dd></div><div><dt>最早优先权</dt><dd>2022-07-26</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>John J. Sullivan、James M. Hollabaugh、Jason W. Brinsfield、Calvin M. Ryan、Andreas Adler</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#gating">一条输入请求复位，另一条输入决定能否执行</a></li><li><a href="#shared-rail">先标出共轨边界，再决定看几个忙闲信号</a></li><li><a href="#exit-rules">忙转闲和超时分别是什么复位依据</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="gating"><h2>一条输入请求复位，另一条输入决定能否执行</h2><p>发起者向 PMIC 提交复位请求。被保护的闪存路径另外报告忙闲状态（Ready/Busy），PMIC 按收到请求那一刻的状态决定是否停止对闪存供电。图 1 把活动反馈、复位请求和功率轨分开。闪存专用位可作为忙闲源，说明书也披露存储控制器根据串行命令提供活动信息。独立权项明确从闪存专用部分取得二值信号。</p><p>图 2 采用原图 2 的忙转闲例。请求刚到时仍在编程，复位信号有效而轨仍保持。活动结束后忙闲输出改变，此时才开始复位。原图的供电波形是逻辑状态示意，真实电源轨可能有下降斜率，需用轨电压另测。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　PMIC 如何用闪存忙闲状态门控供电复位</h3>
+    <p id="fig-1-basis">复位请求、活动输出和功率轨是三条不同连线。PMIC 根据请求到达时的状态决定何时关闭存储电源轨。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="PMIC 如何用闪存忙闲状态门控供电复位" style="--figure-width:1000px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 405" role="img" aria-labelledby="us12354674b2-fig-1-svg-title us12354674b2-fig-1-svg-desc">
+<title id="us12354674b2-fig-1-svg-title">PMIC 如何用闪存忙闲状态门控供电复位</title>
+<desc id="us12354674b2-fig-1-svg-desc">复位请求、活动输出和功率轨是三条不同连线。PMIC 根据请求到达时的状态决定何时关闭存储电源轨。</desc>
+<defs><marker id="us12354674b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12354674b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12354674b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12354674b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12354674b2-fig-1-reset" d="M 200 177 L 280 177" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-1-arrow-control)"/>
+<path id="us12354674b2-fig-1-decision" d="M 468 177 L 551 177" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12354674b2-fig-1-arrow-main)"/>
+<path id="us12354674b2-fig-1-supply" d="M 734 177 L 810 177" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12354674b2-fig-1-arrow-data)"/>
+<path id="us12354674b2-fig-1-activity" d="M 891 220 L 891 283 Q 891 291 883 291 L 382 291 Q 374 291 374 283 L 374 220" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-1-arrow-return)"/>
+<rect x="204.5" y="153" width="71" height="18" fill="#f5f5f5"/><text x="240" y="167" class="arrow-label" text-anchor="middle">复位请求</text>
+<rect x="467" y="151" width="84" height="18" fill="#f5f5f5"/><text x="509" y="165" class="arrow-label" text-anchor="middle">复位许可</text>
+<rect x="735.5" y="153" width="73" height="18" fill="#f5f5f5"/><text x="772" y="167" class="arrow-label" text-anchor="middle">电源供给</text>
+<rect x="579" y="268" width="108" height="18" fill="#f5f5f5"/><text x="633" y="282" class="arrow-label" text-anchor="middle">活动反馈</text>
+<g id="us12354674b2-fig-1-source"><rect x="32" y="138" width="168" height="82" rx="6" fill="#f5f5f5"/><rect x="32" y="138" width="168" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="116" y="164" class="node-name" text-anchor="middle">复位发起者</text><text x="116" y="186" class="node-detail" text-anchor="middle">请求在闪存供电之外产生</text></g>
+<g id="us12354674b2-fig-1-gate"><rect x="280" y="138" width="188" height="82" rx="6" fill="#f5f5f5"/><rect x="280" y="138" width="188" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="374" y="164" class="node-name" text-anchor="middle">PMIC 复位判定</text><text x="374" y="186" class="node-detail" text-anchor="middle">收到请求时检查忙闲</text></g>
+<g id="us12354674b2-fig-1-rail"><rect x="551" y="138" width="183" height="82" rx="6" fill="#f5f5f5"/><rect x="551" y="138" width="183" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="642.5" y="164" class="node-name" text-anchor="middle">闪存供电轨</text><text x="642.5" y="186" class="node-detail" text-anchor="middle">可独立启停</text></g>
+<g id="us12354674b2-fig-1-flash"><rect x="810" y="138" width="162" height="82" rx="6" fill="#f5f5f5"/><rect x="810" y="138" width="162" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="891" y="164" class="node-name" text-anchor="middle">非易失性闪存</text><text x="891" y="186" class="node-detail" text-anchor="middle">编程、擦除或空闲</text></g>
+<text x="32" y="35" class="signal-title" text-anchor="start">复位请求与存储轨控制</text>
+<text x="32" y="366" class="legend" text-anchor="start">活动反馈只报告忙闲，PMIC 决定何时关闭并重新接通电源轨。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12354674b2-fig-1-reset">复位请求</a> 复位发起者可来自独立于该轨的组件。发起权与决定是否能立即执行分开。</li><li><a href="#us12354674b2-fig-1-activity">活动反馈</a> 闪存给出对应部分的忙闲状态。图 3 还展示存储控制器代为报告的实施例。</li><li><a href="#us12354674b2-fig-1-gate">PMIC 复位判定</a> PMIC 收到请求时根据当前的忙闲判定。当时为忙就延后关闭电源轨。</li><li><a href="#us12354674b2-fig-1-supply">电源供给</a> 只切换受控闪存轨，电压实际下降和恢复需另量。</li></ul>
+  <p class="figure-evidence">原图 1、3；说明书归档段 0004、0005、0006、0007、0008、0010、0011、0012、0013、0014、0020、0021、0022；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12354674B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>复位请求</dt><dd>112</dd></div><div><dt>PMIC 复位判定</dt><dd>110</dd></div><div><dt>闪存供电轨</dt><dd>120</dd></div><div><dt>电源供给</dt><dd>122</dd></div><div><dt>活动反馈</dt><dd>132</dd></div><div><dt>非易失性闪存</dt><dd>140</dd></div><div><dt>存储控制器</dt><dd>150</dd></div><div><dt>串行编程接口</dt><dd>152</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　请求有效期间，忙状态怎样阻挡轨的关闭</h3>
+    <p id="fig-2-basis">用同一个事件轴读复位请求、闪存忙闲和轨供电三个信号。原图 2 的中段显示只有活动结束后才开始复位。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="请求有效期间，忙状态怎样阻挡轨的关闭" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 458" role="img" aria-labelledby="us12354674b2-fig-2-svg-title us12354674b2-fig-2-svg-desc">
+<title id="us12354674b2-fig-2-svg-title">请求有效期间，忙状态怎样阻挡轨的关闭</title>
+<desc id="us12354674b2-fig-2-svg-desc">用同一个事件轴读复位请求、闪存忙闲和轨供电三个信号。原图 2 的中段显示只有活动结束后才开始复位。</desc>
+<defs><marker id="us12354674b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12354674b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12354674b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12354674b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12354674b2-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="300" y1="76" x2="300" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="408" y1="76" x2="408" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="516" y1="76" x2="516" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="624" y1="76" x2="624" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="732" y1="76" x2="732" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">6</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（事件序号）</text>
+</g>
+<g id="us12354674b2-fig-2-request"><text x="24" y="136" class="node-name" text-anchor="start">复位请求</text>
+<rect x="192" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="246" y="136" class="arrow-label" text-anchor="middle">未请求</text>
+<rect x="300" y="112" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">请求有效或已受理</text>
+<rect x="732" y="112" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="786" y="136" class="arrow-label" text-anchor="middle">完成</text>
+<circle cx="300" cy="131" r="5" fill="#4f5d75"/>
+<text x="300" y="171" class="arrow-label" text-anchor="end">请求到达</text></g>
+<g id="us12354674b2-fig-2-ready"><text x="24" y="228" class="node-name" text-anchor="start">闪存活动输出</text>
+<rect x="192" y="204" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="354" y="228" class="arrow-label" text-anchor="middle">Busy</text>
+<rect x="516" y="204" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="624" y="228" class="arrow-label" text-anchor="middle">Ready</text>
+<rect x="732" y="204" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="786" y="228" class="arrow-label" text-anchor="middle">重启</text>
+<circle cx="516" cy="223" r="5" fill="#4f5d75"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">由忙转闲</text></g>
+<g id="us12354674b2-fig-2-off"><text x="24" y="320" class="node-name" text-anchor="start">存储电源轨</text>
+<rect x="192" y="296" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="408" y="320" class="arrow-label" text-anchor="middle">保持供电</text>
+<rect x="624" y="296" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="678" y="320" class="arrow-label" text-anchor="middle">开始关断</text>
+<rect x="732" y="296" width="108" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="786" y="320" class="arrow-label" text-anchor="middle">恢复供电</text>
+<circle cx="624" cy="315" r="5" fill="#bf4520"/>
+<text x="624" y="355" class="arrow-label" text-anchor="end">开始供电复位</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">事件序号只用于对齐。忙状态保持供电，忙转闲后可以关闭并重新接通存储电源轨。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12354674b2-fig-2-request">复位请求有效</a> 请求在闪存仍忙时有效，PMIC 保持供电。</li><li><a href="#us12354674b2-fig-2-ready">活动输出转空闲</a> 活动输出转为空闲，在该等待版本中触发对电源轨的复位。</li><li><a href="#us12354674b2-fig-2-off">供电轨开始复位</a> 由 PMIC 关闭存储电源轨。轨电压的实际过渡由开关与负载决定。</li></ul>
+  <p class="figure-evidence">原图 2、8；说明书归档段 0012、0013、0014、0015、0016、0017、0018、0019、0042、0043、0044、0045；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> <a href="../diagrams/US12354674B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>复位请求</dt><dd>112（原图 2 曲线 202）</dd></div><div><dt>活动输出</dt><dd>132（原图 2 曲线 204）</dd></div><div><dt>供电轨状态</dt><dd>122（原图 2 曲线 206）</dd></div><div><dt>忙转闲实施例</dt><dd>220</dd></div></dl></details>
+</figure></section><section id="shared-rail"><h2>先标出共轨边界，再决定看几个忙闲信号</h2><p>每片有独立轨时，对某一片的复位可以只看该片活动。多片共用一条轨时，单次复位会影响整组。图 3 画出一条功率分支给多个存储体，以及反向汇总的各路忙闲状态。权利要求 12 对全部相关部分空闲时复位，权利要求 20 对任一个相关部分活动时抑制复位。</p><p>聚合可在 PMIC 内部完成，也可由存储控制器输出组状态。在 Busy 为低的实施例，用语义上的任一忙来理解。直接对有效低的 Ready 位做或运算会让空闲的一片盖过忙的一片，推导电路时需要先固定极性。说明书还允许监控选定的存储子集，监控集合与实际受断电影响的共轨集合应分别画出。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　一条电源轨供多片时，任一忙如何阻挡组复位</h3>
+    <p id="fig-3-basis">相比各片独立供电，单一轨上的复位同时影响所有挂载的器件。聚合状态要跟这一组物理影响范围对齐。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="一条电源轨供多片时，任一忙如何阻挡组复位" style="--figure-width:1180px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 545" role="img" aria-labelledby="us12354674b2-fig-3-svg-title us12354674b2-fig-3-svg-desc">
+<title id="us12354674b2-fig-3-svg-title">一条电源轨供多片时，任一忙如何阻挡组复位</title>
+<desc id="us12354674b2-fig-3-svg-desc">相比各片独立供电，单一轨上的复位同时影响所有挂载的器件。聚合状态要跟这一组物理影响范围对齐。</desc>
+<defs><marker id="us12354674b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12354674b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12354674b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12354674b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12354674b2-fig-3-act" d="M 224 246 L 335 246" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-3-arrow-control)"/>
+<path id="us12354674b2-fig-3-feed-a" d="M 504 225 L 527 225 Q 535 225 535 217 L 535 99 Q 535 91 543 91 L 570 91" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12354674b2-fig-3-arrow-data)"/>
+<path id="us12354674b2-fig-3-feed-b" d="M 504 246 L 570 246" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12354674b2-fig-3-arrow-data)"/>
+<path id="us12354674b2-fig-3-feed-c" d="M 504 266 L 527 266 Q 535 266 535 274 L 535 389 Q 535 397 543 397 L 570 397" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12354674b2-fig-3-arrow-data)"/>
+<path id="us12354674b2-fig-3-status-a" d="M 755 91 L 831 91 Q 839 91 839 99 L 839 214 Q 839 222 847 222 L 907 222" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-3-arrow-return)"/>
+<path id="us12354674b2-fig-3-status-b" d="M 755 246 L 907 246" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-3-arrow-return)"/>
+<path id="us12354674b2-fig-3-status-c" d="M 755 400 L 831 400 Q 839 400 839 392 L 839 278 Q 839 270 847 270 L 907 270" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12354674b2-fig-3-arrow-return)"/>
+<path id="us12354674b2-fig-3-block" d="M 1009 289 L 1009 485 Q 1009 493 1001 493 L 135 493 Q 127 493 127 485 L 127 289" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12354674b2-fig-3-arrow-main)"/>
+<rect x="234.5" y="221" width="87" height="18" fill="#f5f5f5"/><text x="278" y="235" class="arrow-label" text-anchor="middle">控制整条轨</text>
+<rect x="504" y="91" width="60" height="18" fill="#f5f5f5"/><text x="534" y="105" class="arrow-label" text-anchor="middle">供电</text>
+<rect x="507.5" y="221" width="59" height="18" fill="#f5f5f5"/><text x="537" y="235" class="arrow-label" text-anchor="middle">供电</text>
+<rect x="504" y="363" width="60" height="18" fill="#f5f5f5"/><text x="534" y="377" class="arrow-label" text-anchor="middle">供电</text>
+<rect x="799.5" y="98" width="73" height="18" fill="#f5f5f5"/><text x="836" y="112" class="arrow-label" text-anchor="middle">忙闲 A</text>
+<rect x="798" y="220" width="66" height="18" fill="#f5f5f5"/><text x="831" y="234" class="arrow-label" text-anchor="middle">忙闲 B</text>
+<rect x="797.5" y="365" width="83" height="18" fill="#f5f5f5"/><text x="839" y="379" class="arrow-label" text-anchor="middle">其他忙闲</text>
+<rect x="506" y="469" width="118" height="18" fill="#f5f5f5"/><text x="565" y="483" class="arrow-label" text-anchor="middle">组忙则保持</text>
+<g id="us12354674b2-fig-3-pmic"><rect x="33" y="203" width="191" height="86" rx="6" fill="#f5f5f5"/><rect x="33" y="203" width="191" height="86" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="128.5" y="229" class="node-name" text-anchor="middle">PMIC 组复位判定</text><text x="128.5" y="251" class="node-detail" text-anchor="middle">全空闲时放行</text></g>
+<g id="us12354674b2-fig-3-group"><rect x="335" y="203" width="169" height="86" rx="6" fill="#f5f5f5"/><rect x="335" y="203" width="169" height="86" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="419.5" y="229" class="node-name" text-anchor="middle">共用供电轨</text><text x="419.5" y="251" class="node-detail" text-anchor="middle">一次断电影响整组</text></g>
+<g id="us12354674b2-fig-3-a"><rect x="570" y="54" width="185" height="76" rx="6" fill="#f5f5f5"/><rect x="570" y="54" width="185" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="662.5" y="80" class="node-name" text-anchor="middle">闪存 A</text><text x="662.5" y="102" class="node-detail" text-anchor="middle">独立活动输出</text></g>
+<g id="us12354674b2-fig-3-b"><rect x="570" y="209" width="185" height="76" rx="6" fill="#f5f5f5"/><rect x="570" y="209" width="185" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="662.5" y="235" class="node-name" text-anchor="middle">闪存 B</text><text x="662.5" y="257" class="node-detail" text-anchor="middle">独立活动输出</text></g>
+<g id="us12354674b2-fig-3-c"><rect x="570" y="362" width="185" height="76" rx="6" fill="#f5f5f5"/><rect x="570" y="362" width="185" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="662.5" y="388" class="node-name" text-anchor="middle">其他受保护闪存</text><text x="662.5" y="410" class="node-detail" text-anchor="middle">同轨，按组监控</text></g>
+<g id="us12354674b2-fig-3-fanin"><rect x="907" y="203" width="206" height="86" rx="6" fill="#f5f5f5"/><rect x="907" y="203" width="206" height="86" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1010" y="229" class="node-name" text-anchor="middle">组活动汇总</text><text x="1010" y="251" class="node-detail" text-anchor="middle">任一忙即组忙</text></g>
+<text x="33" y="33" class="signal-title" text-anchor="start">共轨供电与独立忙闲反馈</text>
+<text x="33" y="525" class="legend" text-anchor="start">青灰实线表示共轨供电，虚线表示控制和忙闲反馈。橙线把汇总结果返回 PMIC。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12354674b2-fig-3-group">共用供电轨</a> 组供电轨向多片供电，任何掉电动作会影响整个分支。</li><li><a href="#us12354674b2-fig-3-fanin">组活动汇总</a> 参与判定的闪存状态分别回到汇总逻辑。用任一忙解释有效低输出的极性。</li><li><a href="#us12354674b2-fig-3-pmic">PMIC 组复位判定</a> PMIC 按组判断后执行受控轨复位。只监控子集的实施例需要另标监控范围。</li></ul>
+  <p class="figure-evidence">原图 4、5、6、7；说明书归档段 0023、0024、0025、0026、0027、0028、0029、0030、0031、0032、0033、0034、0035、0036、0037、0038；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12354674B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>共用供电轨</dt><dd>120</dd></div><div><dt>同轨闪存电路</dt><dd>130A–130F</dd></div><div><dt>各片忙闲信号</dt><dd>132A–132F</dd></div><div><dt>可选的组活动汇总控制器</dt><dd>150</dd></div></dl></details>
+</figure></section><section id="exit-rules"><h2>忙转闲和超时分别是什么复位依据</h2><p>等待结束的条件见表 4。忙转闲分支遵守后续状态，超时分支以请求到达且活动为起点，时间到可断开电源，即便忙标志尚未清除。说明书用这条路径应对忙信号卡住。两种分支可配合，先转为空闲时可以提前放行。</p><p>验证时以复位请求被接收为起点，量到轨电压真正跌落或重新上升。把忙退出、超时到达和电源开关动作单独记时。若策略需要暂停新编程命令，说明书给出先停控制器的一个做法。这样才能分辨轨保持是否覆盖了实际编程和擦除窗口。</p><p>图 5 处理等待窗口内的另一处竞争。共轨的第一片还忙时，若第二片开始编程，原先观察到的空闲条件已过期。说明书允许在等待期间抑制新操作。若实施例关掉存储控制器来停止发命令，就要从仍工作的状态源核对在途操作是否结束。超时处理仍按自己的条件启动复位。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　复位请求到达及等待期间的允许条件</h3>
+    <p id="fig-4-basis">忙时先保持轨电压，忙转闲和超时是不同的后续触发。最后一行单列共轨范围判断。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">观测</th><th scope="col">PMIC 行为</th><th scope="col">对应权项</th></tr></thead><tbody><tr id="fig-4-idle"><th scope="row">请求到达时空闲</th><td>允许复位</td><td>1、6、10</td></tr><tr id="fig-4-busy"><th scope="row">请求到达时活动</th><td>抑制复位并保持供电</td><td>1、6、10</td></tr><tr id="fig-4-ready"><th scope="row">等待后活动结束</th><td>在按状态延后的版本中允许复位</td><td>3、7</td></tr><tr id="fig-4-timeout"><th scope="row">计时到预定期限</th><td>在按时间延后的版本中复位</td><td>4、8</td></tr><tr id="fig-4-group"><th scope="row">多个闪存共轨</th><td>任一活动时抑制，全部相关部分空闲时允许</td><td>12、20</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-timeout">计时到预定期限</a> 超时从收到请求且闪存活动起算。到期时即使仍显示忙，也可走强制复位。</li><li><a href="#fig-4-group">多个闪存共轨</a> 多片的忙闲逻辑与共用电源轨的物理范围相关。</li></ul>
+  <p class="figure-evidence">原图 2、4、5、6、7、8；说明书归档段 0007、0013、0014、0016、0017、0018、0019、0025、0026、0028、0030、0031、0042、0043、0044、0045；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>到期复位</dt><dd>230</dd></div><div><dt>共用供电轨</dt><dd>120</dd></div><div><dt>逐片忙闲信号</dt><dd>132A–132F</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　共轨等待期间，怎样避免另一片闪存开始编程</h3>
+    <p id="fig-5-basis">PMIC 可以在等待已忙器件结束时抑制其他共轨器件进入忙状态。情形扩展原图 5 的各片活动输出和说明书第 0031 段。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="共轨等待期间，怎样避免另一片闪存开始编程" style="--figure-width:1120px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 513" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
+<title id="fig-5-svg-title">共轨等待期间，怎样避免另一片闪存开始编程</title>
+<desc id="fig-5-svg-desc">PMIC 可以在等待已忙器件结束时抑制其他共轨器件进入忙状态。情形扩展原图 5 的各片活动输出和说明书第 0031 段。</desc>
+<defs><marker id="fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-5-pending" d="M 286 112 L 432 112" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-commands" d="M 686 110 L 823 110" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-held-power" d="M 161 325 L 161 386 Q 161 394 169 394 L 1092 394 Q 1100 394 1100 386 L 1100 116 Q 1100 108 1092 108 L 1073 108" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-ongoing-status" d="M 823 274 L 686 274" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-return)"/>
+<path id="fig-5-release" d="M 432 275 L 286 275" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-idle-status" d="M 948 155 L 948 178 Q 948 186 940 186 L 568 186 Q 560 186 560 194 L 560 230" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-return)"/>
+<path id="fig-5-held-power-busy" d="M 901 394 L 901 354 Q 901 346 909 346 L 940 346 Q 948 346 948 338 L 948 322" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<rect x="298.5" y="84" width="121" height="18" fill="#f5f5f5"/><text x="359" y="98" class="arrow-label" text-anchor="middle">等待时抑制</text>
+<rect x="691.5" y="82" width="127" height="18" fill="#f5f5f5"/><text x="755" y="96" class="arrow-label" text-anchor="middle">不提交新命令</text>
+<rect x="475" y="366" width="172" height="18" fill="#f5f5f5"/><text x="561" y="380" class="arrow-label" text-anchor="middle">等待时共轨仍供电</text>
+<rect x="704" y="246" width="100" height="18" fill="#f5f5f5"/><text x="754" y="260" class="arrow-label" text-anchor="middle">报告状态</text>
+<rect x="297.5" y="246" width="125" height="18" fill="#f5f5f5"/><text x="360" y="260" class="arrow-label" text-anchor="middle">检查组内就绪</text>
+<rect x="676.5" y="160" width="151" height="18" fill="#f5f5f5"/><text x="752" y="174" class="arrow-label" text-anchor="middle">空闲器件的状态</text>
+<rect x="1080" y="370" width="0" height="18" fill="#f5f5f5"/><text x="1080" y="384" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-5-gate"><rect x="36" y="60" width="250" height="104" rx="6" fill="#f5f5f5"/><rect x="36" y="60" width="250" height="104" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="161" y="86" class="node-name" text-anchor="middle">PMIC 延后共轨复位</text><text x="161" y="108" class="node-detail" text-anchor="middle">请求到达时至少一片 Busy</text><text x="161" y="126" class="node-detail" text-anchor="middle">该轨继续对全部器件供电</text></g>
+<g id="fig-5-stop-new"><rect x="432" y="57" width="254" height="106" rx="6" fill="#f5f5f5"/><rect x="432" y="57" width="254" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="559" y="83" class="node-name" text-anchor="middle">可抑制发起新操作</text><text x="559" y="105" class="node-detail" text-anchor="middle">发控制信号或关停命令控制器</text><text x="559" y="123" class="node-detail" text-anchor="middle">适用于等待窗口</text></g>
+<g id="fig-5-cmd-target"><rect x="823" y="64" width="250" height="91" rx="6" fill="#f5f5f5"/><rect x="823" y="64" width="250" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="948" y="90" class="node-name" text-anchor="middle">其余当前空闲的闪存</text><text x="948" y="112" class="node-detail" text-anchor="middle">不再发起新的编程或擦除</text></g>
+<g id="fig-5-existing"><rect x="823" y="230" width="250" height="92" rx="6" fill="#f5f5f5"/><rect x="823" y="230" width="250" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="948" y="256" class="node-name" text-anchor="middle">已经活动的闪存</text><text x="948" y="278" class="node-detail" text-anchor="middle">继续完成已开始的操作</text></g>
+<g id="fig-5-sense"><rect x="432" y="230" width="254" height="92" rx="6" fill="#f5f5f5"/><rect x="432" y="230" width="254" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="559" y="256" class="node-name" text-anchor="middle">各片活动状态</text><text x="559" y="278" class="node-detail" text-anchor="middle">各片直接报告 Busy / Ready</text><text x="559" y="296" class="node-detail" text-anchor="middle">检查仍在忙的器件</text></g>
+<g id="fig-5-rail"><rect x="36" y="235" width="250" height="90" rx="6" fill="#f5f5f5"/><rect x="36" y="235" width="250" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="161" y="261" class="node-name" text-anchor="middle">PMIC 共用电源轨</text><text x="161" y="283" class="node-detail" text-anchor="middle">条件满足后开始关断动作</text></g>
+<text x="36" y="32" class="signal-title" text-anchor="start">等待已有操作完成，同时限制新操作进入共轨范围</text>
+<text x="36" y="446" class="legend" text-anchor="start">若由存储控制器代报 Busy，停止发命令时仍需保留可用的活动状态源。</text>
+<text x="36" y="474" class="legend" text-anchor="start">超时属于独立的复位依据。图中保留等待期间的用电与活动反馈路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-5-gate">保持共轨的条件来自已经开始的操作</a> 若某片已在编程或擦除，则该片独立的 Busy 信号使组复位保持禁止。</li><li><a href="#fig-5-stop-new">等待期间可以抑制新操作</a> 说明书允许信号或其他控制流程，举例先关掉存储控制器。图用逻辑信号表示这项选择，具体管脚和握手未限定。</li><li><a href="#fig-5-commands">为共轨器件建立同一管理边界</a> 阻止在等待区间有新编程或擦除请求开始。若每片直接报告活动状态，控制器不再发送命令时仍能从闪存核对活动信号。</li><li><a href="#fig-5-existing">已开始的一次操作仍会结束</a> 恢复放行观察的是每片活动信号或正确聚合的结果。省略超时时，应等所有被监测部分变成 Ready。</li><li><a href="#fig-5-rail">从 PMIC 启动复位到电源实际跌落</a> 图 2 表示状态时序，真实轨电压还有转换时间。含超时的实现还可能在 Busy 未清除时启动复位。</li></ul>
+  <p class="figure-evidence">原图 5、8；说明书归档段 0011、0012、0013、0014、0027、0028、0029、0030、0031、0045；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12354674B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>PMIC</dt><dd>110</dd></div><div><dt>共用电源轨</dt><dd>120</dd></div><div><dt>共轨的存储器件</dt><dd>130A–130F</dd></div><div><dt>逐器件活动信号</dt><dd>132A–132F</dd></div><div><dt>存储控制器</dt><dd>150</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US12354674B2</code><span>美国授权专利</span><time datetime="2025-07-08">2025-07-08</time></p>
-  <h1>用闪存活动信号门控供电复位</h1>
-  <p class="english-title" lang="en">Non-volatile memory power cycle protection mechanism</p>
-  <p class="document-question">复位请求到达时，电源管理电路怎样判断能否中断闪存供电？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">电源管理电路在收到非易失存储的供电复位请求时采样活动位，忙时抑制供电轨复位。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>活动位要覆盖复位可能破坏的写入窗口。判断取决于复位请求到达时信号的含义及稳定性。</dd></div><div><dt>验证方法</dt><dd>在一次写入各阶段插入同样的复位请求。记录活动位、复位信号、供电轨变化和复位后数据一致性。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12354674B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">闪存保存的数据在掉电后仍可保留，但正在进行的编程或擦除需要维持供电。处理可控的电源复位请求时，电源管理电路先读取存储活动状态。</p>
-    <p>电源管理电路读取闪存专用的二值活动输出。请求到达时若显示空闲，就复位供电轨；若显示活动，就抑制复位。结束后释放与预定时间后强制复位分别由从属权项给出。</p>
-    <ol class="walkthrough"><li><h3>先取得专用活动信号</h3><p>收到供电复位请求的同时评估闪存的二值活动输出。权 2 以编程和擦除作为活动状态。</p></li><li><h3>选择立即复位或抑制</h3><p>状态为空闲时可复位；活动时延迟复位并保持供电。</p></li><li><h3>按实现选择释放条件</h3><p>可等活动状态转为空闲，或者按预定间隔到期触发复位。两者在从属权项中分别限定。</p></li><li><h3>多器件共轨时合并状态</h3><p>独立供电轨可分别控制。多个器件共用一轨时，可读取各器件的活动位，等全部空闲再复位。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> 的忙转闲与权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> 的预定时间到期分属不同触发条件。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> 明确共轨全部空闲和任一活动对组复位的影响。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>活动输出信号</dt><dd>闪存专用的二值输出，表示所监测部分是否仍活动。</dd></div><div><dt>供电复位</dt><dd>由电源管理电路控制供电轨执行的复位动作。</dd></div><div><dt>共用电源轨</dt><dd>同时给多个闪存器件或多个部分供电的节点。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">先保持供电，操作结束后放行</a></li><li><a href="#fig-1">PMIC 用存储活动位门控电源复位</a></li><li><a href="#fig-3">多片闪存共用供电轨时的复位判定</a></li><li><a href="#fig-4">复位请求后何时允许复位</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">先保持供电，操作结束后放行</h3></div>
-    <a class="paper-open" href="../mechanisms/US12354674B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="先保持供电，操作结束后放行">
-    <img class="paper-image native-image" src="../mechanisms/US12354674B2/fig-2/diagram.svg" width="920" height="416"
-         style="--paper-width:920px" alt="先保持供电，操作结束后放行。此例采用忙转闲后复位。编程期间 PMIC 先保持电源轨，活动结束后再执行请求。">
-  </div>
-  <figcaption>
-    <span>此例采用忙转闲后复位。编程期间 PMIC 先保持电源轨，活动结束后再执行请求。</span>
-    <span class="figure-evidence">图 2、8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/fb/34/62/7a86629143aed3/US12354674B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">PMIC 用存储活动位门控电源复位</h3></div>
-    <a class="paper-open" href="../mechanisms/US12354674B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="PMIC 用存储活动位门控电源复位">
-    <img class="paper-image native-image" src="../mechanisms/US12354674B2/fig-1/diagram.svg" width="1087" height="200"
-         style="--paper-width:1087px" alt="PMIC 用存储活动位门控电源复位。PMIC 同时读复位请求和闪存活动信号。活动时它保持供电，空闲时允许复位受控轨。">
-  </div>
-  <figcaption>
-    <span>PMIC 同时读复位请求和闪存活动信号。活动时它保持供电，空闲时允许复位受控轨。</span>
-    <span class="figure-evidence">图 1、3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00005" aria-label="原文权利要求 5">5</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/fb/34/62/7a86629143aed3/US12354674B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-3-title">多片闪存共用供电轨时的复位判定</h3></div>
-    <a class="paper-open" href="../mechanisms/US12354674B2/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="多片闪存共用供电轨时的复位判定">
-    <img class="paper-image native-image" src="../mechanisms/US12354674B2/fig-3/diagram.svg" width="769" height="420"
-         style="--paper-width:769px" alt="多片闪存共用供电轨时的复位判定。PMIC 汇总各存储器活动。权 12 在各活动值均为空闲时复位，权 20 在任一存储器活动时抑制组复位。">
-  </div>
-  <figcaption>
-    <span>PMIC 汇总各存储器活动。权 12 在各活动值均为空闲时复位，权 20 在任一存储器活动时抑制组复位。</span>
-    <span class="figure-evidence">图 2，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/fb/34/62/7a86629143aed3/US12354674B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">复位请求后何时允许复位</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">观测</th><th scope="col">PMIC 行为</th><th scope="col">附加条件</th></tr></thead><tbody><tr><th scope="row">请求到达且空闲</th><td>复位供电轨</td><td>权 1、6</td></tr><tr><th scope="row">请求到达且活动</th><td class="emphasis">抑制复位</td><td>权 1、6</td></tr><tr><th scope="row">活动随后结束</th><td>允许复位</td><td class="emphasis">权 3、7</td></tr><tr><th scope="row">预定时间到期</th><td>执行该版本的复位分支</td><td>权 4、8</td></tr><tr><th scope="row">多个存储器共轨</th><td>任一活动时抑制，全部空闲时允许</td><td>权 12、20</td></tr></tbody></table>
-  <figcaption>
-    <span>活动结束和预定时间到期是两种后续触发。表中把共轨组判断另列。</span>
-    <span class="figure-evidence">图 2、4–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> · <a href="https://patentimages.storage.googleapis.com/fb/34/62/7a86629143aed3/US12354674B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>用闪存活动信号门控</dt><dd>避免忙时受控复位 <span class="subdued">原图 1、2，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>汇总同轨活动状态</dt><dd>控制组复位时机 <span class="subdued">原图 5、6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>以请求到达为起点量到供电轨动作的延迟，并在恢复后检查编程和擦除的结果。活动信号应覆盖写入对供电敏感的完整区间。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>当活动状态持续超出预定时间时，实现若按超时触发复位，仍可能打断写入。应记录当时的活动状态和实际电压。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设复位请求于 t1 到达，器件 A 正在编程到 t3，B 空闲，两者共享轨。此例定时器不会先到期。</dd></div><div><dt>处理结果</dt><dd>PMIC 从 t1 保持供电，到 t3 得到 A 已空闲的信息后才复位。若电源故障先于 t3，状态门控不能补充能量。</dd></div><div><dt>结果解读</dt><dd>轨保持量、检查间隔与超时均与实现有关。主张的机制是抑制复位，和抵抗所有物理掉电原因有别。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、6、10 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +197,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12354674B2/en#:~:text=a%20plurality%20of%20memory%20circuits%20comprising%20non-volatile%20flash%20memory">F7</a></th><td>提供多个包含非易失闪存的存储电路</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12354674B2/en#:~:text=receive%20an%20activity%20output%20signal%20from%20a%20portion%20of%20the%20non-volatile%20flash%20memory%20dedicated%20to%20output">F8</a></th><td>从闪存的专用状态输出取得二值活动信号</td><td>原图 1 · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12354674B2/en#:~:text=inhibit%20resetting%20the%20power%20on%20the%20power%20rail%20provided%20to%20the%20non-volatile%20flash%20memory%20when%20the">F9</a></th><td>活动时抑制闪存供电轨复位</td><td>原图 2</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>集成电路在请求到达时评估专用闪存活动输出，空闲复位供电轨，活动则暂时抑制。见原图 1、2。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>编程或擦除期间将相关闪存部分标记为活动。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>复位请求后活动输出转闲时执行复位。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>复位请求到达后经过预定时间再复位供电。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>从专用于给出活动输出的闪存位取得二值信息。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td>独立项</td><td>方法要求在电源管理电路接收请求，以当时的活动位决定复位或抑制。见原图 2、8。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>抑制期间收到转闲的更新状态后复位供电。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-6">6</a></td><td>请求到达并仍活动时启动定时器，经过预定时间后复位。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-6">6</a></td><td>方法从专用闪存位提供活动输出。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>多个闪存电路由同一电源管理电路管理。活动值仍作为当前电源复位的判据。见原图 5 至 7。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>若活动值表示忙，抑制对共轨全部存储器的复位。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>分别评估各闪存的活动值，全部空闲才复位全组。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>复位信号来自与存储器分开的组件。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-6">6</a></td><td>方法从存储电路之外的组件接收复位信号。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-5">5</a></td><td>活动输出位是可读取的闪存位。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-10">10</a></td><td>多个闪存的装置用专用位提供活动状态。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-5">5</a></td><td>二值结果对应所述位本身的活动或空闲状态。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-1">1</a></td><td>复位信号源可独立于受控供电轨运行。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-1">1</a></td><td>PMIC 可独立于其他集成电路部件控制这条闪存供电。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-11">11</a></td><td>逐个评估活动位，任一部分活动时抑制全组复位。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>PMIC 观察活动位，门控供电复位时序。</dd></div><div><dt>图 4–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>比较多轨和共享电源轨实施。</dd></div><div><dt>图 8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12354674B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>方法包括忙信号更新和超时两个后继分支。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12354674B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12332723B2.html#engineering">多 die 内存暂停前的读写容忍确认</a>
-<p>US12354674B2 用非易失性闪存的专用活动位阻止忙时电源复位。US12332723B2 先按预定的共享内存不可用事件计算读写容忍值，等远端裸片确认代理电路能承受这段停顿再放行。是否正在执行存储操作与缓冲能否吸收一个确定长度的停顿，是两种不同的安全判据。</p></li></ul>
-    <p><a href="../index.html?patent=US12354674B2#knowledge">在全量关系图上定位 US12354674B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-07-26</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-07-26</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-07-08</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/874,100</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>John J. Sullivan、James M. Hollabaugh、Jason W. Brinsfield、Calvin M. Ryan、Andreas Adler</dd></div><div><dt>分类号</dt><dd>G11C16/30、G11C16/102、G11C16/14、G11C16/32、G11C5/148</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12354674B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12354674B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 76 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12354674B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

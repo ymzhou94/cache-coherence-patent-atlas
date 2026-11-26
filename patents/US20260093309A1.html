@@ -1,119 +1,150 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20260093309A1 用内部性能状态控制跨电源域的发送时钟 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>公开内存档位相同，跨电源域写入可用不同的 TxD 时钟 · US20260093309A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20260093309A1</code> · <a href="https://patents.google.com/patent/US20260093309A1/en">专利全文</a></p>
+<h1>公开内存档位相同，跨电源域写入可用不同的 TxD 时钟</h1><p class="reading-question">软件和硬件代理只知道公开的 F4。PMC 怎样让其中一种组合使用更低的跨域发送时钟？</p>
+<p class="reading-answer">PMC 先从性能请求得到公开的内存和互连目标，再按当前切换模式选择权限表。低档表可以把 F4 映射成内部 F4′，使跨域写入使用较低 TxD CLK。表选、切换许可和时钟控制分别生效；涉及跨表切换时，还可在时钟和电压准备阶段停留。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-04-02</dd></div><div><dt>申请号</dt><dd>US18/953,997</dd></div><div><dt>最早优先权</dt><dd>2024-09-27</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Doron Rajwan、Michael Bekerman、John H. Kelm、Daniel U. Becker</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#domains">先分开请求、切换许可与跨域写数据</a></li><li><a href="#tables">为什么查了两张表，硬件只采用其中一个结果</a></li><li><a href="#transition">跨表切换什么时候完成</a></li><li><a href="#latency">实时代理还有一条独立的固定内存档位路径</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="domains"><h2>先分开请求、切换许可与跨域写数据</h2><p>图 1 上半部跟踪控制路径。发起方可申请带宽、延迟或者公开档位，性能状态处理器把这些输入组合成系统目标，例如内存接口 F4 与互连 V1。切换保护逻辑再判断目标或内部映射是否可用，并控制相关电路。权利要求 1、11、16 对公开目标与内部状态分别作了限定。</p><p>图 1 下半部说明变化发生在哪里。TxD CLK 控制从 fabric 发送到内存接口的写数据。同一内存性能状态可以配不同的发送时钟。较低的发送频率可能减小链路开关活动，写带宽也可能降低。实际核对应分别记录发送时钟、DRAM 或内存接口工作点和写入吞吐量。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　跨域写数据和性能状态请求是两条路径</h3>
+    <p id="fig-1-basis">请求方按公开状态向 PMC 投票。切换保护逻辑可以在控制侧映射到内部状态，并设置跨电源域写入所用的 TxD 时钟。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="跨域写数据和性能状态请求是两条路径" style="--figure-width:1170px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1170 576" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">跨域写数据和性能状态请求是两条路径</title>
+<desc id="fig-1-svg-desc">请求方按公开状态向 PMC 投票。切换保护逻辑可以在控制侧映射到内部状态，并设置跨电源域写入所用的 TxD 时钟。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-vote-input" d="M 255 117 L 341 117" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-target" d="M 559 117 L 649 117" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-judge" d="M 889 117 L 982 117" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-preferred-clock" d="M 768 166 L 768 234" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-clock-to-gateway" d="M 768 326 L 768 400" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-payload" d="M 255 447 L 643 447" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-transfer" d="M 896 447 L 982 447" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<rect x="255.5" y="90" width="85" height="18" fill="#f5f5f5"/><text x="298" y="104" class="arrow-label" text-anchor="middle">公开请求</text>
+<rect x="561.5" y="90" width="85" height="18" fill="#f5f5f5"/><text x="604" y="104" class="arrow-label" text-anchor="middle">公开目标</text>
+<rect x="898" y="90" width="76" height="18" fill="#f5f5f5"/><text x="936" y="104" class="arrow-label" text-anchor="middle">许可值</text>
+<rect x="785.5" y="194" width="135" height="18" fill="#f5f5f5"/><text x="853" y="208" class="arrow-label" text-anchor="middle">时钟控制信号</text>
+<rect x="778" y="347" width="90" height="18" fill="#f5f5f5"/><text x="823" y="361" class="arrow-label" text-anchor="middle">TxD CLK</text>
+<rect x="363" y="418" width="172" height="18" fill="#f5f5f5"/><text x="449" y="432" class="arrow-label" text-anchor="middle">写数据从互连发出</text>
+<rect x="908" y="419" width="62" height="18" fill="#f5f5f5"/><text x="939" y="433" class="arrow-label" text-anchor="middle">写入</text>
+<g id="fig-1-request"><rect x="33" y="68" width="222" height="98" rx="6" fill="#f5f5f5"/><rect x="33" y="68" width="222" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="94" class="node-name" text-anchor="middle">软件与请求代理</text><text x="144" y="116" class="node-detail" text-anchor="middle">带宽、延迟或公开档位</text><text x="144" y="134" class="node-detail" text-anchor="middle">例如内存接口 F4</text></g>
+<g id="fig-1-vote"><rect x="341" y="68" width="218" height="98" rx="6" fill="#f5f5f5"/><rect x="341" y="68" width="218" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="450" y="94" class="node-name" text-anchor="middle">性能状态投票</text><text x="450" y="116" class="node-detail" text-anchor="middle">合成公开目标</text><text x="450" y="134" class="node-detail" text-anchor="middle">例如 (F4, V1)</text></g>
+<g id="fig-1-protect"><rect x="649" y="68" width="240" height="98" rx="6" fill="#f5f5f5"/><rect x="649" y="68" width="240" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="769" y="94" class="node-name" text-anchor="middle">PMC 切换保护</text><text x="769" y="116" class="node-detail" text-anchor="middle">允许或拒绝目标状态</text><text x="769" y="134" class="node-detail" text-anchor="middle">可映射到内部状态</text></g>
+<g id="fig-1-permission"><rect x="982" y="68" width="159" height="98" rx="6" fill="#f5f5f5"/><rect x="982" y="68" width="159" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1061.5" y="94" class="node-name" text-anchor="middle">切换许可</text><text x="1061.5" y="116" class="node-detail" text-anchor="middle">给执行侧</text><text x="1061.5" y="134" class="node-detail" text-anchor="middle">是否允许生效</text></g>
+<g id="fig-1-clock"><rect x="643" y="234" width="253" height="92" rx="6" fill="#f5f5f5"/><rect x="643" y="234" width="253" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="769.5" y="260" class="node-name" text-anchor="middle">跨域时钟电路</text><text x="769.5" y="282" class="node-detail" text-anchor="middle">TxD CLK 可选 LO / HI</text><text x="769.5" y="300" class="node-detail" text-anchor="middle">低档表的 F4′ 用 LO</text></g>
+<g id="fig-1-fabric"><rect x="33" y="400" width="222" height="94" rx="6" fill="#f5f5f5"/><rect x="33" y="400" width="222" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="426" class="node-name" text-anchor="middle">互连电源域</text><text x="144" y="448" class="node-detail" text-anchor="middle">fabric 运行点 V1–V3</text><text x="144" y="466" class="node-detail" text-anchor="middle">SoC 代理发起内存写</text></g>
+<g id="fig-1-gateway"><rect x="643" y="400" width="253" height="94" rx="6" fill="#f5f5f5"/><rect x="643" y="400" width="253" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="769.5" y="426" class="node-name" text-anchor="middle">跨电源域发送接口</text><text x="769.5" y="448" class="node-detail" text-anchor="middle">TxD CLK 控制写数据发送</text></g>
+<g id="fig-1-mem"><rect x="982" y="400" width="159" height="94" rx="6" fill="#f5f5f5"/><rect x="982" y="400" width="159" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1061.5" y="426" class="node-name" text-anchor="middle">内存接口电源域</text><text x="1061.5" y="448" class="node-detail" text-anchor="middle">接收写数据</text></g>
+<text x="33" y="35" class="signal-title" text-anchor="start">控制路径 · 公开目标与内部状态</text>
+<text x="33" y="374" class="signal-title" text-anchor="start">数据路径 · 从互连写向内存接口</text>
+<text x="33" y="541" class="legend" text-anchor="start">F4 与 F4′ 的写入口可以有不同 TxD CLK。目的端的名义内存性能状态单独观察。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-request">软件或代理只提交公开请求</a> 可请求带宽、延迟或公开的性能状态。PMC 下游的 F4′ 状态不属于请求方可直接指定的选项。</li><li><a href="#fig-1-vote">投票先得到公开目标</a> 例如互连 V1、内存接口 F4。这个目标由性能状态处理器产生。</li><li><a href="#fig-1-protect">切换保护逻辑检查该组合并可映射</a> 需选用包含该组合的表，再看允许结果。低档表支持示例中的 V1、F4′；仅发出公开请求还不够判定是否能转换。</li><li><a href="#fig-1-clock">变化具体落在跨域写入接口的 TxD CLK</a> 控制器可以保留内存接口的目标档位，并为写数据发端选择 LO。正文中应把 TxD CLK 与 DRAM 本地时钟区分开。</li><li><a href="#fig-1-transfer">带宽收益和代价比较在写方向</a> TxD 降频可以减少开关活动，也可能限制从互连向内存接口的写带宽。说明书未指定其它方向的时钟都跟着改变。</li></ul>
+  <p class="figure-evidence">原图 1A、1B、1C、3、5A；说明书归档段 0010、0011、0012、0013、0014、0015、0017、0018、0019、0020、0021、0022、0042、0043、0044、0049、0064、0065、0066；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US20260093309A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>互连和内存接口两个电源域</dt><dd>104A、104B</dd></div><div><dt>电源管理电路 PMC</dt><dd>120</dd></div><div><dt>PMC 请求接口</dt><dd>122</dd></div><div><dt>性能状态处理器</dt><dd>130</dd></div><div><dt>切换保护电路</dt><dd>140</dd></div><div><dt>切换许可值</dt><dd>148</dd></div><div><dt>跨域时钟电路与 TxD 信号</dt><dd>160、162</dd></div></dl></details>
+</figure></section><section id="tables"><h2>为什么查了两张表，硬件只采用其中一个结果</h2><p>图 2 保留原图 3 的两个切换表、模式寄存器与许可选择器。目标可以同时送入两张表，但只有当前模式选中的结果参与最终判断。原图 5A 低档表的 F4′ 使用 LO，允许和 V1 稳态共存。V2 与 V3 的 F4′ 只作为暂态。高档表的 F4、F5 使用 HI，且在 V1 下不可作为稳态。表 5 把三个典型请求放到两个表中查一次。</p><p>说明书第 0051 段另以 F5 解释边界比较器的行为。原图 5A 的示例边界在 F4。第 0075 段对原图 5C 三维概念图中 LO 与 HI 的指向与 0066、0072 的表述不一致。本文的具体档位取原图 5A、5B，降时钟方向也与权利要求 17 一致。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　两张表可同时核对同一个公开目标，只有当前模式的结果生效</h3>
+    <p id="fig-2-basis">原图 3 将公开目标同时送到两张切换表。模式寄存器选择权限输出。低档表中的 F4′ 可以用 LO，而高档表对 F4 使用不同的约束。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两张表可同时核对同一个公开目标，只有当前模式的结果生效" style="--figure-width:1170px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1170 550" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">两张表可同时核对同一个公开目标，只有当前模式的结果生效</title>
+<desc id="fig-2-svg-desc">原图 3 将公开目标同时送到两张切换表。模式寄存器选择权限输出。低档表中的 F4′ 可以用 LO，而高档表对 F4 使用不同的约束。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-target-low" d="M 255 203 L 288 203 Q 296 203 296 195 L 296 107 Q 296 99 304 99 L 364 99" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-target-high" d="M 255 239 L 288 239 Q 296 239 296 247 L 296 321 Q 296 329 304 329 L 364 329" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-low-choice" d="M 624 99 L 691 99 Q 699 99 699 107 L 699 190 Q 699 198 707 198 L 773 198" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-high-choice" d="M 624 329 L 691 329 Q 699 329 699 321 L 699 247 Q 699 239 707 239 L 773 239" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-output" d="M 952 221 L 1009 221" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-set-mode" d="M 624 482 L 773 482" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-table-select" d="M 863 440 L 863 266" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="283.5" y="71" width="85" height="18" fill="#f5f5f5"/><text x="326" y="85" class="arrow-label" text-anchor="middle">同一目标</text>
+<rect x="283.5" y="301" width="85" height="18" fill="#f5f5f5"/><text x="326" y="315" class="arrow-label" text-anchor="middle">同一目标</text>
+<rect x="645.5" y="71" width="117" height="18" fill="#f5f5f5"/><text x="704" y="85" class="arrow-label" text-anchor="middle">低档表结果</text>
+<rect x="645.5" y="301" width="117" height="18" fill="#f5f5f5"/><text x="704" y="315" class="arrow-label" text-anchor="middle">高档表结果</text>
+<rect x="981" y="194" width="0" height="18" fill="#f5f5f5"/><text x="981" y="208" class="arrow-label" text-anchor="middle"></text>
+<rect x="650" y="455" width="96" height="18" fill="#f5f5f5"/><text x="698" y="469" class="arrow-label" text-anchor="middle">更新表选</text>
+<rect x="866.5" y="346" width="99" height="18" fill="#f5f5f5"/><text x="916" y="360" class="arrow-label" text-anchor="middle">当前表选</text>
+<g id="fig-2-target"><rect x="33" y="169" width="222" height="102" rx="6" fill="#f5f5f5"/><rect x="33" y="169" width="222" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="195" class="node-name" text-anchor="middle">公开目标 (F, V)</text><text x="144" y="217" class="node-detail" text-anchor="middle">示例取 (F4, V1)</text><text x="144" y="235" class="node-detail" text-anchor="middle">来自 PMC 状态投票</text></g>
+<g id="fig-2-low"><rect x="364" y="46" width="260" height="105" rx="6" fill="#f5f5f5"/><rect x="364" y="46" width="260" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="494" y="72" class="node-name" text-anchor="middle">低档许可表</text><text x="494" y="94" class="node-detail" text-anchor="middle">F1–F3 或内部 F4′</text><text x="494" y="112" class="node-detail" text-anchor="middle">TxD CLK 均为 LO</text><text x="494" y="130" class="node-detail" text-anchor="middle">V1 和 F4′ 可稳态共存</text></g>
+<g id="fig-2-high"><rect x="364" y="277" width="260" height="105" rx="6" fill="#f5f5f5"/><rect x="364" y="277" width="260" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="494" y="303" class="node-name" text-anchor="middle">高档许可表</text><text x="494" y="325" class="node-detail" text-anchor="middle">公开 F1–F5</text><text x="494" y="343" class="node-detail" text-anchor="middle">F4–F5 用 HI（原图 5A）</text><text x="494" y="361" class="node-detail" text-anchor="middle">V1 + F4/F5 不允许</text></g>
+<g id="fig-2-select"><rect x="773" y="170" width="179" height="96" rx="6" fill="#f5f5f5"/><rect x="773" y="170" width="179" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="862.5" y="196" class="node-name" text-anchor="middle">许可结果选择器</text><text x="862.5" y="218" class="node-detail" text-anchor="middle">使用当前模式</text></g>
+<g id="fig-2-gate"><rect x="1009" y="170" width="125" height="96" rx="6" fill="#f5f5f5"/><rect x="1009" y="170" width="125" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1071.5" y="196" class="node-name" text-anchor="middle">切换许可</text><text x="1071.5" y="218" class="node-detail" text-anchor="middle">允许或拒绝</text></g>
+<g id="fig-2-fsm"><rect x="364" y="440" width="260" height="84" rx="6" fill="#f5f5f5"/><rect x="364" y="440" width="260" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="494" y="466" class="node-name" text-anchor="middle">固件切换状态机</text><text x="494" y="488" class="node-detail" text-anchor="middle">只在切换边界更新表选</text></g>
+<g id="fig-2-mode"><rect x="773" y="440" width="179" height="84" rx="6" fill="#f5f5f5"/><rect x="773" y="440" width="179" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="862.5" y="466" class="node-name" text-anchor="middle">当前模式寄存器</text><text x="862.5" y="488" class="node-detail" text-anchor="middle">低档或高档</text></g>
+<text x="33" y="33" class="signal-title" text-anchor="start">选择矩阵输出只需一位模式，目标可以有两个不同判定</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-low">低档表把 F4 请求映射到内部 F4′</a> 在 V1 时 F4′ 可与 LO 稳态组合。V2、V3 的 F4′ 路径在此例可短暂经过，随后切换高档模式。</li><li><a href="#fig-2-high">高档表用另一组限制</a> 在图 5A 的实例，F1–F3 用 LO，F4–F5 用 HI。V1 与 F4 或 F5 的稳态组合不允许。</li><li><a href="#fig-2-select">切换模式选择一张表的结果</a> 两路可以计算不同的许可值。表选择由状态机控制；仅查到一条可用结果并不会使该表被选择。</li><li><a href="#fig-2-gate">许可值和时钟控制分别输出</a> 切换权限不是 TxD CLK 本身。原文还允许高档表内部按目标状态与时钟边界决定 LO/HI。</li></ul>
+  <p class="figure-evidence">原图 3、5A、5B；说明书归档段 0042、0043、0044、0045、0046、0047、0048、0050、0051、0055、0061、0062、0063、0064、0065、0066、0067、0069、0070、0071、0072；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20260093309A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>低档切换许可表</dt><dd>320A / 510A</dd></div><div><dt>高档切换许可表</dt><dd>320B / 510B</dd></div><div><dt>表选寄存及模式信号</dt><dd>330、335</dd></div><div><dt>选择并输出当前许可</dt><dd>340</dd></div><div><dt>跨域时钟边界电路</dt><dd>350</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　同一个公开请求在两张表里怎样被处理</h3>
+    <p id="fig-5-basis">采用原图 5A 的具体矩阵。F 表示内存接口档位，V 表示 fabric 档位。F4′ 是内部表示，API 仍只公布 F1–F5。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">公开目标</th><th scope="col">低档表</th><th scope="col">高档表</th><th scope="col">实际 TxD 选择与条件</th></tr></thead><tbody><tr id="fig-5-stable"><th scope="row">F4、V1</th><td>F4′、V1 可稳态</td><td>F4、V1 禁止</td><td>低档稳态 LO</td></tr><tr id="fig-5-shift"><th scope="row">F4、V2</th><td>F4′、V2 可暂时经过</td><td>F4、V2 可稳态</td><td>备妥后高档用 HI</td></tr><tr id="fig-5-prohibited"><th scope="row">F1、V3</th><td>禁止</td><td>禁止</td><td>无许可</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-stable">公开目标 F4、V1</a> 在低档表可走 F4′、V1，TxD 维持 LO。高档表则禁止 V1 和 F4 作为稳态组合。</li><li><a href="#fig-5-shift">内存仍为 F4，互连改到 V2</a> 低档表的 F4′、V2 是暂态，可以转入高档 F4、V2、HI。原图 4 用就绪条件划分暂态和稳态。</li><li><a href="#fig-5-prohibited">内存 F1、互连 V3</a> 原图 5A 两个表都禁止该组合，改用另一张表也不能给出许可。</li></ul>
+  <p class="figure-evidence">原图 5A、5B、5C；说明书归档段 0061、0062、0063、0064、0065、0066、0067、0069、0070、0071、0072、0074、0075；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
+  
+</figure></section><section id="transition"><h2>跨表切换什么时候完成</h2><p>图 3 画出原图 4 的两段暂态。以低档往高档为例，状态机收到升级条件后先进入过渡状态，可以发出让 TxD 转到 HI 的控制信号。原文举例等必要时钟和电压准备好才进入高档稳态，并更新表选。反向过程可等待降频所需条件后，再回到低档表。</p><p>通过暂态的组合和正常维持的组合有不同要求。例如 (F4′, V2) 可在低档表短暂出现，不能据此认为系统可以长期使用该状态。专利没有给出跨时钟域更换时钟的具体同步器、边界处理或固定开销。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　跨域时钟准备好后，切换保护才稳定地使用新表</h3>
+    <p id="fig-3-basis">原图 4 在低档和高档之间各放一个暂态。进入暂态可发起时钟调整，收到所需时钟和电压的就绪条件后进入新的稳态并更新表选。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="跨域时钟准备好后，切换保护才稳定地使用新表" style="--figure-width:1190px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1190 557" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">跨域时钟准备好后，切换保护才稳定地使用新表</title>
+<desc id="fig-3-svg-desc">原图 4 在低档和高档之间各放一个暂态。进入暂态可发起时钟调整，收到所需时钟和电压的就绪条件后进入新的稳态并更新表选。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-rise-trigger" d="M 263 196 L 324 196 Q 332 196 332 188 L 332 159 Q 332 151 340 151 L 426 151" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-rise-confirm" d="M 704 151 L 819 151 Q 827 151 827 159 L 827 188 Q 827 196 835 196 L 897 196" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-fall-trigger" d="M 1024 282 L 1024 406 Q 1024 414 1016 414 L 704 414" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-fall-confirm" d="M 426 414 L 157 414 Q 149 414 149 406 L 149 282" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<rect x="285.5" y="120" width="129" height="18" fill="#f5f5f5"/><text x="350" y="134" class="arrow-label" text-anchor="middle">收到转换条件</text>
+<rect x="692.5" y="122" width="155" height="18" fill="#f5f5f5"/><text x="770" y="136" class="arrow-label" text-anchor="middle">就绪，稳定用表 1</text>
+<rect x="787" y="386" width="178" height="18" fill="#f5f5f5"/><text x="876" y="400" class="arrow-label" text-anchor="middle">收到低档转换条件</text>
+<rect x="214" y="385" width="168" height="18" fill="#f5f5f5"/><text x="298" y="399" class="arrow-label" text-anchor="middle">就绪，稳定用表 0</text>
+<g id="fig-3-stable-low"><rect x="33" y="164" width="230" height="118" rx="6" fill="#f5f5f5"/><rect x="33" y="164" width="230" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="148" y="190" class="node-name" text-anchor="middle">低档稳态</text><text x="148" y="212" class="node-detail" text-anchor="middle">表选指向表 0</text><text x="148" y="230" class="node-detail" text-anchor="middle">F4′ 可配 LO</text></g>
+<g id="fig-3-raise"><rect x="426" y="95" width="278" height="116" rx="6" fill="#f5f5f5"/><rect x="426" y="95" width="278" height="116" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="565" y="121" class="node-name" text-anchor="middle">向高档过渡</text><text x="565" y="143" class="node-detail" text-anchor="middle">可发 LO→HI 控制</text><text x="565" y="161" class="node-detail" text-anchor="middle">等时钟和电压等条件</text></g>
+<g id="fig-3-stable-high"><rect x="897" y="164" width="248" height="118" rx="6" fill="#f5f5f5"/><rect x="897" y="164" width="248" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1021" y="190" class="node-name" text-anchor="middle">高档稳态</text><text x="1021" y="212" class="node-detail" text-anchor="middle">进入时表选改为表 1</text><text x="1021" y="230" class="node-detail" text-anchor="middle">具体 TxD 取决于状态</text></g>
+<g id="fig-3-lower"><rect x="426" y="355" width="278" height="116" rx="6" fill="#f5f5f5"/><rect x="426" y="355" width="278" height="116" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="565" y="381" class="node-name" text-anchor="middle">向低档过渡</text><text x="565" y="403" class="node-detail" text-anchor="middle">可发 HI→LO 控制</text><text x="565" y="421" class="node-detail" text-anchor="middle">等条件后恢复表 0</text></g>
+<text x="33" y="43" class="signal-title" text-anchor="start">控制触发、时钟准备和表选更新依次发生</text>
+<text x="33" y="514" class="legend" text-anchor="start">低档的 (F4′, V2/V3) 可作为暂态。高档对低互连电压与高内存档位还有独立限制，见表 5。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-stable-low">低档表持续处理允许的状态</a> 低档处可用表 0。F4′、V1 和 LO 是该表可以支持的稳定内部状态。</li><li><a href="#fig-3-raise">从低档过渡到高档时先发所需控制</a> 向更高互连档位转换时，原图 5A 的低档表可能先允许暂态 F4′，并要求最后转到高档。原图 4 的向上路径可以启动 LO→HI。</li><li><a href="#fig-3-rise-confirm">等待所需时钟和电压就绪</a> 状态机收到相应触发后再进入高档稳态并置表选。提前应用新的权限会模糊实际跨域接口是否已经可用。</li><li><a href="#fig-3-stable-high">高档稳态采用表 1 的规则</a> 高档表在该例仍可对 F1–F3 用 LO。经过 LO→HI 暂态这一条路径，并不意味着表 1 的所有状态都指定 HI。</li><li><a href="#fig-3-lower">返回低档也有过渡期</a> 向下路径可以发起 HI→LO。等待退出条件后重新用表 0，原图没有给出具体电路时钟切换周期。</li></ul>
+  <p class="figure-evidence">原图 3、4、5A；说明书归档段 0046、0047、0048、0049、0053、0054、0055、0056、0057、0058、0059、0069、0070、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20260093309A1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>表 0 稳态</dt><dd>410A</dd></div><div><dt>向高档过渡</dt><dd>410B</dd></div><div><dt>表 1 稳态</dt><dd>410C</dd></div><div><dt>向低档过渡</dt><dd>410D</dd></div><div><dt>启动转换和完成转换的事件</dt><dd>412A–412D</dd></div><div><dt>切换表选</dt><dd>314A、314B</dd></div><div><dt>TxD CLK 升降控制</dt><dd>316A、316B</dd></div></dl></details>
+</figure></section><section id="latency"><h2>实时代理还有一条独立的固定内存档位路径</h2><p>DRAM 频率改变时，接口可能要重新校准并暂停接收新请求。图 4 的实时代理用延迟容忍度指出它不能继续承受这样的空窗。PMC 可将内存固定在配置的 F7，即使这一代硬件最高为 F9。固定期间，普通投票 F6 或 F8 都不会让它离开 F7，直到实时约束解除。</p><p>固定在 F7 仍可能需要一次进入档位的转换。核对时可分别观察首次换档造成的服务中断，以及固定期间减去的后续换频次数。第 8、9、15 项描述此路径。内部状态映射与固定内存档位可以独立实现。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　实时代理无法容忍再校准时，怎样把内存保持在 F7</h3>
+    <p id="fig-4-basis">另一条路径按实时代理的延迟容忍度固定内存性能状态。设置的 F7 可低于系统最高 F9。固定期间，新的高低投票都不改变内存档位。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="实时代理无法容忍再校准时，怎样把内存保持在 F7" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 597" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">实时代理无法容忍再校准时，怎样把内存保持在 F7</title>
+<desc id="fig-4-svg-desc">另一条路径按实时代理的延迟容忍度固定内存性能状态。设置的 F7 可低于系统最高 F9。固定期间，新的高低投票都不改变内存档位。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="fig-4-normal"><path d="M 116 120 L 601 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/><rect x="287" y="96" width="143" height="18" fill="#f5f5f5"/><text x="358.5" y="110" class="arrow-label" text-anchor="middle">普通投票综合得到 F6</text></g>
+<g id="fig-4-latency"><path d="M 358 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/><rect x="434" y="144" width="91" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">延迟容忍度不足</text></g>
+<g id="fig-4-pin"><path d="M 601 216 L 844 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/><rect x="651" y="192" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="206" class="arrow-label" text-anchor="middle">按设置进入并固定 F7</text></g>
+<g id="fig-4-new-vote"><path d="M 116 264 L 601 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/><rect x="293.5" y="240" width="130" height="18" fill="#f5f5f5"/><text x="358.5" y="254" class="arrow-label" text-anchor="middle">后续投票会得到 F8</text></g>
+<g id="fig-4-ignore-f8"><path d="M 601 306 L 625 306 Q 633 306 633 314 L 633 316 Q 633 324 625 324 L 601 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#fig-4-arrow-control)"/><rect x="669.5" y="282" width="91" height="18" fill="#f5f5f5"/><text x="715" y="296" class="arrow-label" text-anchor="middle">继续保持 F7</text></g>
+<g id="fig-4-lift"><path d="M 358 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-return)"/><rect x="440.5" y="336" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="350" class="arrow-label" text-anchor="middle">实时约束解除</text></g>
+<g id="fig-4-after"><path d="M 601 408 L 844 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/><rect x="664" y="384" width="117" height="18" fill="#f5f5f5"/><text x="722.5" y="398" class="arrow-label" text-anchor="middle">按当前投票重新决策</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">其它性能请求方</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">实时代理</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">PMC 投票处理器</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">内存接口</text>
+<text x="28" y="484" class="legend" text-anchor="start">F6、F7、F8、F9 属于原文定档示例。该时序与图 3 的 LO / HI 切换流程相互独立。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-normal">未触发固定时，性能投票可以决定内存档位</a> 例如常规请求结果为 F6。说明书中固定功能可以独立于 TxD 内部状态映射存在。</li><li><a href="#fig-4-latency">延迟容忍度来自实时代理</a> 显示、相机或音频可受内存换频校准期间的服务空窗影响，即使它们需要的持续带宽并不高。</li><li><a href="#fig-4-pin">使用设置中的 F7 作为固定档位</a> F7 在例中足以服务实时代理。进入 F7 如需要一次换频，初次切换的等待仍需计入。</li><li><a href="#fig-4-ignore-f8">后续 F8 投票不能改动固定档位</a> 固定期间即使投票超过 F7，也保持设置。它不同于允许升到 F8 的最低档位约束。</li><li><a href="#fig-4-lift">外部实时约束消失后恢复常规决策</a> 解除后由当时的请求决定目标。图中不假定会自动恢复到进入固定前的 F6。</li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0028、0031、0032、0033、0034、0035、0036、0037、0038、0039、0040；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US20260093309A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>性能状态投票处理器</dt><dd>210</dd></div><div><dt>实时延迟容忍度输入</dt><dd>215</dd></div><div><dt>配置与实时代理的固定内存档位</dt><dd>230、234</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US20260093309A1</code><span>美国公开申请</span><time datetime="2026-04-02">2026-04-02</time></p>
-  <h1>用内部性能状态控制跨电源域的发送时钟</h1>
-  <p class="english-title" lang="en">Power Management Circuit with Internal Performance States</p>
-  <p class="document-question">请求方沿用原来的内存性能档位时，硬件怎样管理不同的跨域发送时钟设置？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">电源管理电路根据请求确定软件可见的目标性能状态，执行时允许经过软件无法直接请求的内部组成状态。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>相同的外部目标可对应不同跨域时钟组合。只有状态机和定时约束允许时，内部状态才进入转换路径。</dd></div><div><dt>验证方法</dt><dd>重放同一组外部档位请求，用不同的初始时钟模式执行。记录外部目标、许可表选择、内部状态和各域时钟切换时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">互连代理跨一个电源域边界访问内存接口。对外公布的性能状态用于提交需求，功耗管理电路还维护内部执行状态。</p>
-    <p>功耗管理电路汇总各请求得到外部可见的组成状态，再按当前模式判断能否进入内部状态。内部状态可以为互连域与内存接口域之间的发送时钟指定不同频率。</p>
-    <ol class="walkthrough"><li><h3>合并性能请求</h3><p>功耗管理电路（PMC）接收代理和软件的性能请求，得出由两个域的外部组成档位表示的目标。</p></li><li><h3>并行查表并选择结果</h3><p>迁移保护电路将目标提供给多张迁移许可表，依据当前模式选用其中一张表的结果。</p></li><li><h3>按内部状态管理发送时钟</h3><p>原图 5A、5B 的内部档 F4′ 使用低档发送时钟，外部 F4 对应高档。低档表可允许 (V1, F4′)，高档表示例将 (V1, F4) 列为不允许。</p></li><li><h3>经过过渡态完成换表</h3><p>固件状态机经过转换态，等待所需时钟和供电就绪，再转入另一表对应的稳定模式。权 8 至 10 还覆盖实时代理延迟容忍值限制内存性能状态的方式。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 只要求外部与内部档的跨域发送频率不同。权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a> 另要求降低频率。具体 LO、HI 关系见原图 5A、5B，说明书 0075 的反向写法有别于前述图和段落。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>外部性能档</dt><dd>请求接口列出的各电源域性能状态。</dd></div><div><dt>内部性能状态</dt><dd>PMC 在内部定义、包含请求方无法直接指定的组成档位。</dd></div><div><dt>跨域发送时钟</dt><dd>用于跨越互连与内存接口两个电源域传送数据的时钟。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">跨越边界后才能启用另一张表</a></li><li><a href="#fig-1">请求接口与内部转移保护</a></li><li><a href="#fig-4">两个许可表之间的切换窗口</a></li><li><a href="#fig-3">外部 F4、内部 F4′ 与选表条件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">跨越边界后才能启用另一张表</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260093309A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="跨越边界后才能启用另一张表">
-    <img class="paper-image native-image" src="../mechanisms/US20260093309A1/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="跨越边界后才能启用另一张表。切换目标出现后，固件状态机可先进入过渡态。必要时等待时钟与电压准备完成，再启用另一张许可表。">
-  </div>
-  <figcaption>
-    <span>切换目标出现后，固件状态机可先进入过渡态。必要时等待时钟与电压准备完成，再启用另一张许可表。</span>
-    <span class="figure-evidence">图 3–4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">请求接口与内部转移保护</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260093309A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="请求接口与内部转移保护">
-    <img class="paper-image native-image" src="../mechanisms/US20260093309A1/fig-1/diagram.svg" width="410" height="834"
-         style="--paper-width:410px" alt="请求接口与内部转移保护。PMC 汇总请求得到外部可见目标。迁移保护电路检查许可，跨域发送时钟控制互连侧向内存接口侧的数据发送。">
-  </div>
-  <figcaption>
-    <span>PMC 汇总请求得到外部可见目标。迁移保护电路检查许可，跨域发送时钟控制互连侧向内存接口侧的数据发送。</span>
-    <span class="figure-evidence">图 1A–C、2–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">两个许可表之间的切换窗口</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260093309A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="两个许可表之间的切换窗口">
-    <img class="paper-image native-image" src="../mechanisms/US20260093309A1/fig-4/diagram.svg" width="648" height="440"
-         style="--paper-width:648px" alt="两个许可表之间的切换窗口。以从低档到高档为例，固件状态机等待过渡完成后切表。图示横轴表示事件顺序。">
-  </div>
-  <figcaption>
-    <span>以从低档到高档为例，固件状态机等待过渡完成后切表。图示横轴表示事件顺序。</span>
-    <span class="figure-evidence">图 4、5A，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">外部 F4、内部 F4′ 与选表条件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">组合</th><th scope="col">发送时钟</th><th scope="col">原图 5A 中的许可</th></tr></thead><tbody><tr><th scope="row">V1 与内部 F4′</th><td>LO</td><td class="emphasis">低档表允许</td></tr><tr><th scope="row">V2 或 V3 与内部 F4′</th><td>LO</td><td class="emphasis">低档表允许过渡</td></tr><tr><th scope="row">V1 与外部 F4</th><td>HI</td><td>高档表禁止，需转低档表</td></tr><tr><th scope="row">V2 或 V3 与外部 F4</th><td>HI</td><td>高档表允许</td></tr></tbody></table>
-  <figcaption>
-    <span>对外 F4 与内部 F4′ 分别对应 HI 和 LO。表内还要判断互连档位与该内存档是否允许组成稳定组合。</span>
-    <span class="figure-evidence">图 5A–B，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>独立内部性能状态</dt><dd>按需调整发送时钟 <span class="subdued">原图 1B、5A，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></span></dd></div><div><dt>根据当前模式选表</dt><dd>限制跨域状态迁移 <span class="subdued">原图 3、4，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>对同一外部档请求记录当前许可表、内部档、发送时钟，以及读写队列的占用和排空时间。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若突发写入恰好发生在内部低频档，外部档位未变也可能看到请求延迟增加。用实际发送拍数、队列深度和稳定态驻留时间区分该影响。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>原图 5A 中的外部目标组合包含互连 V1 和内存档 F4。低档表可以指导 PMC 使用内部档 F4′。</dd></div><div><dt>处理结果</dt><dd>在低档表中，(V1, F4′) 可稳定运行，发送时钟为 LO。若互连在 F4′ 时转向较高档位，低档表允许过渡并启动换表。</dd></div><div><dt>结果解读</dt><dd>高档表指定 F4 对应发送时钟 HI，同时禁止 (V1, F4) 组合。要按许可状态和实际发送时钟评估带宽。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +168,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20260093309A1/en#:~:text=permit%2C%20based%20on%20the%20set%20of%20one%20or%20more%20performance%20state%20requests%2C%20a%20transition%20to%20an">F7</a></th><td>按请求允许转入内部状态</td><td>原图 1A · 原图 5A</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260093309A1/en#:~:text=implement%20transitioning%20to%20the%20internal%20performance%20state%20by%20causing%20a%20change%20to%20operation%20of%20a%20particular">F8</a></th><td>通过改变电路运行来执行迁移</td><td>原图 3 · 原图 4</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>跨域内存访问系统依据请求得到外部目标，但可以许可包含未公开组成档位的内部状态。见原图 1A 至 1C 和 5A。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>内部状态与目标状态给同一具体电路指定不同运行参数。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>两个状态保持第一域组成档不变，第二域组成档改用不同的跨域时钟频率。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>请求可指定带宽、延迟、实时需求或任一供电域的性能状态。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>请求方可包括软件和处理器、内存控制器、I/O 或图形等代理电路。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>将目标送入多张迁移表，按模式选用其中一张表的许可结果。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>一种状态转换后持续选第一张表，另一种转换后切到第二张表并持续至再次触发前一转换。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>在确定目标状态时，将内存性能状态限制于系统可用最大值以下。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>依据特定实时代理提供的延迟容忍值限制内存性能状态。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>该实时代理是挂接系统总线的外设。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>方法限定在请求接口收请求、确定可见目标，再允许进入至少有一个组成档位无法外部指定的内部状态。见原图 1B、6。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>内部状态与目标状态对跨两个电源域的数据发送时钟指定不同频率。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>内部状态用于所述系统的移动设备平台版本，至少一种其他平台版本不使用该状态。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>内态只列在第一张迁移表，按两类状态转换在两表间切换。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>按实时代理最大性能状态设置限制内存性能状态。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>装置允许由外部请求转入未开放的内部档，并实际改变某电路运行。权 17 另限定时钟降频。见原图 1A、4、5A。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>指定电路为跨域时钟电路，在切入内部状态时相对所列外部状态降低发送时钟频率。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>内部状态的三个组成项分别指两个电源域及特定电路的运行参数。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>明确先按请求求接口可见目标，再依该目标决定迁移到内部状态。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>按迁移选择模式挑表，将目标送到选中的表判定是否允许。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>原图 1A 至 1C、2，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>请求接口、两个电源域和跨域发送信号。</dd></div><div><dt>原图 3、4，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></dt><dd>按迁移保护模式选表，过渡完成后切换。</dd></div><div><dt>原图 5A、5B，说明书 0066、0072，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260093309A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>F4′ 对应 LO，F4 对应 HI。说明书介绍图 5C 的 0075 段把示例 LO/HI 次序写反。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20260093309A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12681552B2.html#engineering">两层电源管理处理器约束跨域 DVFS 的中间状态</a>
-<p>US20260093309A1 允许电源管理电路使用至少一个请求方无权直接请求的组件状态，并以状态转换许可表管理跨域时钟。US12681552B2 的第二层处理器在转换路径与另一电源域当前状态冲突时，选择绕开非法中间状态的路径。前者说明请求接口的状态集合如何与内部许可区分，后者说明执行阶段如何处理具体冲突。</p></li></ul>
-    <p><a href="../index.html?patent=US20260093309A1#knowledge">在全量关系图上定位 US20260093309A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2024-09-27</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-11-20</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-04-02</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/953,997</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Doron Rajwan、Michael Bekerman、John H. Kelm、Daniel U. Becker</dd></div><div><dt>分类号</dt><dd>G06F1/324、G06F1/28、G06F1/3206、G06F1/3275、G06F1/3296、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20260093309A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20260093309A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 原始公开全文，覆盖 149 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20260093309A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

@@ -1,120 +1,173 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12585469B2 预测 trace cache 未命中时关闭数据读 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>预测 trace cache 缺失时关数据读，保留标签查询 · US12585469B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12585469B2</code> · <a href="https://patents.google.com/patent/US12585469B2/en">专利全文</a></p>
+<h1>预测 trace cache 缺失时关数据读，保留标签查询</h1><p class="reading-question">前端还没有拿到实际命中结果，能否少读一次 trace 指令数据阵列？如果关读之后标签却命中，处理器会用什么供给指令，又怎么纠正预测？</p>
+<p class="reading-answer">取指前端预测 trace 缺失时关闭对应数据阵列的读取，同时保持 trace 标签查询和普通 I-cache 取指。实际标签结果与读预测不一致时可训练预测器。本次关读仍然生效。已预取到缓冲且符合使用条件的 trace 还有独立供给路径。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-03-24</dd></div><div><dt>申请号</dt><dd>US18/627,035</dd></div><div><dt>最早优先权</dt><dd>2024-04-04</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Pruthivi Vuyyuru、Niket K. Choudhary、Muawya M. Al-Otoom、Ilhyun Kim</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#what-is-gated">关掉的数据阵列与仍在查的标签</a></li><li><a href="#false-miss">预测缺失后碰到真实标签命中</a></li><li><a href="#prediction-origin">预测字段分别跟随顺序地址、跳转目标和返回目标</a></li><li><a href="#other-sources">需求阵列关读以后，预取缓冲是否还能供给</a></li><li><a href="#enable-training">预测器追不上执行阶段变化时的代价</a></li><li><a href="#claims-scope">哪些是独立权利要求，哪些是实现细节</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="what-is-gated"><h2>关掉的数据阵列与仍在查的标签</h2><p>普通 I-cache 保存顺序地址中的指令。trace cache 把预测控制流上的指令放在一起，某些 trace 跨越内部 taken 分支。前端若对每个取指地址都同时读两套指令数据，即使 trace 没命中，也会产生数据阵列活动。</p><p>沿图 1 从取指组地址看三条路径。普通 I-cache 照常接到取指请求。trace 标签阵列照常查实际命中。早到的读使能只控制 trace 指令数据阵列。在本次预测缺失时，时钟门控或其他门控机制可以阻止该阵列的读取。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　读预测只关 trace 指令数据阵列</h3>
+    <p id="fig-1-basis">同一个取指地址同时到达普通 I-cache、trace 标签查找和读预测逻辑。预测缺失决定本次不启动 trace 数据读取。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="读预测只关 trace 指令数据阵列" style="--figure-width:1370px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1370 648" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">读预测只关 trace 指令数据阵列</title>
+<desc id="fig-1-svg-desc">同一个取指地址同时到达普通 I-cache、trace 标签查找和读预测逻辑。预测缺失决定本次不启动 trace 数据读取。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-pc-predict" d="M 290 291 L 342 291 Q 350 291 350 283 L 350 116 Q 350 108 358 108 L 471 108" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-pc-tag" d="M 290 316 L 374 316 Q 382 316 382 308 L 382 259 Q 382 251 390 251 L 471 251" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-pc-trace" d="M 290 338 L 383 338 Q 391 338 391 346 L 391 383 Q 391 391 399 391 L 471 391" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-pc-normal" d="M 175 362 L 175 537 Q 175 545 183 545 L 471 545" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-enable" d="M 748 126 L 816 126 Q 824 126 824 134 L 824 317 Q 824 325 816 325 L 626 325 Q 618 325 618 333 L 618 347" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-actual-hit" d="M 748 245 L 883 245 Q 891 245 891 237 L 891 122 Q 891 114 899 114 L 1030 114" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-previous-pred" d="M 748 97 L 1030 97" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-trace-data" d="M 748 395 L 932 395 Q 940 395 940 403 L 940 421 Q 940 429 948 429 L 1030 429" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-normal-data" d="M 748 543 L 940 543 Q 948 543 948 535 L 948 481 Q 948 473 956 473 L 1030 473" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-front-tag" d="M 748 272 L 977 272 Q 985 272 985 280 L 985 405 Q 985 413 993 413 L 1030 413" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<rect x="354" y="73" width="70" height="18" fill="#f5f5f5"/><text x="389" y="87" class="arrow-label" text-anchor="middle">取指地址</text>
+<rect x="388" y="220" width="56" height="18" fill="#f5f5f5"/><text x="416" y="234" class="arrow-label" text-anchor="middle">查标签</text>
+<rect x="302" y="354" width="70" height="18" fill="#f5f5f5"/><text x="337" y="368" class="arrow-label" text-anchor="middle">数据地址</text>
+<rect x="247" y="509" width="126" height="18" fill="#f5f5f5"/><text x="310" y="523" class="arrow-label" text-anchor="middle">普通取指同时发出</text>
+<rect x="861" y="160" width="112" height="18" fill="#f5f5f5"/><text x="917" y="174" class="arrow-label" text-anchor="middle">预测命中才开读</text>
+<rect x="901" y="210" width="70" height="18" fill="#f5f5f5"/><text x="936" y="224" class="arrow-label" text-anchor="middle">实际命中</text>
+<rect x="837" y="63" width="112" height="18" fill="#f5f5f5"/><text x="893" y="77" class="arrow-label" text-anchor="middle">记录本次读预测</text>
+<rect x="807" y="361" width="124" height="18" fill="#f5f5f5"/><text x="869" y="375" class="arrow-label" text-anchor="middle">trace 指令数据</text>
+<rect x="812" y="508" width="98" height="18" fill="#f5f5f5"/><text x="861" y="522" class="arrow-label" text-anchor="middle">普通指令数据</text>
+<rect x="885" y="238" width="98" height="18" fill="#f5f5f5"/><text x="934" y="252" class="arrow-label" text-anchor="middle">实际匹配状态</text>
+<g id="fig-1-pc"><rect x="48" y="270" width="242" height="92" rx="6" fill="#f5f5f5"/><rect x="48" y="270" width="242" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169" y="296" class="node-name" text-anchor="middle">取指组地址</text><text x="169" y="318" class="node-detail" text-anchor="middle">由前端 PC 选择器给出</text></g>
+<g id="fig-1-prediction"><rect x="471" y="64" width="277" height="90" rx="6" fill="#f5f5f5"/><rect x="471" y="64" width="277" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="609.5" y="90" class="node-name" text-anchor="middle">trace 读预测</text><text x="609.5" y="112" class="node-detail" text-anchor="middle">预估本次查找会否命中</text></g>
+<g id="fig-1-tags"><rect x="471" y="207" width="277" height="90" rx="6" fill="#f5f5f5"/><rect x="471" y="207" width="277" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="609.5" y="233" class="node-name" text-anchor="middle">trace 标签阵列</text><text x="609.5" y="255" class="node-detail" text-anchor="middle">执行地址匹配</text></g>
+<g id="fig-1-data"><rect x="471" y="347" width="277" height="90" rx="6" fill="#f5f5f5"/><rect x="471" y="347" width="277" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="609.5" y="373" class="node-name" text-anchor="middle">trace 指令数据阵列</text><text x="609.5" y="395" class="node-detail" text-anchor="middle">受本次读使能控制</text></g>
+<g id="fig-1-icache"><rect x="471" y="500" width="277" height="90" rx="6" fill="#f5f5f5"/><rect x="471" y="500" width="277" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="609.5" y="526" class="node-name" text-anchor="middle">普通 I-cache</text><text x="609.5" y="548" class="node-detail" text-anchor="middle">提供顺序地址中的指令</text></g>
+<g id="fig-1-train"><rect x="1030" y="64" width="294" height="90" rx="6" fill="#f5f5f5"/><rect x="1030" y="64" width="294" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1177" y="90" class="node-name" text-anchor="middle">预测训练</text><text x="1177" y="112" class="node-detail" text-anchor="middle">对照真实命中与使能</text></g>
+<g id="fig-1-source"><rect x="1030" y="393" width="294" height="108" rx="6" fill="#f5f5f5"/><rect x="1030" y="393" width="294" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1177" y="419" class="node-name" text-anchor="middle">前端指令选择</text><text x="1177" y="441" class="node-detail" text-anchor="middle">接收可用的取指数据</text><text x="1177" y="459" class="node-detail" text-anchor="middle">选出送往后续流水线的指令</text></g>
+<text x="49" y="45" class="signal-title" text-anchor="start">一次前端取指访问</text>
+<text x="49" y="621" class="signal-title" text-anchor="start">标签命中可更新预测。本次关闭的数据读仍保持关闭。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-prediction">早到的读预测</a> 读预测在实际标签结果前参与控制。本次预测缺失时，trace 数据读使能被撤销。</li><li><a href="#fig-1-tags">真实命中仍可查</a> 标签阵列继续比较取指地址。它能发现数据阵列关闭时本来会命中的条目。</li><li><a href="#fig-1-source">前端指令选择</a> 当普通 I-cache 命中，前端可用普通指令供给。真实 trace 命中还须有对应 trace 数据可读。</li><li><a href="#fig-1-train">训练反馈</a> 比较实际标签命中和此前读使能，更新下一次相同预测来源的字段。</li></ul>
+  <p class="figure-evidence">原图 24、30；说明书归档段 0252、0253、0254、0255、0257、0299、0304、0307、0308、0309；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12585469B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>前端 PC 选择器</dt><dd>1902</dd></div><div><dt>trace 读预测电路</dt><dd>2410</dd></div><div><dt>trace 标签及受控数据阵列</dt><dd>2420</dd></div><div><dt>普通指令缓存</dt><dd>2430</dd></div><div><dt>训练电路</dt><dd>2440</dd></div></dl></details>
+</figure></section><section id="false-miss"><h2>预测缺失后碰到真实标签命中</h2><p>图 2 用一次误关读说明时机。前端按预测关闭 trace 数据读，同时启动普通取指和 trace 标签查询。随后标签结果表明这笔访问本来可以命中。标签提供训练所需的事实，指令数据仍由本例命中的普通 I-cache 提供。若普通 I-cache 也缺失，通常还要等它回填。</p><p>只要不抑制标签查询，预测器就既能发现误开读，也能发现误关读。权利要求 1 不要求这次实际标签命中后重新开启数据读。权利要求 8 则把对照真实标签结果来训练写入从属限定。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　预测缺失但标签命中，本次仍可从 I-cache 取指</h3>
+    <p id="fig-2-basis">trace 数据不读，标签命中进入训练。本例普通 I-cache 命中，因而可以供出指令。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预测缺失但标签命中，本次仍可从 I-cache 取指" style="--figure-width:966px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 966 583" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">预测缺失但标签命中，本次仍可从 I-cache 取指</title>
+<desc id="fig-2-svg-desc">trace 数据不读，标签命中进入训练。本例普通 I-cache 命中，因而可以供出指令。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="80" y="178" width="800" height="106" rx="4" fill="rgba(45,49,66,.02)" style="stroke:rgba(45,49,66,.22)"/>
+<rect x="87" y="172" width="94" height="18" fill="#f5f5f5"/><text x="134" y="186" class="arrow-label" text-anchor="middle">PAR · 可并行</text>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="fig-2-select"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/><rect x="204.5" y="96" width="65" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">取指组地址</text></g>
+<g id="fig-2-off"><path d="M 358 168 L 116 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/><rect x="172" y="144" width="130" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">预测缺失，数据读关闭</text></g>
+<g id="fig-2-probe"><path d="M 116 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/><rect x="306.5" y="192" width="104" height="18" fill="#f5f5f5"/><text x="358.5" y="206" class="arrow-label" text-anchor="middle">仍做实际标签查询</text></g>
+<g id="fig-2-request"><path d="M 116 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/><rect x="428" y="240" width="104" height="18" fill="#f5f5f5"/><text x="480" y="254" class="arrow-label" text-anchor="middle">并行发起普通取指</text></g>
+<g id="fig-2-hit"><path d="M 601 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-return)"/><rect x="440.5" y="288" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">实际标签命中</text></g>
+<g id="fig-2-ret"><path d="M 844 360 L 116 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-return)"/><rect x="376" y="336" width="208" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">普通 I-cache 命中并供数</text></g>
+<g id="fig-2-learn"><path d="M 358 402 L 382 402 Q 390 402 390 410 L 390 412 Q 390 420 382 420 L 358 420" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#fig-2-arrow-control)"/><rect x="413.5" y="378" width="117" height="18" fill="#f5f5f5"/><text x="472" y="392" class="arrow-label" text-anchor="middle">更新对应项预测状态</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">取指前端</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">读预测与训练</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">trace 标签</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">普通 I-cache</text>
+<text x="28" y="484" class="legend" text-anchor="start">信号先后示意，未给出单步的周期数。下一次训练后的预测可能变化。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-off">先决定关闭数据读</a> 读预测提前判定 trace 缺失。之后实际 trace 标签命中也不会为本次访问重新开启数据读。</li><li><a href="#fig-2-hit">标签返回真实命中</a> 标签证实了一个潜在的 trace 命中。它只提供状态，不能作为前端指令数据。</li><li><a href="#fig-2-ret">I-cache 提供指令</a> 本例普通 I-cache 命中。若它缺失，需要等对应回填，除非已有其他符合条件的前端数据来源。</li><li><a href="#fig-2-learn">训练下一次判断</a> 对照实际命中和关读，识别一次误预测。是否立即改值取决于预测器字段和置信度更新规则。</li></ul>
+  <p class="figure-evidence">原图 24、25、30；说明书归档段 0254、0255、0257、0261、0307、0308、0309；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12585469B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>读预测与训练</dt><dd>2410 / 2440</dd></div><div><dt>trace 标签所属电路和普通指令缓存</dt><dd>2420 / 2430</dd></div><div><dt>预判命中及选择读哪个阵列</dt><dd>3050 / 3060</dd></div></dl></details>
+</figure></section><section id="prediction-origin"><h2>预测字段分别跟随顺序地址、跳转目标和返回目标</h2><p>图 3 上路为顺序取指。用取指组虚拟地址的部分位或散列标记预测项，命中后读出对应预测字段。字段可用饱和计数器，替换信息用于选择逐出的预测项。</p><p>中路与下路的预测结果随预测目标返回。Next Fetch Predictor 可以同时给下次取指地址和该目标的 trace 读使能，覆盖普通控制流跳转和 trace 到 trace 的转移。返回预测器也可以按返回指令的 PC 查预测目标与读使能。说明书给出返回预测表未命中时默认开读的实施例。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　顺序地址、跳转和返回使用不同预测来源</h3>
+    <p id="fig-3-basis">顺序地址用取指地址查表。已有预测目标的控制流还可以从预测项一起取得该目标的 trace 读使能。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="顺序地址、跳转和返回使用不同预测来源" style="--figure-width:1370px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1370 651" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">顺序地址、跳转和返回使用不同预测来源</title>
+<desc id="fig-3-svg-desc">顺序地址用取指地址查表。已有预测目标的控制流还可以从预测项一起取得该目标的 trace 读使能。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-sequential" d="M 299 132 L 485 132" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-branching" d="M 299 302 L 485 302" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-return-pc" d="M 299 472 L 485 472" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-seq-read" d="M 833 131 L 939 131 Q 947 131 947 139 L 947 260 Q 947 268 955 268 L 1034 268" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-target-read" d="M 833 302 L 1034 302" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-return-read" d="M 833 473 L 951 473 Q 959 473 959 465 L 959 348 Q 959 340 967 340 L 1034 340" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<rect x="323" y="96" width="134" height="18" fill="#f5f5f5"/><text x="390" y="110" class="arrow-label" text-anchor="middle">按取指组 VA 查表</text>
+<rect x="327" y="266" width="126" height="18" fill="#f5f5f5"/><text x="390" y="280" class="arrow-label" text-anchor="middle">按当前取指组查表</text>
+<rect x="316" y="436" width="148" height="18" fill="#f5f5f5"/><text x="390" y="450" class="arrow-label" text-anchor="middle">按返回指令 PC 查表</text>
+<rect x="870" y="95" width="98" height="18" fill="#f5f5f5"/><text x="919" y="109" class="arrow-label" text-anchor="middle">顺序取指使能</text>
+<rect x="851.5" y="311" width="143" height="18" fill="#f5f5f5"/><text x="923" y="325" class="arrow-label" text-anchor="middle">下一目标和读使能</text>
+<rect x="871" y="485" width="126" height="18" fill="#f5f5f5"/><text x="934" y="499" class="arrow-label" text-anchor="middle">返回目标和读使能</text>
+<g id="fig-3-seqaddr"><rect x="48" y="89" width="251" height="88" rx="6" fill="#f5f5f5"/><rect x="48" y="89" width="251" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="115" class="node-name" text-anchor="middle">顺序取指地址</text><text x="173.5" y="137" class="node-detail" text-anchor="middle">继续读取顺序指令</text></g>
+<g id="fig-3-branch"><rect x="48" y="259" width="251" height="88" rx="6" fill="#f5f5f5"/><rect x="48" y="259" width="251" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="285" class="node-name" text-anchor="middle">非顺序跳转</text><text x="173.5" y="307" class="node-detail" text-anchor="middle">下次取指地址来自预测</text></g>
+<g id="fig-3-return"><rect x="48" y="429" width="251" height="88" rx="6" fill="#f5f5f5"/><rect x="48" y="429" width="251" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="173.5" y="455" class="node-name" text-anchor="middle">return 指令</text><text x="173.5" y="477" class="node-detail" text-anchor="middle">可能有多个返回目标</text></g>
+<g id="fig-3-seq"><rect x="485" y="78" width="348" height="110" rx="6" fill="#f5f5f5"/><rect x="485" y="78" width="348" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659" y="104" class="node-name" text-anchor="middle">顺序预测表</text><text x="659" y="126" class="node-detail" text-anchor="middle">部分 VA 标签、预测字段</text><text x="659" y="144" class="node-detail" text-anchor="middle">与表项替换信息</text></g>
+<g id="fig-3-nfp"><rect x="485" y="248" width="348" height="110" rx="6" fill="#f5f5f5"/><rect x="485" y="248" width="348" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659" y="274" class="node-name" text-anchor="middle">Next Fetch Predictor</text><text x="659" y="296" class="node-detail" text-anchor="middle">当前取指标签、下个目标地址</text><text x="659" y="314" class="node-detail" text-anchor="middle">与目标的 trace 读使能字段</text></g>
+<g id="fig-3-ret"><rect x="485" y="418" width="348" height="110" rx="6" fill="#f5f5f5"/><rect x="485" y="418" width="348" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="659" y="444" class="node-name" text-anchor="middle">返回目标预测项</text><text x="659" y="466" class="node-detail" text-anchor="middle">返回指令标签、预测目标</text><text x="659" y="484" class="node-detail" text-anchor="middle">与该目标的 trace 读使能</text></g>
+<g id="fig-3-merge"><rect x="1034" y="243" width="285" height="121" rx="6" fill="#f5f5f5"/><rect x="1034" y="243" width="285" height="121" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1176.5" y="269" class="node-name" text-anchor="middle">本次取指所用的预测</text><text x="1176.5" y="291" class="node-detail" text-anchor="middle">选择相应地址来源的输出</text><text x="1176.5" y="309" class="node-detail" text-anchor="middle">形成取指地址与读使能</text></g>
+<text x="48" y="46" class="signal-title" text-anchor="start">三种下一取指来源</text>
+<text x="49" y="592" class="signal-title" text-anchor="start">读预测的输入与分支目标有关，但输出控制的是 trace 数据阵列是否读。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-seq">顺序预测阵列</a> 标签用取指组 VA 的部分位或散列，预测字段可用饱和计数器。替换信息影响表项回收。</li><li><a href="#fig-3-nfp">Next Fetch Predictor</a> 命中项同时给出下一个取指目标和该目标是否应读 trace 的字段。普通分支过渡和 trace 之间过渡都可这样做。</li><li><a href="#fig-3-ret">返回目标预测</a> 返回预测项保存返回目标与相应的 trace 读使能。说明书允许将预测推入 RAS。原文的返回预测表未命中默认开读只是一种实现。</li><li><a href="#fig-3-merge">跟随本次取指来源</a> 图中按地址来源选择相关预测输出。专利允许只实现其中一种或组合多个预测器。</li></ul>
+  <p class="figure-evidence">原图 25、26、27；说明书归档段 0256、0258、0259、0260、0261、0262、0263、0264、0265、0266、0267、0268、0269、0270、0271、0304、0305、0306；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12585469B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>顺序预测控制与预测表</dt><dd>2510 / 2520</dd></div><div><dt>VA 标签、预测字段与替换信息</dt><dd>2502 / 2504 / 2506</dd></div><div><dt>下次取指预测表与读使能字段</dt><dd>2610 / 2606</dd></div><div><dt>返回预测与读使能字段</dt><dd>2710 / 2708</dd></div></dl></details>
+</figure></section><section id="other-sources"><h2>需求阵列关读以后，预取缓冲是否还能供给</h2><p>图 4 上路是另一项预测。签名 lookahead 预取电路可以提前从 L2 trace cache 取数据，装进 fast array。预取缓冲在常规 trace 数据阵列降低功耗时仍可保持供电。在有对应条目、且匹配这次前端访问的实施例中，预取路径可继续供给。</p><p>表 5 把数据读使能与真实标签结果逐项对应。误开读主要增加未被采用的数据阵列访问。误关读可能失去 trace 的一次供给机会。若普通取指仍可提供足够指令，丢掉这次 trace 供给的影响可能很小。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　关读只影响对应阵列，已预取的 trace 仍有供给路径</h3>
+    <p id="fig-4-basis">需求读预测和 lookahead 预取预测可以并行。预取缓冲保持可用时，即使本次常规 trace 数据读关闭，命中的预取项仍可能供给前端。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="关读只影响对应阵列，已预取的 trace 仍有供给路径" style="--figure-width:1380px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1380 640" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">关读只影响对应阵列，已预取的 trace 仍有供给路径</title>
+<desc id="fig-4-svg-desc">需求读预测和 lookahead 预取预测可以并行。预取缓冲保持可用时，即使本次常规 trace 数据读关闭，命中的预取项仍可能供给前端。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-4-look-from" d="M 294 127 L 476 127" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-fill" d="M 767 127 L 1068 127" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-buffer-stage" d="M 1200 176 L 1200 383" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-gating" d="M 294 389 L 476 389" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<path id="fig-4-demand" d="M 767 396 L 911 396 Q 919 396 919 404 L 919 415 Q 919 423 927 423 L 1068 423" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-normal-source" d="M 767 557 L 915 557 Q 923 557 923 549 L 923 482 Q 923 474 931 474 L 1068 474" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<rect x="321" y="91" width="124" height="18" fill="#f5f5f5"/><text x="383" y="105" class="arrow-label" text-anchor="middle">提前查找 trace</text>
+<rect x="854" y="91" width="126" height="18" fill="#f5f5f5"/><text x="917" y="105" class="arrow-label" text-anchor="middle">预取数据装入缓冲</text>
+<rect x="1014" y="259" width="112" height="18" fill="#f5f5f5"/><text x="1070" y="273" class="arrow-label" text-anchor="middle">匹配的预取数据</text>
+<rect x="343" y="355" width="84" height="18" fill="#f5f5f5"/><text x="385" y="369" class="arrow-label" text-anchor="middle">本次读使能</text>
+<rect x="840" y="360" width="140" height="18" fill="#f5f5f5"/><text x="910" y="374" class="arrow-label" text-anchor="middle">被启用且匹配时供数</text>
+<rect x="787" y="522" width="122" height="18" fill="#f5f5f5"/><text x="848" y="536" class="arrow-label" text-anchor="middle">普通指令数据</text>
+<g id="fig-4-lookahead"><rect x="46" y="78" width="248" height="98" rx="6" fill="#f5f5f5"/><rect x="46" y="78" width="248" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="170" y="104" class="node-name" text-anchor="middle">签名 lookahead 预测</text><text x="170" y="126" class="node-detail" text-anchor="middle">预判后续会用到的 trace</text></g>
+<g id="fig-4-level2"><rect x="476" y="78" width="291" height="98" rx="6" fill="#f5f5f5"/><rect x="476" y="78" width="291" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="621.5" y="104" class="node-name" text-anchor="middle">L2 trace cache</text><text x="621.5" y="126" class="node-detail" text-anchor="middle">读出对应的预取条目</text></g>
+<g id="fig-4-buffer"><rect x="1068" y="78" width="265" height="98" rx="6" fill="#f5f5f5"/><rect x="1068" y="78" width="265" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1200.5" y="104" class="node-name" text-anchor="middle">预取缓冲 fast array</text><text x="1200.5" y="126" class="node-detail" text-anchor="middle">可保持供电和可用</text></g>
+<g id="fig-4-read"><rect x="46" y="340" width="248" height="98" rx="6" fill="#f5f5f5"/><rect x="46" y="340" width="248" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="170" y="366" class="node-name" text-anchor="middle">当前取指的读预测</text><text x="170" y="388" class="node-detail" text-anchor="middle">判断常规 trace 数据是否读</text></g>
+<g id="fig-4-gated"><rect x="476" y="347" width="291" height="98" rx="6" fill="#f5f5f5"/><rect x="476" y="347" width="291" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="621.5" y="373" class="node-name" text-anchor="middle">常规 trace 数据阵列</text><text x="621.5" y="395" class="node-detail" text-anchor="middle">读使能关闭时保持空闲</text></g>
+<g id="fig-4-normal"><rect x="476" y="516" width="291" height="84" rx="6" fill="#f5f5f5"/><rect x="476" y="516" width="291" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="621.5" y="542" class="node-name" text-anchor="middle">普通 I-cache</text><text x="621.5" y="564" class="node-detail" text-anchor="middle">顺序缓存行供取</text></g>
+<g id="fig-4-selection"><rect x="1068" y="383" width="265" height="116" rx="6" fill="#f5f5f5"/><rect x="1068" y="383" width="265" height="116" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1200.5" y="409" class="node-name" text-anchor="middle">前端数据选择</text><text x="1200.5" y="431" class="node-detail" text-anchor="middle">检查当前地址与实际可用性</text><text x="1200.5" y="449" class="node-detail" text-anchor="middle">送出匹配的取指数据</text></g>
+<text x="50" y="45" class="signal-title" text-anchor="start">较早的预取路径</text>
+<text x="50" y="297" class="signal-title" text-anchor="start">当前需求取指路径</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-lookahead">预取预测</a> lookahead 预测判断后续可能使用的 trace，按签名和历史查找。在时间上领先当前需求读。</li><li><a href="#fig-4-buffer">可保持供电的预取缓冲</a> 说明书允许 fast array 和目标预取路径在对应 trace 阵列低功耗时仍可用。提供数据前仍需匹配当前取指。</li><li><a href="#fig-4-gated">本次常规数据读取</a> 预测缺失时挡下本次数据读。这里的数据阵列不等于前端所有可能的指令来源。</li><li><a href="#fig-4-selection">前端数据选择</a> 普通 I-cache、直接 trace 数据和已预取数据属于可单独满足的条件。权项 15 明确在预测 trace 命中且两缓存均命中时采用 trace。</li></ul>
+  <p class="figure-evidence">原图 12、19、24、28、30；说明书归档段 0183、0187、0192、0252、0254、0256、0273、0280、0307、0308、0310；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12585469B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>较远的 L2 trace cache</dt><dd>1120</dd></div><div><dt>签名 lookahead 预取预测</dt><dd>1230</dd></div><div><dt>trace 指令预取缓冲 fast array</dt><dd>1240</dd></div><div><dt>目标预取缓冲</dt><dd>1914</dd></div><div><dt>当前需求读预测电路</dt><dd>2410</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　读预测与实际标签结果的四种组合</h3>
+    <p id="fig-5-basis">表中只看常规 trace 指令数据阵列。普通 I-cache 的命中和预取缓冲的命中需要分别判断。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">预测和标签结果</th><th scope="col">本次 trace 数据读</th><th scope="col">影响</th></tr></thead><tbody><tr id="fig-5-skip-miss"><th scope="row">预测缺失、实际缺失</th><td>关闭</td><td>省去无需发生的数据读</td></tr><tr id="fig-5-skip-hit"><th scope="row">预测缺失、实际命中</th><td>关闭</td><td>丢掉本次直接供 trace 的机会，标签结果用于更新</td></tr><tr id="fig-5-read-miss"><th scope="row">预测命中、实际缺失</th><td>开启</td><td>消耗一次未用于取指的数据阵列访问</td></tr><tr id="fig-5-read-hit"><th scope="row">预测命中、实际命中</th><td>开启</td><td>可从匹配的 trace 获取指令</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-skip-hit">误关读的后果</a> 本次实际 trace 数据未读。若普通 I-cache 同时缺失，前端仍需满足其他数据来源或等待回填。</li><li><a href="#fig-5-read-miss">误开读的后果</a> 实际无命中，数据阵列仍发生访问。普通路径是否变慢由设计与竞争情况决定。</li></ul>
+  <p class="figure-evidence">原图 24、25、30；说明书归档段 0254、0255、0257、0261、0307、0308；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> </p>
+  
+</figure></section><section id="enable-training"><h2>预测器追不上执行阶段变化时的代价</h2><p>表 6 保持相同取指地址和访问次数，只改变它的真实标签结果序列或计数器初值。先命中再缺失的阶段切换会留下短暂的误开与误关。标签命中和缺失交替时，初值能改变整个窗口的关读比例。这里用简单的两位计数器复现这种滞后，专利还披露其他预测算法。</p><p>要测能效，至少比较普通指令供给、trace 数据读次数和额外预测访问能量。标签仍然查询，不能把省掉的数据读等同于整个 trace cache 的能量下降。若每次预测有额外成本，只有省掉的数据读能量超过这部分成本，模型中的阵列收益才会转化为净收益。</p><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">表 6　缓存内容变化时，为什么不能只看关闭了多少次读</h3>
+    <p id="fig-6-basis">固定 48 次同一 PC 访问，采用 2 位饱和计数器。状态 2、3 打开读，实际标签命中加一，缺失减一。无读预测的对照在每次访问都读 trace 数据阵列。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-6-title"><thead><tr><th scope="col">实际标签序列与初值</th><th scope="col">关闭的读</th><th scope="col">开启但缺失</th><th scope="col">关闭但实为命中</th></tr></thead><tbody><tr id="fig-6-steady"><th scope="row">持续缺失，初值 0</th><td>48</td><td>0</td><td>0</td></tr><tr id="fig-6-phases"><th scope="row">先缺失 16 次，再命中 16 次，再缺失 16 次，初值 0</th><td>32</td><td>2</td><td>2</td></tr><tr id="fig-6-alternate-low"><th scope="row">命中与缺失交替，初值 0</th><td>48</td><td>0</td><td>24</td></tr><tr id="fig-6-alternate-high"><th scope="row">同样交替，初值 3</th><td>0</td><td>24</td><td>0</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-6-phases">执行阶段切换</a> 第一段命中要积累两次才能开读，下一段缺失也要消耗两次无效读才降回关读状态。</li><li><a href="#fig-6-alternate-low">关闭率很高也可能错过供给</a> 反复从 0 到 1，预测保持关闭。本模型有 24 次实际标签命中，但没有一次打开了对应数据读。</li><li><a href="#fig-6-alternate-high">初始状态改变观测</a> 同一串结果从 3 开始在 2 和 3 之间切换，总是开读，避免 24 次错误关读，但未减少数据阵列访问。</li></ul>
+  <p class="figure-evidence">原图 24、25、30；说明书归档段 0255、0257、0259、0261、0308、0309；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> </p>
+  
+</figure></section><section id="claims-scope"><h2>哪些是独立权利要求，哪些是实现细节</h2><p>独立权利要求 1、11 给出预测缺失时查 trace 标签、读普通 I-cache、保持 trace 数据读关闭的组合，权利要求 18 描述相应硬件设计表示。三个预测来源的字段见权利要求 2–6、12–14。实际标签反馈、预取缓冲与低功耗状态是进一步描述的部件与路径。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US12585469B2</code><span>美国授权专利</span><time datetime="2026-03-24">2026-03-24</time></p>
-  <h1>预测 trace cache 未命中时关闭数据读</h1>
-  <p class="english-title" lang="en">Trace cache access prediction and read enable</p>
-  <p class="document-question">前端预测 trace cache 会缺失时，为什么还要读标签？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">前端预测轨迹缓存缺失时关闭 trace 数据阵列，保留标签查询并读取普通指令缓存。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>即使标签后来匹配，同一次访问仍保持 trace 读关闭。前端可用实际标签结果反馈读预测器。</dd></div><div><dt>验证方法</dt><dd>固定取指序列和标签结果，对照始终读取 trace 数据阵列与按预测使能。按预测和实际命中组合记录两类数据阵列读次数、供给指令数和再次取指次数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12585469B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">trace cache 用标签判断轨迹是否存在，由独立的数据阵列提供轨迹中的指令。单独访问标签，可以在关闭数据阵列时保留训练所需的实际命中结果。</p>
-    <p>预测轨迹缓存缺失时，前端仍查询轨迹标签，同时从普通指令缓存请求数据，轨迹数据阵列保持关闭。即便标签后来命中，也不恢复本次轨迹数据读。普通指令缓存若缺失，仍须等回填。</p>
-    <ol class="walkthrough"><li><h3>把取指地址送给各路径</h3><p>前端把 fetch group 地址送给 I-cache、trace 结构和读预测器。顺序取指、非顺序目标和返回路径可提供不同预测信息。</p></li><li><h3>用预测控制数据阵列读使能</h3><p>读预测器给出命中或缺失的预测。预测缺失时关闭 trace 数据读使能，并从 I-cache 取指令。</p></li><li><h3>保留标签查询</h3><p>标签电路继续检查该地址是否有相应 trace。独立权利要求规定，实际标签匹配也不会让同一次访问重新启动 trace 数据读。</p></li><li><h3>用实际标签结果训练</h3><p>预测器将实际标签结果与先前判断比较并训练。部分从属结构还可支持从远层提前取轨迹，由另一条功能路径完成。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 让下一取指预测器的条目包含读取使能字段。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00004" aria-label="原文权利要求 4">4</a> 还描述单独的顺序预测阵列，可在分配轨迹缓存条目时为顺序路径建立对应预测。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>轨迹读使能</dt><dd>控制本次是否读取轨迹指令数据，不必关闭标签查找。</dd></div><div><dt>假缺失</dt><dd>读预测判断轨迹缺失，实际标签却能匹配该地址。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">预测缺失，实际标签却命中</a></li><li><a href="#fig-1">取指预测控制 trace 数据读，标签照常查</a></li><li><a href="#fig-3">顺序、跳转和返回各用什么信息预测</a></li><li><a href="#fig-4">预测与实际命中的四种组合</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">预测缺失，实际标签却命中</h3></div>
-    <a class="paper-open" href="../mechanisms/US12585469B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="预测缺失，实际标签却命中">
-    <img class="paper-image native-image" src="../mechanisms/US12585469B2/fig-2/diagram.svg" width="524" height="440"
-         style="--paper-width:524px" alt="预测缺失，实际标签却命中。预测缺失后轨迹数据读保持关闭。普通指令缓存命中时提供顺序指令；若它也缺失，前端要等回填。实际轨迹标签命中仍可进入训练。">
-  </div>
-  <figcaption>
-    <span>预测缺失后轨迹数据读保持关闭。普通指令缓存命中时提供顺序指令；若它也缺失，前端要等回填。实际轨迹标签命中仍可进入训练。</span>
-    <span class="figure-evidence">图 24，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。横轴按逻辑阶段分段，具体延迟由实现设定。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">取指预测控制 trace 数据读，标签照常查</h3></div>
-    <a class="paper-open" href="../mechanisms/US12585469B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="取指预测控制 trace 数据读，标签照常查">
-    <img class="paper-image native-image" src="../mechanisms/US12585469B2/fig-1/diagram.svg" width="438" height="816"
-         style="--paper-width:438px" alt="取指预测控制 trace 数据读，标签照常查。读使能只控制 trace 数据阵列。实际标签结果仍会返回，用于对照预测和训练。">
-  </div>
-  <figcaption>
-    <span>读使能只控制 trace 数据阵列。实际标签结果仍会返回，用于对照预测和训练。</span>
-    <span class="figure-evidence">说明书图 19、24–27，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">顺序、跳转和返回各用什么信息预测</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">地址场景</th><th scope="col">预测信息所在</th><th scope="col">验证依据</th></tr></thead><tbody><tr><th scope="row">顺序推进</th><td>带取指地址标签的顺序预测阵列</td><td>轨迹标签比较</td></tr><tr><th scope="row">非顺序目标</th><td class="emphasis">下一次取指预测条目的读使能</td><td>轨迹标签比较</td></tr><tr><th scope="row">返回目标</th><td>返回预测器的轨迹读使能字段</td><td>轨迹标签比较</td></tr></tbody></table>
-  <figcaption>
-    <span>不同取指路径可以从不同结构取预测信息，实际的 trace 标签结果是共同的训练依据。</span>
-    <span class="figure-evidence">原图 25–27，说明书 0258–0271，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。</span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">预测与实际命中的四种组合</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">预测</th><th scope="col">实际 tag</th><th scope="col">数据路径</th><th scope="col">常见代价</th></tr></thead><tbody><tr><th scope="row">预测命中</th><td>标签命中</td><td>可启用轨迹读</td><td>可由轨迹供给</td></tr><tr><th scope="row">预测命中</th><td>标签缺失</td><td>可启用轨迹读</td><td>消耗不必要的阵列活动</td></tr><tr><th scope="row">预测缺失</th><td>标签缺失</td><td>保持轨迹数据读关闭</td><td>由 I-cache 路径处理</td></tr><tr><th scope="row">预测缺失</th><td>标签命中</td><td class="emphasis">仍保持轨迹数据读关闭</td><td>本次漏用轨迹</td></tr></tbody></table>
-  <figcaption>
-    <span>按权利要求 1，预测缺失时始终关闭 trace 数据读。预测命中时的处理取自说明书示例。</span>
-    <span class="figure-evidence">图 24，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>。预测命中时的读使能来自说明书示例。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>关闭预测缺失的数据读</dt><dd>减少无效阵列访问 <span class="subdued">原图 24、30，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>保留轨迹标签查找</dt><dd>获得实际命中反馈 <span class="subdued">原图 24，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>预测关闭时，标签阵列仍要做地址匹配，也要保留训练所需反馈。能耗变化主要发生在轨迹数据阵列和额外取指次数，单数关闭数据读不能代表前端整体节能。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若一段代码频繁在顺序落入和分支跳入同一取指地址之间切换，两套来源可给出不同读预测。若常见的跳入路径多次误报缺失，I-cache 会重走跨分支取指。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定取指块 X 被预测为 trace 缺失。I-cache 返回顺序指令，trace 标签随后也匹配到了 X。</dd></div><div><dt>处理结果</dt><dd>前端在这次访问中使用已启动的 I-cache 读取。实际的 trace 匹配结果可用于训练之后的预测。</dd></div><div><dt>结果解读</dt><dd>独立权利要求覆盖这种预测与标签不符的情况。此时前端仍能从 I-cache 取得顺序指令。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、18 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 24、30。装置项规定预测缺失时查标签、读 I-cache 并保持本次轨迹数据读关闭。</p>
+  <p>原图 24、30。装置项规定预测缺失时查标签、读 I-cache 并保持本次轨迹数据读关闭。只控制是否为本次访问启动数据阵列读取。标签查询和普通指令缓存请求可照常执行。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=instruction%20cache%20circuitry%20configured%20to%20cache%20instructions%20sequentially%20in%20a%20given%20cache%20line">F1</a></th><td>普通 I-cache 以缓存行保存顺序指令</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20illustrating%20an%20example%20processor%20pipeline%20that%20includes%20a%20trace%20cache%2C">说明书 0077</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=one%20or%20more%20of%20the%20identified%20traces%20include%20at%20least%20one%20internal%20taken%20control%20transfer%20instruction">F2</a></th><td>trace 候选至少有一条允许在其内部跨过已采取的控制转移</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Trace%20caches%20store%20traces%20of%20instructions%2C%20where%20a%20trace%20typically%20includes%20at%20least%20one%20internal%20taken">说明书 0003</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=predict%20whether%20a%20fetch%20address%20will%20hit%20in%20the%20trace%20cache%20circuitry">F3</a></th><td>用读预测电路先判断取指地址是否可能命中 trace cache</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Sequential%20predictor%20control%202510%20%2C%20as%20shown%2C%20checks%20the%20predictor%20array%202520%20for%20a%20given%20sequential">说明书 0261</a> · 原图 24</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=access%20tag%20circuitry%20for%20the%20trace%20cache%20circuitry%20based%20on%20the%20fetch%20address">F4</a></th><td>预测不命中时仍按取指地址读 trace 标签，同时从 I-cache 取指</td><td>原图 24</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=prevent%20instruction%20data%20being%20read%20from%20the%20trace%20cache%20circuitry%20for%20the%20fetch%20address%20regardless%20of">F5</a></th><td>在预测不命中条件下，即使 trace 标签匹配也抑制本次 trace 数据读</td><td>原图 30</td></tr></tbody>
@@ -134,49 +187,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=instructions%20of%20a%20hardware%20description%20programming%20language%20stored%20thereon">F11</a></th><td>介质保存用于生成仿真的硬件描述。</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=determine%20whether%20to%20access%20instructions%20from%20the%20instruction%20cache%20circuitry%20or%20the%20trace%20cache%20circuitry%20when">F12</a></th><td>两缓存都命中时，按实现选择供给来源。</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=In%20the%20illustrated%20example%2C%20front-end%20circuitry%20%28e.g.%2C%20PC%20MUX%201902%20%29%20provides%20a%20fetch%20group%20address">说明书 0253</a> · <a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Read%20prediction%20circuitry%202410%20%2C%20in%20the%20illustrated%20example%2C%20also%20receives%20the%20fetch%20group%20address%20and">说明书 0254</a> · 原图 24</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=access%20tag%20circuitry%20for%20the%20trace%20cache%20circuitry%20based%20on%20the%20fetch%20address">F13</a></th><td>预测缺失时仍执行轨迹标签查询。</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Read%20prediction%20circuitry%202410%20%2C%20in%20the%20illustrated%20example%2C%20also%20receives%20the%20fetch%20group%20address%20and">说明书 0254</a> · <a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Training%20circuitry%202440%20%2C%20in%20the%20illustrated%20example%2C%20is%20configured%20to%20train%20read%20prediction%20circuitry%20based">说明书 0257</a> · 原图 24</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=read%20instruction%20data%20from%20the%20instruction%20cache%20circuitry%20for%20the%20fetch%20address">F14</a></th><td>预测缺失时读取普通指令缓存。</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=At%203060%20%2C%20in%20the%20illustrated%20embodiment%2C%20the%20processor%20reads%2C%20in%20response%20to%20a%20prediction%20that">说明书 0307</a> · 原图 30</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=prevent%20instruction%20data%20being%20read%20from%20not%20the%20trace%20cache%20circuitry%20for%20the%20fetch%20address%20regardless">F15</a></th><td>轨迹标签匹配与否都不会打开本次轨迹数据读。</td><td><a href="https://patents.google.com/patent/US12585469B2/en#:~:text=Read%20prediction%20circuitry%202410%20%2C%20in%20the%20illustrated%20example%2C%20also%20receives%20the%20fetch%20group%20address%20and">说明书 0254</a> · <a href="https://patents.google.com/patent/US12585469B2/en#:~:text=At%203060%20%2C%20in%20the%20illustrated%20embodiment%2C%20the%20processor%20reads%2C%20in%20response%20to%20a%20prediction%20that">说明书 0307</a> · 原图 24 · 原图 30</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 24、30。装置项规定预测缺失时查标签、读 I-cache 并保持本次轨迹数据读关闭。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将下一取指预测器命中项的读取使能字段接到 trace 命中预测。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>用部分取指地址标记的顺序预测表预测下一个顺序地址的命中。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>分配轨迹缓存项时，相应分配顺序预测项。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>顺序预测项携带替换字段以跟踪逐出候选。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>返回预测器为返回地址记录轨迹读使能字段。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两个指令缓存均命中时，处理器选择本次的指令来源。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>用实际的标签比较结果与读预测对照，训练预测器。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>另有预测未来执行轨迹并从二级往一级预取的电路。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>预测轨迹缺失时可以降低轨迹缓存一部分的供电。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>预测缺失时查轨迹标签、读普通指令缓存，抑制本次轨迹数据读。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>由下一次取指预测命中项的读使能字段预测轨迹命中。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>用带取指地址标签的顺序预测器产生命中判断。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>返回目标预测结果携带轨迹读使能，用它参与预测。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹命中且两缓存都命中时，从轨迹缓存取指。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹将执行时，从二级轨迹存储预取至一级。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹缺失时降低轨迹缓存一部分的供电。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>硬件描述模拟按命中预测门控轨迹读取和两缓存命中时选来源的电路。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>模拟下一次取指预测表中的轨迹读使能字段。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>模拟由地址片段作为标签、预测顺序取指命中的阵列。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 24、30。装置项规定预测缺失时查标签、读 I-cache 并保持本次轨迹数据读关闭。只控制是否为本次访问启动数据阵列读取。标签查询和普通指令缓存请求可照常执行。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将下一取指预测器命中项的读取使能字段接到 trace 命中预测。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>用部分取指地址标记的顺序预测表预测下一个顺序地址的命中。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>分配轨迹缓存项时，相应分配顺序预测项。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>顺序预测项携带替换字段以跟踪逐出候选。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>返回预测器为返回地址记录轨迹读使能字段。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两个指令缓存均命中时，处理器选择本次的指令来源。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>用实际的标签比较结果与读预测对照，训练预测器。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>另有预测未来执行轨迹并从二级往一级预取的电路。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>预测轨迹缺失时可以降低轨迹缓存一部分的供电。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td>独立项</td><td>预测缺失时查轨迹标签、读普通指令缓存，抑制本次轨迹数据读。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>由下一次取指预测命中项的读使能字段预测轨迹命中。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>用带取指地址标签的顺序预测器产生命中判断。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-11">11</a></td><td>返回目标预测结果携带轨迹读使能，用它参与预测。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹命中且两缓存都命中时，从轨迹缓存取指。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹将执行时，从二级轨迹存储预取至一级。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-11">11</a></td><td>预测轨迹缺失时降低轨迹缓存一部分的供电。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td>独立项</td><td>硬件描述模拟按命中预测门控轨迹读取和两缓存命中时选来源的电路。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>模拟下一次取指预测表中的轨迹读使能字段。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>模拟由地址片段作为标签、预测顺序取指命中的阵列。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>预测缺失时，前端查 trace 标签并读 I-cache，trace 数据读保持关闭。实际标签匹配时仍按该决定执行。</dd></div><div><dt>说明书图 24–27</dt><dd>图中给出读使能以及顺序取指、非顺序目标、返回路径的预测信息。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12585469B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>可用 next-fetch 条目或顺序表的预测字段，也可比较标签结果与预测来训练。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12585469B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12609141B2.html#engineering">用客户端状态约束共享内存的门控深度</a>
-<p>轨迹缓存预测缺失时关闭本次数据阵列读取，同时查标签并访问指令缓存。即使标签意外命中，本次数据读取仍保持关闭。另一专利用异构客户端的运行参数限制共享内存资源的时钟或电源门控，权 7 取各客户端阈值中最活跃的状态。两处的控制范围分别是单次取指和共享资源的电源状态。</p></li><li><a href="US12547409B2.html#engineering">支持多种长度的分层 trace cache</a>
-<p>US18/627,035 与 US18/627,001 在各自说明书记载的关联申请中互相引用。前者权 1 在预测缺失时抑制本次数据阵列读取，后者权 1 用预取缓冲区向取指前端提供来自二级轨迹缓存的长轨迹。</p></li></ul>
-    <p><a href="../index.html?patent=US12585469B2#knowledge">在全量关系图上定位 US12585469B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2024-04-04</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-04-04</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-03-24</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/627,035</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Pruthivi Vuyyuru、Niket K. Choudhary、Muawya M. Al-Otoom、Ilhyun Kim</dd></div><div><dt>分类号</dt><dd>G06F9/3806、G06F12/0811、G06F12/0875、G06F9/30047、G06F9/3802、G06F9/3808、G06F9/3844</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12585469B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12585469B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 375 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2A、图 2B、图 3、图 4、图 5、图 6、图 7、图 8、图 9、图 10A、图 10B、图 10C、图 11、图 12、图 13、图 14、图 15、图 16、图 17、图 18、图 19、图 20、图 21、图 22、图 23、图 24、图 25、图 26、图 27、图 28、图 29、图 30、图 31、图 32、图 33。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12585469B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

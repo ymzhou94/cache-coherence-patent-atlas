@@ -1,123 +1,177 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12657031B2 协处理器指令交付前预取操作数 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在协处理器收到指令前预取操作数 · US12657031B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12657031B2</code> · <a href="https://patents.google.com/patent/US12657031B2/en">专利全文</a></p>
+<h1>在协处理器收到指令前预取操作数</h1><p class="reading-question">CPU 已经知道一条协处理器指令要访问的地址，能让数据先沿内存层次返回吗？</p>
+<p class="reading-answer">CPU 先把协处理器指令的操作数地址提供给预取电路。预取可在相应指令正式交付前生成，操作数则回填到协处理器可访问的缓存或随后装入操作数寄存器。协处理器能否减少等待取决于数据何时可读。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-06-16</dd></div><div><dt>申请号</dt><dd>US18/783,937</dd></div><div><dt>最早优先权</dt><dd>2021-09-23</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brandon H. Dwiel、Andrew J. Beaumont-Smith、Eric J. Furbish、John D. Pape、Stephen G. Meier、Tyler J. Huberty</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#cpu-paths">同一条指令的地址和指令本体何时分开传输</a></li><li><a href="#ordering">主权项比较预取生成和指令交付</a></li><li><a href="#variants">地址转换、缓存落点和去重通知的实施选择</a></li><li><a href="#latency">预取先发仍可能等数据，关键是准备读时的状态</a></li><li><a href="#execution">回填到共享 L2 后，怎样把操作数交给运算阵列</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="cpu-paths"><h2>同一条指令的地址和指令本体何时分开传输</h2><p>原图 2 的 CPU 取指流同时含普通指令和协处理器指令。普通指令进入 CPU 指令缓冲。该实施例把协处理器指令放入 CPU 的 store queue，供协处理器接口中的预取器监视。图 1 左上是指令从 store queue 送到协处理器指令缓冲的路径。左下是预取器先识别该指令并向 CPU 的地址转换缓存（TLB）查询操作数地址的路径。</p><p>物理地址返回后，协处理器预取器可以针对真实操作数地址访问缓存层次，无需按访存步长学习地址。第 10 项明确限定预取使用非预测的地址，第 15 项限定监视 store queue。预取地址已知仍可能遇到地址返回晚、缓存行逐出或上层资源争用。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　地址早送给预取器，指令本体送往协处理器缓冲</h3>
+    <p id="fig-1-basis">CPU 的 store queue 同时供监视与正式交付。预取电路收到转换地址即可申请缓存数据，指令随后走独立交付路径。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="地址早送给预取器，指令本体送往协处理器缓冲" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 685" role="img" aria-labelledby="us12657031b2-fig-1-svg-title us12657031b2-fig-1-svg-desc">
+<title id="us12657031b2-fig-1-svg-title">地址早送给预取器，指令本体送往协处理器缓冲</title>
+<desc id="us12657031b2-fig-1-svg-desc">CPU 的 store queue 同时供监视与正式交付。预取电路收到转换地址即可申请缓存数据，指令随后走独立交付路径。</desc>
+<defs><marker id="us12657031b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657031b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657031b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657031b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657031b2-fig-1-instruction" d="M 254 130 L 701 130" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-1-arrow-main)"/>
+<path id="us12657031b2-fig-1-monitor" d="M 151 167 L 151 221 Q 151 229 159 229 L 470 229 Q 478 229 478 237 L 478 302" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-1-arrow-data)"/>
+<path id="us12657031b2-fig-1-query" d="M 365 324 L 254 324" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-1-arrow-data)"/>
+<path id="us12657031b2-fig-1-pa" d="M 254 355 L 365 355" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657031b2-fig-1-arrow-return)"/>
+<path id="us12657031b2-fig-1-request" d="M 597 339 L 701 339" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-1-arrow-main)"/>
+<path id="us12657031b2-fig-1-hint" d="M 480 376 L 480 545 Q 480 553 472 553 L 254 553" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657031b2-fig-1-arrow-return)"/>
+<path id="us12657031b2-fig-1-miss" d="M 777 376 L 777 517" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-1-arrow-data)"/>
+<path id="us12657031b2-fig-1-fill" d="M 856 517 L 856 376" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657031b2-fig-1-arrow-return)"/>
+<rect x="389" y="99" width="170" height="18" fill="#f5f5f5"/><text x="474" y="113" class="arrow-label" text-anchor="middle">经核心接口正式交付</text>
+<rect x="246.5" y="197" width="151" height="18" fill="#f5f5f5"/><text x="322" y="211" class="arrow-label" text-anchor="middle">识别协处理器指令</text>
+<rect x="261.5" y="294" width="95" height="18" fill="#f5f5f5"/><text x="309" y="308" class="arrow-label" text-anchor="middle">操作数查询</text>
+<rect x="258.5" y="328" width="101" height="18" fill="#f5f5f5"/><text x="309" y="342" class="arrow-label" text-anchor="middle">实际物理地址</text>
+<rect x="601.5" y="309" width="91" height="18" fill="#f5f5f5"/><text x="647" y="323" class="arrow-label" text-anchor="middle">预取请求</text>
+<rect x="287.5" y="523" width="151" height="18" fill="#f5f5f5"/><text x="363" y="537" class="arrow-label" text-anchor="middle">附地址的预取提示</text>
+<rect x="666.5" y="456" width="97" height="18" fill="#f5f5f5"/><text x="715" y="470" class="arrow-label" text-anchor="middle">L2 缺失请求</text>
+<rect x="865" y="454" width="88" height="18" fill="#f5f5f5"/><text x="909" y="468" class="arrow-label" text-anchor="middle">缓存行回填</text>
+<g id="us12657031b2-fig-1-sq"><rect x="34" y="93" width="220" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="93" width="220" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="119" class="node-name" text-anchor="middle">CPU store queue</text><text x="144" y="141" class="node-detail" text-anchor="middle">包含待交付协处理器指令</text></g>
+<g id="us12657031b2-fig-1-formal"><rect x="701" y="93" width="225" height="74" rx="6" fill="#f5f5f5"/><rect x="701" y="93" width="225" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="119" class="node-name" text-anchor="middle">协处理器指令缓冲</text><text x="813.5" y="141" class="node-detail" text-anchor="middle">收到正式指令后排队</text></g>
+<g id="us12657031b2-fig-1-tlb"><rect x="34" y="302" width="220" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="302" width="220" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="328" class="node-name" text-anchor="middle">CPU 地址转换缓存</text><text x="144" y="350" class="node-detail" text-anchor="middle">提供操作数物理地址</text></g>
+<g id="us12657031b2-fig-1-pf"><rect x="365" y="302" width="232" height="74" rx="6" fill="#f5f5f5"/><rect x="365" y="302" width="232" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="481" y="328" class="node-name" text-anchor="middle">协处理器预取器</text><text x="481" y="350" class="node-detail" text-anchor="middle">在核心接口内生成预取</text></g>
+<g id="us12657031b2-fig-1-l2"><rect x="701" y="302" width="225" height="74" rx="6" fill="#f5f5f5"/><rect x="701" y="302" width="225" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="328" class="node-name" text-anchor="middle">共享 L2 缓存</text><text x="813.5" y="350" class="node-detail" text-anchor="middle">接纳预取及正式访存</text></g>
+<g id="us12657031b2-fig-1-pp"><rect x="34" y="517" width="220" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="517" width="220" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="144" y="543" class="node-name" text-anchor="middle">CPU 预取单元</text><text x="144" y="565" class="node-detail" text-anchor="middle">可抑制重复请求</text></g>
+<g id="us12657031b2-fig-1-memory"><rect x="701" y="517" width="225" height="74" rx="6" fill="#f5f5f5"/><rect x="701" y="517" width="225" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="813.5" y="543" class="node-name" text-anchor="middle">下一级缓存或主存</text><text x="813.5" y="565" class="node-detail" text-anchor="middle">返回缓存行</text></g>
+<text x="34" y="642" class="legend" text-anchor="start">图中地址查询从协处理器预取器发出。CPU 也可在其他实现中直接提供地址。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657031b2-fig-1-sq">CPU store queue</a> 本图专用原图 2 的 store queue 监视方式。协处理器指令被缓冲于此，普通 CPU store 也可使用这个队列。</li><li><a href="#us12657031b2-fig-1-formal">协处理器指令缓冲</a> 一条待执行协处理器指令会经核心接口转入协处理器指令缓冲。其触发早晚和地址查询不同。</li><li><a href="#us12657031b2-fig-1-pf">协处理器预取器</a> 预取器读到协处理器指令相关信息后，向 CPU 的 TLB 查询对应操作数，得到真实物理地址再生成预取。</li><li><a href="#us12657031b2-fig-1-hint">附地址的预取提示</a> 原图 2 中的提示方向是协处理器预取器到 CPU 预取单元，供后者避免重复。</li><li><a href="#us12657031b2-fig-1-l2">共享 L2 缓存</a> 本图采用原图 3 的共享 L2 组织。它是一个实施例，缓存级别与共享关系并不是独立项的统一限制。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、5A；说明书归档段 0019、0020、0021、0022、0024、0025、0026、0027、0028、0029、0032、0033、0034、0035、0036、0037、0039、0047、0050、0062、0063、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12657031B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU store queue</dt><dd>213</dd></div><div><dt>CPU 地址转换缓存</dt><dd>214</dd></div><div><dt>协处理器预取器／核心接口</dt><dd>120/215</dd></div><div><dt>协处理器指令缓冲</dt><dd>220</dd></div><div><dt>CPU 预取单元</dt><dd>211</dd></div><div><dt>共享 L2 缓存</dt><dd>335</dd></div></dl></details>
+</figure></section><section id="ordering"><h2>主权项比较预取生成和指令交付</h2><p>第 1、17 项要求预取生成早于 CPU 向协处理器交付对应的指令。图 2 用同一个操作数请求标出地址返回、预取提交、指令交付、回填和正式读。缓存填充可与处理器等待许可并行。说明书允许在指令具备非推测条件后才正式交付，随后还要经过协处理器指令缓冲和内部派发。</p><p>图 2 的回填发生在指令交付之后、需求读之前。图 4 比较两种回填时刻。数据等待取决于需求读开始时，缓存行是否已经回填并且仍然有效。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　先生成预取，再交付同一条协处理器指令</h3>
+    <p id="fig-2-basis">先后要求约束预取生成与指令交付。正式读操作数时才需要检查回填是否完成。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="先生成预取，再交付同一条协处理器指令" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us12657031b2-fig-2-svg-title us12657031b2-fig-2-svg-desc">
+<title id="us12657031b2-fig-2-svg-title">先生成预取，再交付同一条协处理器指令</title>
+<desc id="us12657031b2-fig-2-svg-desc">先后要求约束预取生成与指令交付。正式读操作数时才需要检查回填是否完成。</desc>
+<defs><marker id="us12657031b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657031b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657031b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657031b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<rect x="80" y="178" width="800" height="106" rx="4" fill="rgba(45,49,66,.02)" style="stroke:rgba(45,49,66,.22)"/>
+<rect x="87" y="172" width="94" height="18" fill="#f5f5f5"/><text x="134" y="186" class="arrow-label" text-anchor="middle">PAR · 可并行</text>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12657031b2-fig-2-addr"><path d="M 116 120 L 358 120" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-2-arrow-main)"/><rect x="185" y="96" width="104" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">先提供操作数地址</text></g>
+<g id="us12657031b2-fig-2-pref"><path d="M 358 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-2-arrow-main)"/><rect x="434" y="144" width="91" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">生成并提交预取</text></g>
+<g id="us12657031b2-fig-2-give"><path d="M 116 216 L 844 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-2-arrow-data)"/><rect x="415" y="192" width="130" height="18" fill="#f5f5f5"/><text x="480" y="206" class="arrow-label" text-anchor="middle">随后正式交付对应指令</text></g>
+<g id="us12657031b2-fig-2-fill"><path d="M 601 258 L 625 258 Q 633 258 633 266 L 633 268 Q 633 276 625 276 L 601 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12657031b2-fig-2-arrow-control)"/><rect x="663" y="234" width="104" height="18" fill="#f5f5f5"/><text x="715" y="248" class="arrow-label" text-anchor="middle">安装返回的缓存行</text></g>
+<g id="us12657031b2-fig-2-read"><path d="M 844 312 L 601 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-2-arrow-data)"/><rect x="664" y="288" width="117" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">准备读，访问操作数</text></g>
+<g id="us12657031b2-fig-2-operand"><path d="M 601 360 L 844 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657031b2-fig-2-arrow-return)"/><rect x="677" y="336" width="91" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">返回所需操作数</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">CPU</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">协处理器预取器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">缓存层次</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">协处理器指令管线</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。同一缓存行的回填可与这条指令的交付重叠。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657031b2-fig-2-addr">先提供操作数地址</a> 同一条指令已由 CPU 处理到可以提供对应地址，但尚未交付给协处理器。</li><li><a href="#us12657031b2-fig-2-pref">生成并提交预取</a> 图中以提交预取请求表示预取可开始的一个实现，权项的事件是生成预取。</li><li><a href="#us12657031b2-fig-2-give">随后正式交付对应指令</a> 在某些实施中，CPU 确认其已非推测后再送协处理器。该条件解释两个时间点的先后而非给出固定间隔。</li><li><a href="#us12657031b2-fig-2-fill">安装返回的缓存行</a> 缓存行可能在正式指令交付前或交付后回填。图中只展开交付后及时返回的一种顺序。</li><li><a href="#us12657031b2-fig-2-read">准备读，访问操作数</a> 协处理器准备读取操作数。此时要看缓存命中、数据依赖和就绪位，而非只看请求是否已发出。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、6、7；说明书归档段 0025、0026、0029、0030、0032、0033、0034、0035、0036、0040、0047、0048、0074、0075、0076、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12657031B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>协处理器预取器／指令缓冲</dt><dd>120/220</dd></div><div><dt>混合取指／检测／获取地址／生成预取</dt><dd>605/610/615/620</dd></div><div><dt>查 store queue／取地址／发预取／共享缓存回填</dt><dd>705/710/715/720</dd></div></dl></details>
+</figure></section><section id="variants"><h2>地址转换、缓存落点和去重通知的实施选择</h2><p>表 3 将权利要求的不同选项对应到接口。在图 1 的物理地址方案中，CPU 先完成转换。第 14 项还允许传入虚拟地址，说明书的一个实现由协处理器自己的内存管理单元转换。缓存可以是共享的，也可以在协处理器内部。从缓存搬到寄存器属于进一步可选动作。</p><p>图 1 按原图 2 画协处理器预取器向 CPU 预取单元发送地址提示，避免 CPU 端重复取数。第 11 项另外覆盖协处理器预取器消费 CPU 预取提示并省略自己的请求。两方向都是披露的接口，采取其中一条时无需假定反向通知同时存在。原图 5A 中，多个 CPU 核可让同一个协处理器观察各自的 store queue，授权第 20 项分别要求两个核的提前预取条件，未给定争用时的优先规则。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　操作数地址、缓存和寄存器分别有哪些选择</h3>
+    <p id="fig-3-basis">物理或虚拟地址对应不同地址转换位置。共享或内部缓存对应不同落点，进入寄存器又是一次操作数搬移。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">选项</th><th scope="col">观测或数据所在位置</th><th scope="col">权项</th></tr></thead><tbody><tr id="fig-3-pa"><th scope="row">传物理地址</th><td>CPU 转换后交给预取器</td><td>13</td></tr><tr id="fig-3-va"><th scope="row">传虚拟地址</th><td>说明书允许协处理器侧转换</td><td>14</td></tr><tr id="fig-3-shared"><th scope="row">回填共享缓存</th><td>CPU 与协处理器均可访问</td><td>5、6</td></tr><tr id="fig-3-internal"><th scope="row">回填内部缓存</th><td>协处理器内部的缓存</td><td>5、7</td></tr><tr id="fig-3-reg"><th scope="row">写操作数寄存器</th><td>从预取取得的数据再装入寄存器</td><td>8、19</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-pa">传物理地址</a> 第 13 项是物理地址。原图 2 显示 CPU TLB 返回物理地址给预取器。</li><li><a href="#fig-3-va">传虚拟地址</a> 第 14 项是虚拟地址。说明书允许协处理器在本地转换，此时两侧 TLB 管理可能需要协调。</li><li><a href="#fig-3-internal">回填内部缓存</a> 第 7 项允许协处理器内部缓存。</li><li><a href="#fig-3-reg">写操作数寄存器</a> 第 8、19 项进一步要求把已获得的操作数数据写到协处理器寄存器。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、4、7；说明书归档段 0026、0027、0030、0032、0034、0038、0040、0045、0046、0049、0050、0055、0057、0076、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU 地址转换电路／地址转换缓存</dt><dd>107/214</dd></div><div><dt>共享缓存／共享 L2 实例</dt><dd>135/335</dd></div><div><dt>X／Y 操作数寄存器组</dt><dd>340/360</dd></div></dl></details>
+</figure></section><section id="latency"><h2>预取先发仍可能等数据，关键是准备读时的状态</h2><p>图 4 用同一条指令和相同 12 拍下级服务时间比较两种预取发出时刻。指令在第 10 拍交付，第 16 拍准备读取数据。第 3 拍发出的请求在第 15 拍回填；第 8 拍发出的请求在第 20 拍回填。两者都满足该独立项的先发条件。第一种在行仍有效时可省去缺失等待，第二种如果需求读可合并到在途请求，仍需等 4 拍。</p><p>模型假设两种情形读相同缓存，未计入命中本身的访问时间，也未假定实际数值能代表芯片。读前已逐出、等待同地址的较老访存或更迟获得物理地址时，服务时间重叠会缩短。评估可分开统计两个时间差：预取生成到指令交付，以及回填完成到正式读取。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两次预取都先发，为什么后发的一次仍需等待</h3>
+    <p id="fig-4-basis">同样的下级服务耗时。早发例在正式读前已回填；晚发例虽早于指令交付，正式读时仍未收到数据。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两次预取都先发，为什么后发的一次仍需等待" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us12657031b2-fig-4-svg-title us12657031b2-fig-4-svg-desc">
+<title id="us12657031b2-fig-4-svg-title">两次预取都先发，为什么后发的一次仍需等待</title>
+<desc id="us12657031b2-fig-4-svg-desc">同样的下级服务耗时。早发例在正式读前已回填；晚发例虽早于指令交付，正式读时仍未收到数据。</desc>
+<defs><marker id="us12657031b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657031b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657031b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657031b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12657031b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="273" y1="76" x2="273" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="273" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="408" y1="76" x2="408" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="462" y1="76" x2="462" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="462" y="64" class="arrow-label" text-anchor="middle">10</text>
+<line x1="597" y1="76" x2="597" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="597" y="64" class="arrow-label" text-anchor="middle">15</text>
+<line x1="624" y1="76" x2="624" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">16</text>
+<line x1="732" y1="76" x2="732" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">20</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">24</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us12657031b2-fig-4-early"><text x="24" y="136" class="node-name" text-anchor="start">较早发出的预取</text>
+<rect x="273" y="112" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="435" y="136" class="arrow-label" text-anchor="middle">下级服务 12 拍</text>
+<circle cx="597" cy="131" r="5" fill="#4f5d75"/>
+<text x="597" y="171" class="arrow-label" text-anchor="end">回填</text></g>
+<g id="us12657031b2-fig-4-late"><text x="24" y="228" class="node-name" text-anchor="start">较晚发出的预取</text>
+<rect x="408" y="204" width="324" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="228" class="arrow-label" text-anchor="middle">下级服务 12 拍</text>
+<circle cx="732" cy="223" r="5" fill="#bf4520"/>
+<text x="732" y="263" class="arrow-label" text-anchor="end">较需求读晚 4 拍</text></g>
+<g id="us12657031b2-fig-4-instruction"><text x="24" y="320" class="node-name" text-anchor="start">正式指令</text>
+<rect x="462" y="296" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="543" y="320" class="arrow-label" text-anchor="middle">指令交付后准备读取</text>
+<circle cx="624" cy="315" r="5" fill="#4f5d75"/>
+<text x="624" y="355" class="arrow-label" text-anchor="end">准备读操作数</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">模型设两种预取的服务都为 12 拍。假设早回填的行尚未逐出，晚回填时需求可合并。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657031b2-fig-4-early">较早发出的预取</a> 第 3 拍提交，第 15 拍完成下级服务。数据保留到第 16 拍时，读可命中。</li><li><a href="#us12657031b2-fig-4-late">较晚发出的预取</a> 第 8 拍提交，第 20 拍完成服务。需求读时仍在途，模型假定需求合并后等待 4 拍。</li><li><a href="#us12657031b2-fig-4-instruction">正式指令</a> CPU 第 10 拍交付后，协处理器准备到第 16 拍。这个间隔可以包含译码、依赖等待或排队。</li><li><a href="#us12657031b2-fig-4-axis">时间刻度</a> 第 10 拍是正式交付边界，第 16 拍是实际准备读操作数的边界。主权项前者用于约束，性能度量后者。</li></ul>
+  <p class="figure-evidence">原图 2、3、6、7；说明书归档段 0026、0029、0030、0035、0036、0040、0047、0050、0074、0076、0078；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12657031B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>协处理器预取器</dt><dd>120</dd></div><div><dt>协处理器指令缓冲</dt><dd>220</dd></div><div><dt>共享 L2 缓存</dt><dd>335</dd></div><div><dt>协处理器访存接口</dt><dd>350</dd></div></dl></details>
+</figure></section><section id="execution"><h2>回填到共享 L2 后，怎样把操作数交给运算阵列</h2><p>原图 4 的协处理器先把指令译成访存或算术操作。访存队列的调度器对同址访存保留程序顺序，把获准的 load 送到共享 L2。回填的操作数进入数据缓冲，原图 3 将这部分逻辑存储表示为 X、Y。图 5 把访存地址、缓存行和供算术使用的操作数画成不同边。</p><p>数据就绪后，算术调度器可把等候的运算发往处理单元阵列（PE）。阵列读取 X、Y，结果写入与各 PE 相连的分布式 Z 存储。第 8、19 项允许预取数据进入操作数寄存器，提前到达共享 L2 本身不会解除数据依赖。共享 L2 所处的一致性实施例还可能由 L2 发起反向 snoop 访问 CPU 私有数据缓存，使其对应副本失效，并在该行为修改态时取得最新数据。说明书未限定唯一的一致性协议。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　缓存行先到，X／Y 操作数就绪后算术才能发射</h3>
+    <p id="fig-5-basis">把访存派发、数据返回和算术发射分开，标明待执行算术操作从哪里获得 X、Y，结果写到哪里。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="缓存行先到，X／Y 操作数就绪后算术才能发射" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 730" role="img" aria-labelledby="us12657031b2-fig-5-svg-title us12657031b2-fig-5-svg-desc">
+<title id="us12657031b2-fig-5-svg-title">缓存行先到，X／Y 操作数就绪后算术才能发射</title>
+<desc id="us12657031b2-fig-5-svg-desc">把访存派发、数据返回和算术发射分开，标明待执行算术操作从哪里获得 X、Y，结果写到哪里。</desc>
+<defs><marker id="us12657031b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12657031b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12657031b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12657031b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12657031b2-fig-5-memop" d="M 245 113 L 355 113" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-data)"/>
+<path id="us12657031b2-fig-5-load" d="M 594 113 L 713 113" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-data)"/>
+<path id="us12657031b2-fig-5-arithop" d="M 140 150 L 140 380" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-data)"/>
+<path id="us12657031b2-fig-5-fill" d="M 821 150 L 821 268 Q 821 276 813 276 L 483 276 Q 475 276 475 284 L 475 380" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-main)"/>
+<path id="us12657031b2-fig-5-ready" d="M 356 402 L 245 402" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12657031b2-fig-5-arrow-return)"/>
+<path id="us12657031b2-fig-5-issue" d="M 245 437 L 356 437" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-data)"/>
+<path id="us12657031b2-fig-5-operands" d="M 594 418 L 713 418" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-main)"/>
+<path id="us12657031b2-fig-5-result" d="M 821 455 L 821 560" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12657031b2-fig-5-arrow-data)"/>
+<rect x="258" y="81" width="84" height="18" fill="#f5f5f5"/><text x="300" y="95" class="arrow-label" text-anchor="middle">访存操作</text>
+<rect x="602.5" y="81" width="105" height="18" fill="#f5f5f5"/><text x="655" y="95" class="arrow-label" text-anchor="middle">获准的 load</text>
+<rect x="150" y="250" width="86" height="18" fill="#f5f5f5"/><text x="193" y="264" class="arrow-label" text-anchor="middle">算术操作</text>
+<rect x="567" y="244" width="154" height="18" fill="#f5f5f5"/><text x="644" y="258" class="arrow-label" text-anchor="middle">操作数及缓冲索引</text>
+<rect x="249" y="373" width="104" height="18" fill="#f5f5f5"/><text x="301" y="387" class="arrow-label" text-anchor="middle">源数据已就绪</text>
+<rect x="249" y="407" width="104" height="18" fill="#f5f5f5"/><text x="301" y="421" class="arrow-label" text-anchor="middle">调度取 X／Y</text>
+<rect x="613" y="388" width="88" height="18" fill="#f5f5f5"/><text x="657" y="402" class="arrow-label" text-anchor="middle">X、Y 元素</text>
+<rect x="838" y="500" width="102" height="18" fill="#f5f5f5"/><text x="889" y="514" class="arrow-label" text-anchor="middle">写入运算结果</text>
+<g id="us12657031b2-fig-5-decode"><rect x="35" y="76" width="210" height="74" rx="6" fill="#f5f5f5"/><rect x="35" y="76" width="210" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140" y="102" class="node-name" text-anchor="middle">协处理器译码器</text><text x="140" y="124" class="node-detail" text-anchor="middle">产生访存与算术操作</text></g>
+<g id="us12657031b2-fig-5-ld"><rect x="355" y="76" width="239" height="74" rx="6" fill="#f5f5f5"/><rect x="355" y="76" width="239" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="474.5" y="102" class="node-name" text-anchor="middle">访存队列与调度器</text><text x="474.5" y="124" class="node-detail" text-anchor="middle">检查同址程序顺序</text></g>
+<g id="us12657031b2-fig-5-cache"><rect x="713" y="76" width="216" height="74" rx="6" fill="#f5f5f5"/><rect x="713" y="76" width="216" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="821" y="102" class="node-name" text-anchor="middle">共享 L2 缓存</text><text x="821" y="124" class="node-detail" text-anchor="middle">接收访存并返回数据</text></g>
+<g id="us12657031b2-fig-5-arith"><rect x="35" y="380" width="210" height="75" rx="6" fill="#f5f5f5"/><rect x="35" y="380" width="210" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140" y="406" class="node-name" text-anchor="middle">算术队列与调度器</text><text x="140" y="428" class="node-detail" text-anchor="middle">等待运算的源数据</text></g>
+<g id="us12657031b2-fig-5-data"><rect x="356" y="380" width="238" height="75" rx="6" fill="#f5f5f5"/><rect x="356" y="380" width="238" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="475" y="406" class="node-name" text-anchor="middle">X／Y 操作数缓冲</text><text x="475" y="428" class="node-detail" text-anchor="middle">按重命名条目写入数据</text></g>
+<g id="us12657031b2-fig-5-exec"><rect x="713" y="380" width="216" height="75" rx="6" fill="#f5f5f5"/><rect x="713" y="380" width="216" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="821" y="406" class="node-name" text-anchor="middle">处理单元阵列（PE）</text><text x="821" y="428" class="node-detail" text-anchor="middle">读取 X、Y 向量元素</text></g>
+<g id="us12657031b2-fig-5-z"><rect x="713" y="560" width="216" height="75" rx="6" fill="#f5f5f5"/><rect x="713" y="560" width="216" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="821" y="586" class="node-name" text-anchor="middle">分布式 Z 存储</text><text x="821" y="608" class="node-detail" text-anchor="middle">各 PE 写各自的结果</text></g>
+<text x="35" y="692" class="legend" text-anchor="start">回填共享缓存、写 X／Y、发射算术是三个可分开观测的事件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12657031b2-fig-5-decode">协处理器译码器</a> 译码器按指令生成访存或算术操作。部分实施中还对 X、Y 条目做寄存器重命名。</li><li><a href="#us12657031b2-fig-5-ld">访存队列与调度器</a> 访存控制器可按地址依赖选中可发的载入，同址访存按程序顺序发出。</li><li><a href="#us12657031b2-fig-5-cache">共享 L2 缓存</a> 共享 L2 返回载入数据。其命中、下级回填和针对 CPU 私有缓存的一致性请求均可能影响实际延迟。</li><li><a href="#us12657031b2-fig-5-data">X／Y 操作数缓冲</a> X／Y 数据缓冲由协处理器访存结果写入。算术调度器需要对应的源数据就绪。</li><li><a href="#us12657031b2-fig-5-exec">处理单元阵列（PE）</a> PE 从 X、Y 取向量元素，执行计算。结果数据写到各自关联的分布式 Z。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0038、0040、0041、0042、0043、0044、0045、0046、0048、0049、0050、0051、0055、0056、0057、0058、0059、0060、0061；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12657031B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>协处理器译码器</dt><dd>451</dd></div><div><dt>访存接口／访存操作队列／访存调度器</dt><dd>350/460/441</dd></div><div><dt>算术队列／算术调度器</dt><dd>438/436</dd></div><div><dt>X／Y 操作数缓冲</dt><dd>440</dd></div><div><dt>执行电路／处理单元阵列／分布式 Z 存储</dt><dd>330/421/422</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US12657031B2</code><span>美国授权专利</span><time datetime="2026-06-16">2026-06-16</time></p>
-  <h1>协处理器指令交付前预取操作数</h1>
-  <p class="english-title" lang="en">Coprocessor prefetcher</p>
-  <p class="document-question">CPU 已经拿到协处理器的访存地址时，能否让操作数先进入协处理器可访问的缓存？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">CPU 先把协处理器指令所需的操作数地址给预取电路。预取电路可在该指令正式交付协处理器前发出取数请求。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>操作数地址须提前就绪。数据要在协处理器正式访存前回填，并留在它能访问的缓存中，才能减少等待。</dd></div><div><dt>验证方法</dt><dd>固定指令提交序列和缓存初态，对照协处理器按需取数与 CPU 先交付操作数地址。记录预取发出、指令交付、数据就绪、实际消费四个时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12657031B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">同一条取指流可同时含 CPU 指令和协处理器指令。协处理器收到指令与拿到操作数是两个时点。</p>
-    <p>处理器从混合指令流取得协处理器操作，先把相应操作数地址交给预取电路。独权 1 要求在发送对应指令前生成预取。数据能否在协处理器实际读取前回填，取决于后续缓存路径。</p>
-    <ol class="walkthrough"><li><h3>发送协处理器操作数地址</h3><p>CPU 识别混合指令流中的协处理器操作，并为可预取的操作数提供地址。</p></li><li><h3>将预取请求送到缓存通路</h3><p>协处理器预取器以地址发请求。在权 1 要求下，此时对应指令尚未交付协处理器。</p></li><li><h3>交付协处理器指令</h3><p>正式指令仍要送给协处理器执行，提前发出的动作只涉及操作数取数。</p></li><li><h3>读取缓存中的数据</h3><p>若地址 A 的数据已回填且仍驻留，正式读可以命中。其他情况继续走正常缓存路径。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 允许预取电路位于协处理器内。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 进一步描述预取进入可由该电路访问、也可与 CPU 共享的缓存，操作数地址仍与对应指令分时交付。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>操作数地址</dt><dd>对应正式协处理器指令要读取的数据地址，可由处理器提前给预取器。</dd></div><div><dt>协处理器预取电路</dt><dd>根据处理器给出的地址准备操作数数据的访存电路。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">地址先交付，指令随后进入协处理器</a></li><li><a href="#fig-1">操作数地址与协处理器指令走两条路径</a></li><li><a href="#fig-4">预取先发与数据先到是两个条件</a></li><li><a href="#fig-3">操作数地址和预取落点的实施例</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">地址先交付，指令随后进入协处理器</h3></div>
-    <a class="paper-open" href="../mechanisms/US12657031B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="地址先交付，指令随后进入协处理器">
-    <img class="paper-image native-image" src="../mechanisms/US12657031B2/fig-2/diagram.svg" width="920" height="458"
-         style="--paper-width:920px" alt="地址先交付，指令随后进入协处理器。约束是预取请求的生成先于正式指令的发送。图中回填早于正式读是一个可能成功的时序。">
-  </div>
-  <figcaption>
-    <span>约束是预取请求的生成先于正式指令的发送。图中回填早于正式读是一个可能成功的时序。</span>
-    <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657031">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">操作数地址与协处理器指令走两条路径</h3></div>
-    <a class="paper-open" href="../mechanisms/US12657031B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="操作数地址与协处理器指令走两条路径">
-    <img class="paper-image native-image" src="../mechanisms/US12657031B2/fig-1/diagram.svg" width="684" height="332"
-         style="--paper-width:684px" alt="操作数地址与协处理器指令走两条路径。同一条取指流可同时含 CPU 指令和协处理器指令。协处理器收到指令与拿到操作数是两个时点。">
-  </div>
-  <figcaption>
-    <span>同一条取指流可同时含 CPU 指令和协处理器指令。协处理器收到指令与拿到操作数是两个时点。</span>
-    <span class="figure-evidence">图 1–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657031">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">预取先发与数据先到是两个条件</h3></div>
-    <a class="paper-open" href="../mechanisms/US12657031B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="预取先发与数据先到是两个条件">
-    <img class="paper-image native-image" src="../mechanisms/US12657031B2/fig-4/diagram.svg" width="584" height="440"
-         style="--paper-width:584px" alt="预取先发与数据先到是两个条件。两种路径都在指令发出前生成预取。只有缓存数据在正式读取前回来且仍驻留，读取才可省去相应等待。">
-  </div>
-  <figcaption>
-    <span>两种路径都在指令发出前生成预取。只有缓存数据在正式读取前回来且仍驻留，读取才可省去相应等待。</span>
-    <span class="figure-evidence">原图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>。事件顺序为工程对照。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657031">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">操作数地址和预取落点的实施例</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">条件或位置</th><th scope="col">专利中的选项</th><th scope="col">对应权项</th></tr></thead><tbody><tr><th scope="row">地址</th><td>物理地址或虚拟地址</td><td class="emphasis">13、14</td></tr><tr><th scope="row">预取落点</th><td>可为 CPU 共享缓存或协处理器内部缓存</td><td>5–7</td></tr><tr><th scope="row">地址来源</th><td>监视 CPU 的 store 队列</td><td>15</td></tr><tr><th scope="row">协处理器共享</th><td>两核分别提交本核操作数地址</td><td>20</td></tr></tbody></table>
-  <figcaption>
-    <span>物理与虚拟地址属于不同从属项。缓存位置也由采用的实现决定。</span>
-    <span class="figure-evidence">图 4–5A，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12657031">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>提前交付操作数地址</dt><dd>重叠发指令与取数 <span class="subdued">原图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></span></dd></div><div><dt>先填协处理器可用缓存</dt><dd>减少正式读缺失等待 <span class="subdued">原图 2、4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>提前把地址交给预取器可让缓存请求与正式交付重叠，数据占用的却可能是 CPU 与协处理器共享的容量。看协处理器命中时，还要检查 CPU 热数据是否被挤出。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>在共享缓存中反复预取大批矩阵操作数，同时 CPU 正读取能装下的工作集时，操作数虽可早到，CPU 的重复缺失却可能增加。两边完成时间要分别核对。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>CPU 顺序取到普通指令和一条需要地址 A 的协处理器指令，地址 A 先于协处理器指令交付就绪。</dd></div><div><dt>处理结果</dt><dd>CPU 将 A 交给预取器后，预取请求可先进入缓存通路。协处理器随后收到指令并读取 A。</dd></div><div><dt>结果解读</dt><dd>协处理器端是否命中取决于预取回填相对于正式读的时间，也取决于缓存保留。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、17、20 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 1–3、6–7。装置独权限定取指混合流、地址提供及预取生成早于对应指令发送。</p>
+  <p>原图 1–3、6–7。装置独权限定取指混合流、地址提供及预取生成早于对应指令发送。为对应操作数构造预取。第 1 项比较生成预取和发送协处理器指令的顺序，缓存返回由后续路径完成。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=the%20processor%20instructions%20and%20the%20coprocessor%20instructions%20appear%20together%20in%20code%20sequences%20fetched%20by%20the%20processor">F1</a></th><td>主处理器从同一取指序列中取得主机指令和协处理器指令</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=A%20prefetcher%20for%20a%20coprocessor%20is%20disclosed.%20In%20one%20embodiment%2C%20an%20apparatus%20includes%20a%20processor%20and">说明书 0006</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=provide%20memory%20addresses%20to%20the%20coprocessor%20prefetch%20circuitry%20that%20correspond%20to%20operand%20data%20for%20the%20coprocessor">F2</a></th><td>将协处理器指令所需操作数的内存地址发给预取电路</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=A%20prefetcher%20for%20a%20coprocessor%20is%20disclosed.%20In%20one%20embodiment%2C%20an%20apparatus%20includes%20a%20processor%20and">说明书 0006</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=prior%20to%20the%20processor%20providing%20the%20corresponding%20coprocessor%20instruction%20to%20the%20coprocessor">F3</a></th><td>预取电路基于该地址生成预取，时间早于同一协处理器指令送达</td><td>原图 3</td></tr></tbody>
@@ -137,48 +191,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=a%20first%20processor%20core%3Ba%20second%20processor%20core%3Ba%20coprocessor%20configured%20to%20execute%20coprocessor%20instructions">F8</a></th><td>两个处理器核心共用协处理器。</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=FIG.%205A%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system-on-a-chip%20%28SoC%29%20including%20a%20plurality">说明书 0062</a> · 原图 5A</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=provide%20first%20memory%20addresses%20to%20the%20coprocessor%20prefetch%20circuitry%20that%20correspond%20to%20first%20operand%20data">F9</a></th><td>第一核提供第一组操作数地址。</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=FIG.%205A%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system-on-a-chip%20%28SoC%29%20including%20a%20plurality">说明书 0062</a> · <a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=Method%20700%20includes%20detecting%2C%20using%20a%20coprocessor%20prefetcher%2C%20the%20presence%20of%20coprocessor%20instructions%20by%20monitoring%20a">说明书 0078</a> · 原图 5A · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=provide%20second%20memory%20addresses%20to%20the%20coprocessor%20prefetch%20circuitry%20that%20correspond%20to%20second%20operand%20data">F10</a></th><td>第二核也提供自己的操作数地址。</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=FIG.%205A%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system-on-a-chip%20%28SoC%29%20including%20a%20plurality">说明书 0062</a> · <a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=Method%20700%20includes%20detecting%2C%20using%20a%20coprocessor%20prefetcher%2C%20the%20presence%20of%20coprocessor%20instructions%20by%20monitoring%20a">说明书 0078</a> · 原图 5A · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=prior%20to%20the%20first%20processor%20core%20providing%20the%20first%20corresponding%20coprocessor%20instruction%20to%20the%20coprocessor">F11</a></th><td>第一核路径先生成预取，再发对应指令。</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=FIG.%206%20is%20a%20flow%20diagram%20of%20one%20embodiment%20of%20a%20method%20for%20operating%20a%20coprocessor">说明书 0073</a> · <a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=Method%20700%20includes%20detecting%2C%20using%20a%20coprocessor%20prefetcher%2C%20the%20presence%20of%20coprocessor%20instructions%20by%20monitoring%20a">说明书 0078</a> · 原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=prior%20to%20the%20second%20processor%20core%20providing%20the%20second%20corresponding%20coprocessor%20instruction%20to%20the%20coprocessor">F12</a></th><td>第二核路径也分别满足相同先后。</td><td><a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=FIG.%205A%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system-on-a-chip%20%28SoC%29%20including%20a%20plurality">说明书 0062</a> · <a href="https://eureka.patsnap.com/patent/US12657031B2#:~:text=Method%20700%20includes%20detecting%2C%20using%20a%20coprocessor%20prefetcher%2C%20the%20presence%20of%20coprocessor%20instructions%20by%20monitoring%20a">说明书 0078</a> · 原图 5A · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>混合取指流中，处理器将地址先交给预取器生成预取，再发送对应协处理器指令。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>进一步限定预取电路本身设在协处理器内。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>地址属于系统内存空间。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>协处理器可以执行矩阵操作。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>预取目标是该预取电路可访问的缓存。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>预取用缓存与处理器共享。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-5">5</a></td><td>预取用缓存位于协处理器内部。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>预取完成后把操作数写入协处理器的一个寄存器。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>至少一笔预取从缓存层次中的某级取得相应操作数。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>地址为已提供的确定地址，而非由预取器猜测。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>根据处理器预取已有的指示，协处理器预取器可跳过预取。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>处理器预取电路可以对地址作预测。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>操作数地址用物理地址表示。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-1">1</a></td><td>操作数地址用虚拟地址表示。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-1">1</a></td><td>监视处理器的 store 队列以取得地址。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-1">1</a></td><td>系统还包含网络接口和显示控制器。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>方法规定先把地址交给预取器并生成请求，再把对应指令发送协处理器。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>协处理器指令指定矩阵乘操作。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>基于预取先取入缓存，再把操作数放入操作数寄存器。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td>独立项</td><td>两核都可提供本核操作数地址，双方的预取均须先于相应指令发送。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1–3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></dt><dd>CPU 先将生成的操作数地址交给协处理器预取电路。预取器可在指令交付前发出取数请求，数据目标为协处理器可访问的缓存。协处理器仍按正式指令执行自身操作。</dd></div><div><dt>图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></dt><dd>协处理器端是否命中取决于预取回填相对于正式读的时间，也取决于缓存保留。</dd></div><div><dt>图 4–5A，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12657031B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></dt><dd>地址晚于预期就绪、多个核竞争发出资源或数据在使用前逐出，都会缩短实际领先时间。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12657031B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
-<p>US12657031B2 由主处理器先交付操作数地址，协处理器预取电路在主处理器发送对应指令前生成预取。US12001847B1 在第一笔缺失等待时继续推测执行，第二条缺失读可于此时发出。遇到阻止条件后等首笔数据返回，再从第一条指令按序重执行。</p></li></ul>
-    <p><a href="../index.html?patent=US12657031B2#knowledge">在全量关系图上定位 US12657031B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-09-23</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-07-25</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-06-16</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/783,937</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brandon H. Dwiel、Andrew J. Beaumont-Smith、Eric J. Furbish、John D. Pape、Stephen G. Meier、Tyler J. Huberty</dd></div><div><dt>分类号</dt><dd>G06F9/3881、G06F9/30145、G06F9/382、G06F9/383、G06F9/3832、G06F9/3877</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12657031B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12657031B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 112 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 6、图 4。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12657031B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

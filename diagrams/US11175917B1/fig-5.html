@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
+main{max-width:960px;margin:auto;min-width:0}
+h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
+p{margin:.6rem 0}
+figure{margin:1.25rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
+svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+.node-name{font-weight:600;font-size:17px}
+.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.signal-title{font-weight:600;font-size:16px}
+ol{padding-inline-start:1.45rem}
+li+li{margin-top:.45rem}
+a{color:#2e5aa8;text-underline-offset:.19em}
+.component-index dt{font-weight:600}
+.component-index dd{margin:0 0 .45rem}
+svg :target{scroll-margin:1rem}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
+@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+</style>
+</head>
+<body><main>
+<h1>一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射</h1>
+<p>依赖 store 标识提供匹配，LEQ 存储体决定流水线选择。RLB 和 LEQ 两边的数据共同描述重发的 load。</p>
+<figure>
+<div class="diagram-container" tabindex="0" role="region" aria-label="一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 645" role="img" aria-labelledby="us11175917b1-fig-5-svg-title us11175917b1-fig-5-svg-desc">
+<title id="us11175917b1-fig-5-svg-title">一个 RLB 条目怎样选择重发流水线、补齐字段并避免重复发射</title>
+<desc id="us11175917b1-fig-5-svg-desc">依赖 store 标识提供匹配，LEQ 存储体决定流水线选择。RLB 和 LEQ 两边的数据共同描述重发的 load。</desc>
+<defs><marker id="us11175917b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11175917b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11175917b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11175917b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11175917b1-fig-5-id" d="M 150 161 L 150 220 Q 150 228 158 228 L 417 228 Q 425 228 425 236 L 425 308" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-main)"/>
+<path id="us11175917b1-fig-5-tag" d="M 478 161 L 478 308" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-pipe" d="M 815 161 L 815 220 Q 815 228 807 228 L 545 228 Q 537 228 537 236 L 537 308" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-issue" d="M 455 384 L 455 488" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-main)"/>
+<path id="us11175917b1-fig-5-rlbdat" d="M 266 524 L 363 524" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-leqdat" d="M 713 524 L 591 524" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11175917b1-fig-5-arrow-data)"/>
+<path id="us11175917b1-fig-5-notify" d="M 591 363 L 812 363 Q 820 363 820 371 L 820 488" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11175917b1-fig-5-arrow-return)"/>
+<rect x="227" y="196" width="94" height="18" fill="#f5f5f5"/><text x="274" y="210" class="arrow-label" text-anchor="middle">匹配候选</text>
+<rect x="491.5" y="181" width="129" height="18" fill="#f5f5f5"/><text x="556" y="195" class="arrow-label" text-anchor="middle">候选的 load 标识</text>
+<rect x="633" y="197" width="108" height="18" fill="#f5f5f5"/><text x="687" y="211" class="arrow-label" text-anchor="middle">指定流水线</text>
+<rect x="277.5" y="420" width="145" height="18" fill="#f5f5f5"/><text x="350" y="434" class="arrow-label" text-anchor="middle">发射已仲裁的 load</text>
+<rect x="273" y="494" width="84" height="18" fill="#f5f5f5"/><text x="315" y="508" class="arrow-label" text-anchor="middle">RLB 字段</text>
+<rect x="609" y="494" width="86" height="18" fill="#f5f5f5"/><text x="652" y="508" class="arrow-label" text-anchor="middle">其余字段</text>
+<rect x="652.5" y="332" width="103" height="18" fill="#f5f5f5"/><text x="704" y="346" class="arrow-label" text-anchor="middle">已重发状态</text>
+<g id="us11175917b1-fig-5-match"><rect x="36" y="85" width="230" height="76" rx="6" fill="#f5f5f5"/><rect x="36" y="85" width="230" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="111" class="node-name" text-anchor="middle">有效位与依赖 store 标识</text><text x="151" y="133" class="node-detail" text-anchor="middle">与保留站提供的 SNUM 匹配</text></g>
+<g id="us11175917b1-fig-5-robt"><rect x="364" y="85" width="224" height="76" rx="6" fill="#f5f5f5"/><rect x="364" y="85" width="224" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="476" y="111" class="node-name" text-anchor="middle">重排序缓冲区标签</text><text x="476" y="133" class="node-detail" text-anchor="middle">标识 load，可用于清除</text></g>
+<g id="us11175917b1-fig-5-bank"><rect x="713" y="85" width="213" height="76" rx="6" fill="#f5f5f5"/><rect x="713" y="85" width="213" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819.5" y="111" class="node-name" text-anchor="middle">LEQ 存储体号</text><text x="819.5" y="133" class="node-detail" text-anchor="middle">确定候选 load 的流水线</text></g>
+<g id="us11175917b1-fig-5-pick"><rect x="363" y="308" width="228" height="76" rx="6" fill="#f5f5f5"/><rect x="363" y="308" width="228" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477" y="334" class="node-name" text-anchor="middle">重发选择与仲裁</text><text x="477" y="356" class="node-detail" text-anchor="middle">成功取得指定流水线</text></g>
+<g id="us11175917b1-fig-5-local"><rect x="36" y="488" width="230" height="74" rx="6" fill="#f5f5f5"/><rect x="36" y="488" width="230" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="514" class="node-name" text-anchor="middle">RLB 自带的执行字段</text><text x="151" y="536" class="node-detail" text-anchor="middle">目的寄存器与缓存索引</text></g>
+<g id="us11175917b1-fig-5-fill"><rect x="363" y="488" width="228" height="74" rx="6" fill="#f5f5f5"/><rect x="363" y="488" width="228" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="477" y="514" class="node-name" text-anchor="middle">指定 load 流水线</text><text x="477" y="536" class="node-detail" text-anchor="middle">在所需流水级合并字段</text></g>
+<g id="us11175917b1-fig-5-leq"><rect x="713" y="488" width="213" height="74" rx="6" fill="#f5f5f5"/><rect x="713" y="488" width="213" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819.5" y="514" class="node-name" text-anchor="middle">对应 LEQ 存储体</text><text x="819.5" y="536" class="node-detail" text-anchor="middle">提供其余执行字段</text></g>
+<text x="36" y="606" class="legend" text-anchor="start">按原图 2、6、8 的一项实现。原文允许改变 RLB 与 LEQ 各自保存的字段。</text>
+</svg></div>
+<figcaption>依据 US11175917B1 原图 2、6、8、说明书 0031、0033、0034、0035、0036、0047、0049、0050、0051、0052、0053、0064、0065、0068、0069、0070、权利要求 3、4、5、6、10、11、12、13、15、16、19、20</figcaption>
+</figure>
+<ol aria-label="图中机制"><li><a href="#us11175917b1-fig-5-match">有效位与依赖 store 标识</a> RLB 有效表项保存的依赖 SNUM 与保留站送来的 store 数据操作标识比较。两者相同才得到相应 load 候选。</li><li><a href="#us11175917b1-fig-5-robt">重排序缓冲区标签</a> 重排序缓冲区标签可标识要从 RLB 清除的操作，也可以在重发时一起送出。</li><li><a href="#us11175917b1-fig-5-bank">LEQ 存储体号</a> 示例中 LEQ 存储体与 load 流水线一一对应。因此 RLB 用已存的存储体号指定该候选的入口。</li><li><a href="#us11175917b1-fig-5-fill">指定 load 流水线</a> 目的寄存器与数据缓存索引可来自 RLB，其余字段可在真正需要的流水级由 LEQ 补齐。</li><li><a href="#us11175917b1-fig-5-notify">已重发状态</a> 实际重发后通知 LEQ 标记该 load，以免后续 store 数据到达时再走另一条重发路径。</li></ol>
+
+</main></body>
+</html>

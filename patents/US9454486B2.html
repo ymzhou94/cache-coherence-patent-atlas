@@ -1,123 +1,207 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US9454486B2 预取与需求读共享待处理请求槽 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>需求读如何接入同一缓存行的在途预取 · US9454486B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US9454486B2</code> · <a href="https://patents.google.com/patent/US9454486B2/en">专利全文</a></p>
+<h1>需求读如何接入同一缓存行的在途预取</h1><p class="reading-question">需求读到达时，同一缓存行的预取已经发出但尚未返回。缓存如何复用已有读取，并把返回数据交给 CPU？</p>
+<p class="reading-answer">缓存控制器用地址待处理请求缓冲区（地址 PRB）查同一缓存行。命中预取条目时，需求读可改写该条目的请求类型与来源。内存数据到达数据 PRB 后，控制器用同一返回行完成响应，也可通过重放将其写入缓存。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2016-09-27</dd></div><div><dt>申请号</dt><dd>US13/940,525</dd></div><div><dt>最早优先权</dt><dd>2013-07-12</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brian P. Lilly、Perumal R Subramoniam、Prashant Jain</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#buffers">地址 PRB 跟踪哪笔请求，数据 PRB 暂存哪一行</a></li><li><a href="#merge">同一条目怎样从预取转为等待 CPU 的需求读</a></li><li><a href="#match">哪些地址能够用一个条目，哪些需要各自排队</a></li><li><a href="#timing">合并后仍等数据，节省来自提前发出的读取</a></li><li><a href="#reply">数据返回后，CPU 交付和写入缓存经过哪些动作</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="buffers"><h2>地址 PRB 跟踪哪笔请求，数据 PRB 暂存哪一行</h2><p>原图 2 的缓存单元连接处理器核及总线接口。图 1 将原图 5 的入口分开：缓存仲裁器选择核发出的需求读、预取引擎的请求、来自总线一致性代理的 snoop，以及地址 PRB 发来的重放请求。缓存级别由具体实现决定，原图没有固定写作 LLC 或 SLC。</p><p>地址待处理请求缓冲区（地址 PRB）存行地址和请求状态，例如来源、预取标志、依赖关系。数据待处理请求缓冲区（数据 PRB）暂存总线返回的缓存行。图示实施例可让地址和数据条目一一对应，缓冲数据等待写入缓存。地址命中只说明交易在跟踪，数据 PRB 就绪才说明本次数据已回来。</p><p>授权第 1、7、13 项都包含双缓冲和对已有预取地址条目的复用。原图 5 另画来自总线的 snoop 到仲裁器。此处的复用条件是需求读命中在途预取的行，权项没有给 snoop 加入需求读的规则。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　需求、预取、snoop 和重放怎样共享缓存入口</h3>
+    <p id="fig-1-basis">地址 PRB 为在途行保存请求状态，数据 PRB 另存返回数据；重放再次进入缓存仲裁。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="需求、预取、snoop 和重放怎样共享缓存入口" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 748" role="img" aria-labelledby="us9454486b2-fig-1-svg-title us9454486b2-fig-1-svg-desc">
+<title id="us9454486b2-fig-1-svg-title">需求、预取、snoop 和重放怎样共享缓存入口</title>
+<desc id="us9454486b2-fig-1-svg-desc">地址 PRB 为在途行保存请求状态，数据 PRB 另存返回数据；重放再次进入缓存仲裁。</desc>
+<defs><marker id="us9454486b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9454486b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9454486b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9454486b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9454486b2-fig-1-demand" d="M 259 135 L 286 135 Q 294 135 294 143 L 294 247 Q 294 255 302 255 L 356 255" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-prefetch" d="M 259 277 L 356 277" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-psnoop" d="M 259 421 L 294 421 Q 302 421 302 413 L 302 309 Q 302 301 310 301 L 356 301" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-choose" d="M 596 277 L 686 277" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-match" d="M 795 314 L 795 439" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-replay" d="M 921 468 L 932 468 Q 940 468 940 460 L 940 214 Q 940 206 932 206 L 498 206 Q 490 206 490 214 L 490 241" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9454486b2-fig-1-arrow-return)"/>
+<path id="us9454486b2-fig-1-load" d="M 259 613 L 476 613 Q 484 613 484 605 L 484 515" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-data)"/>
+<path id="us9454486b2-fig-1-filled" d="M 596 502 L 654 502 Q 662 502 662 494 L 662 334 Q 662 326 670 326 L 741 326 Q 747 326 747 320 L 747 314" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-1-arrow-main)"/>
+<rect x="257" y="104" width="74" height="18" fill="#f5f5f5"/><text x="294" y="118" class="arrow-label" text-anchor="middle">需求读</text>
+<rect x="265.5" y="282" width="83" height="18" fill="#f5f5f5"/><text x="307" y="296" class="arrow-label" text-anchor="middle">预取请求</text>
+<rect x="270.5" y="384" width="63" height="18" fill="#f5f5f5"/><text x="302" y="398" class="arrow-label" text-anchor="middle">snoop</text>
+<rect x="593" y="246" width="92" height="18" fill="#f5f5f5"/><text x="639" y="260" class="arrow-label" text-anchor="middle">探测或写入</text>
+<rect x="805" y="354" width="106" height="18" fill="#f5f5f5"/><text x="858" y="368" class="arrow-label" text-anchor="middle">缺失时登记</text>
+<rect x="699.5" y="174" width="111" height="18" fill="#f5f5f5"/><text x="755" y="188" class="arrow-label" text-anchor="middle">命中或重放</text>
+<rect x="307.5" y="583" width="127" height="18" fill="#f5f5f5"/><text x="371" y="597" class="arrow-label" text-anchor="middle">保存返回数据</text>
+<rect x="617" y="393" width="86" height="18" fill="#f5f5f5"/><text x="660" y="407" class="arrow-label" text-anchor="middle">回填数据</text>
+<g id="us9454486b2-fig-1-cpu"><rect x="35" y="98" width="224" height="73" rx="6" fill="#f5f5f5"/><rect x="35" y="98" width="224" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="124" class="node-name" text-anchor="middle">CPU 需求读</text><text x="147" y="146" class="node-detail" text-anchor="middle">由处理器核发起</text></g>
+<g id="us9454486b2-fig-1-pf"><rect x="35" y="241" width="224" height="73" rx="6" fill="#f5f5f5"/><rect x="35" y="241" width="224" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="267" class="node-name" text-anchor="middle">预取引擎</text><text x="147" y="289" class="node-detail" text-anchor="middle">预测后续需要的缓存行</text></g>
+<g id="us9454486b2-fig-1-snoop"><rect x="35" y="383" width="224" height="73" rx="6" fill="#f5f5f5"/><rect x="35" y="383" width="224" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="409" class="node-name" text-anchor="middle">总线一致性代理</text><text x="147" y="431" class="node-detail" text-anchor="middle">发起 snoop</text></g>
+<g id="us9454486b2-fig-1-arb"><rect x="356" y="241" width="240" height="73" rx="6" fill="#f5f5f5"/><rect x="356" y="241" width="240" height="73" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476" y="267" class="node-name" text-anchor="middle">缓存仲裁器</text><text x="476" y="289" class="node-detail" text-anchor="middle">请求来源与重放选路</text></g>
+<g id="us9454486b2-fig-1-array"><rect x="686" y="241" width="235" height="73" rx="6" fill="#f5f5f5"/><rect x="686" y="241" width="235" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="267" class="node-name" text-anchor="middle">缓存阵列</text><text x="803.5" y="289" class="node-detail" text-anchor="middle">探测命中或回填</text></g>
+<g id="us9454486b2-fig-1-addr"><rect x="686" y="439" width="235" height="76" rx="6" fill="#f5f5f5"/><rect x="686" y="439" width="235" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803.5" y="465" class="node-name" text-anchor="middle">地址 PRB</text><text x="803.5" y="487" class="node-detail" text-anchor="middle">行地址／来源／依赖</text></g>
+<g id="us9454486b2-fig-1-data"><rect x="356" y="439" width="240" height="76" rx="6" fill="#f5f5f5"/><rect x="356" y="439" width="240" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="476" y="465" class="node-name" text-anchor="middle">数据 PRB</text><text x="476" y="487" class="node-detail" text-anchor="middle">暂存同条目的返回行</text></g>
+<g id="us9454486b2-fig-1-bus"><rect x="35" y="578" width="224" height="72" rx="6" fill="#f5f5f5"/><rect x="35" y="578" width="224" height="72" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="604" class="node-name" text-anchor="middle">总线读响应</text><text x="147" y="626" class="node-detail" text-anchor="middle">返回完整缓存行</text></g>
+<text x="39" y="696" class="legend" text-anchor="start">缓存探测结果、地址缓冲命中、返回行可用是三个可独立观察的状态。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9454486b2-fig-1-cpu">CPU 需求读</a> 处理器核发起需求读。缓存响应与 CPU 指令退休属于不同观察点。</li><li><a href="#us9454486b2-fig-1-pf">预取引擎</a> 预取引擎生成可能被后续需求访问的缓存行请求。</li><li><a href="#us9454486b2-fig-1-snoop">总线一致性代理</a> 一致性代理从总线侧送入 snoop，在同一缓存仲裁点竞争资源。图中的预取合并限于需求读。</li><li><a href="#us9454486b2-fig-1-arb">缓存仲裁器</a> 选择需求读、预取、snoop 或 PRB 命中／重放。原文给加权轮转作为可选方案。</li><li><a href="#us9454486b2-fig-1-addr">地址 PRB</a> 地址 PRB 查已跟踪的缓存行。条目记录行地址、预取位、来源和依赖。</li><li><a href="#us9454486b2-fig-1-data">数据 PRB</a> 来自总线的返回行进入数据 PRB，可等待重放写缓存。</li><li><a href="#us9454486b2-fig-1-array">缓存阵列</a> 缓存探测命中可以直接使用；已有返回可以由重放路径写入缓存。</li></ul>
+  <p class="figure-evidence">原图 2、4、5、6、7；说明书归档段 0022、0030、0031、0032、0033、0034、0050、0051、0052、0053、0054、0056、0057、0058、0059、0060、0061、0063、0064、0065、0066、0067、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US9454486B2/fig-1.html">打开独立图稿</a></p>
+  
+</figure></section><section id="merge"><h2>同一条目怎样从预取转为等待 CPU 的需求读</h2><p>图 2 从预取行 X 的缓存探测缺失开始。控制器分配地址 PRB 条目，标注来源为预取引擎，并发起下层读取。请求尚在途时，CPU 向同一缓存行 X 发需求读，地址 PRB 返回匹配。此时保留原行地址，条目状态改为需求，来源改为请求核。原图 7 的命中分支覆盖这一改写。</p><p>数据最后抵达并送给 CPU。数据可以先入数据 PRB，再由重放把行写入缓存。因为等待的是已经发出的预取事务，动作发生在未完成窗口内。图中同一行的两次地址入口得到一个下层结果。不同缓存行的读取依自己的请求等待。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　同一缓存行的需求读怎样接上已在途的预取</h3>
+    <p id="fig-2-basis">需求到达时对地址 PRB 查行，命中就改写来源。内存结果同样一笔，返回给登记的 CPU。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一缓存行的需求读怎样接上已在途的预取" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us9454486b2-fig-2-svg-title us9454486b2-fig-2-svg-desc">
+<title id="us9454486b2-fig-2-svg-title">同一缓存行的需求读怎样接上已在途的预取</title>
+<desc id="us9454486b2-fig-2-svg-desc">需求到达时对地址 PRB 查行，命中就改写来源。内存结果同样一笔，返回给登记的 CPU。</desc>
+<defs><marker id="us9454486b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9454486b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9454486b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9454486b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us9454486b2-fig-2-probe"><path d="M 298 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-2-arrow-data)"/><rect x="324" y="96" width="130" height="18" fill="#f5f5f5"/><text x="389" y="110" class="arrow-label" text-anchor="middle">预取 X 缺失，登记</text></g>
+<g id="us9454486b2-fig-2-read"><path d="M 298 168 L 844 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-2-arrow-main)"/><rect x="532" y="144" width="78" height="18" fill="#f5f5f5"/><text x="571" y="158" class="arrow-label" text-anchor="middle">发出读取 X</text></g>
+<g id="us9454486b2-fig-2-demand"><path d="M 116 216 L 298 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-2-arrow-data)"/><rect x="168" y="192" width="78" height="18" fill="#f5f5f5"/><text x="207" y="206" class="arrow-label" text-anchor="middle">发需求读 X</text></g>
+<g id="us9454486b2-fig-2-replace"><path d="M 298 264 L 480 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-2-arrow-main)"/><rect x="324" y="240" width="130" height="18" fill="#f5f5f5"/><text x="389" y="254" class="arrow-label" text-anchor="middle">命中同一行，改写来源</text></g>
+<g id="us9454486b2-fig-2-fill"><path d="M 844 312 L 662 312" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9454486b2-fig-2-arrow-return)"/><rect x="707.5" y="288" width="91" height="18" fill="#f5f5f5"/><text x="753" y="302" class="arrow-label" text-anchor="middle">返回同一行 X</text></g>
+<g id="us9454486b2-fig-2-select"><path d="M 662 360 L 298 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9454486b2-fig-2-arrow-return)"/><rect x="434.5" y="336" width="91" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">该条目数据可用</text></g>
+<g id="us9454486b2-fig-2-send"><path d="M 298 408 L 116 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-2-arrow-main)"/><rect x="168" y="384" width="78" height="18" fill="#f5f5f5"/><text x="207" y="398" class="arrow-label" text-anchor="middle">返回请求数据</text></g>
+<g id="us9454486b2-fig-2-replay"><path d="M 480 456 L 298 456" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us9454486b2-fig-2-arrow-return)"/><rect x="350" y="432" width="78" height="18" fill="#f5f5f5"/><text x="389" y="446" class="arrow-label" text-anchor="middle">可重放以回填</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">CPU</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">缓存控制</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">地址 PRB</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">数据 PRB</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">下层存储</text>
+<text x="28" y="532" class="legend" text-anchor="start">时间向下。展示需求在原预取返回前出现。CPU 得数与缓存阵列写入是独立事件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9454486b2-fig-2-probe">预取 X 缺失，登记</a> 预取 X 未命中缓存后，地址 PRB 留下行地址与预取状态，下层读已经发出。</li><li><a href="#us9454486b2-fig-2-demand">发需求读 X</a> CPU 需求读 X 到达。发出的地址可以和预取地址处于同一行的不同位置。</li><li><a href="#us9454486b2-fig-2-replace">命中同一行，改写来源</a> 命中相同预取行，覆盖请求类型与来源标签，状态可清除预取位并标记请求核。地址仍是 X。</li><li><a href="#us9454486b2-fig-2-fill">返回同一行 X</a> 原事务返回 X 数据，缓存控制器可将其送入数据 PRB。</li><li><a href="#us9454486b2-fig-2-send">返回请求数据</a> 根据改写的状态把返回行的所需数据交给 CPU。</li><li><a href="#us9454486b2-fig-2-replay">可重放以回填</a> 原图 6 支持重放将返回行写入缓存，原图 7 称需求分支也可进行重放。</li></ul>
+  <p class="figure-evidence">原图 5、6、7；说明书归档段 0022、0056、0058、0059、0060、0061、0063、0064、0065、0066、0067、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US9454486B2/fig-2.html">打开独立图稿</a></p>
+  
+</figure></section><section id="match"><h2>哪些地址能够用一个条目，哪些需要各自排队</h2><p>图 3 把匹配地址拆成行地址与行内偏移。假设模型中一行 64 B，0x1000 与 0x1038 同属 0x1000 行，0x1040 已进入下一行。按缓存行比较决定可否查到预取条目，便于解释为何行内偏移不同仍能共用完整的数据行。</p><p>原图 7 的需求读查找有效的预取条目。命中原条目执行改写，未命中另存需求请求，请求类型和来源各自记录。如果有另一个需求读也等同一行，说明书允许用依赖位指向已改写条目。第 3–6 项覆盖地址字段与可选内容可寻址存储（CAM），第 11、12 项描述改写来源标签。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　同一行地址匹配与未匹配的两条处理路径</h3>
+    <p id="fig-3-basis">缓存行地址相同才复用预取条目。行内偏移用于选字节，不能单独决定是否分配新项。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一行地址匹配与未匹配的两条处理路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 625" role="img" aria-labelledby="us9454486b2-fig-3-svg-title us9454486b2-fig-3-svg-desc">
+<title id="us9454486b2-fig-3-svg-title">同一行地址匹配与未匹配的两条处理路径</title>
+<desc id="us9454486b2-fig-3-svg-desc">缓存行地址相同才复用预取条目。行内偏移用于选字节，不能单独决定是否分配新项。</desc>
+<defs><marker id="us9454486b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9454486b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9454486b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9454486b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9454486b2-fig-3-key" d="M 280 159 L 364 159" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-3-arrow-data)"/>
+<path id="us9454486b2-fig-3-entry-status" d="M 475 354 L 475 200" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-3-arrow-data)"/>
+<path id="us9454486b2-fig-3-yes" d="M 595 146 L 684 146" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-3-arrow-main)"/>
+<path id="us9454486b2-fig-3-no" d="M 595 172 L 629 172 Q 637 172 637 180 L 637 375 Q 637 383 645 383 L 684 383" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-3-arrow-data)"/>
+<rect x="274.5" y="128" width="87" height="18" fill="#f5f5f5"/><text x="318" y="142" class="arrow-label" text-anchor="middle">需求行地址</text>
+<rect x="476.5" y="264" width="147" height="18" fill="#f5f5f5"/><text x="550" y="278" class="arrow-label" text-anchor="middle">已有行地址和状态</text>
+<rect x="615" y="116" width="48" height="18" fill="#f5f5f5"/><text x="639" y="130" class="arrow-label" text-anchor="middle">匹配</text>
+<rect x="607.5" y="300" width="65" height="18" fill="#f5f5f5"/><text x="640" y="314" class="arrow-label" text-anchor="middle">未匹配</text>
+<g id="us9454486b2-fig-3-offset"><rect x="44" y="123" width="236" height="77" rx="6" fill="#f5f5f5"/><rect x="44" y="123" width="236" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="162" y="149" class="node-name" text-anchor="middle">需求字节地址</text><text x="162" y="171" class="node-detail" text-anchor="middle">取行地址，保留行内偏移</text></g>
+<g id="us9454486b2-fig-3-select"><rect x="364" y="123" width="231" height="77" rx="6" fill="#f5f5f5"/><rect x="364" y="123" width="231" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479.5" y="149" class="node-name" text-anchor="middle">地址 PRB 匹配</text><text x="479.5" y="171" class="node-detail" text-anchor="middle">行地址与预取状态</text></g>
+<g id="us9454486b2-fig-3-row"><rect x="364" y="354" width="231" height="77" rx="6" fill="#f5f5f5"/><rect x="364" y="354" width="231" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479.5" y="380" class="node-name" text-anchor="middle">在途预取条目</text><text x="479.5" y="402" class="node-detail" text-anchor="middle">示例行地址 0x1000</text></g>
+<g id="us9454486b2-fig-3-merge"><rect x="684" y="110" width="238" height="77" rx="6" fill="#f5f5f5"/><rect x="684" y="110" width="238" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803" y="136" class="node-name" text-anchor="middle">改写相同条目</text><text x="803" y="158" class="node-detail" text-anchor="middle">需求来源／等待原响应</text></g>
+<g id="us9454486b2-fig-3-new"><rect x="684" y="345" width="238" height="77" rx="6" fill="#f5f5f5"/><rect x="684" y="345" width="238" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803" y="371" class="node-name" text-anchor="middle">保存新需求请求</text><text x="803" y="393" class="node-detail" text-anchor="middle">按新请求等待响应</text></g>
+<text x="41" y="519" class="legend" text-anchor="start">假设每行 64 B。0x1038 落在 0x1000 行，0x1040 属于下一行。</text>
+<text x="41" y="546" class="legend" text-anchor="start">若同一行后来还有需求读，可以登记对已改写条目的依赖。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9454486b2-fig-3-offset">需求字节地址</a> 示例设 64 B 行，需求地址 0x1038 的行地址仍是 0x1000。0x1040 是下一行。</li><li><a href="#us9454486b2-fig-3-row">在途预取条目</a> 查找地址 PRB 的在途预取行地址，CAM 为可选实现。</li><li><a href="#us9454486b2-fig-3-select">地址 PRB 匹配</a> 既要匹配行地址，也要看到有效的预取状态。</li><li><a href="#us9454486b2-fig-3-merge">改写相同条目</a> 符合条件时沿用原 PRB 槽，改写来源与状态并等原事务。</li><li><a href="#us9454486b2-fig-3-new">保存新需求请求</a> 没有符合条件的预取项时，将需求读登记为自己的请求。</li></ul>
+  <p class="figure-evidence">原图 5、7；说明书归档段 0022、0039、0053、0058、0060、0061、0065、0066、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> <a href="../diagrams/US9454486B2/fig-3.html">打开独立图稿</a></p>
+  
+</figure></section><section id="timing"><h2>合并后仍等数据，节省来自提前发出的读取</h2><p>图 4 设预取第 0 拍发出并固定 8 拍返回，需求第 3 拍到达，收到结果后加 1 拍交付。合并时 CPU 等原事务，在第 9 拍得到数据，从需求开始算 6 拍。作为对照，若对同一需求另发一次读且下层没有再次合并，需求第 11 拍返回、第 12 拍交付，等待 9 拍。</p><p>在这组假设下少发一笔下层读，需求等待从 9 拍降到 6 拍。预取若已回填且行仍驻留，需求可直接缓存命中。需求早于预取建立在途条目，或者请求的是不同缓存行，也无法按图复用。下层重复合并、排队、仲裁、回填端口和数据交接会改变模型结果。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　复用与另发请求时，CPU 分别等待多久</h3>
+    <p id="fig-4-basis">同一服务时间下，合并保留预取的时间领先。需求仍要从第 3 拍等到第 9 拍。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="复用与另发请求时，CPU 分别等待多久" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us9454486b2-fig-4-svg-title us9454486b2-fig-4-svg-desc">
+<title id="us9454486b2-fig-4-svg-title">复用与另发请求时，CPU 分别等待多久</title>
+<desc id="us9454486b2-fig-4-svg-desc">同一服务时间下，合并保留预取的时间领先。需求仍要从第 3 拍等到第 9 拍。</desc>
+<defs><marker id="us9454486b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9454486b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9454486b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9454486b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us9454486b2-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="246" y1="76" x2="246" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="246" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="300" y1="76" x2="300" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="354" y1="76" x2="354" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="408" y1="76" x2="408" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="462" y1="76" x2="462" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="462" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="516" y1="76" x2="516" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="570" y1="76" x2="570" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="570" y="64" class="arrow-label" text-anchor="middle">7</text>
+<line x1="624" y1="76" x2="624" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="678" y1="76" x2="678" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">9</text>
+<line x1="732" y1="76" x2="732" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">10</text>
+<line x1="786" y1="76" x2="786" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="786" y="64" class="arrow-label" text-anchor="middle">11</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">12</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us9454486b2-fig-4-pf"><text x="24" y="136" class="node-name" text-anchor="start">在途预取 X</text>
+<rect x="192" y="112" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="408" y="136" class="arrow-label" text-anchor="middle">原预取读取在途</text>
+<circle cx="624" cy="131" r="5" fill="#4f5d75"/>
+<text x="624" y="171" class="arrow-label" text-anchor="end">返回 X</text></g>
+<g id="us9454486b2-fig-4-reuse"><text x="24" y="228" class="node-name" text-anchor="start">需求读 · 合并</text>
+<rect x="354" y="204" width="270" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="489" y="228" class="arrow-label" text-anchor="middle">等待原事务</text>
+<rect x="624" y="204" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="651" y="228" class="arrow-label" text-anchor="middle">交付</text>
+<circle cx="678" cy="223" r="5" fill="#bf4520"/>
+<text x="678" y="263" class="arrow-label" text-anchor="end">CPU 得数</text></g>
+<g id="us9454486b2-fig-4-separate"><text x="24" y="320" class="node-name" text-anchor="start">需求读 · 另发</text>
+<rect x="354" y="296" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="320" class="arrow-label" text-anchor="middle">额外读取在途</text>
+<rect x="786" y="296" width="54" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="813" y="320" class="arrow-label" text-anchor="middle">交付</text>
+<circle cx="840" cy="315" r="5" fill="#4f5d75"/>
+<text x="840" y="355" class="arrow-label" text-anchor="end">CPU 得数</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">模型设读取耗时 8 拍，返回后交付 1 拍。另发对照假设下层也不合并，省略端口和队列竞争。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9454486b2-fig-4-pf">在途预取 X</a> 预取第 0 拍发出、第 8 拍返回。若需求到时已经填完且驻留，应按缓存命中路径测量。</li><li><a href="#us9454486b2-fig-4-reuse">需求读 · 合并</a> 需求第 3 拍改写条目，内存等到第 8 拍，模型另计 1 拍数据交接。观察窗口是 3 到 9。</li><li><a href="#us9454486b2-fig-4-separate">需求读 · 另发</a> 对照中没有本层或下层合并，需求第 3 拍发出自己的请求，第 11 拍数据返回，第 12 拍 CPU 得数。</li></ul>
+  <p class="figure-evidence">原图 5、6、7；说明书归档段 0022、0053、0058、0060、0061、0065、0066、0067、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US9454486B2/fig-4.html">打开独立图稿</a></p>
+  
+</figure></section><section id="reply"><h2>数据返回后，CPU 交付和写入缓存经过哪些动作</h2><p>图 5 对照原图 6 和 7。预取最初探测已命中时，不需因这次预取另读下层。预取缺失且还没有需求读时，数据响应填入数据 PRB，重放原条目写缓存。若条目已由需求读改写，回包处理按请求来源向 CPU 返回数据，说明书允许同时按重放路径写缓存。</p><p>这两个出口从相同的返回行开始。原图 6 写明用数据 PRB 的数据进行重放；原图 7 写明按已登记的处理器需求返回。第 15 项另外限定将返回数据存入缓存。观察 CPU 唤醒或完成时延时应以 CPU 数据交付为端点，缓存数据阵列写入可另计。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　预取数据到达数据 PRB 后，怎样选择返回核和缓存回填</h3>
+    <p id="fig-5-basis">数据 PRB 先保存行。根据地址 PRB 的请求状态，给 CPU 交付，并可安排重放写入缓存。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预取数据到达数据 PRB 后，怎样选择返回核和缓存回填" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 686" role="img" aria-labelledby="us9454486b2-fig-5-svg-title us9454486b2-fig-5-svg-desc">
+<title id="us9454486b2-fig-5-svg-title">预取数据到达数据 PRB 后，怎样选择返回核和缓存回填</title>
+<desc id="us9454486b2-fig-5-svg-desc">数据 PRB 先保存行。根据地址 PRB 的请求状态，给 CPU 交付，并可安排重放写入缓存。</desc>
+<defs><marker id="us9454486b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us9454486b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us9454486b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us9454486b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us9454486b2-fig-5-dat" d="M 275 163 L 462 163 Q 470 163 470 171 L 470 265" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-5-arrow-data)"/>
+<path id="us9454486b2-fig-5-key" d="M 275 403 L 463 403 Q 471 403 471 395 L 471 343" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-5-arrow-data)"/>
+<path id="us9454486b2-fig-5-cpuout" d="M 598 287 L 631 287 Q 639 287 639 279 L 639 160 Q 639 152 647 152 L 690 152" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us9454486b2-fig-5-arrow-main)"/>
+<path id="us9454486b2-fig-5-do" d="M 598 320 L 630 320 Q 638 320 638 328 L 638 412 Q 638 420 646 420 L 690 420" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-5-arrow-data)"/>
+<path id="us9454486b2-fig-5-fill" d="M 810 459 L 810 534" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us9454486b2-fig-5-arrow-data)"/>
+<rect x="346.5" y="133" width="71" height="18" fill="#f5f5f5"/><text x="382" y="147" class="arrow-label" text-anchor="middle">返回行</text>
+<rect x="312.5" y="373" width="107" height="18" fill="#f5f5f5"/><text x="366" y="387" class="arrow-label" text-anchor="middle">地址与来源</text>
+<rect x="564" y="208" width="128" height="18" fill="#f5f5f5"/><text x="628" y="222" class="arrow-label" text-anchor="middle">存在需求时返回</text>
+<rect x="586" y="356" width="102" height="18" fill="#f5f5f5"/><text x="637" y="370" class="arrow-label" text-anchor="middle">回填时重放</text>
+<rect x="691.5" y="481" width="113" height="18" fill="#f5f5f5"/><text x="748" y="495" class="arrow-label" text-anchor="middle">写入回填行</text>
+<g id="us9454486b2-fig-5-ret"><rect x="40" y="126" width="235" height="76" rx="6" fill="#f5f5f5"/><rect x="40" y="126" width="235" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="157.5" y="152" class="node-name" text-anchor="middle">数据 PRB</text><text x="157.5" y="174" class="node-detail" text-anchor="middle">原事务返回行就绪</text></g>
+<g id="us9454486b2-fig-5-row"><rect x="40" y="367" width="235" height="76" rx="6" fill="#f5f5f5"/><rect x="40" y="367" width="235" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="157.5" y="393" class="node-name" text-anchor="middle">地址 PRB</text><text x="157.5" y="415" class="node-detail" text-anchor="middle">预取位或 CPU 来源标签</text></g>
+<g id="us9454486b2-fig-5-ready"><rect x="361" y="265" width="237" height="78" rx="6" fill="#f5f5f5"/><rect x="361" y="265" width="237" height="78" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479.5" y="291" class="node-name" text-anchor="middle">缓存返回控制</text><text x="479.5" y="313" class="node-detail" text-anchor="middle">配对同一地址与数据条目</text></g>
+<g id="us9454486b2-fig-5-cpu"><rect x="690" y="114" width="232" height="76" rx="6" fill="#f5f5f5"/><rect x="690" y="114" width="232" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="806" y="140" class="node-name" text-anchor="middle">CPU 响应端</text><text x="806" y="162" class="node-detail" text-anchor="middle">返回需求请求的数据</text></g>
+<g id="us9454486b2-fig-5-replay"><rect x="690" y="383" width="232" height="76" rx="6" fill="#f5f5f5"/><rect x="690" y="383" width="232" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806" y="409" class="node-name" text-anchor="middle">缓存仲裁器的重放入口</text><text x="806" y="431" class="node-detail" text-anchor="middle">必要时安排写入缓存</text></g>
+<g id="us9454486b2-fig-5-cache"><rect x="690" y="534" width="232" height="76" rx="6" fill="#f5f5f5"/><rect x="690" y="534" width="232" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806" y="560" class="node-name" text-anchor="middle">缓存阵列</text><text x="806" y="582" class="node-detail" text-anchor="middle">接收回填行</text></g>
+<text x="38" y="645" class="legend" text-anchor="start">重放使用已返回的数据 PRB 缓存行。在缓存控制内部重放该请求，不需再次向下层读取。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us9454486b2-fig-5-ret">数据 PRB</a> 下层原事务返回，数据进入与地址条目对应的数据 PRB。</li><li><a href="#us9454486b2-fig-5-row">地址 PRB</a> 读对应地址项上的预取位、请求来源和依赖。</li><li><a href="#us9454486b2-fig-5-ready">缓存返回控制</a> 控制决定是否给已登记的需求返回数据，是否需要重放写入缓存。</li><li><a href="#us9454486b2-fig-5-replay">缓存仲裁器的重放入口</a> 仅预取时可以按原图 6 重放，把暂存的返回行写入缓存。需求条件下，原图 7 也允许重放。</li><li><a href="#us9454486b2-fig-5-cpu">CPU 响应端</a> 有需求来源时向请求核返数据；这一步有自己的数据交付时点。</li><li><a href="#us9454486b2-fig-5-cache">缓存阵列</a> 缓存阵列接收重放带来的地址和返回数据。</li></ul>
+  <p class="figure-evidence">原图 5、6、7；说明书归档段 0053、0056、0057、0058、0060、0061、0063、0064、0065、0066、0067、0069、0070、0071、0072、0073；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US9454486B2/fig-5.html">打开独立图稿</a></p>
+  
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US9454486B2</code><span>美国授权专利</span><time datetime="2016-09-27">2016-09-27</time></p>
-  <h1>预取与需求读共享待处理请求槽</h1>
-  <p class="english-title" lang="en">Cache pre-fetch merge in pending request buffer</p>
-  <p class="document-question">需求读和在途预取指向同一缓存行时，怎样共用下层读取？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">对同一缓存行的需求读关联到在途预取的地址槽，返回数据在独立缓冲中暂存并用于重放。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>需求读到达时，原预取尚未完成且对应地址槽有效。两次指向同一缓存行，即使字内偏移不同也可匹配。</dd></div><div><dt>验证方法</dt><dd>固定预取发出拍和下层服务时间，比较合并与为需求读另建读取。按缓存行计下层读次数，并量需求到达到正确返回之间的延迟。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US9454486B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">某一行的预取请求已经发出、数据还没回来时，新的需求读仍可能指向同一行。如果能先查到这笔在途请求，就可以共用一次下层读取。</p>
-    <p>预取经仲裁和缓存查找后，在缺失时用地址缓冲登记并置位。后到的同一缓存行需求复用该条目，部分实施例还清除预取标记并改写来源。下层返回行先放入数据缓冲，可从那里重放预取并回填，同时让需求路径取得数据。</p>
-    <ol class="walkthrough"><li><h3>预取缺失后登记地址</h3><p>仲裁器选出预取请求并查缓存。命中即可结束，缺失时分配地址 PRB 表项，并设置至少一个预取状态位。</p></li><li><h3>用单独的缓冲接收返回行</h3><p>预取请求发到下层后，地址槽保存等待状态。下层回来的缓存行可以放入数据 PRB。</p></li><li><h3>用同一地址条目登记需求读</h3><p>缓存行地址匹配原预取项时，原图 7 可用需求读覆盖该项，清除预取标记并改写来源。再到同一行的需求可标为依赖这条已覆盖的记录。</p></li><li><h3>分开下层回填、重放与需求交付</h3><p>原图 6 用数据 PRB 中的返回数据重放原预取，并写入缓存阵列。原图 7 的需求读得到下层数据后直接响应处理器，部分实现还会重放并填入缓存。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>说明书图 5 的地址缓冲条目还可带请求来源、依赖和预取标记。需求读接入同一行的在途预取时，关联的是已有地址状态，数据缓冲承担之后的重放。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>地址 PRB</dt><dd>按请求地址和状态管理在途工作，可记录来源、依赖及预取位。</dd></div><div><dt>数据 PRB</dt><dd>待处理返回数据缓冲，暂存下层送回的缓存行，供重放时读取。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">需求读接到尚未完成的预取 X</a></li><li><a href="#fig-1">地址 PRB 记录在途请求，数据 PRB 接收返回行</a></li><li><a href="#fig-4">请求合并后还要等原有读取返回</a></li><li><a href="#fig-3">地址 PRB 按缓存行决定是否复用</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">需求读接到尚未完成的预取 X</h3></div>
-    <a class="paper-open" href="../mechanisms/US9454486B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="需求读接到尚未完成的预取 X">
-    <img class="paper-image native-image" src="../mechanisms/US9454486B2/fig-2/diagram.svg" width="920" height="488"
-         style="--paper-width:920px" alt="需求读接到尚未完成的预取 X。先登记预取，再把后到的同一行需求写进原地址槽。数据返回后，重放可以回填缓存，需求也可取得数据。">
-  </div>
-  <figcaption>
-    <span>先登记预取，再把后到的同一行需求写进原地址槽。数据返回后，重放可以回填缓存，需求也可取得数据。</span>
-    <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">地址 PRB 记录在途请求，数据 PRB 接收返回行</h3></div>
-    <a class="paper-open" href="../mechanisms/US9454486B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="地址 PRB 记录在途请求，数据 PRB 接收返回行">
-    <img class="paper-image native-image" src="../mechanisms/US9454486B2/fig-1/diagram.svg" width="790" height="648"
-         style="--paper-width:790px" alt="地址 PRB 记录在途请求，数据 PRB 接收返回行。地址 PRB 负责登记和重放申请。返回行进入数据 PRB，再由它供缓存回填和需求路径取用。">
-  </div>
-  <figcaption>
-    <span>地址 PRB 负责登记和重放申请。返回行进入数据 PRB，再由它供缓存回填和需求路径取用。</span>
-    <span class="figure-evidence">图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">请求合并后还要等原有读取返回</h3></div>
-    <a class="paper-open" href="../mechanisms/US9454486B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="请求合并后还要等原有读取返回">
-    <img class="paper-image native-image" src="../mechanisms/US9454486B2/fig-4/diagram.svg" width="492" height="1060"
-         style="--paper-width:492px" alt="请求合并后还要等原有读取返回。算例把下层读取发出和数据就绪放在 0、12，需求读在 7 到达，因此下层数据还有 5 个时间单位才可用。何时交付取决于重放和仲裁。">
-  </div>
-  <figcaption>
-    <span>算例把下层读取发出和数据就绪放在 0、12，需求读在 7 到达，因此下层数据还有 5 个时间单位才可用。何时交付取决于重放和仲裁。</span>
-    <span class="figure-evidence">图 5–7。时间值为合成模型参数。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">地址 PRB 按缓存行决定是否复用</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">访问结果</th><th scope="col">地址 PRB</th><th scope="col">下层动作</th></tr></thead><tbody><tr><th scope="row">预取已命中缓存</th><td>无需新建预取项</td><td>结束该预取</td></tr><tr><th scope="row">需求命中在途预取</th><td class="emphasis">复用同一行的地址项</td><td class="emphasis">沿用已有下层读取</td></tr><tr><th scope="row">需求没有匹配的预取项</th><td>登记独立需求项</td><td>按正常需求路径处理</td></tr></tbody></table>
-  <figcaption>
-    <span>预取先查缓存阵列，命中即可结束。后到需求查的是尚有效的在途预取项。</span>
-    <span class="figure-evidence">图 6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> · <a href="https://patentimages.storage.googleapis.com/50/68/09/a7eae511cfbd1b/US9454486.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>复用同一地址条目</dt><dd>避免重复下层读取 <span class="subdued">原图 7，说明书 0072，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></span></dd></div><div><dt>返回行独立缓存</dt><dd>支持预取重放回填 <span class="subdued">原图 5–6，说明书 0066–0067</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>完成事件分为下层读已返回、回填数据可被重放口读取、需求读已交付。合并减少第一个阶段的重复事务，地址状态的保留和重放能力仍决定后两个阶段。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若多个不同缓存行的回填同时到达，而数据缓冲或重放口处理能力较低，合并仍能少发读，但挂接的需求读要等待返回数据排队。节省的带宽不必转成等量的延迟下降。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定预取 X 在 t=0 发出，预计 t=12 返回。同一行的需求读在 t=7 到达时，原来的地址项仍有效。</dd></div><div><dt>处理结果</dt><dd>需求读接到原地址项。数据再等 5 个时间单位就可用，随后可重放需求读。模型只需一笔下层读取。</dd></div><div><dt>结果解读</dt><dd>5 是无其他停顿时的最少等待。实际重放还可能受仲裁、下层响应延迟或缓存权限影响。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、7、13 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 5–7。缓存控制电路连接两个缓冲，同一缓存行先登记预取状态，再登记需求，返回数据用于重放。</p>
+  <p>原图 5–7。缓存控制电路连接两个缓冲，同一缓存行先登记预取状态，再登记需求，返回数据用于重放。复用已有的在途下层请求和地址条目。缓存行返回后仍需要通过数据缓冲及回填路径。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=a%20first%20pending%20request%20buffer%2C%20wherein%20the%20first%20pending%20request%20buffer%20includes%20a%20first%20plurality%20of">F1</a></th><td>第一待处理请求缓冲有多个地址状态条目。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%205%2C%20another%20embodiment%20of%20a%20cache%20unit%20is%20illustrated.%20In%20the%20illustrated%20embodiment%2C">说明书 0056</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Address%20PRB%20504%20may%20include%20multiple%20entries%2C%20where%20each%20entry%20is%20configured%20to%20store%20the%20address">说明书 0060</a> · 图5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=a%20second%20pending%20request%20buffer%2C%20wherein%20the%20second%20pending%20request%20buffer%20includes%20a%20second%20plurality%20of">F2</a></th><td>第二待处理请求缓冲有多个回填数据条目。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%205%2C%20another%20embodiment%20of%20a%20cache%20unit%20is%20illustrated.%20In%20the%20illustrated%20embodiment%2C">说明书 0056</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Data%20PRB%20505%20may%20include%20the%20same%20number%20of%20entries%20as%20address%20PRB%20504%2C%20and%20each">说明书 0061</a> · 图5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=a%20control%20circuit%20coupled%20to%20the%20first%20and%20second%20pending%20request%20buffers">F3</a></th><td>缓存控制电路连接两种待处理缓冲。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%205%2C%20another%20embodiment%20of%20a%20cache%20unit%20is%20illustrated.%20In%20the%20illustrated%20embodiment%2C">说明书 0056</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Arbitration%20circuit%20502%20may%20be%20configured%20to%20select%20between%20requests%20from%20multiple%20sources%2C%20including%20pre-fetch%20engine">说明书 0058</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=With%20the%20received%20data%20stored%20in%20data%20PRB%20505%2C%20the%20original%20request%20may%20be%20replayed%20in">说明书 0067</a> · 图5 · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20a%20first%20request%20for%20a%20first%20cache%20line%20from%20a%20pre-fetch%20engine">F4</a></th><td>从预取引擎接收针对第一缓存行的读取请求。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Pre-fetch%20engine%20503%20may%2C%20in%20various%20embodiments%2C%20be%20configured%20to%20generate%20requests%20to%20load%20data%20at">说明书 0059</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=A%20flowchart%20depicted%20an%20embodiment%20of%20a%20method%20for%20operating%20a%20cache%20unit%2C%20such%20as%20cache">说明书 0063</a> · 图5 · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20first%20request%20received%20from%20the%20pre-fetch%20engine%20in%20a%20first%20buffer%20entry%20of%20the">F5</a></th><td>缓存查找缺失时，才用第一缓冲的一个条目登记预取请求。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20pre-fetch%20request%20has%20been%20received%20and%20selected%20by%20arbitration%20circuit%20603%2C%20cache%20memory%20501">说明书 0064</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=The%20method%20may%20then%20depend%20on%20if%20there%20was%20a%20%E2%80%9Chit%2C%E2%80%9D%20i.e.%2C%20the%20requested%20cache%20line">说明书 0065</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20data%20for%20the%20first%20cache%20line">F6</a></th><td>从下层接收预取的缓存行数据。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20data%20for%20the%20first%20cache%20line%20in%20a%20second%20buffer%20entry%20in%20the%20second">F7</a></th><td>把到达的缓存行放入第二缓冲的一个数据条目。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Data%20PRB%20505%20may%20include%20the%20same%20number%20of%20entries%20as%20address%20PRB%20504%2C%20and%20each">说明书 0061</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · 图5 · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20a%20second%20request%20for%20a%20second%20cache%20line%20from%20a%20processor">F8</a></th><td>接收处理器的后续需求读。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20second%20request%20received%20from%20the%20processor%20in%20the%20first%20buffer%20entry%20of%20the%20first">F9</a></th><td>需求读与原预取同属一个缓存行时，复用原地址条目登记需求读。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=When%20the%20cache%20line%20requested%20in%20the%20received%20demand%20fetch%20matches%20a%20pre-fetch%20entry%20in%20address">说明书 0072</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20matching%20pre-fetch%20has%20been%20over-written%2C%20the%20method%20proceeds%20as%20described%20above%20from%20block%20705.">说明书 0073</a> · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=replay%20the%20first%20request%20using%20the%20data%20for%20the%20first%20cache%20line%20stored%20in%20the%20second">F10</a></th><td>重放原读取时从第二缓冲取得已返回的缓存行。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=With%20the%20received%20data%20stored%20in%20data%20PRB%20505%2C%20the%20original%20request%20may%20be%20replayed%20in">说明书 0067</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20demand%20fetch%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed">说明书 0071</a> · 图6 · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=set%20at%20least%20one%20status%20bit%20of%20a%20buffer%20entry%20of%20the%20first%20or%20second%20plurality">F11</a></th><td>登记第一笔请求时，在相应条目设置预取状态位。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Address%20PRB%20504%20may%20include%20multiple%20entries%2C%20where%20each%20entry%20is%20configured%20to%20store%20the%20address">说明书 0060</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=The%20method%20may%20then%20depend%20on%20if%20there%20was%20a%20%E2%80%9Chit%2C%E2%80%9D%20i.e.%2C%20the%20requested%20cache%20line">说明书 0065</a> · 图5 · 图6</td></tr></tbody>
@@ -137,49 +221,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=a%20memory">F20</a></th><td>系统含有为缓存返回数据的下层存储。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · 图2 · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=one%20or%20more%20processors">F21</a></th><td>系统含有一个或多个可发起需求读的处理器。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · 图2 · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=a%20cache%20unit%20coupled%20to%20the%20one%20or%20more%20processors%20and%20the%20memory">F22</a></th><td>缓存单元连接处理器和下层存储。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=The%20interface%20unit%20311%20may%20generally%20include%20the%20circuitry%20for%20interfacing%20the%20processor%20300%20to%20other">说明书 0049</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=BIU%20interface%20406%20may%20be%20configured%20to%20interface%20requests%20between%20cache%20unit%20400%20and%20a%20bus">说明书 0054</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%205%2C%20another%20embodiment%20of%20a%20cache%20unit%20is%20illustrated.%20In%20the%20illustrated%20embodiment%2C">说明书 0056</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · 图2 · 图4 · 图5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20a%20request%20for%20a%20first%20cache%20line%20from%20a%20pre-fetch%20engine">F23</a></th><td>缓存单元接收预取引擎发来的第一行请求。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=A%20flowchart%20depicted%20an%20embodiment%20of%20a%20method%20for%20operating%20a%20cache%20unit%2C%20such%20as%20cache">说明书 0063</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20request%20received%20from%20the%20pre-fetch%20engine%20in%20a%20entry%20of%20an%20address%20pending%20request">F24</a></th><td>缓存缺失时，地址待处理缓冲建立预取条目。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=The%20method%20may%20then%20depend%20on%20if%20there%20was%20a%20%E2%80%9Chit%2C%E2%80%9D%20i.e.%2C%20the%20requested%20cache%20line">说明书 0065</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20a%20request%20for%20a%20second%20cache%20line%20from%20a%20given%20one%20of%20the%20one%20or">F25</a></th><td>缓存单元接收处理器的一笔需求读。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20request%20received%20from%20the%20given%20one%20of%20the%20one%20or%20more%20processors%20in%20the">F26</a></th><td>需求读指向同一行时，缓存单元将它记入原地址条目。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Turning%20to%20FIG.%207%2C%20a%20flowchart%20depicting%20another%20method%20of%20operating%20a%20cache%20unit%2C%20such%20as">说明书 0069</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=When%20the%20cache%20line%20requested%20in%20the%20received%20demand%20fetch%20matches%20a%20pre-fetch%20entry%20in%20address">说明书 0072</a> · 图7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=receive%20data%20corresponding%20the%20first%20cache%20line%20from%20the%20memory">F27</a></th><td>缓存单元从存储器接收第一行数据。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=store%20the%20data%20received%20from%20the%20memory%20in%20a%20data%20pending%20request%20buffer">F28</a></th><td>用数据待处理缓冲保存返回的缓存行。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Data%20PRB%20505%20may%20include%20the%20same%20number%20of%20entries%20as%20address%20PRB%20504%2C%20and%20each">说明书 0061</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Once%20the%20request%20has%20been%20stored%20in%20address%20PRB%2C%20the%20request%20may%20be%20completed%20and%20the">说明书 0066</a> · 图5 · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=replay%20the%20request%20for%20the%20first%20cache%20line%20using%20the%20data%20stored%20in%20the%20data%20pending">F29</a></th><td>利用数据待处理缓冲中的行重放读取。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=With%20the%20received%20data%20stored%20in%20data%20PRB%20505%2C%20the%20original%20request%20may%20be%20replayed%20in">说明书 0067</a> · 图6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=set%20a%20status%20bit%20associated%20with%20the%20entry%20of%20the%20address%20pending%20request%20buffer%20to%20indicate">F30</a></th><td>登记预取时设置地址条目的预取状态位。</td><td><a href="https://patents.google.com/patent/US9454486B2/en#:~:text=Address%20PRB%20504%20may%20include%20multiple%20entries%2C%20where%20each%20entry%20is%20configured%20to%20store%20the%20address">说明书 0060</a> · <a href="https://patents.google.com/patent/US9454486B2/en#:~:text=The%20method%20may%20then%20depend%20on%20if%20there%20was%20a%20%E2%80%9Chit%2C%E2%80%9D%20i.e.%2C%20the%20requested%20cache%20line">说明书 0065</a> · 图5 · 图6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 5–7。缓存控制电路连接两个缓冲，同一缓存行先登记预取状态，再登记需求，返回数据用于重放。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>从预取引擎给出的多个缓存行请求中选择一笔。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>第一和第二待处理缓冲的每个条目都带地址字段。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>收到的第一缓存行预取请求携带地址信息。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>登记第一笔请求时，把地址写到两类缓冲之一的条目地址字段。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>待处理缓冲包含可按内容匹配的存储器。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>原图 6–7。方法独权把预取标志限定在第一缓冲的登记位置，并规定返回数据写入第二缓冲。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>接收预取请求前，要在预取和一笔或多笔需求读之间仲裁。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-7">7</a></td><td>预取请求携带要读取的缓存行地址。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>把预取地址写入第一缓冲对应条目的地址字段。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-7">7</a></td><td>登记预取时，设置第一缓冲条目的来源标签以标明预取引擎。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>登记需求读时，把原地址项的来源标签改为处理器。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td>独立项</td><td>原图 2、5–7。系统独权限定存储器、处理器和缓存单元的连接，预取状态明确记录在地址 PRB。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>缓存单元从多个缓存行的预取请求中选择所接收的请求。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>缓存单元还把内存返回的第一缓存行数据存入缓存阵列。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 5–7。缓存控制电路连接两个缓冲，同一缓存行先登记预取状态，再登记需求，返回数据用于重放。复用已有的在途下层请求和地址条目。缓存行返回后仍需要通过数据缓冲及回填路径。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>从预取引擎给出的多个缓存行请求中选择一笔。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>第一和第二待处理缓冲的每个条目都带地址字段。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>收到的第一缓存行预取请求携带地址信息。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>登记第一笔请求时，把地址写到两类缓冲之一的条目地址字段。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>待处理缓冲包含可按内容匹配的存储器。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>原图 6–7。方法独权把预取标志限定在第一缓冲的登记位置，并规定返回数据写入第二缓冲。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>接收预取请求前，要在预取和一笔或多笔需求读之间仲裁。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-7">7</a></td><td>预取请求携带要读取的缓存行地址。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>把预取地址写入第一缓冲对应条目的地址字段。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-7">7</a></td><td>登记预取时，设置第一缓冲条目的来源标签以标明预取引擎。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>登记需求读时，把原地址项的来源标签改为处理器。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td>独立项</td><td>原图 2、5–7。系统独权限定存储器、处理器和缓存单元的连接，预取状态明确记录在地址 PRB。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>缓存单元从多个缓存行的预取请求中选择所接收的请求。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>缓存单元还把内存返回的第一缓存行数据存入缓存阵列。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>预取缺失先建地址项，后来的同一行请求使用原项。返回的数据另存，用于重放。</dd></div><div><dt>图 5–7</dt><dd>图中区分地址 PRB 与数据 PRB，并给出预取和需求访问各自的决策流程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US9454486B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>这些项规定地址字段及预取与需求候选之间的仲裁，还允许用内容寻址比较。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US9454486B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12306762B1.html#engineering">抑制曾经无用的预取地址</a>
-<p>限制表可按地址在入队前拦截预取。权利要求 8 还覆盖从请求队列撤销已入队的预取。US9454486B2 权 7 处理另一时点：已有预取尚未返回，同一缓存行的需求读可接入原请求的缓冲槽，等已有读取返回。</p></li><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>US9201796B2 让标签查找与缺失条目准备重叠，确认缺失后才可发片外读。US9454486B2 权 7 把等待同一缓存行的需求读记入尚未完成的预取条目，并利用预取返回数据重放。前者改变提前占位的时机，后者让两笔同地址请求共享已有访存。</p></li></ul>
-    <p><a href="../index.html?patent=US9454486B2#knowledge">在全量关系图上定位 US9454486B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2013-07-12</dd></div>
-    <div><dt>美国申请日</dt><dd>2013-07-12</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2016-09-27</dd></div>
-    <div><dt>美国申请号</dt><dd>US13/940,525</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Brian P. Lilly、Perumal R Subramoniam、Prashant Jain</dd></div><div><dt>分类号</dt><dd>G06F12/0862、G06F12/1027、G06F2212/1021、G06F2212/6022、G06F2212/654</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US9454486B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US9454486B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 77 个说明书段落、15 项权利要求。</p>
-  <p>核对过的图号为 4、5、6、7。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US9454486B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

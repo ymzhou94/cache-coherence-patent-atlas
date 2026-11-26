@@ -1,193 +1,201 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12361630B2 在帧提交截止前提前渲染或采用较低功率设置 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用帧提交截止时刻安排提前处理与较低功率设置 · US12361630B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12361630B2</code> · <a href="https://eureka.patsnap.com/patent/US12361630B2">专利全文</a></p>
+<h1>用帧提交截止时刻安排提前处理与较低功率设置</h1><p class="reading-question">当前帧的工作比预计短时，系统怎样判断空余时间应该用来预做下一帧，还是降低处理单元的功率设置？</p>
+<p class="reading-answer">更新调度器给出离下一次帧提交还剩多少时间。帧工作安排器根据滚动内容等预测后续操作，检查必要工作与可选任务能否按时完成。另一实施例靠同一截止时刻筛选仍能及时完成当前任务的较低功率设置。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-07-15</dd></div><div><dt>申请号</dt><dd>US18/731,141</dd></div><div><dt>最早优先权</dt><dd>2021-06-06</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler M. Fox、Andrey Pokrovskiy、Aditya Krishnadevan、James R. MONTGOMERIE</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#sources">帧提交期限、候选内容和处理量来自不同模块</a></li><li><a href="#prefetch">当前帧工作完成后怎样接受下一帧候选</a></li><li><a href="#total">相同时间窗口下，提前处理和低功率执行会争用余量</a></li><li><a href="#power">较低功率设置由谁选择、由谁执行</a></li><li><a href="#pipeline">把耗时项前移后，处理、渲染与显示各在哪一段</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="sources"><h2>帧提交期限、候选内容和处理量来自不同模块</h2><p>应用滚动时，展示已经处理过的图像的一小部分，通常比第一次准备下一张图像短。原图 4 用更新调度器收集当前时刻、处理活动和刷新计划，再生成剩余时间。帧工作安排器询问已注册的应用观察者，获得候选数据、处理时间和对应未来帧，并结合预测引擎的结果排定任务。</p><p>应用框架、系统例程与处理单元分担不同职责。帧工作安排器决定何时通知哪些观察者，观察者准备后续工作并提交结果。渲染模块收到应用提交后准备图形命令，最后按显示周期呈现。这个专利定义的提交截止时刻是向渲染器交付处理结果的时限。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　从系统时钟和刷新率到应用候选与渲染结果</h3>
+    <p id="fig-1-basis">系统例程提供时序信息，框架安排帧工作，应用观察者返回候选并交付结果。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从系统时钟和刷新率到应用候选与渲染结果" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 571" role="img" aria-labelledby="us12361630b2-fig-1-svg-title us12361630b2-fig-1-svg-desc">
+<title id="us12361630b2-fig-1-svg-title">从系统时钟和刷新率到应用候选与渲染结果</title>
+<desc id="us12361630b2-fig-1-svg-desc">系统例程提供时序信息，框架安排帧工作，应用观察者返回候选并交付结果。</desc>
+<defs><marker id="us12361630b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12361630b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12361630b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12361630b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12361630b2-fig-1-info" d="M 266 134 L 369 134" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-1-arrow-data)"/>
+<path id="us12361630b2-fig-1-slack" d="M 592 134 L 713 134" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-1-arrow-main)"/>
+<path id="us12361630b2-fig-1-predicted" d="M 592 367 L 645 367 Q 653 367 653 359 L 653 229 Q 653 221 661 221 L 764 221 Q 772 221 772 213 L 772 172" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-1-arrow-data)"/>
+<path id="us12361630b2-fig-1-request" d="M 851 172 L 851 333" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-1-arrow-main)"/>
+<path id="us12361630b2-fig-1-response" d="M 758 333 L 758 258 Q 758 250 766 250 L 803 250 Q 811 250 811 242 L 811 172" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12361630b2-fig-1-arrow-return)"/>
+<path id="us12361630b2-fig-1-commit" d="M 826 407 L 826 479 Q 826 487 818 487 L 160 487 Q 152 487 152 479 L 152 172" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-1-arrow-main)"/>
+<rect x="274.5" y="102" width="87" height="18" fill="#f5f5f5"/><text x="318" y="116" class="arrow-label" text-anchor="middle">系统时序</text>
+<rect x="594" y="103" width="116" height="18" fill="#f5f5f5"/><text x="652" y="117" class="arrow-label" text-anchor="middle">提交剩余时间</text>
+<rect x="673" y="190" width="86" height="18" fill="#f5f5f5"/><text x="716" y="204" class="arrow-label" text-anchor="middle">预测候选</text>
+<rect x="857.5" y="239" width="83" height="18" fill="#f5f5f5"/><text x="899" y="253" class="arrow-label" text-anchor="middle">询问并安排</text>
+<rect x="679.5" y="266" width="77" height="18" fill="#f5f5f5"/><text x="718" y="280" class="arrow-label" text-anchor="middle">返回估时</text>
+<rect x="388" y="457" width="160" height="18" fill="#f5f5f5"/><text x="468" y="471" class="arrow-label" text-anchor="middle">完成操作并提交结果</text>
+<g id="us12361630b2-fig-1-sys"><rect x="36" y="96" width="230" height="76" rx="6" fill="#f5f5f5"/><rect x="36" y="96" width="230" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="122" class="node-name" text-anchor="middle">系统例程与渲染模块</text><text x="151" y="144" class="node-detail" text-anchor="middle">当前时刻、刷新计划、处理活动</text></g>
+<g id="us12361630b2-fig-1-update"><rect x="369" y="96" width="223" height="76" rx="6" fill="#f5f5f5"/><rect x="369" y="96" width="223" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480.5" y="122" class="node-name" text-anchor="middle">更新调度器</text><text x="480.5" y="144" class="node-detail" text-anchor="middle">计算到提交的剩余时间</text></g>
+<g id="us12361630b2-fig-1-idle"><rect x="713" y="96" width="220" height="76" rx="6" fill="#f5f5f5"/><rect x="713" y="96" width="220" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="823" y="122" class="node-name" text-anchor="middle">帧工作安排器</text><text x="823" y="144" class="node-detail" text-anchor="middle">按窗口选择观察者和工作</text></g>
+<g id="us12361630b2-fig-1-pred"><rect x="369" y="333" width="223" height="74" rx="6" fill="#f5f5f5"/><rect x="369" y="333" width="223" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="480.5" y="359" class="node-name" text-anchor="middle">预测引擎</text><text x="480.5" y="381" class="node-detail" text-anchor="middle">当前帧、内容顺序、交互史</text></g>
+<g id="us12361630b2-fig-1-app"><rect x="713" y="333" width="220" height="74" rx="6" fill="#f5f5f5"/><rect x="713" y="333" width="220" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="823" y="359" class="node-name" text-anchor="middle">应用观察者</text><text x="823" y="381" class="node-detail" text-anchor="middle">获取并处理将提交的内容</text></g>
+<text x="36" y="528" class="legend" text-anchor="start">按原图 4 的功能与消息重画。预测引擎也可放在应用观察者内。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12361630b2-fig-1-sys">系统例程与渲染模块</a> 系统例程提供时钟、运行状态和渲染调度信息。它可以包含渲染模块和内核入口。</li><li><a href="#us12361630b2-fig-1-update">更新调度器</a> 更新调度器计算帧提交的剩余时间，可按变化后的刷新率更新截止时刻。</li><li><a href="#us12361630b2-fig-1-idle">帧工作安排器</a> 帧工作安排器根据剩余窗口、估计工作量和优先级通知观察者。预测引擎提供候选信息。</li><li><a href="#us12361630b2-fig-1-app">应用观察者</a> 观察者如 UITableView 或 UICollectionView，可回报任务规模、估时等，获准后处理和提交结果。</li></ul>
+  <p class="figure-evidence">原图 4、5；说明书归档段 0053、0054、0055、0056、0057、0058、0059、0060、0061、0063、0064、0065、0066、0067、0068、0069、0070、0071、0072、0073、0074、0075；权利要求 1、7、8、12、15、20、21、28、29、30 <a href="../diagrams/US12361630B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>系统例程与渲染模块</dt><dd>402</dd></div><div><dt>更新调度器</dt><dd>404</dd></div><div><dt>帧工作安排器</dt><dd>406</dd></div><div><dt>应用观察者</dt><dd>408a–408c</dd></div><div><dt>预测引擎</dt><dd>430</dd></div><div><dt>系统时序／提交剩余时间通知</dt><dd>409/411</dd></div><div><dt>查询、候选应答、安排指令与结果提交</dt><dd>413/410/415/420</dd></div></dl></details>
+</figure></section><section id="prefetch"><h2>当前帧工作完成后怎样接受下一帧候选</h2><p>权利要求 1 把第二操作和预测的第三操作放在同一个第二提交截止时刻前，并明确要求第三帧在该截止时刻前完成渲染。图 2 按这项限定画出返还候选、准入、提交与渲染。候选可来自滚动序列或当前帧和内容顺序，权利要求 8、18、29 还允许按预测的发生可能性筛选。</p><p>原图 7 展开了另一个例子：先以第三提交截止时刻核对第三操作及附加操作的总处理时间，附加结果用于更后面的帧。具体时点应按权项或所分析的实施例来读。说明书 [0022] 把可用时间和总处理时间的大小关系写反。后文 [0073]–[0074] 和原图 7 明确只有总处理时间小于剩余时间，才发出同时安排的命令。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　候选接受后，到截止前还需要完成哪些步骤</h3>
+    <p id="fig-2-basis">按权利要求 1 的顺序，查询剩余窗口，接受符合时限的预测操作，让当前和后续帧取得渲染结果。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="候选接受后，到截止前还需要完成哪些步骤" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 512" role="img" aria-labelledby="us12361630b2-fig-2-svg-title us12361630b2-fig-2-svg-desc">
+<title id="us12361630b2-fig-2-svg-title">候选接受后，到截止前还需要完成哪些步骤</title>
+<desc id="us12361630b2-fig-2-svg-desc">按权利要求 1 的顺序，查询剩余窗口，接受符合时限的预测操作，让当前和后续帧取得渲染结果。</desc>
+<defs><marker id="us12361630b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12361630b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12361630b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12361630b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12361630b2-fig-2-deadline"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-2-arrow-data)"/><rect x="133" y="96" width="208" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">当前时刻到第二提交截止的剩余时间</text></g>
+<g id="us12361630b2-fig-2-ask"><path d="M 358 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-2-arrow-data)"/><rect x="388.5" y="144" width="182" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">询问当前帧必要工作与预测候选</text></g>
+<g id="us12361630b2-fig-2-work"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12361630b2-fig-2-arrow-return)"/><rect x="375.5" y="192" width="208" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">返还候选任务、未来用途及处理时长</text></g>
+<g id="us12361630b2-fig-2-decide"><path d="M 358 258 L 382 258 Q 390 258 390 266 L 390 268 Q 390 276 382 276 L 358 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12361630b2-fig-2-arrow-control)"/><rect x="407" y="234" width="130" height="18" fill="#f5f5f5"/><text x="472" y="248" class="arrow-label" text-anchor="middle">比较剩余窗口与工作量</text></g>
+<g id="us12361630b2-fig-2-send"><path d="M 358 312 L 601 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-2-arrow-main)"/><rect x="440.5" y="288" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">安排获准操作</text></g>
+<g id="us12361630b2-fig-2-submit"><path d="M 601 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-2-arrow-main)"/><rect x="651" y="336" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">提交第二、第三操作结果</text></g>
+<g id="us12361630b2-fig-2-render"><path d="M 844 408 L 601 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12361630b2-fig-2-arrow-return)"/><rect x="657.5" y="384" width="130" height="18" fill="#f5f5f5"/><text x="722.5" y="398" class="arrow-label" text-anchor="middle">渲染出第二帧与第三帧</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">更新调度器</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">帧工作安排器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">应用观察者</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">渲染模块</text>
+<text x="28" y="484" class="legend" text-anchor="start">时间向下。图示按权利要求 1，预测的第三帧须在第二提交截止前渲染。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12361630b2-fig-2-deadline">当前时刻到第二提交截止的剩余时间</a> 剩余时间从当前时刻量到指定提交截止。权利要求 1 使用第二提交截止，原图 7 的例子使用第三截止。</li><li><a href="#us12361630b2-fig-2-work">返还候选任务、未来用途及处理时长</a> 可按估计时长和未来发生可能性挑候选。原图 7 再把第三操作与附加操作的时长相加，对照剩余时间。</li><li><a href="#us12361630b2-fig-2-decide">比较剩余窗口与工作量</a> 额外操作要通过其采用的时间约束。当余量不足，保留当前帧必要工作。</li><li><a href="#us12361630b2-fig-2-submit">提交第二、第三操作结果</a> 应用提交的是操作结果，渲染器仍需形成对应帧。第三帧在第二截止前渲染是权利要求 1 的条件。</li></ul>
+  <p class="figure-evidence">原图 4、7；说明书归档段 0005、0006、0007、0049、0063、0066、0067、0068、0070、0071、0072、0073、0074、0075、0101、0104、0105、0106、0108、0110、0111、0112、0113；权利要求 1、2、3、4、5、6、7、8、15、18、20、21、25、28、29 <a href="../diagrams/US12361630B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>剩余时间通知</dt><dd>411</dd></div><div><dt>向观察者查询</dt><dd>413</dd></div><div><dt>候选任务与估时的应答</dt><dd>410</dd></div><div><dt>安排获准操作</dt><dd>415</dd></div><div><dt>提交操作结果</dt><dd>420</dd></div></dl></details>
+</figure></section><section id="total"><h2>相同时间窗口下，提前处理和低功率执行会争用余量</h2><p>表 3 给出的 9 ms 是教学设定。当前帧需要 5 ms 或 8 ms，取决于所选设置。候选额外工作假定为 3 ms。若采用当前设置并追加，合计 8 ms，留 1 ms。若下调设置且仅做当前工作，同样完成于 8 ms。两项一起用则需 11 ms，超过时限。实际准入还需考虑提交、渲染及估时误差。</p><p>这组数字只用于核对截止关系。单位工作能耗取决于处理单元运行时的功率和持续时间，不能从表中推出。没有被消费的提前结果也会使用带宽和存储。因此预测的用途和时间准入是两个独立判断。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　剩余 9 ms 时，两种任务安排各用多少余量</h3>
+    <p id="fig-3-basis">同一个教学窗口内，处理当前操作和提前工作合计不越过 9 ms 才具备时间可行性。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">安排</th><th scope="col">当前工作</th><th scope="col">追加工作</th><th scope="col">完成时间相对 9 ms 截止</th></tr></thead><tbody><tr id="fig-3-early"><th scope="row">当前设置，加做预测操作</th><td>5 ms</td><td>3 ms</td><td>8 ms，剩余 1 ms</td></tr><tr id="fig-3-low"><th scope="row">较低设置，只做当前操作</th><td>8 ms</td><td>—</td><td>8 ms，剩余 1 ms</td></tr><tr id="fig-3-over"><th scope="row">较低设置，加做预测操作</th><td>8 ms</td><td>3 ms</td><td>11 ms，越过 2 ms</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-early">当前设置，加做预测操作</a> 5 ms 与 3 ms 是教学设定。合计 8 ms，离设定的截止还有 1 ms。</li><li><a href="#fig-3-low">较低设置，只做当前操作</a> 若仅有当前操作，按较低功率设置估时 8 ms，同样留 1 ms。是否节能需观察实际能耗。</li><li><a href="#fig-3-over">较低设置，加做预测操作</a> 低设置仍追加 3 ms，合计 11 ms，会越过截止 2 ms。两条策略不能据此无条件混用。</li></ul>
+  <p class="figure-evidence">原图 6A、6B、7、8；说明书归档段 0074、0075、0081、0090、0091、0098、0099、0110、0111、0120、0121、0122、0123；权利要求 1、9、10、12、13 </p>
+  
+</figure></section><section id="power"><h2>较低功率设置由谁选择、由谁执行</h2><p>图 4 展示原图 5 的显式请求路径。更新调度器先向帧工作安排器送剩余时间。安排器拿到待办操作及其处理时间后，在已有设置和较低设置间比较预计完成时刻。安排器把较低设置送回更新调度器，后者通过系统例程应用到一个或多个处理单元。权利要求 9 还限定前后帧的提交周期不同。</p><p>原文另有闭环性能控制器，以 CPU 利用率、出帧速率和截止未达标为反馈，逐步调整处理单元的功率设置。原文的 power setting 指该实施例给处理单元的运行设置，并未指定 OPP 表、P-state 字段或 OS 选核策略。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　较低功率设置怎样从估时结果传到处理单元</h3>
+    <p id="fig-4-basis">帧工作安排器选择仍能及时完成工作的一种设置，更新调度器送给系统例程，后者才应用到处理单元。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="较低功率设置怎样从估时结果传到处理单元" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 608" role="img" aria-labelledby="us12361630b2-fig-4-svg-title us12361630b2-fig-4-svg-desc">
+<title id="us12361630b2-fig-4-svg-title">较低功率设置怎样从估时结果传到处理单元</title>
+<desc id="us12361630b2-fig-4-svg-desc">帧工作安排器选择仍能及时完成工作的一种设置，更新调度器送给系统例程，后者才应用到处理单元。</desc>
+<defs><marker id="us12361630b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12361630b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12361630b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12361630b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="548" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="298" y1="80" x2="298" y2="548" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="548" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="662" y1="80" x2="662" y2="548" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="548" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12361630b2-fig-4-stats"><path d="M 116 120 L 298 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-data)"/><rect x="142" y="96" width="130" height="18" fill="#f5f5f5"/><text x="207" y="110" class="arrow-label" text-anchor="middle">时钟、设置与刷新信息</text></g>
+<g id="us12361630b2-fig-4-slack"><path d="M 298 168 L 480 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-data)"/><rect x="330.5" y="144" width="117" height="18" fill="#f5f5f5"/><text x="389" y="158" class="arrow-label" text-anchor="middle">剩余时间与当前设置</text></g>
+<g id="us12361630b2-fig-4-query-work"><path d="M 480 216 L 662 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-data)"/><rect x="519" y="192" width="104" height="18" fill="#f5f5f5"/><text x="571" y="206" class="arrow-label" text-anchor="middle">询问待执行的操作</text></g>
+<g id="us12361630b2-fig-4-estimated-work"><path d="M 662 264 L 480 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12361630b2-fig-4-arrow-return)"/><rect x="506" y="240" width="130" height="18" fill="#f5f5f5"/><text x="571" y="254" class="arrow-label" text-anchor="middle">提供操作及其估计用时</text></g>
+<g id="us12361630b2-fig-4-second"><path d="M 480 306 L 504 306 Q 512 306 512 314 L 512 316 Q 512 324 504 324 L 480 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-control)"/><rect x="516" y="282" width="156" height="18" fill="#f5f5f5"/><text x="594" y="296" class="arrow-label" text-anchor="middle">估计较低设置下的完成时刻</text></g>
+<g id="us12361630b2-fig-4-proposal"><path d="M 480 360 L 298 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-main)"/><rect x="317.5" y="336" width="143" height="18" fill="#f5f5f5"/><text x="389" y="350" class="arrow-label" text-anchor="middle">可按时完成，送较低设置</text></g>
+<g id="us12361630b2-fig-4-set"><path d="M 298 408 L 116 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-main)"/><rect x="155" y="384" width="104" height="18" fill="#f5f5f5"/><text x="207" y="398" class="arrow-label" text-anchor="middle">下发所选功率设置</text></g>
+<g id="us12361630b2-fig-4-apply"><path d="M 116 456 L 844 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12361630b2-fig-4-arrow-main)"/><rect x="408.5" y="432" width="143" height="18" fill="#f5f5f5"/><text x="480" y="446" class="arrow-label" text-anchor="middle">应用设置，执行当前工作</text></g>
+<g id="us12361630b2-fig-4-done"><path d="M 844 504 L 116 504" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12361630b2-fig-4-arrow-return)"/><rect x="421.5" y="480" width="117" height="18" fill="#f5f5f5"/><text x="480" y="494" class="arrow-label" text-anchor="middle">完成处理并提交结果</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">系统例程</text>
+<rect x="210" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="298" y="63" class="node-name" text-anchor="middle">更新调度器</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">帧工作安排器</text>
+<rect x="574" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="662" y="63" class="node-name" text-anchor="middle">应用观察者</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">处理单元</text>
+<text x="28" y="580" class="legend" text-anchor="start">图示原图 5 的显式请求路径。原文还允许由闭环性能控制器根据反馈决定设置。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12361630b2-fig-4-slack">剩余时间与当前设置</a> 更新调度器送当前的运行设置及剩余时间，帧工作安排器比较任务在设置变化后的预计完成时间。</li><li><a href="#us12361630b2-fig-4-second">估计较低设置下的完成时刻</a> 说明书按当前设置和较低设置比较时间。预计在较低设置下仍赶得上，才可请求变更。</li><li><a href="#us12361630b2-fig-4-apply">应用设置，执行当前工作</a> 系统例程将选定设置应用到处理单元。原文另披露由闭环性能控制器控制运行设置的实施例。</li></ul>
+  <p class="figure-evidence">原图 5、8；说明书归档段 0076、0077、0078、0079、0080、0081、0082、0083、0119、0120、0121、0122、0123、0124、0125、0126；权利要求 9、10、11、12、13、14、22、30 <a href="../diagrams/US12361630B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>系统例程、更新调度器、帧工作安排器及观察者</dt><dd>502/504/506/508a–508c</dd></div><div><dt>系统信息／剩余时间与设置通知</dt><dd>509/511</dd></div><div><dt>送选定设置／下发功率设置</dt><dd>515/520</dd></div></dl></details>
+</figure></section><section id="pipeline"><h2>把耗时项前移后，处理、渲染与显示各在哪一段</h2><p>在原图 6A 中，耗时项从周期 D 开始，跨过 D 末的提交截止。原图 6B 的大部分工作提前到周期 B，并延续到 C 的开头。该例在 D 补完剩余部分，周期 E 渲染所需结果，周期 F 显示。图 5 保留这种前移与三阶段流水的关系。原图没有给出这些阶段的时长或硬件计数。</p><p>原图 6A 的说明书把跨 D 截止关联到后续显示周期的卡顿。不能从原图的帧标记推导实际掉了几帧。原图 6B 允许把已处理结果先缓存，在未来被需要时才交给渲染模块，所以完成数据处理的时点也可早于渲染。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　提前处理把耗时工作搬过了哪些帧边界</h3>
+    <p id="fig-5-basis">大部分耗时项被搬到较早的处理窗口。剩余部分赶在提交前补齐，后续才渲染并显示。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前处理把耗时工作搬过了哪些帧边界" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12361630b2-fig-5-svg-title us12361630b2-fig-5-svg-desc">
+<title id="us12361630b2-fig-5-svg-title">提前处理把耗时工作搬过了哪些帧边界</title>
+<desc id="us12361630b2-fig-5-svg-desc">大部分耗时项被搬到较早的处理窗口。剩余部分赶在提交前补齐，后续才渲染并显示。</desc>
+<defs><marker id="us12361630b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12361630b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12361630b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12361630b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12361630b2-fig-5-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">B 开始</text>
+<line x1="321.6" y1="76" x2="321.6" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">C 开始</text>
+<line x1="451.2" y1="76" x2="451.2" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">D 开始</text>
+<line x1="580.8" y1="76" x2="580.8" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">E 开始</text>
+<line x1="710.4" y1="76" x2="710.4" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">F 开始</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">F 结束</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="us12361630b2-fig-5-orig"><text x="24" y="136" class="node-name" text-anchor="start">原排程 · 处理</text>
+<rect x="451.2" y="112" width="174.96" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="538.68" y="136" class="arrow-label" text-anchor="middle">耗时项跨越 D 末截止</text>
+<circle cx="626.16" cy="131" r="5" fill="#4f5d75"/>
+<text x="626.16" y="171" class="arrow-label" text-anchor="end">提交晚于 D 末</text></g>
+<g id="us12361630b2-fig-5-advanced"><text x="24" y="228" class="node-name" text-anchor="start">提前排程 · 处理</text>
+<rect x="208.848" y="204" width="142.56" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="280.128" y="228" class="arrow-label" text-anchor="middle">先做大部分耗时项</text>
+<rect x="457.68" y="204" width="42.768" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="479.064" y="228" class="arrow-label" text-anchor="middle">补齐</text>
+<circle cx="500.448" cy="223" r="5" fill="#bf4520"/>
+<text x="500.448" y="263" class="arrow-label" text-anchor="end">D 内完成</text></g>
+<g id="us12361630b2-fig-5-render"><text x="24" y="320" class="node-name" text-anchor="start">提前排程 · 渲染</text>
+<rect x="589.872" y="296" width="76.464" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="628.104" y="320" class="arrow-label" text-anchor="middle">渲染结果</text>
+<circle cx="666.336" cy="315" r="5" fill="#4f5d75"/>
+<text x="666.336" y="355" class="arrow-label" text-anchor="end">渲染就绪</text></g>
+<g id="us12361630b2-fig-5-display"><text x="24" y="412" class="node-name" text-anchor="start">提前排程 · 显示</text>
+<rect x="710.4" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="412" class="arrow-label" text-anchor="middle">显示该帧</text>
+<circle cx="710.4" cy="407" r="5" fill="#4f5d75"/>
+<text x="710.4" y="447" class="arrow-label" text-anchor="end">计划显示期开始</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">按原图 6A、6B 对照。竖线是相邻周期的边界，块宽未按实际耗时绘制。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12361630b2-fig-5-orig">原排程 · 处理</a> 原图 6A 将耗时任务从 D 开始，处理条跨过 D 末提交线至 E。说明书关联之后的显示卡顿。</li><li><a href="#us12361630b2-fig-5-advanced">提前排程 · 处理</a> 原图 6B 把主体提前到 B 后段并延续至 C 开头。D 内只补齐剩余部分。</li><li><a href="#us12361630b2-fig-5-render">提前排程 · 渲染</a> 图中的渲染开始于 E，使用的是该耗时任务准备好的结果。</li><li><a href="#us12361630b2-fig-5-display">提前排程 · 显示</a> F 是原图安排显示该帧的区间。图上显示的是阶段关系，实际扫屏时长未给定。</li></ul>
+  <p class="figure-evidence">原图 2、3、6A、6B；说明书归档段 0030、0031、0032、0033、0034、0035、0036、0037、0038、0039、0042、0044、0045、0084、0085、0086、0090、0091、0094、0095、0096、0097、0098、0099、0100；权利要求 1、4、7、15、17、21、25 <a href="../diagrams/US12361630B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>周期 B–F</dt><dd>604b–604f</dd></div><div><dt>C 末和 D 末提交截止</dt><dd>640c/640d</dd></div><div><dt>耗时项处理／用于渲染的结果／安排显示的帧</dt><dd>610a/610b/610c</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
-  <p class="document-id"><code>US12361630B2</code><span>美国授权专利</span><time datetime="2025-07-15">2025-07-15</time></p>
-  <h1>在帧提交截止前提前渲染或采用较低功率设置</h1>
-  <p class="english-title" lang="en">Prediction and use of processor inactivity for rendering frames</p>
-  <p class="document-question">下一次帧提交的剩余时间，可以用于预测操作还是用于以较低功率执行当前操作？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">更新调度器针对可变提交周期选择下一项工作的处理器功率档。若较低功率档仍可在第二提交期限前完成，就以该档执行。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>前后提交周期不同，必须按下一次提交期限和下一项工作的预计用时判断。若提前做预测操作，还要另外扣除它占用的时间。</dd></div><div><dt>验证方法</dt><dd>固定工作量及每帧提交期限序列，对照沿用前一档位和按下一期限下调。记录实际完成时点、迟交帧数与每帧能耗。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12361630B2">原文权利要求 9（全文）</a><a href="#fig-3">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">帧准备、渲染、提交和屏显是不同事件。说明书按当前提交截止的剩余时间安排后续帧准备，或者调节处理单元的功率设置。</p>
-    <p>更新调度器计算距提交截止的时间。提前渲染方案在剩余时间中安排预测操作。较低功率方案选择下一项操作仍能按时完成的功率设置。</p>
-    <ol class="walkthrough"><li><h3>取得真实提交边界</h3><p>更新调度器根据显示时序取得当前提交期限。即便帧刷新可变，也用当前边界计算剩余时间。</p></li><li><h3>收集并预测待执行项</h3><p>从应用观察者取得后续请求，也能用交互近期信息预测将要显示的单元或图像所需工作。</p></li><li><h3>比较耗时与剩余窗</h3><p>已经必须完成的工作先占预算。预测项只有在其合计时间落入剩余窗时才合适。</p></li><li><h3>在长周期配置较低档</h3><p>独立权 9 描述相邻提交周期时长不同的情形；较低功率档仍须完成第二操作。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 1、15、21 要求在第二次提交截止前利用预测操作结果渲染第三帧。独立权 9 单独要求可变提交周期和较低的功率设置。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>提交截止</dt><dd>本帧相关工作需要提交给后续系统阶段的最迟时刻。</dd></div><div><dt>帧渲染</dt><dd>使用准备用于展示的数据生成可显示的一帧。</dd></div><div><dt>空闲调度器</dt><dd>根据剩余时间和应用观察者的候选信息安排操作或选择功率设置的模块。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">提交边界和操作预测进入空闲调度</a></li><li><a href="#fig-2">决定预测操作能否提前</a></li><li><a href="#fig-4">较低功率设置如何送到处理单元</a></li><li><a href="#fig-3">9 ms 剩余时间内可安排哪些操作</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">提交边界和操作预测进入空闲调度</h3></div>
-    <a class="paper-open" href="../mechanisms/US12361630B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="提交边界和操作预测进入空闲调度">
-    <img class="paper-image native-image" src="../mechanisms/US12361630B2/fig-1/diagram.svg" width="970" height="284"
-         style="--paper-width:970px" alt="提交边界和操作预测进入空闲调度。更新调度器将提交截止前的空闲信息送到空闲调度器。预测引擎与应用观察者提供后续候选操作。">
-  </div>
-  <figcaption>
-    <span>更新调度器将提交截止前的空闲信息送到空闲调度器。预测引擎与应用观察者提供后续候选操作。</span>
-    <span class="figure-evidence">图 4–5，权 1、9 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12361630">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12361630B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">决定预测操作能否提前</h3></div>
-    <a class="paper-open" href="../mechanisms/US12361630B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="决定预测操作能否提前">
-    <img class="paper-image native-image" src="../mechanisms/US12361630B2/fig-2/diagram.svg" width="920" height="458"
-         style="--paper-width:920px" alt="决定预测操作能否提前。空闲调度器根据剩余时间和预计执行时间选择要提前做的操作。权 1 要求第三帧也在第二次提交截止之前完成渲染。">
-  </div>
-  <figcaption>
-    <span>空闲调度器根据剩余时间和预计执行时间选择要提前做的操作。权 1 要求第三帧也在第二次提交截止之前完成渲染。</span>
-    <span class="figure-evidence">图 4、6B，权 1、21 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12361630">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12361630B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">较低功率设置如何送到处理单元</h3></div>
-    <a class="paper-open" href="../mechanisms/US12361630B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="较低功率设置如何送到处理单元">
-    <img class="paper-image native-image" src="../mechanisms/US12361630B2/fig-4/diagram.svg" width="721" height="332"
-         style="--paper-width:721px" alt="较低功率设置如何送到处理单元。空闲调度器选出能够守住截止时间的设置，发消息给更新调度器。系统例程随后将该设置应用到处理单元。">
-  </div>
-  <figcaption>
-    <span>空闲调度器选出能够守住截止时间的设置，发消息给更新调度器。系统例程随后将该设置应用到处理单元。</span>
-    <span class="figure-evidence">图 6A–6B；教学数据 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12361630">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12361630B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">9 ms 剩余时间内可安排哪些操作</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">方案</th><th scope="col">第二帧操作</th><th scope="col">预测操作</th><th scope="col">用时与截止关系</th></tr></thead><tbody><tr><th scope="row">高档且预做</th><td>5 ms</td><td>3 ms</td><td class="emphasis">共 8 ms，可容纳</td></tr><tr><th scope="row">低档且仅做当前</th><td>8 ms</td><td>无</td><td>共 8 ms，可容纳</td></tr><tr><th scope="row">低档再追加</th><td>8 ms</td><td>3 ms</td><td class="emphasis">共 11 ms，超过 9 ms</td></tr></tbody></table>
-  <figcaption>
-    <span>数值为教学设定。能否按时提交与每帧能耗是不同的观察量。</span>
-    <span class="figure-evidence">图 6A–6B，权 1、9；教学算例 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12361630">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12361630B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测后续帧操作</dt><dd>提前处理后续工作 <span class="subdued">原图 4、6B，权 1</span></dd></div><div><dt>按截止选择功率</dt><dd>较低设置下按时完成 <span class="subdued">原图 5、8，权 9</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>分别计量提前操作的时间、后续窗口中实际少做的时间和预测失效后的重做量。比较能效时按完成的帧数归一化，并量测执行期间消耗的能量。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>用户改变滚动方向时，已提前计算或渲染的内容可能无用，增加额外计算和访存，也可能压缩下一次提交的有效裕量。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>距离提交 9 ms，当前第二帧工作需 5 ms，预测第三帧准备需 3 ms。降低当前档位后第二帧工作需 8 ms。</dd></div><div><dt>处理结果</dt><dd>高档可在当前窗完成第二和预测项，总计 8 ms。低档能按时完成第二项，但剩余 1 ms 不能容纳 3 ms 预测项。</dd></div><div><dt>结果解读</dt><dd>两种分配是示例，用来说明空闲预算竞争。实际收益取决于预测命中率和下一窗口负载。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、15、21 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>方法权项识别第二帧所需的操作和剩余时间，预测第三操作，并在第二提交截止前用其结果渲染第三帧。见原图 4、5、6B。</p>
+  <p>方法权项识别第二帧所需的操作和剩余时间，预测第三操作，并在第二帧提交截止时刻前用其结果渲染第三帧。见原图 4、5、6B。依据当前时刻、帧提交截止时刻和应用提供的候选操作安排额外工作，或选择功率设置。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=identifying%20a%20second%20operation%20having%20a%20second%20result%20used%20for%20rendering%20a%20second%20frame">F1</a></th><td>识别用于渲染第二帧的操作</td><td>原图 4 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=determining%20a%20remaining%20time%20to%20the%20second%20commit%20deadline%20relative%20to%20a%20current%20time">F2</a></th><td>根据当前时刻计算距第二提交截止的剩余时间</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%20a%20third%20operation%20to%20be%20performed%20before%20the%20second%20commit%20deadline">F3</a></th><td>预测可在第二提交截止前执行的第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20using%20a%20third%20result%20of%20the%20third%20operation%2C%20a%20third%20frame%20before%20the%20second%20commit">F4</a></th><td>用第三操作结果赶在第二提交截止前渲染第三帧</td><td>原图 6B</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=identifying%20a%20second%20operation%20having%20a%20second%20result%20used%20for%20rendering%20a%20second%20frame">F1</a></th><td>识别用于渲染第二帧的操作</td><td>原图 4 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=determining%20a%20remaining%20time%20to%20the%20second%20commit%20deadline%20relative%20to%20a%20current%20time">F2</a></th><td>根据当前时刻计算距第二帧提交截止时刻的剩余时间</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%20a%20third%20operation%20to%20be%20performed%20before%20the%20second%20commit%20deadline">F3</a></th><td>预测可在第二帧提交截止时刻前执行的第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20using%20a%20third%20result%20of%20the%20third%20operation%2C%20a%20third%20frame%20before%20the%20second%20commit">F4</a></th><td>用第三操作结果赶在第二帧提交截止时刻前渲染第三帧</td><td>原图 6B</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
   <h4 id="independent-9-title">权利要求 9</h4>
   <p>另一方法权项使用不同长度的相邻提交周期，在比前一项更低的功率设置下按时完成第二操作。见原图 5、8。</p>
   <table class="comparison-table" aria-labelledby="independent-9-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20second%20period%20different%20from%20the%20first%20period">F5</a></th><td>两个提交周期时长不同</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20one%20or%20more%20processing%20elements%20complete%20the%20second%20operation%20before%20the%20second%20commit%20deadline">F6</a></th><td>处理单元仍须在第二提交截止前完成操作</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20second%20power%20setting%20is%20lower%20than%20the%20first%20power%20setting">F7</a></th><td>第二功率设置低于第一设置</td><td>原图 8</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20second%20period%20different%20from%20the%20first%20period">F5</a></th><td>两个提交周期时长不同</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20one%20or%20more%20processing%20elements%20complete%20the%20second%20operation%20before%20the%20second%20commit%20deadline">F6</a></th><td>处理单元仍须在第二帧提交截止时刻前完成操作</td><td>原图 8</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=the%20second%20power%20setting%20is%20lower%20than%20the%20first%20power%20setting">F7</a></th><td>第二功率设置低于第一设置</td><td>原图 8</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
   <h4 id="independent-15-title">权利要求 15</h4>
   <p>设备的存储器和处理器执行剩余时间预测与提前渲染方法。关键时间边界与权 1 相同。见原图 4、5、6B。</p>
   <table class="comparison-table" aria-labelledby="independent-15-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=identifying%20a%20second%20operation%20having%20a%20second%20result%20used%20for%20rendering%20a%20second%20frame">F8</a></th><td>识别用于渲染第二帧的操作</td><td>原图 4 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=determining%20a%20remaining%20time%20to%20the%20second%20commit%20deadline%20relative%20to%20a%20current%20time">F9</a></th><td>根据当前时刻计算距第二提交截止的剩余时间</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%20a%20third%20operation%20to%20be%20performed%20before%20the%20second%20commit%20deadline">F10</a></th><td>预测可在第二提交截止前执行的第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20using%20a%20third%20result%20of%20the%20third%20operation%2C%20a%20third%20frame%20before%20the%20second%20commit">F11</a></th><td>用第三操作结果赶在第二提交截止前渲染第三帧</td><td>原图 6B</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=identifying%20a%20second%20operation%20having%20a%20second%20result%20used%20for%20rendering%20a%20second%20frame">F8</a></th><td>识别用于渲染第二帧的操作</td><td>原图 4 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=determining%20a%20remaining%20time%20to%20the%20second%20commit%20deadline%20relative%20to%20a%20current%20time">F9</a></th><td>根据当前时刻计算距第二帧提交截止时刻的剩余时间</td><td>原图 5</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%20a%20third%20operation%20to%20be%20performed%20before%20the%20second%20commit%20deadline">F10</a></th><td>预测可在第二帧提交截止时刻前执行的第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20using%20a%20third%20result%20of%20the%20third%20operation%2C%20a%20third%20frame%20before%20the%20second%20commit">F11</a></th><td>用第三操作结果赶在第二帧提交截止时刻前渲染第三帧</td><td>原图 6B</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-21" aria-labelledby="independent-21-title">
   <h4 id="independent-21-title">权利要求 21</h4>
   <p>应用收到滚动输入并向操作系统传递数据。OS 调度器预测操作，渲染模块按提交边界完成帧；应用显示其中至少一帧。见原图 1、4、6B。</p>
   <table class="comparison-table" aria-labelledby="independent-21-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=receiving%2C%20by%20an%20application%20executed%20on%20a%20computing%20device%2C%20a%20user%20input%20corresponding%20to%20a%20scrolling">F12</a></th><td>应用接收界面滚动输入</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=transmitting%2C%20by%20the%20application%20executed%20on%20the%20computing%20device%2C%20data%20indicating%20at%20least%20the%20user%20input">F13</a></th><td>应用将表示输入的数据送给操作系统</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%2C%20by%20a%20prediction%20module%20of%20the%20operating%20system%2C%20a%20third%20operation%20to%20be%20performed%20before">F14</a></th><td>OS 预测模块在第二截止范围内安排第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20by%20the%20render%20module%20of%20the%20operating%20system%20and%20using%20a%20third%20result%20of%20the">F15</a></th><td>OS 渲染模块须在第二提交截止前渲染第三帧</td><td>原图 6B</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=receiving%2C%20by%20an%20application%20executed%20on%20a%20computing%20device%2C%20a%20user%20input%20corresponding%20to%20a%20scrolling">F12</a></th><td>应用接收界面滚动输入</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=transmitting%2C%20by%20the%20application%20executed%20on%20the%20computing%20device%2C%20data%20indicating%20at%20least%20the%20user%20input">F13</a></th><td>应用将表示输入的数据送给操作系统</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=predicting%2C%20by%20a%20prediction%20module%20of%20the%20operating%20system%2C%20a%20third%20operation%20to%20be%20performed%20before">F14</a></th><td>OS 预测模块在第二截止范围内安排第三操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12361630B2#:~:text=rendering%2C%20by%20the%20render%20module%20of%20the%20operating%20system%20and%20using%20a%20third%20result%20of%20the">F15</a></th><td>OS 渲染模块须在第二帧提交截止时刻前渲染第三帧</td><td>原图 6B</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>方法权项识别第二帧所需的操作和剩余时间，预测第三操作，并在第二提交截止前用其结果渲染第三帧。见原图 4、5、6B。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第一与第二提交截止按显示刷新率确定。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>第一与第二提交截止使用可变周期。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>将第三操作限定为预取。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>第二操作由界面滚动引发，但该滚动没有使新图像的一部分显示出来。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>第三操作使新图像中至少该部分得以显示。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>更新调度器计算剩余时间，预测引擎根据当前帧及应用的图像顺序预测第三操作。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>从未来发生概率超过阈值的多个候选操作中选择第三操作。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>另一方法权项使用不同长度的相邻提交周期，在比前一项更低的功率设置下按时完成第二操作。见原图 5、8。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>计算距第二截止的剩余时间，估计沿用第一功率设置的完成时间，再进行比较。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-9">9</a></td><td>前后提交截止由刷新率决定。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-9">9</a></td><td>与用户界面例程交互的调度器确定低设置，并指示处理单元采用它。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>调度器估计采用较低设置时的完成时间，并使其小于剩余时间。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>由接收提交截止信息的性能控制器决定并调整第二功率设置。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>设备的存储器和处理器执行剩余时间预测与提前渲染方法。关键时间边界与权 1 相同。见原图 4、5、6B。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>设备的第一、第二提交截止由刷新率决定。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>设备所执行的第三操作是预取。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>第三操作按发生概率阈值从多个候选中选出。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>第二操作响应滚动，滚动尚未显示新图像的一部分。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>更新调度器计算剩余时间，预测引擎用当前帧与图像顺序预测第三及额外操作。</td></tr><tr id="claim-21"><th scope="row">21</th><td>独立项</td><td>应用收到滚动输入并向操作系统传递数据。OS 调度器预测操作，渲染模块按提交边界完成帧；应用显示其中至少一帧。见原图 1、4、6B。</td></tr><tr id="claim-22"><th scope="row">22</th><td><a href="#claim-21">21</a></td><td>第一、第二和第三操作各对应一个功率设置。</td></tr><tr id="claim-23"><th scope="row">23</th><td><a href="#claim-21">21</a></td><td>前三次提交截止按刷新率确定。</td></tr><tr id="claim-24"><th scope="row">24</th><td><a href="#claim-21">21</a></td><td>前三次提交截止采用可变周期。</td></tr><tr id="claim-25"><th scope="row">25</th><td><a href="#claim-21">21</a></td><td>第三操作为预取。</td></tr><tr id="claim-26"><th scope="row">26</th><td><a href="#claim-21">21</a></td><td>第二操作响应界面滚动，该滚动尚未显示新图像的一部分。</td></tr><tr id="claim-27"><th scope="row">27</th><td><a href="#claim-26">26</a></td><td>第三操作使至少一部分新图像显示出来。</td></tr><tr id="claim-28"><th scope="row">28</th><td><a href="#claim-21">21</a></td><td>更新调度器计算剩余时间，预测引擎按当前帧与图像顺序预测第三操作。</td></tr><tr id="claim-29"><th scope="row">29</th><td><a href="#claim-21">21</a></td><td>从未来发生概率超过阈值的操作中选择第三操作。</td></tr><tr id="claim-30"><th scope="row">30</th><td><a href="#claim-21">21</a></td><td>更新调度器确定第二操作的功率设置，并使处理单元用该设置渲染第二结果。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>方法权项识别第二帧所需的操作和剩余时间，预测第三操作，并在第二帧提交截止时刻前用其结果渲染第三帧。见原图 4、5、6B。依据当前时刻、帧提交截止时刻和应用提供的候选操作安排额外工作，或选择功率设置。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>第一与第二帧提交截止时刻按显示刷新率确定。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>第一与第二帧提交截止时刻使用可变周期。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>将第三操作限定为预取。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>第二操作由界面滚动引发，但该滚动没有使新图像的一部分显示出来。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>第三操作使新图像中至少该部分得以显示。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>更新调度器计算剩余时间，预测引擎根据当前帧及应用的图像顺序预测第三操作。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>从未来发生概率超过阈值的多个候选操作中选择第三操作。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>另一方法权项使用不同长度的相邻提交周期，在比前一项更低的功率设置下按时完成第二操作。见原图 5、8。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>计算距第二截止的剩余时间，估计沿用第一功率设置的完成时间，再进行比较。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-9">9</a></td><td>前后帧提交截止时刻由刷新率决定。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-9">9</a></td><td>与用户界面例程交互的调度器确定低设置，并指示处理单元采用它。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>调度器估计采用较低设置时的完成时间，并使其小于剩余时间。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>由接收帧提交截止时刻信息的性能控制器决定并调整第二功率设置。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>设备的存储器和处理器执行剩余时间预测与提前渲染方法。关键时间边界与权 1 相同。见原图 4、5、6B。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>设备的第一、第二帧提交截止时刻由刷新率决定。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>设备所执行的第三操作是预取。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>第三操作按发生概率阈值从多个候选中选出。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>第二操作响应滚动，滚动尚未显示新图像的一部分。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>更新调度器计算剩余时间，预测引擎用当前帧与图像顺序预测第三及额外操作。</td></tr><tr id="claim-21"><th scope="row">21</th><td>独立项</td><td>应用收到滚动输入并向操作系统传递数据。OS 调度器预测操作，渲染模块按提交边界完成帧；应用显示其中至少一帧。见原图 1、4、6B。</td></tr><tr id="claim-22"><th scope="row">22</th><td><a href="#claim-21">21</a></td><td>第一、第二和第三操作各对应一个功率设置。</td></tr><tr id="claim-23"><th scope="row">23</th><td><a href="#claim-21">21</a></td><td>前三次帧提交截止时刻按刷新率确定。</td></tr><tr id="claim-24"><th scope="row">24</th><td><a href="#claim-21">21</a></td><td>前三次帧提交截止时刻采用可变周期。</td></tr><tr id="claim-25"><th scope="row">25</th><td><a href="#claim-21">21</a></td><td>第三操作为预取。</td></tr><tr id="claim-26"><th scope="row">26</th><td><a href="#claim-21">21</a></td><td>第二操作响应界面滚动，该滚动尚未显示新图像的一部分。</td></tr><tr id="claim-27"><th scope="row">27</th><td><a href="#claim-26">26</a></td><td>第三操作使至少一部分新图像显示出来。</td></tr><tr id="claim-28"><th scope="row">28</th><td><a href="#claim-21">21</a></td><td>更新调度器计算剩余时间，预测引擎按当前帧与图像顺序预测第三操作。</td></tr><tr id="claim-29"><th scope="row">29</th><td><a href="#claim-21">21</a></td><td>从未来发生概率超过阈值的操作中选择第三操作。</td></tr><tr id="claim-30"><th scope="row">30</th><td><a href="#claim-21">21</a></td><td>更新调度器确定第二操作的功率设置，并使处理单元用该设置渲染第二结果。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 1、15、21</dt><dd>提前渲染路径有方法、设备和应用输入等限定。</dd></div><div><dt>权 9 与图 5、8</dt><dd>可变提交周期下选择较低功率档的路径有独立权项。</dd></div><div><dt>图 4、6A–6B</dt><dd>更新调度器、空闲观察者及预测操作如何利用提交前剩余时间。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12361630B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20250086009A1.html#engineering">按工作完成窗口选择 CPU 性能状态</a>
-<p>US20250086009A1 按预计工作完成窗选择 CPU 性能状态，权 5 另要求从窗口扣除期限余量。US12361630B2 权 9 比较两段长度不同的相邻提交周期，为后一项操作选择更低的功率设置并满足期限。后一专利另有权 1，允许利用同一提交期限前的剩余时间完成额外的预测操作。</p></li><li><a href="US11614791B2.html#engineering">按预制帧交替供电和停止应用处理器</a>
-<p>US11614791B2 让显示流水线按预定呈现时刻读取预制帧，权 16 允许处理预制帧期间应用处理器已断电。US12361630B2 权 9 在可变提交周期中，为下一项操作选择低于前一项的功率设置，并要求操作在相应截止时间前完成。两案分别支持显示侧自行重放与处理器继续运算。</p></li><li><a href="US20250308133A1.html#engineering">用帧提交的剩余时间提前渲染或下调功率设置</a>
-<p>公开申请继续自 US18/731,141。两份权 1 分别利用第一、第二个提交期限前的剩余时间预测后续图形操作。对照时先确认计时边界，再判断可用于节能的空档。</p></li></ul>
-    <p><a href="../index.html?patent=US12361630B2#knowledge">在全量关系图上定位 US12361630B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-06-06</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-05-31</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-07-15</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/731,141</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler M. Fox、Andrey Pokrovskiy、Aditya Krishnadevan、James R. MONTGOMERIE</dd></div><div><dt>分类号</dt><dd>G06T15/005、G06T1/20、G09G5/003、G09G2320/103</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12361630B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12361630B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权全文，覆盖 177 个说明书段落、30 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6A、6B、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12361630B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

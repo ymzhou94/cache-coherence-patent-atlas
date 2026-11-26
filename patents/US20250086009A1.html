@@ -1,123 +1,172 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20250086009A1 按工作完成窗口选择 CPU 性能状态 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用工作完成窗口选择 CPU 性能状态 · US20250086009A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20250086009A1</code> · <a href="https://eureka.patsnap.com/patent/US20250086009A1">专利全文</a></p>
+<h1>用工作完成窗口选择 CPU 性能状态</h1><p class="reading-question">应用里有多个 CPU 进程时，控制器怎样找出影响帧完成的进程，并为它选择性能状态？</p>
+<p class="reading-answer">性能控制器估计多个工作完成窗口，按窗口确定负责工作的进程并配置候选 CPU 性能状态。识别为截止时间约束型负载后，按该状态执行。图示实现可使用 GPU 帧缓冲交换作为窗口边界，在算力受限时切换为利用率控制。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-03-13</dd></div><div><dt>申请号</dt><dd>US18/367,710</dd></div><div><dt>最早优先权</dt><dd>2023-09-13</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ronit BANERJEE、Karthic A. PALANIAPPAN、Bryan R. Hinch、John G. Dorsey</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#signals">GPU 缓冲交换给 CPU 工作窗口提供边界</a></li><li><a href="#mode">先配置候选性能状态，再按负载类型应用</a></li><li><a href="#attribution">同一组窗口内，怎样识别负责完成工作的进程</a></li><li><a href="#margin">截止余量会改变可用的性能状态</a></li><li><a href="#state-lookup">用当前频率与完成时间查询下一个状态</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="signals"><h2>GPU 缓冲交换给 CPU 工作窗口提供边界</h2><p>GPU 把已完成的工作帧从工作缓冲切换到可见缓冲。帧缓冲可以将交换事件通知 CPU 性能控制器。控制器以两次通知所对应的时刻作为工作完成窗口的开始和结束。第 8 项明确了 GPU 的双缓冲，第 9 项进一步要求用交换时刻确定窗口。</p><p>图 1 上部画帧数据的流向，下部画控制器收到的完成时刻、进程观测和状态设置。说明书把控制器选择及配置性能状态的机制称为动态电压与频率管理（DVFM）。说明书允许估计窗口时采用目标帧率等性能要求。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　从帧缓冲交换观测到 CPU 性能状态</h3>
+    <p id="fig-1-basis">可见帧送显示设备，交换通知送性能控制器。窗口时刻和 CPU 进程观测共同进入状态选择。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从帧缓冲交换观测到 CPU 性能状态" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us20250086009a1-fig-1-svg-title us20250086009a1-fig-1-svg-desc">
+<title id="us20250086009a1-fig-1-svg-title">从帧缓冲交换观测到 CPU 性能状态</title>
+<desc id="us20250086009a1-fig-1-svg-desc">可见帧送显示设备，交换通知送性能控制器。窗口时刻和 CPU 进程观测共同进入状态选择。</desc>
+<defs><marker id="us20250086009a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250086009a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250086009a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250086009a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250086009a1-fig-1-prepared" d="M 212 110 L 344 110" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-1-arrow-data)"/>
+<path id="us20250086009a1-fig-1-visible" d="M 568 110 L 744 110" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-1-arrow-data)"/>
+<path id="us20250086009a1-fig-1-swap" d="M 456 144 L 456 224" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250086009a1-fig-1-arrow-control)"/>
+<path id="us20250086009a1-fig-1-definition" d="M 456 292 L 456 377" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-1-arrow-data)"/>
+<path id="us20250086009a1-fig-1-metrics" d="M 212 419 L 344 419" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-1-arrow-data)"/>
+<path id="us20250086009a1-fig-1-state" d="M 568 419 L 744 419" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-1-arrow-main)"/>
+<path id="us20250086009a1-fig-1-sample" d="M 832 453 L 832 493 Q 832 501 824 501 L 134 501 Q 126 501 126 493 L 126 453" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250086009a1-fig-1-arrow-return)"/>
+<rect x="226" y="80" width="104" height="18" fill="#f5f5f5"/><text x="278" y="94" class="arrow-label" text-anchor="middle">完成工作帧</text>
+<rect x="604" y="80" width="104" height="18" fill="#f5f5f5"/><text x="656" y="94" class="arrow-label" text-anchor="middle">当前可见帧</text>
+<rect x="471" y="173" width="82" height="18" fill="#f5f5f5"/><text x="512" y="187" class="arrow-label" text-anchor="middle">交换通知</text>
+<rect x="474.5" y="321" width="75" height="18" fill="#f5f5f5"/><text x="512" y="335" class="arrow-label" text-anchor="middle">完成窗口</text>
+<rect x="228" y="389" width="100" height="18" fill="#f5f5f5"/><text x="278" y="403" class="arrow-label" text-anchor="middle">进程完成量</text>
+<rect x="598" y="389" width="116" height="18" fill="#f5f5f5"/><text x="656" y="403" class="arrow-label" text-anchor="middle">CPU 性能状态</text>
+<rect x="425" y="471" width="108" height="18" fill="#f5f5f5"/><text x="479" y="485" class="arrow-label" text-anchor="middle">CPU 运行样本</text>
+<g id="us20250086009a1-fig-1-gpu"><rect x="40" y="76" width="172" height="68" rx="6" fill="#f5f5f5"/><rect x="40" y="76" width="172" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="126" y="102" class="node-name" text-anchor="middle">GPU 渲染</text><text x="126" y="124" class="node-detail" text-anchor="middle">准备当前工作帧</text></g>
+<g id="us20250086009a1-fig-1-buffers"><rect x="344" y="76" width="224" height="68" rx="6" fill="#f5f5f5"/><rect x="344" y="76" width="224" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="456" y="102" class="node-name" text-anchor="middle">GPU 帧缓冲</text><text x="456" y="124" class="node-detail" text-anchor="middle">工作帧完成后交换角色</text></g>
+<g id="us20250086009a1-fig-1-display"><rect x="744" y="76" width="176" height="68" rx="6" fill="#f5f5f5"/><rect x="744" y="76" width="176" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="832" y="102" class="node-name" text-anchor="middle">显示设备</text><text x="832" y="124" class="node-detail" text-anchor="middle">读取当前可见帧</text></g>
+<g id="us20250086009a1-fig-1-window"><rect x="344" y="224" width="224" height="68" rx="6" fill="#f5f5f5"/><rect x="344" y="224" width="224" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="456" y="250" class="node-name" text-anchor="middle">完成窗口估计</text><text x="456" y="272" class="node-detail" text-anchor="middle">取起止交换时刻</text></g>
+<g id="us20250086009a1-fig-1-work"><rect x="40" y="385" width="172" height="68" rx="6" fill="#f5f5f5"/><rect x="40" y="385" width="172" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="126" y="411" class="node-name" text-anchor="middle">CPU 进程观测</text><text x="126" y="433" class="node-detail" text-anchor="middle">分窗统计候选完成量</text></g>
+<g id="us20250086009a1-fig-1-controller"><rect x="344" y="377" width="224" height="84" rx="6" fill="#f5f5f5"/><rect x="344" y="377" width="224" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="456" y="403" class="node-name" text-anchor="middle">CPU 性能控制器</text><text x="456" y="425" class="node-detail" text-anchor="middle">识别进程并选择性能状态</text></g>
+<g id="us20250086009a1-fig-1-cpu"><rect x="744" y="385" width="176" height="68" rx="6" fill="#f5f5f5"/><rect x="744" y="385" width="176" height="68" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="832" y="411" class="node-name" text-anchor="middle">CPU 执行</text><text x="832" y="433" class="node-detail" text-anchor="middle">按相应状态继续运行</text></g>
+<text x="40" y="538" class="legend" text-anchor="start">实线　帧数据及控制输入    蓝虚线　缓冲交换通知    灰虚线　CPU 运行反馈</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250086009a1-fig-1-swap">交换通知</a> GPU 完成工作帧后交换缓冲角色，可以向 CPU 性能控制器通知交换事件。</li><li><a href="#us20250086009a1-fig-1-window">完成窗口估计</a> 两次交换时刻可界定一个完成窗口。实施例还能利用目标帧率或其他性能要求估计边界。</li><li><a href="#us20250086009a1-fig-1-work">CPU 进程观测</a> CPU 进程活动在这些窗口内分别统计。已提供给 GPU 的绘制工作和用于进程归因的 CPU 完成量处在不同路径。</li><li><a href="#us20250086009a1-fig-1-state">CPU 性能状态</a> 候选 CPU 性能状态用于执行已识别负载；控制器还需判断它是否受截止时间约束。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、4；说明书归档段 0008、0009、0028、0029、0030、0031、0034、0035、0036、0037、0040、0041、0042、0046、0047；权利要求 1、2、3、8、9、10、15 <a href="../diagrams/US20250086009A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>GPU 渲染</dt><dd>102</dd></div><div><dt>显示设备</dt><dd>104</dd></div><div><dt>CPU 执行</dt><dd>108</dd></div><div><dt>GPU 帧缓冲</dt><dd>110</dd></div><div><dt>CPU 性能控制器</dt><dd>112</dd></div><div><dt>估计完成时刻</dt><dd>302.1–302.n</dd></div><div><dt>完成窗口</dt><dd>304.1–304.a</dd></div></dl></details>
+</figure></section><section id="mode"><h2>先配置候选性能状态，再按负载类型应用</h2><p>原图 2 的执行顺序是估计窗口、识别进程、配置性能状态、判定负载类型。截止时间约束型走候选状态，随后继续判定。算力受限型切换为基于利用率的控制，在该工作结束后返回性能状态配置。</p><p>说明书的一个算力受限判定例使用 CPU 单独执行所占比例，阈值举例为 90%。它表示该负载很少与 GPU 工作重叠，具体统计口径由实现决定。图 2 保留两条回路，便于区分持续监测与重新配置。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　截止时间分支与利用率分支分别返回哪里</h3>
+    <p id="fig-2-basis">先配置候选性能状态。截止时间分支继续监测类型，算力受限分支结束后重新配置。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="截止时间分支与利用率分支分别返回哪里" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 577" role="img" aria-labelledby="us20250086009a1-fig-2-svg-title us20250086009a1-fig-2-svg-desc">
+<title id="us20250086009a1-fig-2-svg-title">截止时间分支与利用率分支分别返回哪里</title>
+<desc id="us20250086009a1-fig-2-svg-desc">先配置候选性能状态。截止时间分支继续监测类型，算力受限分支结束后重新配置。</desc>
+<defs><marker id="us20250086009a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250086009a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250086009a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250086009a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250086009a1-fig-2-window_info" d="M 280 98 L 365 98" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-2-arrow-data)"/>
+<path id="us20250086009a1-fig-2-configured" d="M 495 133 L 495 219" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-2-arrow-data)"/>
+<path id="us20250086009a1-fig-2-compute_bound" d="M 351 274 L 187 274 Q 179 274 179 282 L 179 408" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-2-arrow-data)"/>
+<path id="us20250086009a1-fig-2-deadline" d="M 495 329 L 495 355 Q 495 363 503 363 L 770 363 Q 778 363 778 371 L 778 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-2-arrow-main)"/>
+<path id="us20250086009a1-fig-2-monitor" d="M 900 448 L 926 448 Q 934 448 934 440 L 934 282 Q 934 274 926 274 L 639 274" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250086009a1-fig-2-arrow-return)"/>
+<path id="us20250086009a1-fig-2-reconfigure" d="M 64 446 L 42 446 Q 34 446 34 438 L 34 185 Q 34 177 42 177 L 383 177 Q 391 177 391 169 L 391 133" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250086009a1-fig-2-arrow-return)"/>
+<rect x="283" y="68" width="78" height="18" fill="#f5f5f5"/><text x="322" y="82" class="arrow-label" text-anchor="middle">窗口与工作量</text>
+<rect x="507" y="156" width="82" height="18" fill="#f5f5f5"/><text x="548" y="170" class="arrow-label" text-anchor="middle">候选状态</text>
+<rect x="215" y="244" width="90" height="18" fill="#f5f5f5"/><text x="260" y="258" class="arrow-label" text-anchor="middle">算力受限</text>
+<rect x="581" y="333" width="110" height="18" fill="#f5f5f5"/><text x="636" y="347" class="arrow-label" text-anchor="middle">截止时间约束</text>
+<rect x="728" y="244" width="110" height="18" fill="#f5f5f5"/><text x="783" y="258" class="arrow-label" text-anchor="middle">复核负载类型</text>
+<rect x="139.5" y="147" width="135" height="18" fill="#f5f5f5"/><text x="207" y="161" class="arrow-label" text-anchor="middle">结束后重新配置</text>
+<g id="us20250086009a1-fig-2-inputs"><rect x="56" y="63" width="224" height="70" rx="6" fill="#f5f5f5"/><rect x="56" y="63" width="224" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168" y="89" class="node-name" text-anchor="middle">已知窗口与进程</text><text x="168" y="111" class="node-detail" text-anchor="middle">来自前序观测与归因</text></g>
+<g id="us20250086009a1-fig-2-candidate"><rect x="365" y="63" width="260" height="70" rx="6" fill="#f5f5f5"/><rect x="365" y="63" width="260" height="70" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="495" y="89" class="node-name" text-anchor="middle">配置候选 CPU 性能状态</text><text x="495" y="111" class="node-detail" text-anchor="middle">在窗口内完成相应工作</text></g>
+<g id="us20250086009a1-fig-2-classify"><polygon points="495,219 639,274 495,329 351,274" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="495" y="271" class="node-name" text-anchor="middle">受截止时间约束？</text><text x="495" y="292" class="node-detail" text-anchor="middle">观察当前负载类型</text></g>
+<g id="us20250086009a1-fig-2-util"><rect x="64" y="408" width="229" height="74" rx="6" fill="#f5f5f5"/><rect x="64" y="408" width="229" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="178.5" y="434" class="node-name" text-anchor="middle">切换利用率控制</text><text x="178.5" y="456" class="node-detail" text-anchor="middle">运行算力受限工作</text></g>
+<g id="us20250086009a1-fig-2-apply"><rect x="656" y="408" width="244" height="74" rx="6" fill="#f5f5f5"/><rect x="656" y="408" width="244" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="778" y="434" class="node-name" text-anchor="middle">按候选性能状态执行</text><text x="778" y="456" class="node-detail" text-anchor="middle">运行截止时间约束型工作</text></g>
+<text x="38" y="553" class="legend" text-anchor="start">配置与执行沿实线；虚线返回判定或配置阶段。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250086009a1-fig-2-candidate">配置候选 CPU 性能状态</a> 根据已识别进程所需工作和完成窗口，从多个性能状态中选出候选。</li><li><a href="#us20250086009a1-fig-2-classify">受截止时间约束？</a> 再判定负载类型。说明书把 CPU 单独执行占比较高作为识别算力受限的例子。</li><li><a href="#us20250086009a1-fig-2-monitor">复核负载类型</a> 按候选状态执行后，可以继续回到分类检查，避免负载改变后仍保持旧控制。</li><li><a href="#us20250086009a1-fig-2-reconfigure">结束后重新配置</a> 算力受限工作结束后，回到性能状态配置。</li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0026、0037、0038、0039、0040、0041、0042、0043、0044、0045；权利要求 1、4、5、6、7、8、12、13、14、15、18、19、20 <a href="../diagrams/US20250086009A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>估计完成窗口</dt><dd>202</dd></div><div><dt>识别执行进程</dt><dd>204</dd></div><div><dt>配置候选 CPU 性能状态</dt><dd>206</dd></div><div><dt>判断是否受截止时间约束</dt><dd>208</dd></div><div><dt>按候选性能状态执行</dt><dd>210</dd></div><div><dt>切换利用率控制</dt><dd>212</dd></div></dl></details>
+</figure></section><section id="attribution"><h2>同一组窗口内，怎样识别负责完成工作的进程</h2><p>第 3 项给出的识别方法是对每个候选进程分窗口估计完成工作量，再选方差最小的候选。原图 4 的不同进程可在同一窗口内多次执行，图 3 因此用共同窗口切割样本，并展示执行片段跨边界时该如何分窗。</p><p>图区分原图的示意与具体测量。算例用进程活跃时间近似工作量，三个候选的平均值相同，但每窗总量的方差不同。实际选择还受候选集合和观测量定义影响。若背景工作同样规律，仅凭低方差会有误判。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　按相同窗口切割进程的活动片段</h3>
+    <p id="fig-3-basis">共享交换边界把各进程切成分窗样本。此例的平均活动量相同，稳定进程的窗间方差更小。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="按相同窗口切割进程的活动片段" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us20250086009a1-fig-3-svg-title us20250086009a1-fig-3-svg-desc">
+<title id="us20250086009a1-fig-3-svg-title">按相同窗口切割进程的活动片段</title>
+<desc id="us20250086009a1-fig-3-svg-desc">共享交换边界把各进程切成分窗样本。此例的平均活动量相同，稳定进程的窗间方差更小。</desc>
+<defs><marker id="us20250086009a1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250086009a1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250086009a1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250086009a1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us20250086009a1-fig-3-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="408" y1="76" x2="408" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">16</text>
+<line x1="624" y1="76" x2="624" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">32</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">48</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（ms）</text>
+</g>
+<g id="us20250086009a1-fig-3-windows"><text x="24" y="136" class="node-name" text-anchor="start">完成窗口</text>
+<rect x="192" y="112" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="300" y="136" class="arrow-label" text-anchor="middle">第一个窗口</text>
+<rect x="408" y="112" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">第二个窗口</text>
+<rect x="624" y="112" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="732" y="136" class="arrow-label" text-anchor="middle">第三个窗口</text>
+<circle cx="840" cy="131" r="5" fill="#4f5d75"/>
+<text x="840" y="171" class="arrow-label" text-anchor="end">第三窗口结束</text></g>
+<g id="us20250086009a1-fig-3-varied"><text x="24" y="228" class="node-name" text-anchor="start">变化候选</text>
+<rect x="219" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="259.5" y="228" class="arrow-label" text-anchor="middle">6 ms</text>
+<rect x="462" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="543" y="228" class="arrow-label" text-anchor="middle">12 ms</text>
+<rect x="624" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="705" y="228" class="arrow-label" text-anchor="middle">12 ms</text>
+<circle cx="786" cy="223" r="5" fill="#4f5d75"/>
+<text x="786" y="263" class="arrow-label" text-anchor="end">本窗口已累计 12 ms</text></g>
+<g id="us20250086009a1-fig-3-stable"><text x="24" y="320" class="node-name" text-anchor="start">稳定候选</text>
+<rect x="246" y="296" width="135" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="313.5" y="320" class="arrow-label" text-anchor="middle">10 ms</text>
+<rect x="435" y="296" width="135" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="502.5" y="320" class="arrow-label" text-anchor="middle">10 ms</text>
+<rect x="651" y="296" width="135" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="718.5" y="320" class="arrow-label" text-anchor="middle">10 ms</text>
+<circle cx="786" cy="315" r="5" fill="#bf4520"/>
+<text x="786" y="355" class="arrow-label" text-anchor="end">本窗口已累计 10 ms</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">示例把每窗 CPU 活跃时间作为工作量近似。原图未提供绝对时间或各进程实测工作量。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250086009a1-fig-3-windows">完成窗口</a> 共同边界 t=0、16、32、48 ms。窗口由下一次交换关闭，一个执行片段跨窗时按边界分别统计。</li><li><a href="#us20250086009a1-fig-3-stable">稳定候选</a> 三个窗口内的活跃时间各为 10 ms。以 CPU 活跃时间作为工作量近似，方差为 0。</li><li><a href="#us20250086009a1-fig-3-varied">变化候选</a> 三个窗口内依次为 6、12、12 ms。它的平均值也是 10 ms，但按三个窗口计算的总体方差为 8 ms²。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0035、0036、0040、0041、0046、0047；权利要求 1、3、8、10、15、17 <a href="../diagrams/US20250086009A1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>完成窗口</dt><dd>304.1–304.a</dd></div><div><dt>CPU 候选进程</dt><dd>402.1–402.m</dd></div></dl></details>
+</figure></section><section id="margin"><h2>截止余量会改变可用的性能状态</h2><p>原图 5A/5B 用近似恒定的工作量比较高频短时与低频长时两种状态。第 5 项允许从完成窗口扣除截止余量，再筛选符合期限的性能状态。图表 4 用 16 ms 窗口和 2 ms 截止余量演示，实际参与比较的期限为 14 ms。</p><p>在这个算例里，中状态和高状态可行。若希望比较能效，需要采样 CPU 电压、频率和实际功率，计算完成同一帧的能量。缓存、内存访问或 GPU 协同占比较大时，完工时间和功耗都可能偏离频率的简单比例。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　扣除截止余量后，哪些性能状态来得及</h3>
+    <p id="fig-4-basis">模型中 16 ms 窗口扣去 2 ms 余量，得到 14 ms 有效期限。两个状态满足期限，其能耗需另比。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">候选性能状态</th><th scope="col">预计完成时间</th><th scope="col">距有效期限余量</th><th scope="col">能否按时</th></tr></thead><tbody><tr id="fig-4-low"><th scope="row">低</th><td>17 ms</td><td>−3 ms</td><td>超期</td></tr><tr id="fig-4-middle"><th scope="row">中</th><td>13 ms</td><td>1 ms</td><td>可行</td></tr><tr id="fig-4-high"><th scope="row">高</th><td>9 ms</td><td>5 ms</td><td>可行</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-low">低</a> 预计完成时间为 17 ms，超过 14 ms 有效期限 3 ms。</li><li><a href="#fig-4-middle">中</a> 预计完成时间 13 ms，留下 1 ms 的额外余量。</li><li><a href="#fig-4-high">高</a> 预计完成时间 9 ms。是否值得用额外性能，仍取决于完成同一工作所需要的能量。</li></ul>
+  <p class="figure-evidence">原图 5A、5B；说明书归档段 0028、0037、0048、0049；权利要求 4、5、11、12、18 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>第一性能状态</dt><dd>502</dd></div><div><dt>第二性能状态</dt><dd>504</dd></div><div><dt>工作完成窗口</dt><dd>506</dd></div><div><dt>窗口起止时刻</dt><dd>508.1/508.2</dd></div></dl></details>
+</figure></section><section id="state-lookup"><h2>用当前频率与完成时间查询下一个状态</h2><p>说明书 [0036] 披露一种查表实施方式。图 5 左侧分别输入当前状态的运行频率 f₁ 与完成时长 t₁，以及扣除余量后设给下一状态的目标完成时长 t₂。查询用这三项数据寻找候选频率 f₂。性能控制器随后通过 DVFM 配置第二状态，CPU 在后续工作窗口执行已识别的进程。图表 4 的时限比较说明此查询可接受的完成时间范围。</p><p>原图 5A、5B 用近似相等的 f₁t₁ 和 f₂t₂ 表示完成的工作量相近。图中面积的量纲是运行周期，频率与完成时长近似成反比依赖工作量相近且每周期能完成的有效工作变化不大。受内存延迟、GPU 等待或频率切换影响时，估计可能偏离。比较能效还要计算活动到空闲的窗口总能耗，同时记录实际工作完成的位置。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　从已观测状态到满足时限的候选 CPU 性能状态</h3>
+    <p id="fig-5-basis">性能控制器把旧频率、实测时长和目标时长一起交给查询。返回的是候选状态的运行频率，CPU 通过 DVFM 应用该状态。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="从已观测状态到满足时限的候选 CPU 性能状态" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 550" role="img" aria-labelledby="us20250086009a1-fig-5-svg-title us20250086009a1-fig-5-svg-desc">
+<title id="us20250086009a1-fig-5-svg-title">从已观测状态到满足时限的候选 CPU 性能状态</title>
+<desc id="us20250086009a1-fig-5-svg-desc">性能控制器把旧频率、实测时长和目标时长一起交给查询。返回的是候选状态的运行频率，CPU 通过 DVFM 应用该状态。</desc>
+<defs><marker id="us20250086009a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250086009a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250086009a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250086009a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250086009a1-fig-5-observed" d="M 280 129 L 307 129 Q 315 129 315 137 L 315 198 Q 315 206 323 206 L 355 206" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-5-arrow-data)"/>
+<path id="us20250086009a1-fig-5-budget" d="M 280 324 L 307 324 Q 315 324 315 316 L 315 254 Q 315 246 323 246 L 355 246" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-5-arrow-data)"/>
+<path id="us20250086009a1-fig-5-target" d="M 602 225 L 692 225" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-5-arrow-main)"/>
+<path id="us20250086009a1-fig-5-apply" d="M 809 263 L 809 415" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250086009a1-fig-5-arrow-main)"/>
+<path id="us20250086009a1-fig-5-observe" d="M 692 452 L 24 452 Q 16 452 16 444 L 16 137 Q 16 129 24 129 L 33 129" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250086009a1-fig-5-arrow-return)"/>
+<rect x="230" y="182" width="70" height="18" fill="#f5f5f5"/><text x="265" y="196" class="arrow-label" text-anchor="middle">f₁、t₁</text>
+<rect x="252.5" y="254" width="45" height="18" fill="#f5f5f5"/><text x="275" y="268" class="arrow-label" text-anchor="middle">t₂</text>
+<rect x="627" y="195" width="38" height="18" fill="#f5f5f5"/><text x="646" y="209" class="arrow-label" text-anchor="middle">f₂</text>
+<rect x="669" y="330" width="126" height="18" fill="#f5f5f5"/><text x="732" y="344" class="arrow-label" text-anchor="middle">按候选状态执行</text>
+<rect x="243.5" y="422" width="213" height="18" fill="#f5f5f5"/><text x="350" y="436" class="arrow-label" text-anchor="middle">用后续窗口观测更新模型输入</text>
+<g id="us20250086009a1-fig-5-current"><rect x="33" y="90" width="247" height="78" rx="6" fill="#f5f5f5"/><rect x="33" y="90" width="247" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="156.5" y="116" class="node-name" text-anchor="middle">第一 CPU 性能状态</text><text x="156.5" y="138" class="node-detail" text-anchor="middle">运行频率 f₁，实测时长 t₁</text></g>
+<g id="us20250086009a1-fig-5-window"><rect x="33" y="285" width="247" height="78" rx="6" fill="#f5f5f5"/><rect x="33" y="285" width="247" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="156.5" y="311" class="node-name" text-anchor="middle">完成窗口与截止余量</text><text x="156.5" y="333" class="node-detail" text-anchor="middle">扣除余量，得目标时长 t₂</text></g>
+<g id="us20250086009a1-fig-5-query"><rect x="355" y="184" width="247" height="84" rx="6" fill="#f5f5f5"/><rect x="355" y="184" width="247" height="84" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="478.5" y="210" class="node-name" text-anchor="middle">性能状态查询</text><text x="478.5" y="232" class="node-detail" text-anchor="middle">同等工作量下的频率与时长</text></g>
+<g id="us20250086009a1-fig-5-config"><rect x="692" y="185" width="235" height="78" rx="6" fill="#f5f5f5"/><rect x="692" y="185" width="235" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="809.5" y="211" class="node-name" text-anchor="middle">DVFM 配置第二状态</text><text x="809.5" y="233" class="node-detail" text-anchor="middle">应用候选运行频率 f₂</text></g>
+<g id="us20250086009a1-fig-5-run"><rect x="692" y="415" width="235" height="78" rx="6" fill="#f5f5f5"/><rect x="692" y="415" width="235" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="809.5" y="441" class="node-name" text-anchor="middle">后续 CPU 工作窗口</text><text x="809.5" y="463" class="node-detail" text-anchor="middle">执行并观察实际完成时长</text></g>
+<text x="32" y="529" class="legend" text-anchor="start">说明书的近似关系 f₁t₁ ≈ f₂t₂ 以工作量相近为前提。周期数本身不等于能耗。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250086009a1-fig-5-current">第一 CPU 性能状态</a> f₁ 是原先运行频率，t₁ 是在这个状态完成已识别工作所用的时长。在原图 5A 的示意里，两者组成工作矩形。</li><li><a href="#us20250086009a1-fig-5-window">完成窗口与截止余量</a> 固定完成窗口的边界由图 1 所示的缓冲交换或业务要求提供，扣除余量后得到候选状态的目标完成时长 t₂。</li><li><a href="#us20250086009a1-fig-5-query">性能状态查询</a> 说明书 [0036] 披露用 f₁、t₁ 和 t₂ 查询不同频率下的完成时间。它保留的是近似相同工作量下的状态间关系。</li><li><a href="#us20250086009a1-fig-5-config">DVFM 配置第二状态</a> 第二状态的候选输入是查询返回的 f₂。状态的提交仍服从图 2 中截止时间控制的适用条件。</li><li><a href="#us20250086009a1-fig-5-run">后续 CPU 工作窗口</a> 在下一工作窗口执行并可重新观察完成时长。CPU 受非频率因素限制时，频率乘时长近似恒定的关系可能不成立。</li></ul>
+  <p class="figure-evidence">原图 1、2、5A、5B；说明书归档段 0034、0035、0037、0038、0042、0044、0048、0049；权利要求 1、4、5、8、11、12、15、17、18 <a href="../diagrams/US20250086009A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>CPU 性能控制器</dt><dd>112</dd></div><div><dt>配置候选 CPU 性能状态</dt><dd>206</dd></div><div><dt>第一／第二 CPU 性能状态</dt><dd>502/504</dd></div><div><dt>工作完成窗口</dt><dd>506</dd></div><div><dt>完成窗口的开始／结束</dt><dd>508.1/508.2</dd></div><div><dt>第一／第二状态所完成的工作</dt><dd>510/512</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=clpc#catalog">CLPC 与性能调节</a></p>
-  <p class="document-id"><code>US20250086009A1</code><span>美国公开申请</span><time datetime="2025-03-13">2025-03-13</time></p>
-  <h1>按工作完成窗口选择 CPU 性能状态</h1>
-  <p class="english-title" lang="en">Provisioning of performance states for central processing units (CPUS)</p>
-  <p class="document-question">CPU 利用率相同时，帧提交截止时间如何改变性能状态选择？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">CPU 性能控制器估计一组工作完成窗口，识别负责完成这些工作的进程，再为已判定受截止时间约束的工作选用相应性能状态。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>以缓冲区交换推算窗口是实施例。周期或工作量变化时，负责进程的识别结果和每个窗口的截止时间都须重新检查。</dd></div><div><dt>验证方法</dt><dd>回放相同的进程活动和帧提交序列，对照利用率控制与按完成窗口选档。分别记录负责进程识别错误、提交前余量、迟交帧及每帧能耗。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US20250086009A1">原文权利要求 1（全文）</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">GPU 交换可见缓冲区和工作缓冲区提供了一条观测线索。CPU 并不直接从画面提交得知哪个进程应提速，仍需先识别负责人，再判断工作是否受期限约束。</p>
-    <p>CPU 控制器估计工作完成窗口，识别承担该工作的进程并为其配置候选性能状态。若判定为截止时间约束型负载，就按该状态执行。说明书另展示算力受限时使用利用率控制。</p>
-    <ol class="walkthrough"><li><h3>取得窗口边界</h3><p>图 1 的 GPU 可以在准备完工作帧时交换两个缓冲区。图 2 将相关时刻作为推定工作完成窗口的输入。</p></li><li><h3>归属工作量</h3><p>跨窗口统计候选进程完成的工作。权利要求 3 的做法比较工作量方差，选择方差最低的候选。</p></li><li><h3>按预留余量后的截止时间选择运行点</h3><p>设备可为窗口预留期限余量。图 5A、5B 给出在截止时间前可完成工作、且频率较低的性能状态。</p></li><li><h3>按任务类型切换</h3><p>有稳定的工作完成窗口时，按提交截止时间选择 CPU 运行点。检测到算力受限的任务后，切换为按利用率选择运行点。任务结束后可恢复按窗口控制。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 5 增设截止时间余量；权 4 对功耗或性能优化另有限定。原图 2 的判定首先配置候选运行点，随后按任务类型决定使用方式。独权不要求最低频率。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>完成窗口（workload completion window）</dt><dd>由预计完成时刻定义的区间，用于判断可选 CPU 运行点。</dd></div><div><dt>截止时间约束型负载（deadline-bound workload）</dt><dd>必须在指定时点前完成的工作。区分截止点与实际调度等待。</dd></div><div><dt>工作量方差（workload variance）</dt><dd>按多个窗口统计候选进程完成量的变化程度。权 3 将最小方差作为识别条件。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">完成窗口与进程归因进入 CPU 性能控制</a></li><li><a href="#fig-2">完成窗口控制与利用率控制的切换</a></li><li><a href="#fig-3">如何用跨窗口工作量识别进程</a></li><li><a href="#fig-4">相同工作量下哪些运行点来得及</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">完成窗口与进程归因进入 CPU 性能控制</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250086009A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="完成窗口与进程归因进入 CPU 性能控制">
-    <img class="paper-image native-image" src="../mechanisms/US20250086009A1/fig-1/diagram.svg" width="287" height="838"
-         style="--paper-width:287px" alt="完成窗口与进程归因进入 CPU 性能控制。双缓冲交换是设备独权 8 明列的窗口线索。最小工作量方差属于权 3，图中两类输入的作用不同。">
-  </div>
-  <figcaption>
-    <span>双缓冲交换是设备独权 8 明列的窗口线索。最小工作量方差属于权 3，图中两类输入的作用不同。</span>
-    <span class="figure-evidence">原图 1–2、4，说明书 [0034]–[0036]，权利要求 1–3、8 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250086009">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250086009A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">完成窗口控制与利用率控制的切换</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250086009A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="完成窗口控制与利用率控制的切换">
-    <img class="paper-image native-image" src="../mechanisms/US20250086009A1/fig-2/diagram.svg" width="560" height="488"
-         style="--paper-width:560px" alt="完成窗口控制与利用率控制的切换。控制器先配置候选性能状态，再确认负载类型。图 2 的另一分支为算力受限工作采用利用率控制。">
-  </div>
-  <figcaption>
-    <span>控制器先配置候选性能状态，再确认负载类型。图 2 的另一分支为算力受限工作采用利用率控制。</span>
-    <span class="figure-evidence">原图 2，说明书 [0041]–[0044]，权利要求 1、6–7 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250086009">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250086009A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-3-title">如何用跨窗口工作量识别进程</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250086009A1/fig-3/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="如何用跨窗口工作量识别进程">
-    <img class="paper-image native-image" src="../mechanisms/US20250086009A1/fig-3/diagram.svg" width="687" height="316"
-         style="--paper-width:687px" alt="如何用跨窗口工作量识别进程。权 3 对一批候选进程分别统计每窗完成量，再计算方差和选择最低者。规律的无关进程也可能呈现低方差。">
-  </div>
-  <figcaption>
-    <span>权 3 对一批候选进程分别统计每窗完成量，再计算方差和选择最低者。规律的无关进程也可能呈现低方差。</span>
-    <span class="figure-evidence">原图 4，说明书 [0040]、[0046]，权利要求 3 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250086009">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250086009A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">相同工作量下哪些运行点来得及</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">候选运行点</th><th scope="col">预计完成时间</th><th scope="col">距有效期限余量</th><th scope="col">可行性</th></tr></thead><tbody><tr><th scope="row">低</th><td>17 ms</td><td>−3 ms</td><td class="emphasis">超期</td></tr><tr><th scope="row">中</th><td>13 ms</td><td>1 ms</td><td>可行</td></tr><tr><th scope="row">高</th><td>9 ms</td><td>5 ms</td><td>可行</td></tr></tbody></table>
-  <figcaption>
-    <span>教学算例的窗口长 16 ms，扣除 2 ms 余量后为 14 ms。是否节能仍需测量每帧消耗的能量。</span>
-    <span class="figure-evidence">原图 5A–5B，说明书 [0047]–[0048]，权利要求 5，教学算例 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250086009">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250086009A1">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>根据事件估计工作窗口</dt><dd>按预计期限配置 CPU 性能状态 <span class="subdued">原图 1–3，权利要求 1、2、8</span></dd></div><div><dt>比较候选进程的工作量方差</dt><dd>识别承担周期性工作的进程 <span class="subdued">原图 4，权利要求 3</span></dd></div><div><dt>判断负载类别后选择控制模式</dt><dd>对算力受限工作可转为利用率控制 <span class="subdued">原图 2，说明书 [0041]–[0044]，权利要求 6–7</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>把从可运行到完成拆成调度等待和实际 CPU 执行，再记录距提交期限的余量。运行点调整首先改变执行段，平均利用率无法直接识别等待尾部。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>交替注入高低复杂度帧且保持长期平均指令量不变。若低频配置使提交前余量的低分位转负，逐窗检查进程识别、执行时长预测与帧边界预测。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设窗口为 16 ms，保留 2 ms 余量。把低、中、高三档的预计完成时间取为 17、13、9 ms。</dd></div><div><dt>处理结果</dt><dd>有效期限为 14 ms。低档晚 3 ms，中档留下 1 ms，高档留下 5 ms。在中档能耗较低的前提下可以选择中档。</dd></div><div><dt>结果解读</dt><dd>这是按固定耗时比较档位的算例。窗口预测、执行时间估计以及误差余量得分别校准。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、8、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>CPU 估计完成窗口、找出负责进程并配置候选性能状态。确认工作受期限约束后才按该状态执行。</p>
+  <p>CPU 估计完成窗口、找出负责进程并配置候选性能状态。确认工作受期限约束后才按该状态执行。说明书把按工作负载配置性能状态的机制称为 DVFM。性能状态是该机制的选择结果，权利要求未限定其具体电压或频率表。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20plurality%20of%20specific%20timeframes%20that%20a%20plurality%20of%20workloads%20are%20to%20be%20completed%20to%20determine">F1</a></th><td>CPU 估计一组工作需要完成的时刻，由这些时刻确立多个完成窗口。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=As%20part%20of%20the%20DVFM%2C%20the%20performance%20controller%20112%20can%20estimate%20specific%20timeframes%20that%20the%20workloads">说明书 0035</a> · 原图 2–3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20process%20that%20is%20performing%20the%20plurality%20of%20workloads%20from%20among%20a%20plurality%20of%20processes">F2</a></th><td>从多个在 CPU 上执行的进程中识别承担这些工作的进程。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=After%20determining%20the%20workload%20completion%20windows%2C%20the%20performance%20controller%20112%20can%20identify%20one%20or%20more%20processes%2C">说明书 0036</a> · 原图 2 · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20performance%20state%20from%20among%20a%20plurality%20of%20different%20performance%20states%20to%20execute%20the%20process">F3</a></th><td>在多个性能状态中选择一个，让该进程在估计的时间窗内完成工作。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20206%2C%20the%20operational%20control%20flow%20200%20dynamically%20provisions%20a%20performance%20state%20that%20can%20be">说明书 0042</a> · 原图 2 · 原图 5A–5B</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=whether%20the%20plurality%20of%20workloads%20being%20performed%20by%20the%20process%20are%20a%20plurality%20of%20deadline-bound%20workloads">F4</a></th><td>判断已识别进程的工作是否受完成期限约束。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20208%2C%20the%20operational%20control%20flow%20200%20determines%20whether%20the%20workloads%20being%20performed%20by%20the">说明书 0043</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=the%20plurality%20of%20workloads%20in%20accordance%20with%20the%20performance%20state">F5</a></th><td>在判定受完成期限约束后，使用所选性能状态执行。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20210%2C%20the%20operational%20control%20flow%20200%20performs%20the%20workloads%20in%20accordance%20with%20the%20performance">说明书 0044</a> · 原图 2</td></tr></tbody>
@@ -137,49 +186,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20Graphics%20Processing%20Unit%20%28GPU%29%3Ba%20memory">F14</a></th><td>芯片包括 GPU 与存储器，CPU 在此平台配置工作完成窗口和性能状态。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=FIG.%201%20graphically%20illustrates%20an%20exemplary%20computing%20device%20in%20accordance%20with%20various%20embodiments%20of%20the%20present">说明书 0028</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20plurality%20of%20specific%20timeframes%20that%20a%20plurality%20of%20workloads%20are%20to%20be%20completed%20to%20determine">F15</a></th><td>CPU 估计一组工作需要完成的时刻，由这些时刻确立多个完成窗口。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=As%20part%20of%20the%20DVFM%2C%20the%20performance%20controller%20112%20can%20estimate%20specific%20timeframes%20that%20the%20workloads">说明书 0035</a> · 原图 2–3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20process%20that%20is%20performing%20the%20plurality%20of%20workloads%20from%20among%20a%20plurality%20of%20processes">F16</a></th><td>从多个在 CPU 上执行的进程中识别承担这些工作的进程。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=After%20determining%20the%20workload%20completion%20windows%2C%20the%20performance%20controller%20112%20can%20identify%20one%20or%20more%20processes%2C">说明书 0036</a> · 原图 2 · 原图 4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=a%20performance%20state%20from%20among%20a%20plurality%20of%20different%20performance%20states%20to%20execute%20the%20process">F17</a></th><td>在多个性能状态中选择一个，让该进程在估计的时间窗内完成工作。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20206%2C%20the%20operational%20control%20flow%20200%20dynamically%20provisions%20a%20performance%20state%20that%20can%20be">说明书 0042</a> · 原图 2 · 原图 5A–5B</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=whether%20the%20plurality%20of%20workloads%20being%20performed%20by%20the%20process%20are%20a%20plurality%20of%20deadline-bound%20workloads">F18</a></th><td>判断已识别进程的工作是否受完成期限约束。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20208%2C%20the%20operational%20control%20flow%20200%20determines%20whether%20the%20workloads%20being%20performed%20by%20the">说明书 0043</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=the%20plurality%20of%20workloads%20in%20accordance%20with%20the%20performance%20state">F19</a></th><td>在判定受完成期限约束后，使用所选性能状态执行。</td><td><a href="https://eureka.patsnap.com/patent/US20250086009A1#:~:text=At%20operation%20210%2C%20the%20operational%20control%20flow%20200%20performs%20the%20workloads%20in%20accordance%20with%20the%20performance">说明书 0044</a> · 原图 2</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>CPU 估计完成窗口、找出负责进程并配置候选性能状态。确认工作受期限约束后才按该状态执行。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>取 GPU 帧缓冲显示缓冲区与工作缓冲区交换时刻推导窗口。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>估计各候选窗口内的完成量及其方差，选择方差最小者。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>要求性能状态在按时完成的前提下优化功耗或 CPU 性能。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>选运行点时从完成窗口扣除截止余量。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>发现算力受限工作后，改用基于利用率的控制并执行。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-6">6</a></td><td>算力受限工作完成后，恢复满足完成窗口的性能状态。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>设备包含 GPU 双缓冲和 CPU，GPU 在工作帧完成后交换缓冲区，CPU 使用完成窗口管理候选进程的性能状态。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>在设备权基础上，将估计时点与两帧缓冲区的交换对齐。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>设备比较候选进程在各窗的完成量方差，选择最小者。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>设备按窗口约束配置优化功率或 CPU 性能的运行点。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>设备选取运行点时，须满足扣除截止余量的完成窗口。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>设备识别算力受限工作后切至利用率控制并执行。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>算力受限工作结束后回到按窗口选择运行点。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>SoC 含 GPU、存储器和 CPU，其中 CPU 负责估计对应工作窗口、判定负载并使用候选性能状态。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加根据 GPU 缓冲交换估计完成时点。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加候选完成量和最小方差识别。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>以权 17 所识别的进程为对象，在扣除截止余量后优化运行点。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加算力受限时的利用率控制分支。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>该利用率分支结束后恢复为窗口设置性能状态。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>CPU 估计完成窗口、找出负责进程并配置候选性能状态。确认工作受期限约束后才按该状态执行。说明书把按工作负载配置性能状态的机制称为 DVFM。性能状态是该机制的选择结果，权利要求未限定其具体电压或频率表。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>取 GPU 帧缓冲显示缓冲区与工作缓冲区交换时刻推导窗口。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>估计各候选窗口内的完成量及其方差，选择方差最小者。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>要求性能状态在按时完成的前提下优化功耗或 CPU 性能。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>选运行点时从完成窗口扣除截止余量。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>发现算力受限工作后，改用基于利用率的控制并执行。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-6">6</a></td><td>算力受限工作完成后，恢复满足完成窗口的性能状态。</td></tr><tr id="claim-8"><th scope="row">8</th><td>独立项</td><td>设备包含 GPU 双缓冲和 CPU，GPU 在工作帧完成后交换缓冲区，CPU 使用完成窗口管理候选进程的性能状态。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>在设备权基础上，将估计时点与两帧缓冲区的交换对齐。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-8">8</a></td><td>设备比较候选进程在各窗的完成量方差，选择最小者。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-8">8</a></td><td>设备按窗口约束配置优化功率或 CPU 性能的运行点。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>设备选取运行点时，须满足扣除截止余量的完成窗口。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-8">8</a></td><td>设备识别算力受限工作后切至利用率控制并执行。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>算力受限工作结束后回到按窗口选择运行点。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>SoC 含 GPU、存储器和 CPU，其中 CPU 负责估计对应工作窗口、判定负载并使用候选性能状态。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加根据 GPU 缓冲交换估计完成时点。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加候选完成量和最小方差识别。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>以权 17 所识别的进程为对象，在扣除截止余量后优化运行点。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-8">8</a></td><td>公开文本直接引用权 8，增加算力受限时的利用率控制分支。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>该利用率分支结束后恢复为窗口设置性能状态。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 1、2 与图 1–2</dt><dd>权 1 给出完整窗口控制链。权 2 限定一种以 GPU 缓冲交换估计时刻的实施方式。</dd></div><div><dt>权 3 与图 3–4</dt><dd>进程归属可以靠重复窗口的完成工作量统计。</dd></div><div><dt>权 4–7 与图 5A、5B</dt><dd>带余量的档位选择和检测算力受限后的切换分别来自从属项。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US20250086009A1">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12361630B2.html#engineering">在帧提交截止前提前渲染或采用较低功率设置</a>
-<p>US20250086009A1 按预计工作完成窗选择 CPU 性能状态，权 5 另要求从窗口扣除期限余量。US12361630B2 权 9 比较两段长度不同的相邻提交周期，为后一项操作选择更低的功率设置并满足期限。后一专利另有权 1，允许利用同一提交期限前的剩余时间完成额外的预测操作。</p></li><li><a href="US11579934B2.html#engineering">非对称多处理器的闭环性能控制与热功率约束</a>
-<p>US20250086009A1 根据剩余工作量和截止时间估计按时完成所需的 CPU 性能状态。US11579934B2 汇总线程组推荐的运行点，再依据核簇功率映射与控制量上限确定可用运行点。若功率上限使实际运行点低于性能请求，仍须检查工作能否在截止时间前完成。</p></li></ul>
-    <p><a href="../index.html?patent=US20250086009A1#knowledge">在全量关系图上定位 US20250086009A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-09-13</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-09-13</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-03-13</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/367,710</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ronit BANERJEE、Karthic A. PALANIAPPAN、Bryan R. Hinch、John G. Dorsey</dd></div><div><dt>分类号</dt><dd>G06F11/3409、G06F1/3203、G06F1/3234、G06F11/3058、G06F11/3419、G06F11/3428、G06F11/3433、G06F9/4887、G06F9/4893、G06F9/5044、G06F9/505、G06F9/5094、G06F9/544、G06F1/324、G06F2201/805、G06F2201/845</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20250086009A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US20250086009A1">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对公开申请，覆盖 55 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5A、5B。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20250086009A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

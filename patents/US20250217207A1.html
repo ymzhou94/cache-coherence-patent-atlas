@@ -1,123 +1,167 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20250217207A1 地址转换屏障约束乱序流水线 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>地址转换屏障约束年轻转换，保留独立执行机会 · US20250217207A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20250217207A1</code> · <a href="https://eureka.patsnap.com/patent/US20250217207A1">专利全文</a></p>
+<h1>地址转换屏障约束年轻转换，保留独立执行机会</h1><p class="reading-question">乱序核心准备更新地址翻译上下文时，哪些在途操作必须先完成？屏障开启后，独立的年轻算术和已在途的投机转换各该怎样处置？</p>
+<p class="reading-answer">屏障以程序顺序阻止较年轻的地址转换，直到较老的地址转换全部完成。没有依赖受阻转换的指令可继续执行。若年轻转换在屏障发出前已经启动，屏障期间可禁止其结果写入 TLB，完成屏障后再检查映射是否仍有效。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-07-03</dd></div><div><dt>申请号</dt><dd>US18/970,633</dd></div><div><dt>最早优先权</dt><dd>2023-12-29</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeff Gonion</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#translation-path">先找出哪些部件正在处理地址转换</a></li><li><a href="#issue-boundary">较老转换结束前，哪些工作还能继续发射</a></li><li><a href="#registers">需要同步系统寄存器时，谁加入等待集合</a></li><li><a href="#speculative">投机地址转换已经返回时，控制的是结果可用性</a></li><li><a href="#cost">执行重叠能遮住多少等待</a></li><li><a href="#claimed">公开权利要求的范围</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="translation-path"><h2>先找出哪些部件正在处理地址转换</h2><p>图 1 展开取指和数据两条路径。说明书原图 2 让取指请求同时到 I-cache 与 IMMU。在这个例子中，取指组已缓存时不需要继续启动缺失处理。取指缺失可检查 IMMU 的 TLB。数据侧相应使用 D-cache 和 DMMU。若本地 TLB 没有适用的转换，携带 VA 的请求交给后级 MMU，再查本级 TLB 或访问页表。</p><p>下方控制路径来自译码。屏障用动态指令在程序顺序中的位置判断年龄。即使一笔年轻请求更早抵达 MMU，仍按屏障之后的请求处理。较老转换可在屏障期间继续完成。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　取指侧和数据侧都有地址转换，屏障在请求可用处约束两路</h3>
+    <p id="fig-1-basis">本例取指通过 IMMU，数据访问通过 DMMU。各自的 TLB 缺失可将 VA 交给后级 MMU，屏障用动态指令的程序顺序决定转换能否继续。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="取指侧和数据侧都有地址转换，屏障在请求可用处约束两路" style="--figure-width:1450px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 707" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">取指侧和数据侧都有地址转换，屏障在请求可用处约束两路</title>
+<desc id="fig-1-svg-desc">本例取指通过 IMMU，数据访问通过 DMMU。各自的 TLB 缺失可将 VA 交给后级 MMU，屏障用动态指令的程序顺序决定转换能否继续。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-i-req" d="M 301 137 L 506 137" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-d-req" d="M 301 384 L 506 384" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-i-translation" d="M 824 141 L 939 141 Q 947 141 947 149 L 947 207 Q 947 215 955 215 L 1091 215" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-d-translation" d="M 824 381 L 956 381 Q 964 381 964 373 L 964 280 Q 964 272 972 272 L 1091 272" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-memory-req" d="M 1248 308 L 1248 421" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-barrier" d="M 301 599 L 506 599" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-barrier-d" d="M 661 545 L 661 440" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-barrier-mmu" d="M 824 600 L 1019 600 Q 1027 600 1027 592 L 1027 302 Q 1027 294 1035 294 L 1091 294" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-barrier-i" d="M 540 545 L 540 492 Q 540 484 532 484 L 452 484 Q 444 484 444 476 L 444 287 Q 444 279 452 279 L 632 279 Q 640 279 640 271 L 640 196" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<rect x="341" y="101" width="126" height="18" fill="#f5f5f5"/><text x="404" y="115" class="arrow-label" text-anchor="middle">取指缺失相关请求</text>
+<rect x="314" y="348" width="126" height="18" fill="#f5f5f5"/><text x="377" y="362" class="arrow-label" text-anchor="middle">数据缺失相关请求</text>
+<rect x="917" y="105" width="112" height="18" fill="#f5f5f5"/><text x="973" y="119" class="arrow-label" text-anchor="middle">取指侧后级请求</text>
+<rect x="894" y="389" width="112" height="18" fill="#f5f5f5"/><text x="950" y="403" class="arrow-label" text-anchor="middle">数据侧后级请求</text>
+<rect x="1295" y="352" width="112" height="18" fill="#f5f5f5"/><text x="1351" y="366" class="arrow-label" text-anchor="middle">按物理地址访问</text>
+<rect x="355" y="562" width="98" height="18" fill="#f5f5f5"/><text x="404" y="576" class="arrow-label" text-anchor="middle">记录屏障边界</text>
+<rect x="703" y="475" width="112" height="18" fill="#f5f5f5"/><text x="759" y="489" class="arrow-label" text-anchor="middle">检查数据侧状态</text>
+<rect x="1093" y="555" width="126" height="18" fill="#f5f5f5"/><text x="1156" y="569" class="arrow-label" text-anchor="middle">核对跨级在途转换</text>
+<rect x="490" y="244" width="112" height="18" fill="#f5f5f5"/><text x="546" y="258" class="arrow-label" text-anchor="middle">检查取指侧状态</text>
+<g id="fig-1-fe"><rect x="48" y="89" width="253" height="101" rx="6" fill="#f5f5f5"/><rect x="48" y="89" width="253" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="174.5" y="115" class="node-name" text-anchor="middle">取指、I-cache</text><text x="174.5" y="137" class="node-detail" text-anchor="middle">按 PC 查取指组</text></g>
+<g id="fig-1-lsu"><rect x="48" y="334" width="253" height="101" rx="6" fill="#f5f5f5"/><rect x="48" y="334" width="253" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="174.5" y="360" class="node-name" text-anchor="middle">译码、LSU 与 D-cache</text><text x="174.5" y="382" class="node-detail" text-anchor="middle">计算或消费访存地址</text></g>
+<g id="fig-1-decode"><rect x="48" y="551" width="253" height="99" rx="6" fill="#f5f5f5"/><rect x="48" y="551" width="253" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="174.5" y="577" class="node-name" text-anchor="middle">译码并发出转换屏障</text><text x="174.5" y="599" class="node-detail" text-anchor="middle">程序顺序上的分界</text></g>
+<g id="fig-1-im"><rect x="506" y="85" width="318" height="111" rx="6" fill="#f5f5f5"/><rect x="506" y="85" width="318" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="665" y="111" class="node-name" text-anchor="middle">取指侧 IMMU</text><text x="665" y="133" class="node-detail" text-anchor="middle">本地 TLB 与配置寄存器</text><text x="665" y="151" class="node-detail" text-anchor="middle">缺失时将 VA 交给后级</text></g>
+<g id="fig-1-dm"><rect x="506" y="329" width="318" height="111" rx="6" fill="#f5f5f5"/><rect x="506" y="329" width="318" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="665" y="355" class="node-name" text-anchor="middle">数据侧 DMMU</text><text x="665" y="377" class="node-detail" text-anchor="middle">本地 TLB 与配置寄存器</text><text x="665" y="395" class="node-detail" text-anchor="middle">缺失时将 VA 交给后级</text></g>
+<g id="fig-1-shared"><rect x="1091" y="182" width="312" height="126" rx="6" fill="#f5f5f5"/><rect x="1091" y="182" width="312" height="126" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1247" y="208" class="node-name" text-anchor="middle">后级 MMU</text><text x="1247" y="230" class="node-detail" text-anchor="middle">先查本级 TLB</text><text x="1247" y="248" class="node-detail" text-anchor="middle">未命中时查地址转换表</text></g>
+<g id="fig-1-gate"><rect x="506" y="545" width="318" height="111" rx="6" fill="#f5f5f5"/><rect x="506" y="545" width="318" height="111" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="665" y="571" class="node-name" text-anchor="middle">屏障条件与程序顺序</text><text x="665" y="593" class="node-detail" text-anchor="middle">等待较老转换完成</text><text x="665" y="611" class="node-detail" text-anchor="middle">阻挡受屏障约束的年轻转换</text></g>
+<g id="fig-1-memory"><rect x="1091" y="421" width="312" height="87" rx="6" fill="#f5f5f5"/><rect x="1091" y="421" width="312" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1247" y="447" class="node-name" text-anchor="middle">下游缓存或内存</text><text x="1247" y="469" class="node-detail" text-anchor="middle">按已确定的 PA 提供数据</text></g>
+<text x="49" y="48" class="signal-title" text-anchor="start">整条指令流水线与受控的地址转换请求路径</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-im">取指侧 MMU</a> 说明书原图 2 的 fetch 请求同时到 I-cache 和 IMMU。例示取指组已在 I-cache 时，可不走图中的缺失转换路径。</li><li><a href="#fig-1-dm">数据侧 MMU</a> 数据路径缺失时，DMMU 检查本地 TLB。若未得到物理地址，可向后级 MMU 提交携带 VA 的请求。</li><li><a href="#fig-1-shared">后级 MMU</a> 需要时先查本级 TLB，再访问地址转换表。拿到物理地址后才能向下游发相应访存事务。</li><li><a href="#fig-1-gate">地址转换屏障</a> 控制用指令的程序顺序，而不是请求到达 MMU 的时间。较老转换继续，较年轻且依赖转换的工作等屏障开放。</li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0019、0021、0022、0024、0025、0026、0027、0028、0030、0040、0041、0042、0043、0046；权利要求 1、8、9、10、15、16、17、20 <a href="../diagrams/US20250217207A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>取指电路和 I-cache</dt><dd>210 / 220</dd></div><div><dt>IMMU 与取指本地 TLB</dt><dd>230 / 234</dd></div><div><dt>地址转换屏障指令</dt><dd>242</dd></div><div><dt>LSU 与 D-cache</dt><dd>256 / 260</dd></div><div><dt>DMMU 与数据本地 TLB</dt><dd>270 / 274</dd></div><div><dt>后级 MMU 与后级 TLB</dt><dd>280 / 284</dd></div></dl></details>
+</figure></section><section id="issue-boundary"><h2>较老转换结束前，哪些工作还能继续发射</h2><p>图 2 的 A、B 是两笔较老转换。A 先返回，B 仍在途，就不能结束屏障。等最后一笔较老转换也完成，后续依赖转换的指令才能继续。说明书允许轮询较老转换状态，也允许转换单元回报各笔完成。</p><p>独立的年轻指令看另一项条件。若操作数已就绪、不依赖被阻挡的转换，原图 5 允许继续发射或者执行。当剩余工作都依赖受阻的转换时，流水线才可能等屏障完成。图 2 只标执行时点，ROB 的退休顺序仍按程序顺序约束。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　年轻转换等待，独立的执行路径仍可向前推进</h3>
+    <p id="fig-2-basis">两笔较老转换都完成后，屏障才放行受控的年轻转换。独立年轻指令可以先进入执行，但退休仍遵循指令顺序。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="年轻转换等待，独立的执行路径仍可向前推进" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 634" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">年轻转换等待，独立的执行路径仍可向前推进</title>
+<desc id="fig-2-svg-desc">两笔较老转换都完成后，屏障才放行受控的年轻转换。独立年轻指令可以先进入执行，但退休仍遵循指令顺序。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">时间向右 ｜ 各轨只显示状态变化与依赖关系</text>
+<g id="fig-2-blocked"><rect x="392" y="261" width="541" height="92" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="716" y="316" class="arrow-label" text-anchor="middle">等待在途较老转换</text></g>
+<line x1="392" x2="392" y1="78" y2="551" stroke="#4f5d75" opacity=".18"/>
+<text x="392" y="69" class="arrow-label" text-anchor="middle">发出转换屏障</text>
+<line x1="608" x2="608" y1="78" y2="551" stroke="#4f5d75" opacity=".18"/>
+<text x="608" y="69" class="arrow-label" text-anchor="middle">旧侧 A 完成</text>
+<line x1="933" x2="933" y1="78" y2="551" stroke="#4f5d75" opacity=".18"/>
+<text x="933" y="69" class="arrow-label" text-anchor="middle">旧侧 B 完成</text>
+<line x1="1086" x2="1086" y1="78" y2="551" stroke="#4f5d75" opacity=".18"/>
+<text x="1086" y="69" class="arrow-label" text-anchor="middle">年轻转换开始</text>
+<g id="fig-2-old-a"><text x="24" y="119" class="node-name" text-anchor="start">较老转换 A</text>
+<polyline points="254,145 303,145 303,105 608,105 608,145 1320,145" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-2-old-b"><text x="24" y="217" class="node-name" text-anchor="start">较老转换 B</text>
+<polyline points="254,237 338,237 338,196 933,196 933,237 1320,237" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-2-stop"><text x="24" y="311" class="node-name" text-anchor="start">屏障约束有效</text>
+<polyline points="254,336 392,336 392,281 933,281 933,336 1320,336" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="fig-2-young-compute"><text x="24" y="405" class="node-name" text-anchor="start">独立的年轻算术</text>
+<polyline points="254,429 477,429 477,382 687,382 687,429 1320,429" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-2-young-va"><text x="24" y="508" class="node-name" text-anchor="start">年轻访存所需转换</text>
+<polyline points="254,529 1086,529 1086,486 1320,486" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="fig-2-issued"><circle cx="392" cy="281" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="425" y="243" width="154" height="18" fill="#f5f5f5"/><text x="502" y="257" class="arrow-label" text-anchor="middle">禁止新的年轻转换</text></g>
+<g id="fig-2-slow"><circle cx="933" cy="196" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="960" y="162" width="102" height="18" fill="#f5f5f5"/><text x="1011" y="176" class="arrow-label" text-anchor="middle">B 回报完成</text></g>
+<g id="fig-2-independent"><circle cx="477" cy="382" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="543" y="355" width="166" height="18" fill="#f5f5f5"/><text x="626" y="369" class="arrow-label" text-anchor="middle">不依赖转换，继续执行</text></g>
+<g id="fig-2-release"><circle cx="1086" cy="486" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="1102" y="456" width="168" height="18" fill="#f5f5f5"/><text x="1186" y="470" class="arrow-label" text-anchor="middle">等待解除后发出请求</text></g>
+<text x="24" y="597" class="legend" text-anchor="start">这里采用只等待转换的实施例。释放屏障与下一个年轻转换实际取得 MMU 资源之间仍可能有间隔。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-issued">屏障开始约束</a> 屏障发出时，先按程序顺序区分比它早和比它晚的转换。图示第二笔旧转换仍在处理。</li><li><a href="#fig-2-slow">最后完成的旧侧转换</a> 旧侧两笔都要完成。先完成的 A 只能移除一个等待项，B 回报完成后才能释放这条仅等待转换的屏障。</li><li><a href="#fig-2-independent">独立年轻指令可执行</a> 如果操作数已就绪且无需受阻的转换，年轻算术指令可先执行。原图 5 调整的是可发射指令。</li><li><a href="#fig-2-release">年轻转换开始</a> 依赖翻译的年轻访存停在屏障之后。只有等较老转换全部结束，MMU 才能继续处理；系统寄存器选项见图 3。</li></ul>
+  <p class="figure-evidence">原图 1、3、5；说明书归档段 0027、0028、0029、0033、0046、0061、0062、0069、0071、0072；权利要求 1、9、10、15、17 <a href="../diagrams/US20250217207A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>较老的两笔地址转换</dt><dd>147a / 147b</dd></div><div><dt>屏障后的年轻转换</dt><dd>147c / 147d</dd></div><div><dt>阻挡年轻转换及等较老转换结束</dt><dd>320 / 330</dd></div><div><dt>继续独立指令并停发依赖受阻转换的指令</dt><dd>510–530</dd></div></dl></details>
+</figure></section><section id="registers"><h2>需要同步系统寄存器时，谁加入等待集合</h2><p>图 3 让旧的转换请求与旧的系统寄存器写入形成两个独立完成条件。前者看转换完成回报，后者看受控寄存器写入是否已完成。屏障活动期间，来自年轻指令且目标落在该集合内的写入被暂缓。</p><p>说明书给出的集合可按实现选择，包括页表或权限表基址，影响地址转换或访问权限的寄存器，或者更广的系统寄存器集合。权利要求 2–7、11–14、18–19 分别限定不同范围。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　纳入系统寄存器时，完成条件多了一条依赖</h3>
+    <p id="fig-3-basis">除了较老地址转换，实施例可等待指定的较老系统寄存器写入。此时受控集合内的年轻写入也要等屏障完成。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="纳入系统寄存器时，完成条件多了一条依赖" style="--figure-width:1410px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1410 656" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">纳入系统寄存器时，完成条件多了一条依赖</title>
+<desc id="fig-3-svg-desc">除了较老地址转换，实施例可等待指定的较老系统寄存器写入。此时受控集合内的年轻写入也要等屏障完成。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-tlb-done" d="M 350 132 L 431 132 Q 439 132 439 140 L 439 177 Q 439 185 447 185 L 536 185" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-write-done" d="M 350 326 L 443 326 Q 451 326 451 318 L 451 241 Q 451 233 459 233 L 536 233" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-young-wait" d="M 350 534 L 536 534" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-unblock" d="M 695 276 L 695 470" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-write" d="M 859 530 L 1091 530" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-older-direct" d="M 350 351 L 391 351 Q 399 351 399 359 L 399 413 Q 399 421 407 421 L 1217 421 Q 1225 421 1225 429 L 1225 468" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<rect x="367" y="97" width="98" height="18" fill="#f5f5f5"/><text x="416" y="111" class="arrow-label" text-anchor="middle">转换完成回报</text>
+<rect x="372" y="334" width="98" height="18" fill="#f5f5f5"/><text x="421" y="348" class="arrow-label" text-anchor="middle">较老写入完成</text>
+<rect x="394" y="499" width="98" height="18" fill="#f5f5f5"/><text x="443" y="513" class="arrow-label" text-anchor="middle">等待允许提交</text>
+<rect x="751" y="351" width="126" height="18" fill="#f5f5f5"/><text x="814" y="365" class="arrow-label" text-anchor="middle">全部旧侧操作完成</text>
+<rect x="914" y="493" width="126" height="18" fill="#f5f5f5"/><text x="977" y="507" class="arrow-label" text-anchor="middle">通过屏障后允许写</text>
+<rect x="485.5" y="386" width="141" height="18" fill="#f5f5f5"/><text x="556" y="400" class="arrow-label" text-anchor="middle">较老写入允许继续</text>
+<g id="fig-3-translation"><rect x="47" y="83" width="303" height="102" rx="6" fill="#f5f5f5"/><rect x="47" y="83" width="303" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="198.5" y="109" class="node-name" text-anchor="middle">较老地址转换</text><text x="198.5" y="131" class="node-detail" text-anchor="middle">已经发出，等待回报</text></g>
+<g id="fig-3-old-write"><rect x="47" y="276" width="303" height="103" rx="6" fill="#f5f5f5"/><rect x="47" y="276" width="303" height="103" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="198.5" y="302" class="node-name" text-anchor="middle">较老系统寄存器写入</text><text x="198.5" y="324" class="node-detail" text-anchor="middle">例如更新页表或权限表基址</text></g>
+<g id="fig-3-new-write"><rect x="47" y="486" width="303" height="100" rx="6" fill="#f5f5f5"/><rect x="47" y="486" width="303" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="198.5" y="512" class="node-name" text-anchor="middle">年轻系统寄存器写入</text><text x="198.5" y="534" class="node-detail" text-anchor="middle">仅受控集合内的写入受影响</text></g>
+<g id="fig-3-gate"><rect x="536" y="470" width="323" height="118" rx="6" fill="#f5f5f5"/><rect x="536" y="470" width="323" height="118" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="697.5" y="496" class="node-name" text-anchor="middle">年轻写入使能</text><text x="697.5" y="518" class="node-detail" text-anchor="middle">屏障活跃时阻挡</text><text x="697.5" y="536" class="node-detail" text-anchor="middle">完成后再允许进入相关路径</text></g>
+<g id="fig-3-retire"><rect x="536" y="141" width="323" height="135" rx="6" fill="#f5f5f5"/><rect x="536" y="141" width="323" height="135" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="697.5" y="167" class="node-name" text-anchor="middle">联合完成判断</text><text x="697.5" y="189" class="node-detail" text-anchor="middle">等所有较老地址转换</text><text x="697.5" y="207" class="node-detail" text-anchor="middle">等受控集合内较老写入</text></g>
+<g id="fig-3-regs"><rect x="1091" y="468" width="265" height="117" rx="6" fill="#f5f5f5"/><rect x="1091" y="468" width="265" height="117" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1223.5" y="494" class="node-name" text-anchor="middle">受控系统寄存器</text><text x="1223.5" y="516" class="node-detail" text-anchor="middle">按该实施例定义集合</text></g>
+<text x="49" y="48" class="signal-title" text-anchor="start">可与地址转换等待同时启用的寄存器实施例</text>
+<text x="50" y="629" class="signal-title" text-anchor="start">寄存器改动由哪条指令提交，与地址转换请求何时可发是两条独立控制。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-old-write">较老寄存器写入继续</a> 保护集合可选页表或权限表基址、影响翻译和权限的寄存器，另有包含所有系统寄存器的实施例。</li><li><a href="#fig-3-retire">屏障完成检查</a> 图中采用同时约束转换与寄存器的实施例。两类较老工作都需要完结。</li><li><a href="#fig-3-new-write">年轻寄存器写入等待</a> 在屏障活跃期间，目标属于受保护集合的年轻写入不能生效。其许可独立于年轻算术指令是否能执行。</li></ul>
+  <p class="figure-evidence">原图 1、2、4；说明书归档段 0031、0032、0035、0036、0047、0048、0050、0054、0055、0066、0067、0068；权利要求 2、3、4、5、6、7、11、12、13、14、18、19 <a href="../diagrams/US20250217207A1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>取指侧、数据侧与后级 MMU 的 TLB 配置寄存器</dt><dd>236 / 276 / 286</dd></div><div><dt>屏障激活时阻止较年轻的受控寄存器更改</dt><dd>420</dd></div><div><dt>等较老受控寄存器更改完成</dt><dd>430</dd></div></dl></details>
+</figure></section><section id="speculative"><h2>投机地址转换已经返回时，控制的是结果可用性</h2><p>图 4 从屏障前发出的一笔年轻投机请求开始。例如分支预测可推动取指，提前向 MMU 查一个目标 VA。若查询已在途，实施例可以允许它返回，但在屏障活动期间不让结果写入 TLB。说明书也披露暂停或取消后重新发起的选项。</p><p>屏障结束后，若这个 VA 的映射仍有效，先前的结果可被缓存。如果地址空间或当前配置改变使结果过期，就丢弃并重发。完成一次查找、写入 TLB 和在正确上下文中使用转换结果是不同事件。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　屏障生效前发出的投机转换结果需要核验</h3>
+    <p id="fig-4-basis">允许已在途的请求结束计算，并不意味着允许它向 TLB 写入。屏障后只有仍有效的结果可缓存。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="屏障生效前发出的投机转换结果需要核验" style="--figure-width:1420px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1420 675" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">屏障生效前发出的投机转换结果需要核验</title>
+<desc id="fig-4-svg-desc">允许已在途的请求结束计算，并不意味着允许它向 TLB 写入。屏障后只有仍有效的结果可缓存。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-4-inflight" d="M 193 164 L 193 260" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-prohibit" d="M 345 308 L 554 308" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-active-over" d="M 717 365 L 717 480" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<path id="fig-4-ok" d="M 871 518 L 952 518 Q 960 518 960 510 L 960 397 Q 960 389 968 389 L 1060 389" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-old" d="M 871 554 L 1060 554" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<rect x="241" y="200" width="112" height="18" fill="#f5f5f5"/><text x="297" y="214" class="arrow-label" text-anchor="middle">页表查询已在途</text>
+<rect x="387" y="268" width="126" height="18" fill="#f5f5f5"/><text x="450" y="282" class="arrow-label" text-anchor="middle">有结果，暂不写入</text>
+<rect x="769" y="410" width="98" height="18" fill="#f5f5f5"/><text x="818" y="424" class="arrow-label" text-anchor="middle">屏障条件满足</text>
+<rect x="968" y="351" width="70" height="18" fill="#f5f5f5"/><text x="1003" y="365" class="arrow-label" text-anchor="middle">仍然有效</text>
+<rect x="902" y="521" width="126" height="18" fill="#f5f5f5"/><text x="965" y="535" class="arrow-label" text-anchor="middle">原结果已失效</text>
+<g id="fig-4-ahead"><rect x="46" y="79" width="299" height="85" rx="6" fill="#f5f5f5"/><rect x="46" y="79" width="299" height="85" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="195.5" y="105" class="node-name" text-anchor="middle">年轻指令提前发出转换</text><text x="195.5" y="127" class="node-detail" text-anchor="middle">投机取指等先触发该请求</text></g>
+<g id="fig-4-result"><rect x="46" y="260" width="299" height="105" rx="6" fill="#f5f5f5"/><rect x="46" y="260" width="299" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="195.5" y="286" class="node-name" text-anchor="middle">MMU 返回候选转换</text><text x="195.5" y="308" class="node-detail" text-anchor="middle">返回发生在屏障活动期间</text></g>
+<g id="fig-4-hold"><rect x="554" y="260" width="317" height="105" rx="6" fill="#f5f5f5"/><rect x="554" y="260" width="317" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="712.5" y="286" class="node-name" text-anchor="middle">关闭年轻结果的 TLB 写入</text><text x="712.5" y="308" class="node-detail" text-anchor="middle">只为核验保留候选结果</text></g>
+<g id="fig-4-validate"><rect x="554" y="480" width="317" height="109" rx="6" fill="#f5f5f5"/><rect x="554" y="480" width="317" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="712.5" y="506" class="node-name" text-anchor="middle">屏障完成后检查有效性</text><text x="712.5" y="528" class="node-detail" text-anchor="middle">核对当前地址空间与映射</text></g>
+<g id="fig-4-accept"><rect x="1060" y="337" width="312" height="102" rx="6" fill="#f5f5f5"/><rect x="1060" y="337" width="312" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1216" y="363" class="node-name" text-anchor="middle">有效时缓存结果</text><text x="1216" y="385" class="node-detail" text-anchor="middle">当前映射仍可用</text></g>
+<g id="fig-4-reissue"><rect x="1060" y="523" width="312" height="92" rx="6" fill="#f5f5f5"/><rect x="1060" y="523" width="312" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1216" y="549" class="node-name" text-anchor="middle">丢弃并重新发转换请求</text><text x="1216" y="571" class="node-detail" text-anchor="middle">用现在的配置重新查找</text></g>
+<text x="48" y="46" class="signal-title" text-anchor="start">以屏障发出前已开始的投机地址转换为例</text>
+<text x="50" y="637" class="signal-title" text-anchor="start">TLB 更新与转换请求完成是不同事件。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-result">年轻转换结果返回</a> 投机取指等可以使年轻请求先于屏障发出。在本实施例中允许它返回，但屏障活动期间不提交到 TLB。</li><li><a href="#fig-4-hold">写入使能关闭</a> 源文允许继续计算但阻止结果使用或缓存，也披露暂停或取消后重发的其他实施例。图中展开保留结果进行重新判断的支路。</li><li><a href="#fig-4-validate">屏障结束后核验有效性</a> 针对当前虚拟地址的映射仍有效时才允许缓存。若翻译表、地址空间或相关配置改动使结果过期，就丢弃。</li><li><a href="#fig-4-reissue">按新上下文重发</a> 年轻指令会使用重新得到的结果，避免此前的候选翻译进入 TLB。</li></ul>
+  <p class="figure-evidence">原图 1、2、6；说明书归档段 0030、0034、0036、0049、0051、0056、0075、0076、0077；权利要求 8、16、20 <a href="../diagrams/US20250217207A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>屏障前发出年轻投机转换</dt><dd>610</dd></div><div><dt>发出地址转换屏障</dt><dd>620</dd></div><div><dt>阻止投机结果进入 TLB</dt><dd>630</dd></div><div><dt>原图 2 中三处 TLB</dt><dd>234 / 274 / 284</dd></div></dl></details>
+</figure></section><section id="cost"><h2>执行重叠能遮住多少等待</h2><p>表 5 固定两笔旧侧转换和屏障后的访存工作。限制地址转换与暂停所有年轻发射相比，可以把独立算术移进等待窗口。年轻访存的转换仍要等屏障结束。本例不计算年轻指令退休的时点。</p><p>要观察前端或后端收益，可以记录屏障发出到最后较老转换结束的时间，等待期间发射的独立指令数，以及被取消或重新核验的投机转换数。这些量决定是否减轻等待和重取开销。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　几种指令在同一个屏障窗口中分别等到何时</h3>
+    <p id="fig-5-basis">教学例在第 3 周期发出屏障，较老转换在第 7、9 周期分别完成。年轻算术已就绪，执行 2 周期。年轻访存的转换服务为 4 周期。表中终点是执行或转换结束时点。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">年轻指令</th><th scope="col">只限制地址转换，开始 → 完成</th><th scope="col">暂停全部年轻发射，开始 → 完成</th><th scope="col">观测点</th></tr></thead><tbody><tr id="fig-5-alu"><th scope="row">操作数已就绪的整数算术</th><td>3 → 5</td><td>9 → 11</td><td>执行完成</td></tr><tr id="fig-5-addr"><th scope="row">需要新地址转换的访存</th><td>9 → 13</td><td>9 → 13</td><td>地址转换结束</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-alu">执行无需转换的年轻算术</a> 只阻止地址转换时，算术可从第 3 周期执行。若完全停发年轻指令，则需等到第 9 周期。执行结束仍与退休时点相分离。</li><li><a href="#fig-5-addr">年轻访存等待转换资源</a> 在这个例子中，两种做法都到第 9 周期才允许该笔年轻转换开始，假定无需再等额外 MMU 资源。</li></ul>
+  <p class="figure-evidence">原图 1、3、5；说明书归档段 0027、0028、0029、0033、0046、0061、0062、0071、0072；权利要求 1、9、10、15、17 </p>
+  
+</figure></section><section id="claimed"><h2>公开权利要求的范围</h2><p>权利要求 1、10、17 把先前转换完成和后续转换受阻写成基本条件。权利要求 8、16、20 增加对年轻投机结果写入 TLB 的限制。这里的转换屏障是本公开申请提出的硬件机制，内核仍需按所用 ISA 的地址转换维护和屏障规则发出操作。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US20250217207A1</code><span>美国公开申请</span><time datetime="2025-07-03">2025-07-03</time></p>
-  <h1>地址转换屏障约束乱序流水线</h1>
-  <p class="english-title" lang="en">Translation Barrier Instruction</p>
-  <p class="document-question">乱序执行时，怎样避免一条较年轻指令越过地址转换屏障使用不合适的转换状态？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">处理器在地址转换屏障完成前禁止启动程序顺序较晚的地址转换，并等全部较早转换做完后才完成该屏障。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>先后组按程序顺序划分。完成条件针对地址转换，访问数据返回可能另有等待。</dd></div><div><dt>验证方法</dt><dd>使用同一段跨屏障访存序列，让较早访存分别命中 TLB 和触发页表遍历。记录最后一个旧侧转换完成、屏障完成及第一个年轻转换启动的时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US20250217207A1">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">连续访存可能跨越页表或权限寄存器更新。屏障如果只依赖程序顺序的指令位置，无法直接确定实际哪些地址转换仍在进行。</p>
-    <p>地址转换屏障完成前，处理器不发出程序顺序上更年轻的新转换，并等待全部较老转换完成。已经投机发出的年轻转换可能返回，但权 8 另外限制何时可写入 TLB。</p>
-    <ol class="walkthrough"><li><h3>辨认程序顺序在前的转换</h3><p>程序顺序以屏障指令为界。已经发出的相关转换计入等待条件。</p></li><li><h3>给年轻侧设置发出限制</h3><p>年轻指令的地址转换须等待屏障完成，即使其操作数已经就绪。</p></li><li><h3>确认等待条件消失</h3><p>屏障控制核对旧侧转换全部完成。特定从属项还跟踪寄存器动作或 TLB 更新。</p></li><li><h3>解除较年轻侧限制</h3><p>屏障完成后，较年轻转换按通常流水线和资源条件继续。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 2 可把指定系统寄存器修改纳入屏障的先后两侧。权 8 又明确屏障完成前阻止年轻推测指令的映射写入 TLB，这是一条可单独检查的状态更新约束。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>地址转换屏障</dt><dd>按程序顺序划分旧、年轻转换，并协调发起和完成条件的屏障。</dd></div><div><dt>TLB 写入</dt><dd>把新的虚拟到物理地址映射填进翻译缓存。与发起转换是不同事件。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">等待旧侧转换完成后放行年轻转换</a></li><li><a href="#fig-1">屏障前后访存与地址转换单元</a></li><li><a href="#fig-4">在途推测转换可以回来，写 TLB 必须等</a></li><li><a href="#fig-3">地址转换屏障的等待条件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">等待旧侧转换完成后放行年轻转换</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250217207A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="等待旧侧转换完成后放行年轻转换">
-    <img class="paper-image native-image" src="../mechanisms/US20250217207A1/fig-2/diagram.svg" width="920" height="380"
-         style="--paper-width:920px" alt="等待旧侧转换完成后放行年轻转换。该实施例的同步对象是转换动作，可据此将屏障停顿和访存数据返回延迟分别归因。">
-  </div>
-  <figcaption>
-    <span>该实施例的同步对象是转换动作，可据此将屏障停顿和访存数据返回延迟分别归因。</span>
-    <span class="figure-evidence">图 3–5，权利要求 1、17。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250217207">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">屏障前后访存与地址转换单元</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250217207A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="屏障前后访存与地址转换单元">
-    <img class="paper-image native-image" src="../mechanisms/US20250217207A1/fig-1/diagram.svg" width="706" height="300"
-         style="--paper-width:706px" alt="屏障前后访存与地址转换单元。连续访存可能跨越页表或权限寄存器更新。屏障如果只依赖程序顺序的指令位置，无法直接确定实际哪些地址转换仍在进行。">
-  </div>
-  <figcaption>
-    <span>连续访存可能跨越页表或权限寄存器更新。屏障如果只依赖程序顺序的指令位置，无法直接确定实际哪些地址转换仍在进行。</span>
-    <span class="figure-evidence">图 1–2，权利要求 1–2。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250217207">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">在途推测转换可以回来，写 TLB 必须等</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250217207A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="在途推测转换可以回来，写 TLB 必须等">
-    <img class="paper-image native-image" src="../mechanisms/US20250217207A1/fig-4/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="在途推测转换可以回来，写 TLB 必须等。屏障阻止年轻的新转换。屏障发出前已有的推测结果可以回来，但屏障完成前不能缓存。结束后仍需验证映射。">
-  </div>
-  <figcaption>
-    <span>屏障阻止年轻的新转换。屏障发出前已有的推测结果可以回来，但屏障完成前不能缓存。结束后仍需验证映射。</span>
-    <span class="figure-evidence">原图 6，档案说明书 0074–0077、0049–0051，权利要求 8、16、20。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250217207">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">地址转换屏障的等待条件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">动作</th><th scope="col">程序位置</th><th scope="col">屏障规则</th></tr></thead><tbody><tr><th scope="row">较老的地址转换</th><td>屏障之前</td><td class="emphasis">已完成是屏障完成条件</td></tr><tr><th scope="row">年轻的新转换</th><td>屏障之后</td><td>等屏障完成才可发起</td></tr><tr><th scope="row">无需转换的年轻指令</th><td>屏障之后</td><td>满足其他条件仍可发射</td></tr><tr><th scope="row">指定系统寄存器变更</th><td>两侧均可能</td><td>按权利要求 2 另受先后约束</td></tr></tbody></table>
-  <figcaption>
-    <span>页表遍历延迟和 TLB 缺失会拖长旧侧完成时间。原文的屏障语义需要按权项区分，不能直接对应通用 ARM 指令。</span>
-    <span class="figure-evidence">图 5–6，权利要求 1、8。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/20250217207">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按指令顺序隔开转换</dt><dd>保留转换一致性边界 <span class="subdued">原图 3，权利要求 1、10</span></dd></div><div><dt>暂缓推测映射写入</dt><dd>避免回填过期映射 <span class="subdued">原图 6，权利要求 8、16</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>若修改的是转换基址或权限寄存器，观察转换发起和完成之外还要检查 TLB 回填的先后。不受屏障定义限制的数据返回可以分别记录，避免把不同等待叠成一次内存访问。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>如果旧侧所有转换都命中 TLB，但一笔旧侧 load 的数据还在等待远端缓存，屏障与该 load 的返回可以相差较远。反过来，长页表遍历会延长年轻侧转换的等待。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>一条较老的 load 已发起转换且仍在页表遍历。地址转换屏障之后另有一条需要转换的 load。</dd></div><div><dt>处理结果</dt><dd>旧侧遍历完成前，后一条 load 的转换等待。屏障完成后才按正常条件发起。</dd></div><div><dt>结果解读</dt><dd>该实施例的同步对象是转换动作，可据此将屏障停顿和访存数据返回延迟分别归因。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
-  <p>原图 1–3。处理器按程序顺序阻止后续地址转换，等全部先前转换完成。</p>
+  <p>原图 1–3。处理器按程序顺序阻止后续地址转换，等全部先前转换完成。以程序顺序划分较老和较年轻的地址转换，分别约束屏障完成和较年轻转换的启动或结果生效。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=execute%20a%20translation%20barrier%20instruction">F1</a></th><td>处理器负责执行独立的转换屏障指令</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=prevent%2C%20until%20after%20the%20translation%20barrier%20instruction%20completes%2C%20address%20translations%20for%20instructions%20that%20occur%20subsequent%20to">F2</a></th><td>在屏障完成前阻止程序序位于其后的指令开始地址转换</td><td><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=The%20disclosed%20embodiments%20address%20systems%20and%20methods%20for%20implementing%20a%20translation%20barrier%20instruction.%20For%20example%2C%20a">说明书 0021</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=complete%20the%20translation%20barrier%20instruction%20based%20on%20finishing%20all%20address%20translations%20for%20instructions%20that%20occur%20prior">F3</a></th><td>待程序序更早指令的地址转换全结束，屏障据此完成</td><td><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=The%20disclosed%20embodiments%20address%20systems%20and%20methods%20for%20implementing%20a%20translation%20barrier%20instruction.%20For%20example%2C%20a">说明书 0021</a> · 原图 2</td></tr></tbody>
@@ -131,54 +175,18 @@
   </table>
 </section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
   <h4 id="independent-17-title">权利要求 17</h4>
-  <p>原图 1–3。装置项从流水线职责规定较老转换继续、较年轻转换受限以及完成条件。</p>
+  <p>原图 1–3。装置项从流水线职责规定较老转换继续、较年轻地址转换受限以及完成条件。</p>
   <table class="comparison-table" aria-labelledby="independent-17-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=perform%20address%20translations%20for%20instructions%20in%20the%20instruction%20pipeline%20circuit%20that%20are%20older%20than%20the%20translation">F7</a></th><td>流水线继续处理比屏障老的转换。</td><td><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=As%20shown%2C%20processor%20circuit%20100%20may%20also%20be%20configured%20to%20complete%20translation%20barrier%20instruction%20142%20based">说明书 0028</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=Method%20300%20may%20proceed%2C%20at%20block%20330%2C%20with%20processor%20circuit%20100%2C%20completing%20translation%20barrier%20instruction%20142">说明书 0062</a> · 原图 1 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=prevent%20address%20translations%20for%20instructions%20in%20the%20instruction%20pipeline%20circuit%20that%20are%20younger%20than%20the%20translation">F8</a></th><td>阻止比屏障年轻的转换。</td><td><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=As%20illustrated%2C%20processor%20circuit%20100%20is%20configured%20to%20execute%20translation%20barrier%20instruction%20142.%20For%20example%2C%20decode">说明书 0027</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=At%20block%20320%2C%20method%20300%20continues%20with%20processor%20circuit%20100%20preventing%2C%20until%20after%20the%20translation%20barrier">说明书 0061</a> · 原图 1 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=complete%20the%20translation%20barrier%20instruction%20based%20on%20finishing%20the%20address%20translations%20for%20all%20the%20instructions%20in">F9</a></th><td>等所有老指令的转换完成才完成屏障。</td><td><a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=As%20shown%2C%20processor%20circuit%20100%20may%20also%20be%20configured%20to%20complete%20translation%20barrier%20instruction%20142%20based">说明书 0028</a> · <a href="https://eureka.patsnap.com/patent/US20250217207A1#:~:text=Method%20300%20may%20proceed%2C%20at%20block%20330%2C%20with%20processor%20circuit%20100%2C%20completing%20translation%20barrier%20instruction%20142">说明书 0062</a> · 原图 1 · 原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1–3。处理器按程序顺序阻止后续地址转换，等全部先前转换完成。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>对屏障两侧的系统寄存器改动也添加年轻阻塞、年老完成的约束。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>同步的寄存器集合涵盖全部系统寄存器。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-2">2</a></td><td>寄存器集合是所有影响地址转换的寄存器。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-2">2</a></td><td>寄存器集合是所有影响地址权限的寄存器。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-2">2</a></td><td>寄存器集合涵盖影响地址转换或权限的全部寄存器。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-6">6</a></td><td>寄存器集合包含页表或权限表的基地址寄存器。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>屏障完成前，禁止把后续推测指令的虚实地址映射写入 TLB。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>可通过暂停发出一或多条年轻指令来阻止地址转换。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>发出转换屏障后禁止较晚待转换项，并在全部较早转换结束后完成。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>另要求等较老系统寄存器变更完成，期间阻止年轻变更。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>将被同步的寄存器集合设为全部系统寄存器。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>将集合设为所有影响地址转换的系统寄存器。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-11">11</a></td><td>将集合设为所有影响地址转换或权限的系统寄存器。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>用停发一条或多条年轻指令实现阻止。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>屏障完成前不许缓存年轻推测转换结果。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>流水线完成全部较老转换，期间阻止较年轻转换。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>屏障期间允许较老指令改指定寄存器，阻止较年轻改动，并等旧改动完成。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>指定寄存器集合含影响地址转换或权限的寄存器。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>屏障完成前禁止将年轻推测映射写入一个或多个 TLB。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>原图 1–3。处理器按程序顺序阻止后续地址转换，等全部先前转换完成。以程序顺序划分较老和较年轻的地址转换，分别约束屏障完成和较年轻转换的启动或结果生效。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>对屏障两侧的系统寄存器改动也添加年轻阻塞、年老完成的约束。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>同步的寄存器集合涵盖全部系统寄存器。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-2">2</a></td><td>寄存器集合是所有影响地址转换的寄存器。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-2">2</a></td><td>寄存器集合是所有影响地址权限的寄存器。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-2">2</a></td><td>寄存器集合涵盖影响地址转换或权限的全部寄存器。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-6">6</a></td><td>寄存器集合包含页表或权限表的基地址寄存器。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>屏障完成前，禁止把后续推测指令的虚实地址映射写入 TLB。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>可通过暂停发出一或多条年轻指令来阻止地址转换。</td></tr><tr id="claim-10"><th scope="row">10</th><td>独立项</td><td>发出转换屏障后禁止较晚待转换项，并在全部较早转换结束后完成。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-10">10</a></td><td>另要求等较老系统寄存器变更完成，期间阻止年轻变更。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>将被同步的寄存器集合设为全部系统寄存器。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>将集合设为所有影响地址转换的系统寄存器。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-11">11</a></td><td>将集合设为所有影响地址转换或权限的系统寄存器。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-10">10</a></td><td>用停发一条或多条年轻指令实现阻止。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-10">10</a></td><td>屏障完成前不许缓存年轻推测转换结果。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>流水线完成全部较老转换，期间阻止较年轻地址转换。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>屏障期间允许较老指令改指定寄存器，阻止较年轻改动，并等旧改动完成。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-18">18</a></td><td>指定寄存器集合含影响地址转换或权限的寄存器。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-19">19</a></td><td>屏障完成前禁止将年轻推测映射写入一个或多个 TLB。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 1–2，权利要求 1–2</dt><dd>屏障跟踪程序顺序上较老指令的地址转换。在旧侧转换全部完成前，较年轻指令的转换等待。部分权利要求也约束系统寄存器操作或高速地址转换缓冲区（TLB）写入，具体作用取决于相应权项。</dd></div><div><dt>图 3–5，权利要求 1、17</dt><dd>该实施例的同步对象是转换动作，可据此将屏障停顿和访存数据返回延迟分别归因。</dd></div><div><dt>图 5–6，权利要求 1、8</dt><dd>页表遍历延迟和 TLB 缺失会拖长旧侧完成时间。原文的屏障语义需要按权项区分，不能直接对应通用 ARM 指令。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US20250217207A1">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12229561B1.html#engineering">TLBI 后的数据同步屏障等待目标核在途访问</a>
-<p>US20250217207A1 在本核等待所有程序顺序较早的地址转换结束，再完成转换屏障。较年轻指令必须等屏障完成后才能做地址转换。US12229561B1 的目标核收到 TLBI 后的 DSB 指示时，检查已经完成转换但未退休的访存，等有关指令退休再应答。</p></li></ul>
-    <p><a href="../index.html?patent=US20250217207A1#knowledge">在全量关系图上定位 US20250217207A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-12-29</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-12-05</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-07-03</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/970,633</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeff Gonion</dd></div><div><dt>分类号</dt><dd>G06F9/3836、G06F12/1027、G06F9/3004、G06F9/30087、G06F9/30101、G06F9/522、G06F2212/1024、G06F2212/654</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20250217207A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US20250217207A1">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国公开申请全文，覆盖 118 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 3、图 5。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20250217207A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

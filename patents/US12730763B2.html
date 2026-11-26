@@ -1,119 +1,175 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12730763B2 关键读触发提前结束写服务轮次 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
-
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US12730763B2</code><span>美国授权专利</span><time datetime="2026-09-08">2026-09-08</time></p>
-  <h1>关键读触发提前结束写服务轮次</h1>
-  <p class="english-title" lang="en">Mechanisms for processing memory requests based on criticality</p>
-  <p class="document-question">写轮次中到达的关键读，怎样才能让控制器提早切到读轮次？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">写轮次中检测到关键读并满足启用条件时，内存控制器可提前进入读轮次。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>指定优先级的写队列达到可用条目数门槛，与关键性标记一起参与提前切换判定。</dd></div><div><dt>验证方法</dt><dd>重放同一关键读并仅改变写队列空位，使其分别位于门槛两侧。记录关键读到达、读轮次开始和首个读命令发出的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12730763B2">原文权利要求 1（全文）</a><a href="#fig-3">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">内存控制器通常成批执行写命令，以减少读写转向。批量写尚未做完时，CPU 可能已经被新到的 load 卡住。处理器提供关键性，控制器据此判断能否打断当前写轮次。</p>
-    <p>处理器标记读请求的关键性。内存系统在写轮次收到关键读后，检查写队列可容纳多少指定优先级的写请求。达到空位门槛并满足其他启用条件时，控制器可以提前进入读轮次。</p>
-    <ol class="walkthrough"><li><h3>处理器给出请求的关键性</h3><p>处理器或 LLC 逻辑判断请求是否关键。实施例包括阻住队头的 load、地址转换表遍历，以及 I-cache 未命中队列的队首。</p></li><li><h3>在写轮次收到读请求</h3><p>内存系统读取关键性字段，有些实施方式则另行询问。普通读继续等待可获读服务的时点。</p></li><li><h3>检查写队列空位</h3><p>控制器检查指定优先级的写队列是否达到空位下限。实施例还可能考虑当前写轮次的进度、过去的写压力或实时流量是否升级。</p></li><li><h3>按启用条件决定是否切轮</h3><p>条件满足时，控制器可以提前结束写轮次。其余情形可继续原轮次。切到读轮次后，仲裁器再按读队列的服务规则选请求。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 4、5 将一次关键读的门槛判定与剩余写轮次绑定。首次检查若判定条件不满足，该轮写服务仍完成，即使门槛随后变得满足。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>关键性</dt><dd>处理器为访存请求给出的分类值。实施例包括最老 load、取指缺失队首或地址转换相关事务。</dd></div><div><dt>写槽</dt><dd>写轮次中分配给写请求的计划服务机会。图中的槽号不是 DRAM 周期。</dd></div><div><dt>高写负载历史</dt><dd>在过去一组轮次内统计写队列占用满足高负载阈值的次数，用于门控本轮的提前切换。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">处理器怎样通知内存控制器</a></li><li><a href="#fig-2">关键读在哪个写槽之后可以切换</a></li><li><a href="#fig-4">内存系统何时回查请求关键性</a></li><li><a href="#fig-3">提前切换要符合哪些条件</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">处理器怎样通知内存控制器</h3></div>
-    <a class="paper-open" href="../mechanisms/US12730763B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="处理器怎样通知内存控制器">
-    <img class="paper-image native-image" src="../mechanisms/US12730763B2/fig-1/diagram.svg" width="732" height="332"
-         style="--paper-width:732px" alt="处理器怎样通知内存控制器。控制器收到关键读标记后，还要检查指定写队列的空位，才知道能否提前结束写轮次。">
-  </div>
-  <figcaption>
-    <span>控制器收到关键读标记后，还要检查指定写队列的空位，才知道能否提前结束写轮次。</span>
-    <span class="figure-evidence">图 1、图 2、图 4、图 5，权 1。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-2-title">关键读在哪个写槽之后可以切换</h3></div>
-    <a class="paper-open" href="../mechanisms/US12730763B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="关键读在哪个写槽之后可以切换">
-    <img class="paper-image native-image" src="../mechanisms/US12730763B2/fig-2/diagram.svg" width="768" height="528"
-         style="--paper-width:768px" alt="关键读在哪个写槽之后可以切换。原计划处理 8 个写槽。关键读在第 2 槽结束后到达。写队列空位达标且其他条件满足时，可在边界 2 获得切换资格。空位不足的情形按计划处理完剩余写槽，到边界 8 再切换。图上标的是获得切换资格的时点。总线周转、命令仲裁和读返回另计。">
-  </div>
-  <figcaption>
-    <span>原计划处理 8 个写槽。关键读在第 2 槽结束后到达。写队列空位达标且其他条件满足时，可在边界 2 获得切换资格。空位不足的情形按计划处理完剩余写槽，到边界 8 再切换。图上标的是获得切换资格的时点。总线周转、命令仲裁和读返回另计。</span>
-    <span class="figure-evidence">图 5–7，权利要求 1、4；计划写槽教学例，非 DRAM 时钟与实测。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">内存系统何时回查请求关键性</h3></div>
-    <a class="paper-open" href="../mechanisms/US12730763B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="内存系统何时回查请求关键性">
-    <img class="paper-image native-image" src="../mechanisms/US12730763B2/fig-4/diagram.svg" width="560" height="458"
-         style="--paper-width:560px" alt="内存系统何时回查请求关键性。第一类请求的服务轮次进行时，发来第二类请求。内存系统接收后向处理器询问关键性，依据回复决定能否提前转入第二轮次。">
-  </div>
-  <figcaption>
-    <span>第一类请求的服务轮次进行时，发来第二类请求。内存系统接收后向处理器询问关键性，依据回复决定能否提前转入第二轮次。</span>
-    <span class="figure-evidence">原图 9，说明书 0076–0080，权利要求 13–17 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">提前切换要符合哪些条件</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">输入</th><th scope="col">所用观察位置</th><th scope="col">权项或实现</th></tr></thead><tbody><tr><th scope="row">指定优先级写的可用条目数</th><td>读当前写队列可接纳的相应条目</td><td class="emphasis">权利要求 1</td></tr><tr><th scope="row">当前写队列占用</th><td>比较总占用与高写负载阈值</td><td>权利要求 2</td></tr><tr><th scope="row">指定读优先级是否升级</th><td>查该类读流量的当前服务状态</td><td>权利要求 3</td></tr><tr><th scope="row">本轮已服务的写槽数</th><td>对照原图 6 的最小写槽门槛</td><td>原图 6 的实施例</td></tr><tr><th scope="row">历史写队列高占用次数</th><td>对过去一组轮次的采样计数</td><td class="emphasis">权利要求 9</td></tr></tbody></table>
-  <figcaption>
-    <span>权利要求 1 规定了空位下限。其他条件由具体权项或实施方式给出。</span>
-    <span class="figure-evidence">图 5、图 6，权 1–5。 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12730763">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按关键读提前切轮</dt><dd>减少等待写轮次机会 <span class="subdued">权利要求 1；原图 6–7</span></dd></div><div><dt>检查指定写队列空位</dt><dd>保留写请求接纳能力 <span class="subdued">权利要求 1；原图 6</span></dd></div><div><dt>回查请求关键性</dt><dd>按返回值调整轮次 <span class="subdued">权利要求 13；原图 9</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>这一限制减少同一轮内因队列空位变化反复尝试切换的机会，代价是刚错过门槛的关键读可能等完整个剩余批次。应对齐首个判定时点、空位变化和读轮次开始。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若关键读到达时写队列只差一个空位，紧随其后的写完成也不会让权利要求 5 的实施例提前切读。把门槛建模为逐拍重新仲裁，会低估这类请求的等待。</p></div>
-    <div id="example" class="article-example">
-      <h3>模型算例</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设每轮计划处理 8 个写槽。关键读在第 2 个写槽服务完后到达。模型要求至少服务 2 槽，指定写队列至少有 3 个空位。分别比较有 4 个和 1 个空位的情况。</dd></div><div><dt>处理结果</dt><dd>空位为 4 且其他条件满足时，可以提前切换，关键读最多绕过后续 6 个写服务机会。只有 1 个空位时继续原轮次，让写侧继续排出请求。</dd></div><div><dt>结果解读</dt><dd>6 是剩余计划写槽数。若要算读延迟，还要计入总线转向、读请求间的竞争和 DRAM 行状态。</dd></div></dl>
-    </div>
-    <a class="lab-link" href="../lab.html#read-turn">复算该场景</a>
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、13 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>关键读到达时，内存控制器何时提前结束写轮次 · US12730763B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12730763B2</code> · <a href="https://eureka.patsnap.com/patent/US12730763B2">专利全文</a></p>
+<h1>关键读到达时，内存控制器何时提前结束写轮次</h1><p class="reading-question">关键读正在阻塞处理器前进，内存系统能否提早切到读，又怎样给写请求和实时流量留足服务？</p>
+<p class="reading-answer">处理器侧给访存请求标上关键性，内存系统再根据写队列容量、服务进度和其他流量状态决定是否提前结束当前轮次。提前切换让关键读更早获得仲裁机会，剩余写要等到恢复写服务。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-09-08</dd></div><div><dt>申请号</dt><dd>US18/978,516</dd></div><div><dt>最早优先权</dt><dd>2024-09-20</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Qiong Cai、Tyler J. Huberty、Anwar Q. Rohillah、Gregory S. Mathews、Wolfgang H. Klingauf、Rohit K. Gupta</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#priority">处理器产生关键性，内存系统选择轮次</a></li><li><a href="#gates">写容量、写进度和历史写积压分别参与判定</a></li><li><a href="#turn-time">在同一个当前写槽边界比较两种策略</a></li><li><a href="#query">在两种实施例里，内存系统掌握关键性的时间不同</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="priority"><h2>处理器产生关键性，内存系统选择轮次</h2><p>处理器侧的 LLC 可在发出缺失请求时标记关键性。原图 3 的三种来源是 MMU 页表遍历、load queue 队首的 load，以及指令缓存缺失队列队首的取指请求。区分页表遍历读与早先造成 TLB 缺失的访存指令，可以知道内存控制器当前实际处理哪笔请求。</p><p>内存系统在读、写轮次分别仲裁对应方向的队列。原图 4 用虚通道区分实时与低延迟流量。轮次切换控制收到关键性后检查内存侧条件。决定提前结束写轮次时，控制电路通知仲裁器开始挑选读请求。</p><p>开始读轮次和关键读在该轮次内的相对顺序由不同规则决定。有的实施例在读轮次中优先选关键读，有的继续按相应读队列次序服务。单从切换时间推不出 DRAM 已发读命令或数据已经返回。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　处理器给读请求标记关键性，内存系统决定何时切换轮次</h3>
+    <p id="fig-1-basis">LLC 中的关键性控制观察当前读的来源。内存系统把请求按方向和流量类别排队，用队列状态和关键性决定是否提前开始读仲裁。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="处理器给读请求标记关键性，内存系统决定何时切换轮次" style="--figure-width:1196px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1196 597" role="img" aria-labelledby="us12730763b2-fig-1-svg-title us12730763b2-fig-1-svg-desc">
+<title id="us12730763b2-fig-1-svg-title">处理器给读请求标记关键性，内存系统决定何时切换轮次</title>
+<desc id="us12730763b2-fig-1-svg-desc">LLC 中的关键性控制观察当前读的来源。内存系统把请求按方向和流量类别排队，用队列状态和关键性决定是否提前开始读仲裁。</desc>
+<defs><marker id="us12730763b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12730763b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12730763b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12730763b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12730763b2-fig-1-flow" d="M 247 151 L 329 151" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-data)"/>
+<path id="us12730763b2-fig-1-read" d="M 521 141 L 613 141" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-main)"/>
+<path id="us12730763b2-fig-1-write" d="M 247 342 L 613 342" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-data)"/>
+<path id="us12730763b2-fig-1-read-candidate" d="M 809 141 L 864 141 Q 872 141 872 149 L 872 217 Q 872 225 880 225 L 938 225" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-data)"/>
+<path id="us12730763b2-fig-1-write-candidate" d="M 809 349 L 864 349 Q 872 349 872 341 L 872 280 Q 872 272 880 272 L 938 272" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-data)"/>
+<path id="us12730763b2-fig-1-mark" d="M 425 206 L 425 430" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-1-arrow-control)"/>
+<path id="us12730763b2-fig-1-pressure" d="M 712 399 L 712 480 Q 712 488 704 488 L 581 488" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-1-arrow-control)"/>
+<path id="us12730763b2-fig-1-change" d="M 581 522 L 1042 522 Q 1050 522 1050 514 L 1050 302" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-1-arrow-main)"/>
+<rect x="250.5" y="123" width="75" height="18" fill="#f5f5f5"/><text x="288" y="137" class="arrow-label" text-anchor="middle">读的来源</text>
+<rect x="531.5" y="112" width="71" height="18" fill="#f5f5f5"/><text x="567" y="126" class="arrow-label" text-anchor="middle">读请求</text>
+<rect x="339" y="314" width="172" height="18" fill="#f5f5f5"/><text x="425" y="328" class="arrow-label" text-anchor="middle">写请求与流量类别</text>
+<rect x="837.5" y="112" width="69" height="18" fill="#f5f5f5"/><text x="872" y="126" class="arrow-label" text-anchor="middle">读候选</text>
+<rect x="837.5" y="351" width="69" height="18" fill="#f5f5f5"/><text x="872" y="365" class="arrow-label" text-anchor="middle">写候选</text>
+<rect x="432" y="246" width="70" height="18" fill="#f5f5f5"/><text x="467" y="260" class="arrow-label" text-anchor="middle">关键性</text>
+<rect x="613.5" y="459" width="121" height="18" fill="#f5f5f5"/><text x="674" y="473" class="arrow-label" text-anchor="middle">写占用与可用资源</text>
+<rect x="725.5" y="491" width="163" height="18" fill="#f5f5f5"/><text x="807" y="505" class="arrow-label" text-anchor="middle">发出轮次切换指示</text>
+<g id="us12730763b2-fig-1-sources"><rect x="27" y="96" width="220" height="110" rx="6" fill="#f5f5f5"/><rect x="27" y="96" width="220" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137" y="122" class="node-name" text-anchor="middle">处理器的读请求来源</text><text x="137" y="144" class="node-detail" text-anchor="middle">页表遍历、load queue 队首</text><text x="137" y="162" class="node-detail" text-anchor="middle">指令缓存缺失队列队首</text></g>
+<g id="us12730763b2-fig-1-critical"><rect x="329" y="96" width="192" height="110" rx="6" fill="#f5f5f5"/><rect x="329" y="96" width="192" height="110" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="425" y="122" class="node-name" text-anchor="middle">LLC 关键性控制</text><text x="425" y="144" class="node-detail" text-anchor="middle">为发出的访存请求</text><text x="425" y="162" class="node-detail" text-anchor="middle">产生关键性值</text></g>
+<g id="us12730763b2-fig-1-source-write"><rect x="27" y="298" width="220" height="91" rx="6" fill="#f5f5f5"/><rect x="27" y="298" width="220" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137" y="324" class="node-name" text-anchor="middle">写请求来源</text><text x="137" y="346" class="node-detail" text-anchor="middle">通过写方向虚通道送出</text></g>
+<g id="us12730763b2-fig-1-readq"><rect x="613" y="91" width="196" height="100" rx="6" fill="#f5f5f5"/><rect x="613" y="91" width="196" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="711" y="117" class="node-name" text-anchor="middle">读请求队列</text><text x="711" y="139" class="node-detail" text-anchor="middle">实时／低延迟读虚通道</text></g>
+<g id="us12730763b2-fig-1-writeq"><rect x="613" y="299" width="196" height="100" rx="6" fill="#f5f5f5"/><rect x="613" y="299" width="196" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="711" y="325" class="node-name" text-anchor="middle">写请求队列</text><text x="711" y="347" class="node-detail" text-anchor="middle">实时／低延迟写虚通道</text></g>
+<g id="us12730763b2-fig-1-activation"><rect x="334" y="430" width="247" height="112" rx="6" fill="#f5f5f5"/><rect x="334" y="430" width="247" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="457.5" y="456" class="node-name" text-anchor="middle">轮次切换控制</text><text x="457.5" y="478" class="node-detail" text-anchor="middle">检查门槛、记录写占用历史</text><text x="457.5" y="496" class="node-detail" text-anchor="middle">以关键性与状态决定切换</text></g>
+<g id="us12730763b2-fig-1-arbitration"><rect x="938" y="196" width="225" height="106" rx="6" fill="#f5f5f5"/><rect x="938" y="196" width="225" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1050.5" y="222" class="node-name" text-anchor="middle">内存仲裁器</text><text x="1050.5" y="244" class="node-detail" text-anchor="middle">在读或写轮次选择请求</text><text x="1050.5" y="262" class="node-detail" text-anchor="middle">将所选请求送往 DRAM</text></g>
+<text x="27" y="46" class="signal-title" text-anchor="start">从 CPU 请求来源到内存系统的读写仲裁</text>
+<text x="27" y="573" class="legend" text-anchor="start">图中列出一种虚通道配置。门槛的具体组合由实施例和权利要求分别限定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12730763b2-fig-1-critical">LLC 标记请求的关键性</a> 可把页表遍历读、load queue 队首 load 和指令缓存缺失队列队首的读标记为关键。示例把关键性与请求或附加信号交给内存系统。</li><li><a href="#us12730763b2-fig-1-writeq">虚通道与队列状态</a> 原图 4 的实施例把实时与低延迟流量分设虚通道并分别存入读写队列。队列空项和已经服务的写槽是两类计量。</li><li><a href="#us12730763b2-fig-1-activation">轮次切换电路作独立判定</a> 判断有关键请求后，再用写进度、写队列压力与实时流量状态等条件决定是否切换。选择策略见表 3。</li><li><a href="#us12730763b2-fig-1-arbitration">仲裁器按读写轮次选择请求</a> 轮次变更指示让仲裁器开始读仲裁。读轮内部是否重排关键读由另一规则决定。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、4、5；说明书归档段 0025、0026、0027、0031、0033、0034、0035、0036、0037、0038、0043、0044、0045、0046、0047、0052、0055、0057；权利要求 1、2、3、6、7、8、9、12、13、14、15、17 <a href="../diagrams/US12730763B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存系统</dt><dd>120</dd></div><div><dt>读请求队列</dt><dd>130</dd></div><div><dt>写请求队列</dt><dd>140</dd></div><div><dt>轮次切换控制</dt><dd>150</dd></div><div><dt>指令缓存缺失队列</dt><dd>230</dd></div><div><dt>load queue</dt><dd>245</dd></div><div><dt>内存管理单元</dt><dd>250</dd></div><div><dt>末级缓存</dt><dd>270</dd></div><div><dt>关键性控制</dt><dd>280</dd></div><div><dt>虚通道</dt><dd>410</dd></div><div><dt>内存仲裁器</dt><dd>420</dd></div><div><dt>提前切换条件</dt><dd>430</dd></div></dl></details>
+</figure></section><section id="gates"><h2>写容量、写进度和历史写积压分别参与判定</h2><p>已使用的写槽表示本轮已经交付的服务，空闲写队列条目决定还能容纳多少指定优先级的请求。两项一同检查时，即使已经处理了最少数量的写请求，相关队列空项仍可能不足。</p><p>原图 6 给出一组可以并行检查的门槛，包括最少写槽、实时读是否已提升优先级、实时写预留空项以及当前写占用。某些实施例在关键读到达时只判断一次，后来条件改善也让现有写轮次走完。说明书还允许重新评估的实现。</p><p>图 5 展开历史统计。写队列在过去的写轮次里反复达到高占用时，控制器可考虑继续写以维持写服务进度。原文区分累计高占用样本与达到条件的历史轮次数。读到某个阈值时，应明确是样本数、轮次数、单轮写槽，还是可用空项。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　写轮次提前结束前要检查哪些资源</h3>
+    <p id="fig-3-basis">写服务槽衡量本轮已完成的服务，写队列空位决定还能接收多少指定优先级的写请求。实时流量状态和历史写积压是独立输入。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">判定输入</th><th scope="col">观测位置和计量</th><th scope="col">何时继续写</th></tr></thead><tbody><tr id="fig-3-progress"><th scope="row">本轮写进度</th><td>当前轮次已服务的写槽数量</td><td>还未达到最少写槽（原图 6 示例为 2）</td></tr><tr id="fig-3-available"><th scope="row">指定优先级可用写条目</th><td>可供该类写请求使用的专用和共享空项</td><td>空项低于该优先级所需阈值</td></tr><tr id="fig-3-instant"><th scope="row">当前写积压</th><td>写队列有效条目数量或填充率</td><td>超过当前高写占用阈值</td></tr><tr id="fig-3-history"><th scope="row">历史写积压</th><td>在既往写轮次中统计满足填充阈值的样本或轮次</td><td>历史计数达到相应上限</td></tr><tr id="fig-3-realtime"><th scope="row">指定优先级的读流量</th><td>实时流量是否已进入优先级提升状态</td><td>需要维持实时流量的既有调度策略</td></tr><tr id="fig-3-credit"><th scope="row">共享写 credit</th><td>共享池剩余 credit 的数量</td><td>低于指定可用 credit 阈值</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-progress">已服务写槽是本轮进度</a> 原图 6 示例至少用过两槽。说明书允许随当前写队列占用调整最小进度。</li><li><a href="#fig-3-available">可用写队列空项是接收容量</a> 权利要求 1 要求给特定优先级的写请求留至少阈值数量的条目。说明书讨论专用空间和共享空间的可用总量。</li><li><a href="#fig-3-history">过去轮次中的高写占用</a> 权利要求 9 跟踪过去轮次中达到高写占用阈值的次数。图 5 把队列采样、每轮分类和历史窗口分开。</li></ul>
+  <p class="figure-evidence">原图 5、6、7、8；说明书归档段 0057、0058、0059、0060、0061、0062、0063、0064、0065、0067、0071、0074；权利要求 1、2、3、4、5、9、10、11、14 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>写请求队列</dt><dd>140</dd></div><div><dt>轮次切换控制</dt><dd>150</dd></div><div><dt>写队列占用历史记录电路</dt><dd>510</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　写队列占用按轮次采样，持续积压可以阻止插入关键读</h3>
+    <p id="fig-5-basis">先判断每次采样是否超过填充阈值，再更新历史。说明书给出先分类每个轮次的做法，权利要求 9 则直接限定过去轮次中满足阈值的次数。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="写队列占用按轮次采样，持续积压可以阻止插入关键读" style="--figure-width:1180px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 580" role="img" aria-labelledby="us12730763b2-fig-5-svg-title us12730763b2-fig-5-svg-desc">
+<title id="us12730763b2-fig-5-svg-title">写队列占用按轮次采样，持续积压可以阻止插入关键读</title>
+<desc id="us12730763b2-fig-5-svg-desc">先判断每次采样是否超过填充阈值，再更新历史。说明书给出先分类每个轮次的做法，权利要求 9 则直接限定过去轮次中满足阈值的次数。</desc>
+<defs><marker id="us12730763b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12730763b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12730763b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12730763b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12730763b2-fig-5-samples" d="M 218 273 L 304 273" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-5-arrow-data)"/>
+<path id="us12730763b2-fig-5-class-mode" d="M 515 245 L 547 245 Q 555 245 555 237 L 555 163 Q 555 155 563 155 L 594 155" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-5-arrow-control)"/>
+<path id="us12730763b2-fig-5-count-mode" d="M 515 302 L 547 302 Q 555 302 555 310 L 555 394 Q 555 402 563 402 L 594 402" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-5-arrow-control)"/>
+<path id="us12730763b2-fig-5-roll" d="M 821 155 L 919 155" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-5-arrow-main)"/>
+<path id="us12730763b2-fig-5-raw-check" d="M 821 402 L 919 402" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-5-arrow-main)"/>
+<path id="us12730763b2-fig-5-gross-check" d="M 1033 206 L 1033 353" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-5-arrow-control)"/>
+<rect x="221" y="245" width="78" height="18" fill="#f5f5f5"/><text x="260" y="259" class="arrow-label" text-anchor="middle">采样占用</text>
+<rect x="514" y="122" width="78" height="18" fill="#f5f5f5"/><text x="553" y="136" class="arrow-label" text-anchor="middle">分轮分类</text>
+<rect x="515" y="373" width="80" height="18" fill="#f5f5f5"/><text x="555" y="387" class="arrow-label" text-anchor="middle">直接计数</text>
+<rect x="830" y="127" width="82" height="18" fill="#f5f5f5"/><text x="871" y="141" class="arrow-label" text-anchor="middle">每轮更新</text>
+<rect x="831.5" y="372" width="79" height="18" fill="#f5f5f5"/><text x="871" y="386" class="arrow-label" text-anchor="middle">历史计数</text>
+<rect x="1055" y="264" width="84" height="18" fill="#f5f5f5"/><text x="1097" y="278" class="arrow-label" text-anchor="middle">历史门槛</text>
+<g id="us12730763b2-fig-5-queue"><rect x="41" y="221" width="177" height="104" rx="6" fill="#f5f5f5"/><rect x="41" y="221" width="177" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="129.5" y="247" class="node-name" text-anchor="middle">写请求队列</text><text x="129.5" y="269" class="node-detail" text-anchor="middle">在写轮次内采样</text><text x="129.5" y="287" class="node-detail" text-anchor="middle">记录填充水平</text></g>
+<g id="us12730763b2-fig-5-threshold"><rect x="304" y="221" width="211" height="104" rx="6" fill="#f5f5f5"/><rect x="304" y="221" width="211" height="104" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="409.5" y="247" class="node-name" text-anchor="middle">填充水平比较器</text><text x="409.5" y="269" class="node-detail" text-anchor="middle">与高写占用阈值比较</text></g>
+<g id="us12730763b2-fig-5-classify"><rect x="594" y="107" width="227" height="99" rx="6" fill="#f5f5f5"/><rect x="594" y="107" width="227" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="707.5" y="133" class="node-name" text-anchor="middle">每轮高写负载分类</text><text x="707.5" y="155" class="node-detail" text-anchor="middle">本轮超阈值样本数</text><text x="707.5" y="173" class="node-detail" text-anchor="middle">达到条件则标高写</text></g>
+<g id="us12730763b2-fig-5-history"><rect x="594" y="353" width="227" height="99" rx="6" fill="#f5f5f5"/><rect x="594" y="353" width="227" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="707.5" y="379" class="node-name" text-anchor="middle">既往轮次超阈值计数</text><text x="707.5" y="401" class="node-detail" text-anchor="middle">统计符合阈值的实例</text></g>
+<g id="us12730763b2-fig-5-previous"><rect x="919" y="107" width="228" height="99" rx="6" fill="#f5f5f5"/><rect x="919" y="107" width="228" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1033" y="133" class="node-name" text-anchor="middle">近期高写轮次数</text><text x="1033" y="155" class="node-detail" text-anchor="middle">记录过去多个写轮次</text></g>
+<g id="us12730763b2-fig-5-veto"><rect x="919" y="353" width="228" height="99" rx="6" fill="#f5f5f5"/><rect x="919" y="353" width="228" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1033" y="379" class="node-name" text-anchor="middle">轮次切换控制</text><text x="1033" y="401" class="node-detail" text-anchor="middle">历史达到阈值时继续写</text></g>
+<text x="41" y="50" class="signal-title" text-anchor="start">从写积压采样到提前切换的历史门槛</text>
+<text x="41" y="530" class="legend" text-anchor="start">两条分支对照不同的统计方法。每轮服务的写槽和实时队列空项另由表 3 所示条件检查。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12730763b2-fig-5-threshold">采样比较的是写队列填充水平</a> 原图 5 的写占用历史电路每轮可采一次或多次。记录的是写队列的占用达到阈值的样本。</li><li><a href="#us12730763b2-fig-5-classify">说明书的分轮分类</a> 先数某一轮内超阈值的样本数，达一定数量才把这一轮记为高写负载。随后可对最近多轮的高写状态设门槛。</li><li><a href="#us12730763b2-fig-5-history">权利要求 9 的过去轮次条件</a> 该权项写的是对既往轮次内达到高写占用阈值的实例计数。这个条件和可用写队列空位下限可同时检查。</li><li><a href="#us12730763b2-fig-5-veto">长期积压时保留写轮次</a> 历史达到门槛时，本轮继续处理写，给写请求持续推进的机会。若历史允许，仍须检查适用的其他条件。</li></ul>
+  <p class="figure-evidence">原图 5、8；说明书归档段 0057、0058、0060、0061、0062、0072、0073、0074、0075；权利要求 9、10、11 <a href="../diagrams/US12730763B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>写请求队列</dt><dd>140</dd></div><div><dt>写队列占用历史电路</dt><dd>510</dd></div><div><dt>轮次切换控制</dt><dd>150</dd></div><div><dt>以既往轮次的条件决定是否允许提前切换</dt><dd>830</dd></div></dl></details>
+</figure></section><section id="turn-time"><h2>在同一个当前写槽边界比较两种策略</h2><p>图 2 的原型在 t2 收到关键读，写轮次原计划服务八笔，已服务两笔。每笔写占 1 拍，读占 2 拍，写转读、读转写各需 2 拍。完成写轮次的基线在 t8 开始切换，t10 开始读，t12 完成读。</p><p>满足准入时，提前切换从 t2 开始，t4 开始读，t6 完成读。切回写后从 t8 恢复六笔剩余写，第 14 拍完成。请求的读开始提前 6 拍，最后一笔写完成也比基线晚 6 拍。指定写队列空位低于阈值时，原型得到与基线相同的读开始时刻。</p><p>原型量度的是一个简化调度器的用时。真实 DRAM 的读命令还要等待总线定序、bank 与行状态、刷新等条件。说明书中的写槽是计划配置的服务机会，不具有固定的纳秒换算。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　提前切换把关键读移到 t4，剩余的写从 t8 恢复</h3>
+    <p id="fig-2-basis">模型在 t2 收到关键读时已完成两笔写，还剩六笔写。提前切换使读开始提前六拍，剩余写恢复后，最后一笔写完成推迟六拍。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前切换把关键读移到 t4，剩余的写从 t8 恢复" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 352" role="img" aria-labelledby="us12730763b2-fig-2-svg-title us12730763b2-fig-2-svg-desc">
+<title id="us12730763b2-fig-2-svg-title">提前切换把关键读移到 t4，剩余的写从 t8 恢复</title>
+<desc id="us12730763b2-fig-2-svg-desc">模型在 t2 收到关键读时已完成两笔写，还剩六笔写。提前切换使读开始提前六拍，剩余写恢复后，最后一笔写完成推迟六拍。</desc>
+<defs><marker id="us12730763b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12730763b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12730763b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12730763b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12730763b2-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="284.571" y1="76" x2="284.571" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="284.571" y="64" class="arrow-label" text-anchor="middle">2 · 关键读到达</text>
+<line x1="377.143" y1="76" x2="377.143" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="377.143" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="469.714" y1="76" x2="469.714" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="469.714" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="562.286" y1="76" x2="562.286" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="562.286" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="654.857" y1="76" x2="654.857" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="654.857" y="64" class="arrow-label" text-anchor="middle">10</text>
+<line x1="747.429" y1="76" x2="747.429" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="747.429" y="64" class="arrow-label" text-anchor="middle">12</text>
+<line x1="840" y1="76" x2="840" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">14</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us12730763b2-fig-2-finish"><text x="24" y="136" class="node-name" text-anchor="start">完成写轮次</text>
+<rect x="192" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="238.286" y="136" class="arrow-label" text-anchor="middle">写 ×2</text>
+<rect x="284.571" y="112" width="277.714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="423.429" y="136" class="arrow-label" text-anchor="middle">剩余写 ×6</text>
+<rect x="562.286" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="608.571" y="136" class="arrow-label" text-anchor="middle">写转读</text>
+<rect x="654.857" y="112" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="701.143" y="136" class="arrow-label" text-anchor="middle">关键读</text>
+<circle cx="654.857" cy="131" r="5" fill="#4f5d75"/>
+<text x="654.857" y="171" class="arrow-label" text-anchor="end">读开始 t10</text></g>
+<g id="us12730763b2-fig-2-early"><text x="24" y="228" class="node-name" text-anchor="start">提前切换</text>
+<rect x="192" y="204" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="238.286" y="228" class="arrow-label" text-anchor="middle">写 ×2</text>
+<rect x="284.571" y="204" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="330.857" y="228" class="arrow-label" text-anchor="middle">写转读</text>
+<rect x="377.143" y="204" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="423.429" y="228" class="arrow-label" text-anchor="middle">关键读</text>
+<rect x="469.714" y="204" width="92.5714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="228" class="arrow-label" text-anchor="middle">读转写</text>
+<rect x="562.286" y="204" width="277.714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="701.143" y="228" class="arrow-label" text-anchor="middle">恢复剩余写 ×6</text>
+<circle cx="377.143" cy="223" r="5" fill="#bf4520"/>
+<text x="377.143" y="263" class="arrow-label" text-anchor="end">读开始 t4</text></g>
+<text x="24" y="328" class="legend" text-anchor="start">原型在读到达时检查门槛，读后回到写。横轴表示模型时间。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12730763b2-fig-2-axis">t0 开始写轮次，t2 到达关键读</a> 算例每拍服务一笔写。已写两笔，一轮原计划八笔。写转读和读转写各 2 拍，读服务 2 拍。</li><li><a href="#us12730763b2-fig-2-finish">完成原写轮次后才切换</a> 余下六笔写在 t2–t8 服务，再经过总线方向切换，关键读到 t10 开始。</li><li><a href="#us12730763b2-fig-2-early">提前切换后在 t4 开始处理读</a> 启动方向切换后，关键读提前六拍开始。服务完成并切回写，t8–t14 处理剩余六笔写。</li></ul>
+  <p class="figure-evidence">原图 5、6、7；说明书归档段 0050、0052、0053、0055、0060、0064、0067、0070；权利要求 1、4、5 <a href="../diagrams/US12730763B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>轮次切换控制</dt><dd>150</dd></div><div><dt>内存仲裁器</dt><dd>420</dd></div><div><dt>提前结束写轮次并开始读轮次</dt><dd>660</dd></div></dl></details>
+</figure></section><section id="query"><h2>在两种实施例里，内存系统掌握关键性的时间不同</h2><p>原图 7 的实施例让内存系统在接收读请求时同时得到关键性。原图 9 允许先接收请求，再向处理器侧 LLC 或其他部件回查对应值。图 4 展开这一额外往返，收到返回值后再与本地准入状态结合。</p><p>权利要求 1 限定指定优先级的写队列还有至少阈值数量的空项。权利要求 9 限定过去轮次中高写占用超阈值的次数，权利要求 13 则限定内存系统收到另一类请求后发起关键性查询。权利要求 14 添加共享 credit 的门槛，权利要求 17 将第 13 项的两个方向具体化为写转读。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　内存系统也可以在接收请求后回查关键性</h3>
+    <p id="fig-4-basis">带关键性一起发送的实施例可以直接判定。采用回查时，内存系统先接收请求，再向处理器侧查询并根据返回值决定是否提前切换。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="内存系统也可以在接收请求后回查关键性" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 494" role="img" aria-labelledby="us12730763b2-fig-4-svg-title us12730763b2-fig-4-svg-desc">
+<title id="us12730763b2-fig-4-svg-title">内存系统也可以在接收请求后回查关键性</title>
+<desc id="us12730763b2-fig-4-svg-desc">带关键性一起发送的实施例可以直接判定。采用回查时，内存系统先接收请求，再向处理器侧查询并根据返回值决定是否提前切换。</desc>
+<defs><marker id="us12730763b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12730763b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12730763b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12730763b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12730763b2-fig-4-request"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-4-arrow-data)"/><rect x="239.5" y="96" width="117" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">写轮次中送来读请求</text></g>
+<g id="us12730763b2-fig-4-query"><path d="M 480 168 L 116 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-4-arrow-main)"/><rect x="226.5" y="144" width="143" height="18" fill="#f5f5f5"/><text x="298" y="158" class="arrow-label" text-anchor="middle">请求提供该读的关键性值</text></g>
+<g id="us12730763b2-fig-4-criticality"><path d="M 116 216 L 480 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12730763b2-fig-4-arrow-return)"/><rect x="226.5" y="192" width="143" height="18" fill="#f5f5f5"/><text x="298" y="206" class="arrow-label" text-anchor="middle">返回对应请求的关键性值</text></g>
+<g id="us12730763b2-fig-4-gates"><path d="M 480 264 L 844 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12730763b2-fig-4-arrow-data)"/><rect x="584" y="240" width="156" height="18" fill="#f5f5f5"/><text x="662" y="254" class="arrow-label" text-anchor="middle">交付关键性与本地资源状态</text></g>
+<g id="us12730763b2-fig-4-turn-select"><path d="M 844 312 L 480 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12730763b2-fig-4-arrow-main)"/><rect x="577.5" y="288" width="169" height="18" fill="#f5f5f5"/><text x="662" y="302" class="arrow-label" text-anchor="middle">条件满足时提前切换为读轮次</text></g>
+<g id="us12730763b2-fig-4-arbitrate"><path d="M 480 354 L 504 354 Q 512 354 512 362 L 512 364 Q 512 372 504 372 L 480 372" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12730763b2-fig-4-arrow-control)"/><rect x="561.5" y="330" width="65" height="18" fill="#f5f5f5"/><text x="594" y="344" class="arrow-label" text-anchor="middle">进入读仲裁</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">处理器侧 LLC</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">内存系统入口</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">轮次切换控制</text>
+<text x="28" y="436" class="legend" text-anchor="start">原图 9 的回查实施例。消息间距表示先后，查询往返耗时由实现决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12730763b2-fig-4-request">内存系统先收到第二类请求</a> 权利要求 13 泛指第一、第二类轮次，权利要求 17 具体为写轮次遇到读。图按后者画例。</li><li><a href="#us12730763b2-fig-4-query">内存系统主动发起关键性查询</a> 原图 9 的实现可以在收请求后向 LLC 或其他处理器部件取关键性。权利要求 1 描写的方式可随读请求收到关键性指示。</li><li><a href="#us12730763b2-fig-4-gates">阈值检查与关键性回报发生在不同侧</a> 查询返回标记属于处理器提供的信息。能否提前切换由内存系统决定，权利要求 14 可进一步限定 credit 的门槛。</li></ul>
+  <p class="figure-evidence">原图 2、7、9；说明书归档段 0037、0038、0041、0051、0069、0077、0078、0079、0080；权利要求 1、7、13、14、15、16、17 <a href="../diagrams/US12730763B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>处理器侧关键性控制</dt><dd>280</dd></div><div><dt>内存系统</dt><dd>120</dd></div><div><dt>接收相反方向的请求并可回查关键性</dt><dd>920</dd></div><div><dt>满足条件时提前切换</dt><dd>930</dd></div><div><dt>执行新轮次</dt><dd>940</dd></div></dl></details>
+</figure></section></div>
+<p><a class="lab-link" href="../lab.html#read-turn">在原型中复算</a></p>
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
@@ -137,50 +193,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=processor%20circuitry%20that%20includes%20cache%20circuitry%20configured%20to%20issue%20memory%20requests%20and%20assign%20one%20of%20a">F15</a></th><td>处理器的缓存电路发送访存请求，并为给定请求赋予一个关键性等级</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=LLC%20270%2C%20in%20various%20embodiments%2C%20is%20the%20highest%20level%20cache%20circuitry%20within%20processor%20circuitry%20160%20and">说明书 0036</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=At%20the%20time%20of%20issuing%20a%20memory%20request%20to%20memory%20system%20120%2C%20LLC%20270%20may%20assign">说明书 0037</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=In%20step%20920%2C%20the%20memory%20system%20receives%2C%20during%20the%20first%20turn%2C%20a%20memory%20request%20of%20a">说明书 0078</a> · 图2 · 图9</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=a%20memory%20system%20configured%20to%20couple%20to%20one%20or%20more%20memory%20devices%20and%20to%20receive%20ones">F16</a></th><td>内存系统连接一个或多个内存器件，并接收其中的访存请求</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=Turning%20now%20to%20FIG.%201%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20system%20100%20is">说明书 0019</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=Memory%20system%20120%2C%20in%20various%20embodiments%2C%20includes%20circuitry%20configured%20to%20receive%2C%20from%20other%20components%20%28e.g.%20processor">说明书 0024</a> · 图1 · 图4</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=perform%20a%20first%20turn%20in%20which%20a%20plurality%20of%20memory%20requests%20of%20a%20first%20request%20type">F17</a></th><td>内存系统在第一轮次处理多笔第一类型请求</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=Method%20900%20begins%20in%20step%20910%20with%20the%20memory%20system%20performing%20a%20first%20turn%20in%20which">说明书 0077</a> · 图9</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=receive%2C%20during%20the%20first%20turn%2C%20a%20memory%20request%20of%20a%20second%20request%20type">F18</a></th><td>第一轮次中收到一笔第二类型请求</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=In%20step%20920%2C%20the%20memory%20system%20receives%2C%20during%20the%20first%20turn%2C%20a%20memory%20request%20of%20a">说明书 0078</a> · 图9</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=issue%2C%20upon%20the%20reception%20of%20the%20memory%20request%2C%20a%20request%20to%20the%20processor%20circuitry%20to%20provide">F19</a></th><td>内存系统收到请求后反向询问处理器该请求的关键性</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=Furthermore%2C%20instead%20of%20LLC%20270%20providing%20a%20memory%20request%20with%20a%20criticality%20value%2C%20in%20some%20embodiments%2C">说明书 0041</a> · <a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=In%20step%20920%2C%20the%20memory%20system%20receives%2C%20during%20the%20first%20turn%2C%20a%20memory%20request%20of%20a">说明书 0078</a> · 图2 · 图9</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=based%20on%20the%20criticality%20value%20of%20the%20memory%20request%2C%20transition%2C%20to%20process%20the%20memory%20request%2C%20from">F20</a></th><td>内存系统按关键性提前结束第一轮次，并切入第二轮次以处理该请求</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=In%20step%20930%2C%20based%20on%20the%20criticality%20value%20of%20the%20memory%20request%2C%20the%20memory%20system%20transitions%2C">说明书 0079</a> · 图9</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=perform%20the%20second%20turn%20in%20which%20a%20plurality%20of%20memory%20requests%20of%20the%20second%20request%20type">F21</a></th><td>第二轮次服务多笔第二类型的访存请求</td><td><a href="https://eureka.patsnap.com/patent/US12730763B2#:~:text=In%20step%20940%2C%20the%20memory%20system%20performs%20the%20second%20turn%20in%20which%20a%20plurality%20of%20memory">说明书 0080</a> · 图9</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>写轮次收到处理器标记的关键读，且指定优先级写请求可用条目达到阈值等条件满足时，内存系统提前切至读轮次。见原图 6–7。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>切换条件增加写队列占用低于高写负载阈值</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>切换条件增加另一指定优先级的读流量未处于紧急提升状态</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>条件未满足时，先完成写轮次，再进入读轮次处理关键读</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-4">4</a></td><td>即使切换条件随后满足，仍继续完成已开始的写轮次</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>设置读队列，并让关键读先于队列中的其他读请求处理</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>由处理器内的缓存电路给读请求赋值，取值至少包含关键和非关键</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-7">7</a></td><td>缓存电路发现请求对应 load 队列中最老的指令时，将请求标为关键</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>独立方法统计过去一组轮次内写队列占用满足高写负载阈值的次数。次数没有达到设定门槛等条件满足时，提前转读并处理关键读。见原图 8。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>切换条件增加指定优先级的流量未处于紧急提升状态</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-9">9</a></td><td>切换条件增加写队列的可用条目数达到阈值</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-9">9</a></td><td>读请求对应指令缓存缺失队列中最老的指令时，由处理器标为关键</td></tr><tr id="claim-13"><th scope="row">13</th><td>独立项</td><td>两类请求的系统在第一轮次收到第二类请求后，向处理器查询关键性。依据该值提前切换到第二类服务。只有从属权利要求 17 才特指写转读。见原图 9。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>用信用池管理第一类请求队列，提前切换还要求可用信用数达到阈值等条件</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-13">13</a></td><td>关键性含关键和非关键值，缓存电路把 MMU 翻译事务所对应的请求标为关键</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-13">13</a></td><td>第二轮次设队列，并按第二类请求入队顺序处理</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-13">13</a></td><td>第一轮次限定为处理写请求，第二轮次限定为处理读请求</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 1、原图 7</dt><dd>关键读到达写轮次且指定优先级写请求的可用条目达到阈值等条件满足时提前切换。</dd></div><div><dt>权利要求 9、原图 8</dt><dd>在一组历史轮次内统计写队列占用满足高写负载阈值的次数，并按次数限制提前切换。</dd></div><div><dt>权利要求 13、原图 9</dt><dd>当前轮次收到另一类型请求后向处理器问关键性，再按回复决定是否提前开启下一类型的轮次。</dd></div><div><dt>权利要求 2–6、原图 6–7</dt><dd>若干从属项分别增加当前写队列占用、另一优先级读流量升级、完成原轮次和读队内优先服务等限定。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12730763B2">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11900146B2.html#engineering">实时内存事务表使用独立信用池</a>
-<p>独立 credit 保住实时内存事务的仲裁资格。即便具备资格，读请求也可能赶上集中写轮次。另件授权的切换条件是处理器标明这笔读为关键读，并且指定优先级的写队列有足够空位等条件成立，可提前转入读轮次。</p></li><li><a href="US12079144B1.html#engineering">数据总线忙时选择仅需命令的请求</a>
-<p>命令和数据分线时，US12079144B1 在数据线不可用时仍可从另一地址队列选不需携带数据的合格请求。US12730763B2 遇到关键读时可提前结束整段写轮次，前提之一是写队列有足够空位。前者利用仍可用的命令链路，后者改变读写服务方向。</p></li><li><a href="US11403037B2.html#engineering">根据内存总线活动调整连续读写轮次</a>
-<p>US11403037B2 在一对读写轮次完成后测量活动时间，再调整后续轮次的读写批量。US12730763B2 把关键读带入当前写轮次的切换判断，同时检查写队列空位等条件。前者的观察窗口是一对轮次，后者的触发点是关键读进入后的当轮边界。</p></li></ul>
-    <p><a href="../index.html?patent=US12730763B2#knowledge">在全量关系图上定位 US12730763B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2024-09-20</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-12-12</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-09-08</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/978,516</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc.</dd></div><div><dt>发明人</dt><dd>Qiong Cai、Tyler J. Huberty、Anwar Q. Rohillah、Gregory S. Mathews、Wolfgang H. Klingauf、Rohit K. Gupta</dd></div><div><dt>分类号</dt><dd>G06F13/1626</dd></div><div><dt>著录来源</dt><dd><a href="https://patentsgazette.uspto.gov/week36/OG/patentee/alphaC.html">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12730763B2">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权全文（Patsnap 与 Justia 转录，USPTO Gazette 核对），覆盖 131 个说明书段落、17 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 4、图 5、图 6、图 7、图 8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12730763B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

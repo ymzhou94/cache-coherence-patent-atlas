@@ -1,119 +1,147 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12321746B2 跨处理器数据同步屏障可排除指定地址区间 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>带排除区的 mild DSB 如何缩短跨核应答 · US12321746B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12321746B2</code> · <a href="https://patents.google.com/patent/US12321746B2/en">专利全文</a></p>
+<h1>带排除区的 mild DSB 如何缩短跨核应答</h1><p class="reading-question">响应核同时有普通内存访问和长时间未返回的设备访问。它能否向另一个核确认 DSB 已完成？</p>
+<p class="reading-answer">mild DSB 允许响应核跳过排除地址区里的未完成访存，区外访问仍须达到完成条件。目标核按 PA 范围标记访存，并在支持的实现中分别处理 mild DSB 和 strong DSB。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-06-03</dd></div><div><dt>申请号</dt><dd>US18/336,704</dd></div><div><dt>最早优先权</dt><dd>2020-09-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeff Gonion、John H. Kelm、James Vash、Pradeep Kanapathipillai、Mridul Agarwal、Gideon N. Levinsky、Richard F. Russo、Christopher M. Tsay</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#lsu">响应核在什么位置识别排除区访问</a></li><li><a href="#ack-window">区外 store 完成后可以先发应答</a></li><li><a href="#parallel">为什么后到的 mild DSB 可以先应答</a></li><li><a href="#flush">Flush 指针确定从哪一个指令边界清理</a></li><li><a href="#scope">区内与区外请求仍可争用互连</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="lsu"><h2>响应核在什么位置识别排除区访问</h2><p>图 1 从 AGU／TLB 送出的物理地址（PA）开始。访存单元（LSU）按可编程排除区寄存器判断访问落在区内还是区外。说明书允许在访存进入 load 队列（LDQ）或 store 队列（STQ）时比较地址，并随项记录区域标记。</p><p>随后，LSU 检查 LDQ、STQ、核接口单元（CIF）等处仍未完成的访问。原文将可排除区内访存的类型称为 mild DSB，将需要等待所有未完成访存的类型称为 strong DSB。排除区可以映射设备地址。是否采用这条路径还取决于发起端的维护是否影响该地址区。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　LSU 按物理地址分类后再检查 DSB 完成条件</h3>
+    <p id="fig-1-basis">沿 PA、地址范围比较、队列标记、核接口状态和发出应答的路径找到硬件判断点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="LSU 按物理地址分类后再检查 DSB 完成条件" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 603" role="img" aria-labelledby="us12321746b2-fig-1-svg-title us12321746b2-fig-1-svg-desc">
+<title id="us12321746b2-fig-1-svg-title">LSU 按物理地址分类后再检查 DSB 完成条件</title>
+<desc id="us12321746b2-fig-1-svg-desc">沿 PA、地址范围比较、队列标记、核接口状态和发出应答的路径找到硬件判断点。</desc>
+<defs><marker id="us12321746b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12321746b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12321746b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12321746b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12321746b2-fig-1-pa" d="M 238 156 L 373 156" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-1-arrow-data)"/>
+<path id="us12321746b2-fig-1-range" d="M 719 156 L 575 156" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-1-arrow-control)"/>
+<path id="us12321746b2-fig-1-tag" d="M 471 207 L 471 299" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-1-arrow-main)"/>
+<path id="us12321746b2-fig-1-external" d="M 137 399 L 137 440 Q 137 448 145 448 L 767 448 Q 775 448 775 440 L 775 399" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-1-arrow-control)"/>
+<path id="us12321746b2-fig-1-wait" d="M 575 345 L 719 345" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-1-arrow-main)"/>
+<path id="us12321746b2-fig-1-re" d="M 829 399 L 829 478" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-1-arrow-return)"/>
+<rect x="249.5" y="130" width="111" height="18" fill="#f5f5f5"/><text x="305" y="144" class="arrow-label" text-anchor="middle">译得 PA</text>
+<rect x="591.5" y="129" width="111" height="18" fill="#f5f5f5"/><text x="647" y="143" class="arrow-label" text-anchor="middle">可配置区间</text>
+<rect x="493" y="236" width="132" height="18" fill="#f5f5f5"/><text x="559" y="250" class="arrow-label" text-anchor="middle">保存分类结果</text>
+<rect x="340.5" y="420" width="195" height="18" fill="#f5f5f5"/><text x="438" y="434" class="arrow-label" text-anchor="middle">核接口尚未完成的请求</text>
+<rect x="577.5" y="318" width="141" height="18" fill="#f5f5f5"/><text x="648" y="332" class="arrow-label" text-anchor="middle">未完成的访存状态</text>
+<rect x="773.5" y="451" width="169" height="18" fill="#f5f5f5"/><text x="858" y="465" class="arrow-label" text-anchor="middle">满足本类 DSB 条件</text>
+<g id="us12321746b2-fig-1-src"><rect x="43" y="107" width="195" height="100" rx="6" fill="#f5f5f5"/><rect x="43" y="107" width="195" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140.5" y="133" class="node-name" text-anchor="middle">AGU／TLB</text><text x="140.5" y="155" class="node-detail" text-anchor="middle">产生并翻译访存地址</text></g>
+<g id="us12321746b2-fig-1-cmp"><rect x="373" y="107" width="202" height="100" rx="6" fill="#f5f5f5"/><rect x="373" y="107" width="202" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="474" y="133" class="node-name" text-anchor="middle">LSU 地址比较</text><text x="474" y="155" class="node-detail" text-anchor="middle">将 PA 与排除区范围比较</text></g>
+<g id="us12321746b2-fig-1-regs"><rect x="719" y="107" width="198" height="100" rx="6" fill="#f5f5f5"/><rect x="719" y="107" width="198" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="818" y="133" class="node-name" text-anchor="middle">排除区寄存器</text><text x="818" y="155" class="node-detail" text-anchor="middle">定义需要跳过的地址范围</text></g>
+<g id="us12321746b2-fig-1-queues"><rect x="373" y="299" width="202" height="100" rx="6" fill="#f5f5f5"/><rect x="373" y="299" width="202" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="474" y="325" class="node-name" text-anchor="middle">LDQ／STQ</text><text x="474" y="347" class="node-detail" text-anchor="middle">逐条跟踪未完成访存</text><text x="474" y="365" class="node-detail" text-anchor="middle">关联排除区标记</text></g>
+<g id="us12321746b2-fig-1-cif"><rect x="43" y="299" width="195" height="100" rx="6" fill="#f5f5f5"/><rect x="43" y="299" width="195" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="140.5" y="325" class="node-name" text-anchor="middle">核接口单元 CIF</text><text x="140.5" y="347" class="node-detail" text-anchor="middle">外发请求及完成状态</text></g>
+<g id="us12321746b2-fig-1-check"><rect x="719" y="299" width="198" height="100" rx="6" fill="#f5f5f5"/><rect x="719" y="299" width="198" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="818" y="325" class="node-name" text-anchor="middle">DSB 完成检查</text><text x="818" y="347" class="node-detail" text-anchor="middle">mild：等待区外请求</text><text x="818" y="365" class="node-detail" text-anchor="middle">strong：等待全部请求</text></g>
+<g id="us12321746b2-fig-1-llc"><rect x="719" y="478" width="198" height="85" rx="6" fill="#f5f5f5"/><rect x="719" y="478" width="198" height="85" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="818" y="504" class="node-name" text-anchor="middle">返回发起侧</text><text x="818" y="526" class="node-detail" text-anchor="middle">发送 DSB 完成应答</text></g>
+<text x="44" y="58" class="signal-title" text-anchor="start">响应核的 LSU 用地址分类，再检查队列和核接口</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12321746b2-fig-1-pa">译得物理地址</a> AGU／TLB 在在访存流水线入口生成并翻译地址，该例用 PA 比较排除区域。</li><li><a href="#us12321746b2-fig-1-range">可配置区间</a> 范围由寄存器设置，可包括映射到外设的地址。</li><li><a href="#us12321746b2-fig-1-queues">未完成访存记录</a> 访存进入 LDQ／STQ 时可记录地址分类。</li><li><a href="#us12321746b2-fig-1-check">DSB 完成检查</a> mild DSB 可排除区内等待。strong DSB 将同一批在途区内访问纳入等待。</li></ul>
+  <p class="figure-evidence">原图 2、4、5、6；说明书归档段 0027、0028、0029、0034、0043、0044、0045、0047、0048、0049、0053、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> <a href="../diagrams/US12321746B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>DSB 响应核</dt><dd>125A</dd></div><div><dt>地址生成与翻译单元（AGU／TLB）</dt><dd>434</dd></div><div><dt>访存单元（LSU）</dt><dd>430</dd></div><div><dt>store 队列（STQ）</dt><dd>436</dd></div><div><dt>load 队列（LDQ）</dt><dd>438</dd></div><div><dt>核接口单元（CIF）</dt><dd>450</dd></div><div><dt>配置排除地址区域</dt><dd>610</dd></div><div><dt>DSB 操作请求</dt><dd>220</dd></div><div><dt>DSB 完成应答</dt><dd>230</dd></div></dl></details>
+</figure></section><section id="ack-window"><h2>区外 store 完成后可以先发应答</h2><p>图 2 在原图 2 的慢外设例中加入一笔区外 store，说明原图 5 的等待条件。响应核收到 mild DSB 时，两笔访问都没完成。区外的 store 必须先达到完成条件。仍未返回的排除区内外设访问不阻止这一类应答。</p><p>表 3 比较当前请求属于排除区或区外时两类 DSB 的等待条件。发起核收到应答说明响应核满足本次请求的屏障条件。排除区访问的外设响应仍可能在后面才返回。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　区外写先完成，区内设备响应可以晚于 mild DSB 应答</h3>
+    <p id="fig-2-basis">看区外 store、等待中的设备访问和应答三条事件线。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="区外写先完成，区内设备响应可以晚于 mild DSB 应答" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 503" role="img" aria-labelledby="us12321746b2-fig-2-svg-title us12321746b2-fig-2-svg-desc">
+<title id="us12321746b2-fig-2-svg-title">区外写先完成，区内设备响应可以晚于 mild DSB 应答</title>
+<desc id="us12321746b2-fig-2-svg-desc">看区外 store、等待中的设备访问和应答三条事件线。</desc>
+<defs><marker id="us12321746b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12321746b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12321746b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12321746b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12321746b2-fig-2-write"><path d="M 358 120 L 601 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-data)"/><rect x="395" y="96" width="169" height="18" fill="#f5f5f5"/><text x="479.5" y="110" class="arrow-label" text-anchor="middle">区外 store 尚未完成</text></g>
+<g id="us12321746b2-fig-2-device"><path d="M 358 168 L 844 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-data)"/><rect x="529.5" y="144" width="143" height="18" fill="#f5f5f5"/><text x="601" y="158" class="arrow-label" text-anchor="middle">排除区访存等待外设响应</text></g>
+<g id="us12321746b2-fig-2-dsb"><path d="M 116 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-data)"/><rect x="146" y="192" width="182" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">发出 mild DSB 请求</text></g>
+<g id="us12321746b2-fig-2-check"><path d="M 358 258 L 382 258 Q 390 258 390 266 L 390 268 Q 390 276 382 276 L 358 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-control)"/><rect x="374.5" y="234" width="195" height="18" fill="#f5f5f5"/><text x="472" y="248" class="arrow-label" text-anchor="middle">LSU 仍检查区外 store</text></g>
+<g id="us12321746b2-fig-2-drain"><path d="M 601 312 L 358 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-main)"/><rect x="414.5" y="288" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">区外写入达到完成条件</text></g>
+<g id="us12321746b2-fig-2-ack"><path d="M 358 360 L 116 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-2-arrow-main)"/><rect x="139.5" y="336" width="195" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">区外均完成，发送 DSB 应答</text></g>
+<g id="us12321746b2-fig-2-device-done"><path d="M 844 408 L 358 408" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-2-arrow-return)"/><rect x="542.5" y="384" width="117" height="18" fill="#f5f5f5"/><text x="601" y="398" class="arrow-label" text-anchor="middle">排除区外设稍后完成</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">mild DSB 发起核</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">DSB 响应核</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">区外写入目标</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">排除区设备</text>
+<text x="28" y="484" class="legend" text-anchor="start">在 FIG. 2 示例上加入一笔区外写，使 FIG. 5 的等待条件可见。时间间隔无比例含义。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12321746b2-fig-2-device">等待排除区设备响应</a> 如果地址在已配置排除范围，慢外设应答可晚于 mild DSB 应答。</li><li><a href="#us12321746b2-fig-2-check">仍须等待区外 store</a> 地址落在区外，加入此 DSB 的完成条件。</li><li><a href="#us12321746b2-fig-2-drain">区外写完成</a> 在本图中这是最后一笔仍需等待的访存。</li><li><a href="#us12321746b2-fig-2-ack">发出 mild DSB 应答</a> 区外条件满足后允许应答，外设响应尚未到达。</li></ul>
+  <p class="figure-evidence">原图 2、5；说明书归档段 0026、0027、0029、0030、0051、0052、0053、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> <a href="../diagrams/US12321746B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>DSB 响应核</dt><dd>125A</dd></div><div><dt>第一个 DSB 发起核</dt><dd>125B</dd></div><div><dt>排除区映射的外设</dt><dd>140</dd></div><div><dt>外设访问请求</dt><dd>210</dd></div><div><dt>DSB 操作请求</dt><dd>220</dd></div><div><dt>DSB 完成应答</dt><dd>230</dd></div><div><dt>外设访问响应</dt><dd>240</dd></div><div><dt>确认区外事务完成</dt><dd>630</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　两类 DSB 对各类未完成访问的处理</h3>
+    <p id="fig-3-basis">只需按访问所属区和操作状态检查两种屏障的可应答条件。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">响应核到应答前的状态</th><th scope="col">mild DSB</th><th scope="col">strong DSB</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">仍有区外 load／store</th><td>继续等待</td><td>继续等待</td></tr><tr id="fig-3-table-row-2"><th scope="row">仅区内 load／store 未完成</th><td>满足该类屏障的访存要求</td><td>继续等待</td></tr><tr id="fig-3-table-row-3"><th scope="row">区内、区外均无未完成访问</th><td>满足访存要求</td><td>满足访存要求</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">判定对象</a> 比较响应核里已发出的访存，与当前 DSB 对应的完成条件。</li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0028、0029、0030、0049、0053、0054、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>访存单元（LSU）</dt><dd>430</dd></div><div><dt>store 队列（STQ）</dt><dd>436</dd></div><div><dt>load 队列（LDQ）</dt><dd>438</dd></div><div><dt>核接口单元（CIF）</dt><dd>450</dd></div><div><dt>确认区外事务完成</dt><dd>630</dd></div></dl></details>
+</figure></section><section id="parallel"><h2>为什么后到的 mild DSB 可以先应答</h2><p>图 4 各有一个 DSB 发起方。响应核先接受 strong DSB，并因未完成的区内设备访问继续等待。之后收到另一核的 mild DSB，硬件可使用独立逻辑处理。若此时区外访问都已满足条件，mild DSB 先应答。</p><p>说明书还给出同类请求依次处理的实施例，对应每类请求队列。第 21 项独立限定晚到请求属于不同类型时并行处理。它关注请求类型与并行性，图中的 I/O 等待和完成先后为原图 3 的应用场景。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　两类 DSB 可并行，晚到的 mild DSB 可以先回</h3>
+    <p id="fig-4-basis">用原图 3 的三核实例定位哪个应答依赖外设完成，以及何时允许并行。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两类 DSB 可并行，晚到的 mild DSB 可以先回" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 503" role="img" aria-labelledby="us12321746b2-fig-4-svg-title us12321746b2-fig-4-svg-desc">
+<title id="us12321746b2-fig-4-svg-title">两类 DSB 可并行，晚到的 mild DSB 可以先回</title>
+<desc id="us12321746b2-fig-4-svg-desc">用原图 3 的三核实例定位哪个应答依赖外设完成，以及何时允许并行。</desc>
+<defs><marker id="us12321746b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12321746b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12321746b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12321746b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12321746b2-fig-4-pending"><path d="M 358 120 L 844 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-data)"/><rect x="516.5" y="96" width="169" height="18" fill="#f5f5f5"/><text x="601" y="110" class="arrow-label" text-anchor="middle">发出区内设备访问，响应未回</text></g>
+<g id="us12321746b2-fig-4-strong"><path d="M 116 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-data)"/><rect x="146" y="144" width="182" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">先收到 strong DSB</text></g>
+<g id="us12321746b2-fig-4-mild"><path d="M 601 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-data)"/><rect x="401.5" y="192" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">后收到 mild DSB</text></g>
+<g id="us12321746b2-fig-4-parallel"><path d="M 358 258 L 382 258 Q 390 258 390 266 L 390 268 Q 390 276 382 276 L 358 276" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-control)"/><rect x="420" y="234" width="104" height="18" fill="#f5f5f5"/><text x="472" y="248" class="arrow-label" text-anchor="middle">不同类型分别处理</text></g>
+<g id="us12321746b2-fig-4-ack_mild"><path d="M 358 312 L 601 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-main)"/><rect x="362.5" y="288" width="234" height="18" fill="#f5f5f5"/><text x="479.5" y="302" class="arrow-label" text-anchor="middle">区外均完成，先应答 mild DSB</text></g>
+<g id="us12321746b2-fig-4-dev_done"><path d="M 844 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-4-arrow-return)"/><rect x="549" y="336" width="104" height="18" fill="#f5f5f5"/><text x="601" y="350" class="arrow-label" text-anchor="middle">区内设备响应到达</text></g>
+<g id="us12321746b2-fig-4-ack_strong"><path d="M 358 408 L 116 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-4-arrow-main)"/><rect x="100.5" y="384" width="273" height="18" fill="#f5f5f5"/><text x="237" y="398" class="arrow-label" text-anchor="middle">确认全部完成，再应答 strong DSB</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">strong DSB 发起核</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">DSB 响应核</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">mild DSB 发起核</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">排除区外设</text>
+<text x="28" y="484" class="legend" text-anchor="start">同一响应核收到两个不同类型请求。本图中允许后到的 mild DSB 先应答。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12321746b2-fig-4-strong">先接到 strong DSB</a> 响应核要等待自己的区内设备访问。</li><li><a href="#us12321746b2-fig-4-parallel">不同类型分别处理</a> 专利实施例以独立逻辑支持不同类型并行，同类型可入队串行。</li><li><a href="#us12321746b2-fig-4-ack_mild">mild DSB 先回</a> 区外条件满足时向对应发起核应答。</li><li><a href="#us12321746b2-fig-4-ack_strong">strong DSB 收尾</a> 区内外设响应到达后再应答，仍须符合其它访存完成条件。</li></ul>
+  <p class="figure-evidence">原图 3、5；说明书归档段 0031、0032、0033、0052；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US12321746B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>DSB 响应核</dt><dd>125A</dd></div><div><dt>第一个 DSB 发起核</dt><dd>125B</dd></div><div><dt>第二个 DSB 发起核</dt><dd>125C</dd></div><div><dt>外设访问响应</dt><dd>240</dd></div><div><dt>DSB 操作请求</dt><dd>220</dd></div><div><dt>DSB 完成应答</dt><dd>230</dd></div></dl></details>
+</figure></section><section id="flush"><h2>Flush 指针确定从哪一个指令边界清理</h2><p>图 5 从 LSU 把 flush 请求送给映射、派发与重命名单元（MDR）看起。重排序缓冲区对应的退休指针跟踪下一条待退休操作。如果 mild DSB flush 指针有效，就等退休指针到达这个边界。strong DSB 或该指针无效的情形，等待分支与系统解析指针。</p><p>等待 mild DSB 时若有新的区内访问发出，说明书允许硬件在 valid 生效后转用 mild DSB flush 指针。MDR 执行 flush 后通知 LSU。LSU 仍要满足该类请求的访存完成条件再应答，后续前端可按恢复路径重新取指和翻译。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　退休指针到达哪一个边界时才 flush</h3>
+    <p id="fig-5-basis">沿 LSU 发起请求、MDR 选择指针、前后端 flush 和 LSU 等待读出顺序。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="退休指针到达哪一个边界时才 flush" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 649" role="img" aria-labelledby="us12321746b2-fig-5-svg-title us12321746b2-fig-5-svg-desc">
+<title id="us12321746b2-fig-5-svg-title">退休指针到达哪一个边界时才 flush</title>
+<desc id="us12321746b2-fig-5-svg-desc">沿 LSU 发起请求、MDR 选择指针、前后端 flush 和 LSU 等待读出顺序。</desc>
+<defs><marker id="us12321746b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12321746b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12321746b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12321746b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12321746b2-fig-5-type" d="M 252 140 L 329.5 140 Q 333 140 333 143.5 L 333 143.5 Q 333 147 336.5 147 L 384 147" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-5-arrow-main)"/>
+<path id="us12321746b2-fig-5-yes" d="M 581 147 L 711 147" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-5-arrow-main)"/>
+<path id="us12321746b2-fig-5-no" d="M 481 207 L 481 302" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-5-arrow-control)"/>
+<path id="us12321746b2-fig-5-mild-valid" d="M 545 302 L 545 265 Q 545 257 553 257 L 798 257 Q 806 257 806 249 L 806 189" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-5-arrow-return)"/>
+<path id="us12321746b2-fig-5-merge" d="M 581 354 L 711 354" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12321746b2-fig-5-arrow-data)"/>
+<path id="us12321746b2-fig-5-reach" d="M 878 189 L 878 302" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12321746b2-fig-5-arrow-main)"/>
+<path id="us12321746b2-fig-5-signal" d="M 818 406 L 818 502" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12321746b2-fig-5-arrow-control)"/>
+<rect x="258" y="114" width="118" height="18" fill="#f5f5f5"/><text x="317" y="128" class="arrow-label" text-anchor="middle">检查请求类型</text>
+<rect x="614.5" y="120" width="63" height="18" fill="#f5f5f5"/><text x="646" y="134" class="arrow-label" text-anchor="middle">有效</text>
+<rect x="297.5" y="249" width="165" height="18" fill="#f5f5f5"/><text x="380" y="263" class="arrow-label" text-anchor="middle">strong 或指针无效</text>
+<rect x="576.5" y="232" width="241" height="18" fill="#f5f5f5"/><text x="697" y="246" class="arrow-label" text-anchor="middle">等待中的 mild 遇到新发区内请求</text>
+<rect x="582" y="326" width="126" height="18" fill="#f5f5f5"/><text x="645" y="340" class="arrow-label" text-anchor="middle">到达所需指针</text>
+<rect x="837.5" y="254" width="119" height="18" fill="#f5f5f5"/><text x="897" y="268" class="arrow-label" text-anchor="middle">达到 flush 点</text>
+<rect x="657.5" y="440" width="149" height="18" fill="#f5f5f5"/><text x="732" y="454" class="arrow-label" text-anchor="middle">执行管线已 flush</text>
+<g id="us12321746b2-fig-5-pkt"><rect x="45" y="93" width="207" height="96" rx="6" fill="#f5f5f5"/><rect x="45" y="93" width="207" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="148.5" y="119" class="node-name" text-anchor="middle">LSU 收到 DSB 请求</text><text x="148.5" y="141" class="node-detail" text-anchor="middle">向 MDR 提交 flush 请求</text></g>
+<g id="us12321746b2-fig-5-class"><polygon points="482.5,87 581,147 482.5,207 384,147" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="482.5" y="144" class="node-name" text-anchor="middle">mild 且指针有效？</text><text x="482.5" y="165" class="node-detail" text-anchor="middle">检查 valid 位</text></g>
+<g id="us12321746b2-fig-5-light"><rect x="711" y="93" width="212" height="96" rx="6" fill="#f5f5f5"/><rect x="711" y="93" width="212" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="119" class="node-name" text-anchor="middle">mild DSB flush 指针</text><text x="817" y="141" class="node-detail" text-anchor="middle">退休指针到达时 flush</text></g>
+<g id="us12321746b2-fig-5-strong"><rect x="384" y="302" width="197" height="104" rx="6" fill="#f5f5f5"/><rect x="384" y="302" width="197" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="482.5" y="328" class="node-name" text-anchor="middle">分支与系统解析指针</text><text x="482.5" y="350" class="node-detail" text-anchor="middle">冻结后等待退休指针到达</text></g>
+<g id="us12321746b2-fig-5-flush"><rect x="711" y="302" width="212" height="104" rx="6" fill="#f5f5f5"/><rect x="711" y="302" width="212" height="104" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="328" class="node-name" text-anchor="middle">MDR 执行 flush</text><text x="817" y="350" class="node-detail" text-anchor="middle">清理前端与执行流水线</text><text x="817" y="368" class="node-detail" text-anchor="middle">向 LSU 报告完成</text></g>
+<g id="us12321746b2-fig-5-drain"><rect x="711" y="502" width="212" height="98" rx="6" fill="#f5f5f5"/><rect x="711" y="502" width="212" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="817" y="528" class="node-name" text-anchor="middle">LSU 检查未完成请求</text><text x="817" y="550" class="node-detail" text-anchor="middle">等待指定访存完成</text><text x="817" y="568" class="node-detail" text-anchor="middle">发送应答并重新取指</text></g>
+<text x="45" y="52" class="signal-title" text-anchor="start">DSB 类型和指针的有效性决定清理边界</text>
+<text x="45" y="574" class="legend" text-anchor="start">有效位由排除区访存发出更新。图中省略指针随普通退休推进的反馈。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12321746b2-fig-5-class">类型与指针有效性</a> 只有 mild DSB 且专用指针有效时，选专用的指令边界。</li><li><a href="#us12321746b2-fig-5-light">mild DSB flush 指针</a> 可在区内访问发出时置有效，并随访存提交或完成调整到顺序中的下一位置。</li><li><a href="#us12321746b2-fig-5-mild-valid">等待中的 mild DSB 改用专用指针</a> 正在等待时新发出区内访问，可使 mild DSB 路径切换到专用边界。</li><li><a href="#us12321746b2-fig-5-flush">MDR 执行 flush</a> 退休指针到达选定边界后清理执行流水线等结构。LSU 收到该信号仍需核查未完成访存。</li></ul>
+  <p class="figure-evidence">原图 4、5、6；说明书归档段 0037、0038、0039、0043、0048、0049、0050、0054、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12321746B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>映射、派发与重命名单元（MDR）</dt><dd>420</dd></div><div><dt>重排序缓冲（ROB）</dt><dd>425</dd></div><div><dt>访存单元（LSU）</dt><dd>430</dd></div><div><dt>store 队列（STQ）</dt><dd>436</dd></div><div><dt>load 队列（LDQ）</dt><dd>438</dd></div><div><dt>核接口单元（CIF）</dt><dd>450</dd></div></dl></details>
+</figure></section><section id="scope"><h2>区内与区外请求仍可争用互连</h2><p>第 1、10、17 项分别从装置、方法与硬件设计信息限定排除区外请求完成这一条件。第 5、6、14–16、19、20 项再涉及 flush 指针及更新规则。第 9 项在一个系统实现中加入两类访问的独立虚通道。</p><p>如果长延迟来自区外请求，mild DSB 仍要等该请求。区内、区外共用某段硬件队列时，设备拥塞也可能间接延后区外请求。应答延迟可以从响应核接到 DSB 请求计到发出应答，排除区命中率、等待在途队列和发起端的总停顿需分别记录。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US12321746B2</code><span>美国授权专利</span><time datetime="2025-06-03">2025-06-03</time></p>
-  <h1>跨处理器数据同步屏障可排除指定地址区间</h1>
-  <p class="english-title" lang="en">DSB operation with excluded region</p>
-  <p class="document-question">跨处理器完成数据同步屏障时，哪些未完成的 load/store 必须等待？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">目标处理器收到核间屏障后，只等待排除地址区间之外的在途 load/store 完成，再向发起者应答。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>地址区间内仍可能存在未完成事务，屏障保证须按实现支持的排除范围解释。</dd></div><div><dt>验证方法</dt><dd>注入两笔完成时间可控的访存，再交换它们落在排除区内外的位置。记录两笔事务各自完成周期与屏障应答周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12321746B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">处理器间的数据同步屏障（DSB）可能等待另一处理器之前发出的访存操作。原文按受影响地址范围区分屏障类型，并给出内核更新设备地址翻译等触发场景。</p>
-    <p>接收处理器等待排除区之外的在途 load/store 完成，然后应答 DSB 请求。排除区内可以仍有未完成操作。另一独权涉及接收端并行处理不同类型的 DSB 请求。</p>
-    <ol class="walkthrough"><li><h3>发起屏障</h3><p>检测需要进行同步的事件后，发起处理器向其他处理器提交 DSB 请求。</p></li><li><h3>按地址确定等待范围</h3><p>接收端核对在途 load/store 是否属于排除区。</p></li><li><h3>等待屏障覆盖范围</h3><p>覆盖范围之外的操作状态可保持在途。接收端确保覆盖范围内的操作已完成。</p></li><li><h3>向发起端应答</h3><p>发出屏障完成应答。多个不同类型的屏障可以在规定条件下同时处理。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 分别为两类屏障保留 load/store 单元的清除指针。原图 4 的实施例在排除区请求发出后使轻量屏障的指针有效，允许在另一个指令边界执行清除。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>排除区</dt><dd>轻量屏障不必等待其中未完成访存的地址范围，实施例可包括外设映射地址。</dd></div><div><dt>强 DSB</dt><dd>本件实施例中，包含排除区在内的在途 load/store 都要完成才应答的屏障。</dd></div><div><dt>LSU 清空指针</dt><dd>给出在指令序列何处执行 load/store 单元清空动作的指针。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">区外写完成后可应答</a></li><li><a href="#fig-1">目标处理器按地址筛选需要等待的事务</a></li><li><a href="#fig-4">后到的轻量屏障可以先应答</a></li><li><a href="#fig-3">不同访存状态对屏障应答的影响</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">区外写完成后可应答</h3></div>
-    <a class="paper-open" href="../mechanisms/US12321746B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="区外写完成后可应答">
-    <img class="paper-image native-image" src="../mechanisms/US12321746B2/fig-2/diagram.svg" width="920" height="422"
-         style="--paper-width:920px" alt="区外写完成后可应答。排除区内的读可以跨过该应答时点继续在途。">
-  </div>
-  <figcaption>
-    <span>排除区内的读可以跨过该应答时点继续在途。</span>
-    <span class="figure-evidence">原图 2、图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8f/85/db/ad453361bd8002/US12321746B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">目标处理器按地址筛选需要等待的事务</h3></div>
-    <a class="paper-open" href="../mechanisms/US12321746B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="目标处理器按地址筛选需要等待的事务">
-    <img class="paper-image native-image" src="../mechanisms/US12321746B2/fig-1/diagram.svg" width="690" height="284"
-         style="--paper-width:690px" alt="目标处理器按地址筛选需要等待的事务。屏障应答依赖覆盖范围内的在途访存状态。">
-  </div>
-  <figcaption>
-    <span>屏障应答依赖覆盖范围内的在途访存状态。</span>
-    <span class="figure-evidence">原图 2、图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8f/85/db/ad453361bd8002/US12321746B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">后到的轻量屏障可以先应答</h3></div>
-    <a class="paper-open" href="../mechanisms/US12321746B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="后到的轻量屏障可以先应答">
-    <img class="paper-image native-image" src="../mechanisms/US12321746B2/fig-4/diagram.svg" width="920" height="452"
-         style="--paper-width:920px" alt="后到的轻量屏障可以先应答。125A 的外设访问尚未完成，先收到 125B 的强 DSB，再收到 125C 的轻量 DSB。若区外访存已完成，125A 可先回复 125C，等外设响应后才回复 125B。">
-  </div>
-  <figcaption>
-    <span>125A 的外设访问尚未完成，先收到 125B 的强 DSB，再收到 125C 的轻量 DSB。若区外访存已完成，125A 可先回复 125C，等外设响应后才回复 125B。</span>
-    <span class="figure-evidence">原图 3；说明书 0031–0032；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00021" aria-label="原文权利要求 21">21</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/8f/85/db/ad453361bd8002/US12321746B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同访存状态对屏障应答的影响</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">状态</th><th scope="col">是否必须等待</th><th scope="col">应答结果</th></tr></thead><tbody><tr><th scope="row">区外访问仍在途</th><td>是</td><td>暂不应答</td></tr><tr><th scope="row">区外均完成且区内仍在途</th><td>区内可继续处理</td><td>可以应答</td></tr><tr><th scope="row">所有相关访问已完成</th><td>无未完成依赖</td><td>可以应答</td></tr></tbody></table>
-  <figcaption>
-    <span>已等待的范围取决于特定屏障类型。</span>
-    <span class="figure-evidence">原图 5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>。 · <a href="https://patentimages.storage.googleapis.com/8f/85/db/ad453361bd8002/US12321746B2.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>屏障忽略排除区访存</dt><dd>减少等待慢外设 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>；原图 2、5</span></dd></div><div><dt>分开处理两类屏障</dt><dd>使轻量应答可先返回 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00021" aria-label="原文权利要求 21">21</a>；原图 3</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>缩短等待外设的时间后，轻量屏障仍会消耗流水线清除和取指重启时间。可同时记录清除指针生效、退休指针到达边界、屏障应答以及应答后的首次重新取指。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>从属权利要求 4 要求同类型请求串行处理。可让两个发起处理器向同一接收端同时发起同类型屏障，即使两者都不等待慢外设，后一笔仍可能在前一笔处理结束前无法开始。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>示例中核心 B 的一笔在途读落在排除区内，另一笔写落在排除区外。核心 A 向 B 发送这类跨核 DSB。</dd></div><div><dt>处理结果</dt><dd>B 必须等待区外写完成，区内读仍在途时即可向 A 应答。</dd></div><div><dt>结果解读</dt><dd>例子只描述专利的特定屏障类型。常规 ISA 屏障支持哪些范围须依据目标平台文档。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、10、17、21 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -144,48 +172,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=a%20first%20processor%20and%20a%20second%20processor%20that%20are%20communicatively%20coupled">F17</a></th><td>系统包含通信相连的发起和接收端。</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=issue%20a%20first%20data%20barrier%20operation%20request%20responsive%20to%20a%20detection%20of%20an%20occurrence%20of%20a">F18</a></th><td>发起处理器检测指定事件后发出跨处理器数据屏障请求。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=receive%20the%20first%20data%20barrier%20operation%20request">F19</a></th><td>接收方接收由另一处理器发出的数据屏障请求。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=receive%20a%20second%20data%20barrier%20operation%20request%20after%20reception%20of%20the%20first%20data%20barrier%20operation%20request">F20</a></th><td>接收方随后收到第二个数据屏障请求。</td><td><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=In%20the%20illustrated%20embodiment%2C%20processor%20125%20A%20initially%20issues%2C%20to%20a%20peripheral%20140%20via%20last%20level">说明书 0032</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=concurrently%20process%20the%20first%20and%20second%20data%20barrier%20operation%20requests%20based%20on%20a%20detection%20that%20the">F21</a></th><td>处理一条屏障时，可同时处理后到的不同类型屏障。</td><td><a href="https://patents.google.com/patent/US12321746B2/en#:~:text=In%20the%20illustrated%20embodiment%2C%20processor%20125%20A%20initially%20issues%2C%20to%20a%20peripheral%20140%20via%20last%20level">说明书 0032</a> · 原图 3</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统在发起端检测事件，目标处理器等待区外在途访存后应答，区内未完成的访存不阻止应答。见原图 2、5。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>若第二项屏障请求与正在处理的第一项类型不同，则可并行处理两者。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>新增第三处理器，第二条屏障由它发送到同一接收端。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>后到屏障类型与当前相同时按顺序串行处理。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>为两类屏障各保留一个指定 LSU 清空位置的指针。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>排除区内访存已经发出时，使第一 LSU 清空指针有效。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>用每笔在途 load/store 的地址与排除区地址范围比较，判定它是否属于区内。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>排除区包括映射到两个处理器之外的 I/O 设备的地址。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>区外和区内访存分别使用两条虚拟通道。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td>独立项</td><td>方法以目标处理器为第一处理器，接收第二处理器发出的屏障，等待区外访存并应答。见原图 5。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>处理一条屏障时，可同时处理后到的不同类型屏障。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>同类型屏障按顺序处理，不同时处理。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-10">10</a></td><td>第二请求将排除区也纳入范围时，等所有在途访存完成后再应答。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>用两个清空指针标识指令序列中两类屏障的 LSU 清空位置。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>发起排除区内访存时，第一清空指针可改指另一位置。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>一笔在途 load/store 完成后，第一清空指针指向其下一条访存指令。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>介质存放供制造系统使用的电路设计。设计出的处理器实现同样的区外访存等待和应答。见原图 2、5、7。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>处理一条屏障时，可同时处理后到的不同类型屏障。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-17">17</a></td><td>依据是否还有排除区访存，选择第一或第二 LSU 清空指针。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>指定在途访存完成后，将第一清空指针移到指令序列的下一笔访存。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td>独立项</td><td>同一目标先接收一条屏障，再接收另一条；判断两者类型不同后并行处理。该独权不加入排除区规则。见原图 3。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>约束屏障可在区内访存仍在途时应答的条件。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12321746B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></dt><dd>规定不同类型的屏障可并行处理。</dd></div><div><dt>原图 2–6</dt><dd>给出两个处理器的 DSB 交互、并行请求及目标端筛选流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12321746B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12229561B1.html#engineering">TLBI 后的数据同步屏障等待目标核在途访问</a>
-<p>US12321746B2 的目标处理器等待排除地址区间之外的在途 load/store 完成后应答。US12229561B1 针对 TLB 失效指令（TLBI）之后的数据同步屏障（DSB），要求目标核根据已完成地址转换的在途指令是否退休来应答。两种机制的核间应答均受目标核流水线状态约束，但所等待的事务集合和完成条件不同。</p></li></ul>
-    <p><a href="../index.html?patent=US12321746B2#knowledge">在全量关系图上定位 US12321746B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2020-09-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-06-16</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-06-03</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/336,704</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Jeff Gonion、John H. Kelm、James Vash、Pradeep Kanapathipillai、Mridul Agarwal、Gideon N. Levinsky、Richard F. Russo、Christopher M. Tsay</dd></div><div><dt>分类号</dt><dd>G06F12/0238、G06F12/0833、G06F12/0875、G06F12/1027、G06F15/781、G06F15/7846、G06F9/30043、G06F9/30047、G06F9/30087、G06F9/30101、G06F9/3834、G06F9/522、G06F2212/683</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12321746B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12321746B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 92 个说明书段落、21 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12321746B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

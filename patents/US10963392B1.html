@@ -1,116 +1,139 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US10963392B1 用前级取入数据的统计筛选系统缓存逐出分配 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用其他请求的统计决定共享系统缓存是否接纳逐出行 · US10963392B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US10963392B1</code> · <a href="https://patents.google.com/patent/US10963392B1/en">专利全文</a></p>
+<h1>用其他请求的统计决定共享系统缓存是否接纳逐出行</h1><p class="reading-question">前级 LLC 已经选择了待逐出行，什么时候把它送进共享系统缓存？若不接纳，干净与脏数据各去哪？</p>
+<p class="reading-answer">处理器 complex 的分配器根据其他请求的 miss、预取效果及逐出压力，判断是否给当前逐出数据在共享系统缓存中分配空间。拒绝的干净副本可丢弃；拒绝的脏数据仍写入系统内存。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2021-03-30</dd></div><div><dt>申请号</dt><dd>US16/048,645</dd></div><div><dt>最早优先权</dt><dd>2018-07-30</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sandeep Gupta、Perumal R. Subramoniam</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#path">区分当前逐出数据与作为评分输入的其他数据</a></li><li><a href="#measure">区分队列中的预取合并与填入后的需求命中</a></li><li><a href="#handshake">脏数据被接纳时，控制消息与数据传输分开</a></li><li><a href="#target">旁路共享系统缓存时，再看当前逐出的数据是否脏</a></li><li><a href="#scope">评估时分别核对准入丢弃的重用与节省的流量</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="path"><h2>区分当前逐出数据与作为评分输入的其他数据</h2><p>图 1 上方的 LLC、逐出队列和共享系统缓存是当前行 V 的路径。原图 1 中每个处理器 complex 有自己的 LLC 和分配器，系统缓存由多个 complex 共享，也可用作 victim cache。</p><p>下方的统计可以来自未完成的需求和预取 miss、带 streaming hint 的缺失、预取命中情况、待逐出脏数据等。授权第 1、17 项写明用途判断至少以取入前级缓存的其他数据为依据。系统不会只由当前行的 tag、地址或有效位得到这一判断。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　当前逐出行的数据路径与准入判断路径</h3>
+    <p id="fig-1-basis">画出前级 LLC、两个队列、计数器、分配器和共享系统缓存。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="当前逐出行的数据路径与准入判断路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="us10963392b1-fig-1-svg-title us10963392b1-fig-1-svg-desc">
+<title id="us10963392b1-fig-1-svg-title">当前逐出行的数据路径与准入判断路径</title>
+<desc id="us10963392b1-fig-1-svg-desc">画出前级 LLC、两个队列、计数器、分配器和共享系统缓存。</desc>
+<defs><marker id="us10963392b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10963392b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10963392b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10963392b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us10963392b1-fig-1-enter" d="M 235 155 L 371 155" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-1-arrow-data)"/>
+<path id="us10963392b1-fig-1-data" d="M 585 155 L 715 155" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-1-arrow-main)"/>
+<path id="us10963392b1-fig-1-measure-miss" d="M 238 409 L 371 409" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-1-arrow-data)"/>
+<path id="us10963392b1-fig-1-measure-evict" d="M 469 214 L 469 343" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-1-arrow-control)"/>
+<path id="us10963392b1-fig-1-evaluate" d="M 589 410 L 712 410" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-1-arrow-main)"/>
+<path id="us10963392b1-fig-1-route-hint" d="M 814 345 L 814 219" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-1-arrow-control)"/>
+<rect x="244.5" y="126" width="121" height="18" fill="#f5f5f5"/><text x="305" y="140" class="arrow-label" text-anchor="middle">旧行成为候选</text>
+<rect x="581" y="127" width="136" height="18" fill="#f5f5f5"/><text x="649" y="141" class="arrow-label" text-anchor="middle">条件满足时送数据</text>
+<rect x="257.5" y="381" width="95" height="18" fill="#f5f5f5"/><text x="305" y="395" class="arrow-label" text-anchor="middle">队列计数</text>
+<rect x="410.5" y="261" width="113" height="18" fill="#f5f5f5"/><text x="467" y="275" class="arrow-label" text-anchor="middle">脏逐出统计</text>
+<rect x="594" y="381" width="114" height="18" fill="#f5f5f5"/><text x="651" y="395" class="arrow-label" text-anchor="middle">比较多个量</text>
+<rect x="759" y="270" width="114" height="18" fill="#f5f5f5"/><text x="816" y="284" class="arrow-label" text-anchor="middle">allocate hint</text>
+<g id="us10963392b1-fig-1-llc"><rect x="38" y="105" width="197" height="112" rx="6" fill="#f5f5f5"/><rect x="38" y="105" width="197" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="136.5" y="131" class="node-name" text-anchor="middle">complex 的 LLC</text><text x="136.5" y="153" class="node-detail" text-anchor="middle">选择已驻留行逐出</text></g>
+<g id="us10963392b1-fig-1-evict"><rect x="371" y="105" width="214" height="109" rx="6" fill="#f5f5f5"/><rect x="371" y="105" width="214" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="478" y="131" class="node-name" text-anchor="middle">逐出队列</text><text x="478" y="153" class="node-detail" text-anchor="middle">携带当前地址、长度和脏位</text></g>
+<g id="us10963392b1-fig-1-route"><rect x="715" y="108" width="207" height="111" rx="6" fill="#f5f5f5"/><rect x="715" y="108" width="207" height="111" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="818.5" y="134" class="node-name" text-anchor="middle">共享系统缓存</text><text x="818.5" y="156" class="node-detail" text-anchor="middle">收到允许分配的逐出数据</text></g>
+<g id="us10963392b1-fig-1-miss"><rect x="39" y="356" width="199" height="115" rx="6" fill="#f5f5f5"/><rect x="39" y="356" width="199" height="115" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="138.5" y="382" class="node-name" text-anchor="middle">未完成 miss 队列</text><text x="138.5" y="404" class="node-detail" text-anchor="middle">需求读取、预取</text><text x="138.5" y="422" class="node-detail" text-anchor="middle">可带 streaming hint</text></g>
+<g id="us10963392b1-fig-1-stats"><rect x="371" y="343" width="218" height="136" rx="6" fill="#f5f5f5"/><rect x="371" y="343" width="218" height="136" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="480" y="369" class="node-name" text-anchor="middle">从请求和逐出提取统计</text><text x="480" y="391" class="node-detail" text-anchor="middle">统计其他 miss、预取效果</text><text x="480" y="409" class="node-detail" text-anchor="middle">以及待逐出的脏数据量</text></g>
+<g id="us10963392b1-fig-1-logic"><rect x="712" y="345" width="214" height="137" rx="6" fill="#f5f5f5"/><rect x="712" y="345" width="214" height="137" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="819" y="371" class="node-name" text-anchor="middle">victim cache 分配逻辑</text><text x="819" y="393" class="node-detail" text-anchor="middle">按本地阈值比较</text><text x="819" y="411" class="node-detail" text-anchor="middle">产生 allocate hint</text></g>
+<text x="38" y="58" class="signal-title" text-anchor="start">当前逐出数据走逐出队列，准入由其他访问的统计参与决定</text>
+<text x="38" y="531" class="legend" text-anchor="start">按原图 1、5、6 综合。LLC 专指处理器 complex 内的末级缓存；共享系统缓存较靠近系统内存。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10963392b1-fig-1-enter">当前逐出行进入逐出队列</a> 存当前行地址与修改状态。</li><li><a href="#us10963392b1-fig-1-measure-miss">读取其他未完成请求</a> 可计笔数、字节数或带 streaming hint 的子集。</li><li><a href="#us10963392b1-fig-1-stats">形成不同口径的统计</a> 考虑预取使用和脏逐出量。</li><li><a href="#us10963392b1-fig-1-route-hint">向后续路径给出分配提示</a> allocate hint 告知是否在系统缓存保留逐出数据。</li></ul>
+  <p class="figure-evidence">原图 1、5、6；说明书归档段 0034、0035、0036、0040、0055、0056、0057、0058、0059、0060、0061、0062、0063、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US10963392B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>complex 的末级缓存（LLC）</dt><dd>116／136</dd></div><div><dt>complex 的逐出分配器</dt><dd>122／142</dd></div><div><dt>共享系统缓存</dt><dd>150</dd></div><div><dt>未完成 miss 队列</dt><dd>510／612</dd></div><div><dt>逐出队列</dt><dd>560／616</dd></div><div><dt>统计计数器</dt><dd>660</dd></div><div><dt>阈值与权重寄存器</dt><dd>680</dd></div><div><dt>victim cache 分配逻辑</dt><dd>690</dd></div><div><dt>allocate hint</dt><dd>692</dd></div></dl></details>
+</figure></section><section id="measure"><h2>区分队列中的预取合并与填入后的需求命中</h2><p>图 5 上半部对应原图 5。预取 X 尚未发送到内存时，若同地址的需求到达，可以把队列中的类型由 prefetch 改成 demand。分配器可计数这种 merged prefetch。</p><p>下半部的预取 Y 已经填入 LLC。之后出现需求命中才增加已使用预取的计数，关联行的 prefetch 标志也会更新。授权第 3、5 项用预取属性和使用量计算预取准确度。它与未完成请求数是不同观察量。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　预取合并和需求命中发生在不同硬件时点</h3>
+    <p id="fig-5-basis">用两地址区分未发出的预取队列项与已经填入 LLC 的行。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预取合并和需求命中发生在不同硬件时点" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 458" role="img" aria-labelledby="us10963392b1-fig-5-svg-title us10963392b1-fig-5-svg-desc">
+<title id="us10963392b1-fig-5-svg-title">预取合并和需求命中发生在不同硬件时点</title>
+<desc id="us10963392b1-fig-5-svg-desc">用两地址区分未发出的预取队列项与已经填入 LLC 的行。</desc>
+<defs><marker id="us10963392b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10963392b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10963392b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10963392b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us10963392b1-fig-5-pending"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-5-arrow-data)"/><rect x="133" y="96" width="208" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">预取 X 进入队列，尚未发往内存</text></g>
+<g id="us10963392b1-fig-5-merge"><path d="M 116 168 L 358 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-5-arrow-main)"/><rect x="100.5" y="144" width="273" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">同址需求 X 到来，标志改为 demand</text></g>
+<g id="us10963392b1-fig-5-countMerge"><path d="M 358 216 L 844 216" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-5-arrow-return)"/><rect x="458" y="192" width="286" height="18" fill="#f5f5f5"/><text x="601" y="206" class="arrow-label" text-anchor="middle">统计未完成的 merged prefetch</text></g>
+<g id="us10963392b1-fig-5-other"><path d="M 116 264 L 601 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-5-arrow-data)"/><rect x="241.5" y="240" width="234" height="18" fill="#f5f5f5"/><text x="358.5" y="254" class="arrow-label" text-anchor="middle">另一个预取 Y 已返回并填入 LLC</text></g>
+<g id="us10963392b1-fig-5-read"><path d="M 116 312 L 601 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-5-arrow-data)"/><rect x="280.5" y="288" width="156" height="18" fill="#f5f5f5"/><text x="358.5" y="302" class="arrow-label" text-anchor="middle">需求命中已驻留的预取 Y</text></g>
+<g id="us10963392b1-fig-5-countUsed"><path d="M 601 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-5-arrow-main)"/><rect x="618.5" y="336" width="208" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">增加已使用预取计数，更新该行标志</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">预取器／核心</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">LLC 的 miss 队列</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">LLC 缓存阵列</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">分配器计数器</text>
+<text x="28" y="436" class="legend" text-anchor="start">上下是两条不同地址的路径。原图 5、6 区分回填前合并与回填后命中，二者观测时点不同。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10963392b1-fig-5-merge">未发出的预取可转为 demand</a> 同址需求命中时改队列的请求类型。</li><li><a href="#us10963392b1-fig-5-countMerge">统计合并预取</a> 在 miss 队列中可记录。</li><li><a href="#us10963392b1-fig-5-other">预取已被填入 LLC</a> 对应不同的已驻留行。</li><li><a href="#us10963392b1-fig-5-countUsed">需求命中后增加已使用预取数</a> 可用于预取准确度的分子。</li></ul>
+  <p class="figure-evidence">原图 2、5、6；说明书归档段 0037、0038、0043、0058、0060、0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00013" aria-label="原文权利要求 13">13</a> <a href="../diagrams/US10963392B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>预取器</dt><dd>120A–120B／140A–140B</dd></div><div><dt>未完成 miss 队列</dt><dd>510／612</dd></div><div><dt>需求／预取标志</dt><dd>526</dd></div><div><dt>streaming hint</dt><dd>528</dd></div><div><dt>未完成的合并预取计数</dt><dd>666</dd></div><div><dt>已被访问的预取数据计数</dt><dd>668</dd></div></dl></details>
+</figure></section><section id="handshake"><h2>脏数据被接纳时，控制消息与数据传输分开</h2><p>图 2 展开说明书 ¶0063 的一个实现。修改值若仍在核的 L1，要先将它送回 complex 的 LLC。分配器再通知系统缓存即将发送，当系统缓存回复发送时机后才送实际数据。</p><p>这笔接纳的成本除了存储容量，还包括两条控制消息、数据传输和可能的内部数据回收。原图未给这些消息定义固定协议名称。第 8 项将待逐出脏数据量与阈值比较，超过阈值时可将数据直接送系统内存。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　脏行被接纳时，从通知到发送实际数据</h3>
+    <p id="fig-2-basis">展示 L1 的新数据位置、控制消息和进入系统缓存的数据。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="脏行被接纳时，从通知到发送实际数据" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 407" role="img" aria-labelledby="us10963392b1-fig-2-svg-title us10963392b1-fig-2-svg-desc">
+<title id="us10963392b1-fig-2-svg-title">脏行被接纳时，从通知到发送实际数据</title>
+<desc id="us10963392b1-fig-2-svg-desc">展示 L1 的新数据位置、控制消息和进入系统缓存的数据。</desc>
+<defs><marker id="us10963392b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10963392b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10963392b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10963392b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="356" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us10963392b1-fig-2-copy"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-2-arrow-data)"/><rect x="113.5" y="96" width="247" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">若修改值还在 L1，先把它取到 LLC</text></g>
+<g id="us10963392b1-fig-2-ready"><path d="M 358 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-2-arrow-data)"/><rect x="401.5" y="144" width="156" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">提供准备逐出的地址和数据</text></g>
+<g id="us10963392b1-fig-2-announce"><path d="M 601 216 L 844 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-2-arrow-main)"/><rect x="651" y="192" width="143" height="18" fill="#f5f5f5"/><text x="722.5" y="206" class="arrow-label" text-anchor="middle">通知将发送要接纳的数据</text></g>
+<g id="us10963392b1-fig-2-allow"><path d="M 844 264 L 601 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-2-arrow-return)"/><rect x="677" y="240" width="91" height="18" fill="#f5f5f5"/><text x="722.5" y="254" class="arrow-label" text-anchor="middle">回复何时可发送</text></g>
+<g id="us10963392b1-fig-2-payload"><path d="M 601 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-2-arrow-main)"/><rect x="644.5" y="288" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="302" class="arrow-label" text-anchor="middle">送实际数据供系统缓存分配</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">私有 L1</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">complex 的 LLC</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">逐出分配器</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">共享系统缓存</text>
+<text x="28" y="388" class="legend" text-anchor="start">说明书 ¶0063 的三条跨互连消息是通知、应答、数据；L1 转移和 LLC 准备是前置条件示意。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10963392b1-fig-2-copy">确定修改值的实际位置</a> 此例若修改值还在 L1，先移到 LLC。</li><li><a href="#us10963392b1-fig-2-announce">通知系统缓存即将发送</a> 通知为示例的一条控制消息，说明书未给固定协议名。</li><li><a href="#us10963392b1-fig-2-allow">等待系统缓存回复发送时机</a> 控制通路会占用互连。</li><li><a href="#us10963392b1-fig-2-payload">实际数据随后发送</a> 只有准备好数据并收到应答才发送。</li></ul>
+  <p class="figure-evidence">原图 1、6；说明书归档段 0035、0040、0063、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a> <a href="../diagrams/US10963392B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>各核的私有缓存</dt><dd>114A–114B／134A–134B</dd></div><div><dt>complex 的末级缓存（LLC）</dt><dd>116／136</dd></div><div><dt>complex 的逐出分配器</dt><dd>122／142</dd></div><div><dt>共享系统缓存</dt><dd>150</dd></div><div><dt>allocate hint</dt><dd>692</dd></div></dl></details>
+</figure></section><section id="target"><h2>旁路共享系统缓存时，再看当前逐出的数据是否脏</h2><p>在图 3 的接纳支路，原图 3 允许将逐出数据放入系统缓存；部分实现会同时把脏数据写入系统内存。进入旁路支路时，干净副本可以丢弃，脏数据仍要写入系统内存，保存尚未写回的修改。</p><p>表 4 固定当前干净行 V。模型门限为 8 笔，其他未完成缺失从 5 笔变为 12 笔，准入由允许变为拒绝。把当前行改为脏，在相同的拒绝路径上会改成写回系统内存。两种变化对应不同的判断位置，可独立计数验证。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　接纳、干净旁路及脏旁路有不同数据归宿</h3>
+    <p id="fig-3-basis">将系统缓存准入结果与当前行的 clean／dirty 条件分开。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="接纳、干净旁路及脏旁路有不同数据归宿" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="us10963392b1-fig-3-svg-title us10963392b1-fig-3-svg-desc">
+<title id="us10963392b1-fig-3-svg-title">接纳、干净旁路及脏旁路有不同数据归宿</title>
+<desc id="us10963392b1-fig-3-svg-desc">将系统缓存准入结果与当前行的 clean／dirty 条件分开。</desc>
+<defs><marker id="us10963392b1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us10963392b1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us10963392b1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us10963392b1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us10963392b1-fig-3-yes" d="M 264 175.5 L 370 175.5" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-3-arrow-main)"/>
+<path id="us10963392b1-fig-3-also" d="M 587 175 L 711 175" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-3-arrow-control)"/>
+<path id="us10963392b1-fig-3-skip" d="M 153 234 L 153 404.5 Q 153 412.5 161 412.5 L 371 412.5" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us10963392b1-fig-3-arrow-data)"/>
+<path id="us10963392b1-fig-3-dirty-out" d="M 585 412.5 L 644 412.5 Q 652 412.5 652 404.5 L 652 208 Q 652 200 660 200 L 711 200" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us10963392b1-fig-3-arrow-main)"/>
+<path id="us10963392b1-fig-3-clean-out" d="M 478 470 L 478 544 Q 478 552 486 552 L 801 552 Q 809 552 809 544 L 809 524" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us10963392b1-fig-3-arrow-control)"/>
+<rect x="256" y="146" width="106" height="18" fill="#f5f5f5"/><text x="309" y="160" class="arrow-label" text-anchor="middle">允许分配</text>
+<rect x="586.5" y="146" width="119" height="18" fill="#f5f5f5"/><text x="646" y="160" class="arrow-label" text-anchor="middle">可选写入脏数据</text>
+<rect x="198" y="382" width="136" height="18" fill="#f5f5f5"/><text x="266" y="396" class="arrow-label" text-anchor="middle">旁路系统缓存</text>
+<rect x="601" y="310" width="106" height="18" fill="#f5f5f5"/><text x="654" y="324" class="arrow-label" text-anchor="middle">保存脏数据</text>
+<rect x="590.5" y="523" width="141" height="18" fill="#f5f5f5"/><text x="661" y="537" class="arrow-label" text-anchor="middle">干净副本可丢弃</text>
+<g id="us10963392b1-fig-3-admission"><polygon points="153,117 264,175.5 153,234 42,175.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="153" y="172.5" class="node-name" text-anchor="middle">接纳评分达标？</text><text x="153" y="193.5" class="node-detail" text-anchor="middle">使用有效的策略输入</text></g>
+<g id="us10963392b1-fig-3-cache"><rect x="370" y="119" width="217" height="113" rx="6" fill="#f5f5f5"/><rect x="370" y="119" width="217" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="478.5" y="145" class="node-name" text-anchor="middle">分配到共享系统缓存</text><text x="478.5" y="167" class="node-detail" text-anchor="middle">干净或脏逐出数据均可能</text></g>
+<g id="us10963392b1-fig-3-dirty"><polygon points="478,355 585,412.5 478,470 371,412.5" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="478" y="409.5" class="node-name" text-anchor="middle">当前逐出行是脏？</text><text x="478" y="430.5" class="node-detail" text-anchor="middle">检查当前行状态</text></g>
+<g id="us10963392b1-fig-3-mem"><rect x="711" y="127" width="211" height="103" rx="6" fill="#f5f5f5"/><rect x="711" y="127" width="211" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="816.5" y="153" class="node-name" text-anchor="middle">系统内存</text><text x="816.5" y="175" class="node-detail" text-anchor="middle">保存修改过的数据</text></g>
+<g id="us10963392b1-fig-3-discard"><rect x="710" y="424" width="212" height="100" rx="6" fill="#f5f5f5"/><rect x="710" y="424" width="212" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="816" y="450" class="node-name" text-anchor="middle">本地丢弃干净副本</text><text x="816" y="472" class="node-detail" text-anchor="middle">原内存仍有对应内容</text></g>
+<text x="42" y="57" class="signal-title" text-anchor="start">接纳判定只决定是否用系统缓存，脏数据仍需保存</text>
+<text x="42" y="584" class="legend" text-anchor="start">按原图 3。旁路只影响共享系统缓存是否接纳此行；已修改数据写入系统内存。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us10963392b1-fig-3-admission">是否分配到共享系统缓存</a> 采用准入判断决定是否保存逐出副本。</li><li><a href="#us10963392b1-fig-3-also">接纳时可选同时写内存</a> 原图 3 标成可选。</li><li><a href="#us10963392b1-fig-3-dirty">旁路也要检查当前行的脏位</a> 不能丢弃修改过的数据。</li><li><a href="#us10963392b1-fig-3-mem">脏旁路写入系统内存</a> 共享系统缓存不做本次分配。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0040、0049、0050、0051、0052、0053、0054；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US10963392B1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>系统缓存是否接纳</dt><dd>306</dd></div><div><dt>接纳时可选的系统内存存入</dt><dd>310</dd></div><div><dt>丢弃干净逐出数据</dt><dd>312</dd></div><div><dt>旁路时将脏数据存入系统内存</dt><dd>314</dd></div><div><dt>clean／dirty 标志</dt><dd>574</dd></div><div><dt>系统内存</dt><dd>160</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　固定干净逐出行，只改变其他请求的未完成缺失数</h3>
+    <p id="fig-4-basis">相同的当前 V，在两个请求积压条件下得到两种准入结果。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">当前逐出行</th><th scope="col">其他未完成缺失请求数</th><th scope="col">模型的用途判定</th><th scope="col">系统缓存分配</th></tr></thead><tbody><tr id="fig-4-table-row-1"><th scope="row">干净 V</th><td>5 笔</td><td>较高</td><td>允许</td></tr><tr id="fig-4-table-row-2"><th scope="row">同一干净 V</th><td>12 笔</td><td>较低</td><td>旁路</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-basis">模型只选择一个调节变量</a> 第 2 项用未完成 miss 数，例子保持候选和其他参数相同。</li></ul>
+  <p class="figure-evidence">原图 4、5、6；说明书归档段 0034、0050、0053、0054、0061、0062、0064；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>未完成 miss 队列</dt><dd>510／612</dd></div><div><dt>统计计数器</dt><dd>660</dd></div><div><dt>阈值与权重寄存器</dt><dd>680</dd></div></dl></details>
+</figure></section><section id="scope"><h2>评估时分别核对准入丢弃的重用与节省的流量</h2><p>授权第 2、6、7 项具体涉及未完成缺失的数量、数据量或带 streaming hint 的请求。第 4 项允许将多个比较结果做加权和。实际准入阈值、采样窗和每核配置是实现参数。</p><p>在手机 SoC 评估这类策略时，可记录共享系统缓存接纳率、旁路后对同址的再次访问是否击中、内存 writeback 字节数和互连上的控制消息。针对相同工作负载复算时，应保持前级替换策略和请求流一致。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US10963392B1</code><span>美国授权专利</span><time datetime="2021-03-30">2021-03-30</time></p>
-  <h1>用前级取入数据的统计筛选系统缓存逐出分配</h1>
-  <p class="english-title" lang="en">Victim allocations in shared system cache</p>
-  <p class="document-question">前级缓存逐出一行时，控制器怎样决定要不要把它留在 SLC？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">前级取入数据被判定用途较低时，控制器可让当前逐出行绕过 SLC，未完成缺失数可作为判断输入。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>用途统计针对前级其他取入数据，被逐出行本身的访问历史是另一个量。</dd></div><div><dt>验证方法</dt><dd>固定同一逐出地址和脏状态，使前级未完成缺失数跨过门槛。记录用途判定、SLC 分配事件及下层写回数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US10963392B1/en#CLM-00002">原文权利要求 2</a><a href="#fig-4">对应对照表</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">系统缓存接纳前级逐出行会消耗共享容量。前级分配器以其他取入数据的需求和预取情况推断当前流量的用途，再判断选中逐出的行是否值得分配。</p>
-    <p>前级缓存的分配逻辑按其他取入数据估计用途，并据此决定当前逐出行是否分配到系统缓存（SLC）。可以使用尚未完成的缺失请求数、待取数据量、带流式提示的请求或预取使用率。</p>
-    <ol class="walkthrough"><li><h3>确定将被逐出的行</h3><p>前级控制器选定待替换的地址，另行判断这一行是否脏、是否还需要保存。</p></li><li><h3>统计其他取入的数据</h3><p>计数器或队列记录其他需求和预取事务。控制器可组合未完成缺失、预取后是否访问等指标。</p></li><li><h3>比较统计值和门槛</h3><p>按权利要求 2，outstanding miss 超过阈值可作为用途较低的依据。部分实施方式对多个比较结果加权。</p></li><li><h3>决定逐出后的去向</h3><p>估计用途较高时可写入 SLC，较低时绕开它。需要写回的脏值仍走协议规定的内存路径。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a> 在权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 的用途信号基础上另比较待逐出脏数据量。达到对应判定时，控制器允许绕过 SLC 直接写入内存，仍须维持脏数据的正确去向。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>未完成缺失请求</dt><dd>在前级发现缺失、已进入跟踪流程但尚未返回全部所需数据的请求。笔数与待取数据量是不同的统计量。</dd></div><div><dt>预取使用率</dt><dd>处理器已经访问的预取数据量，占前级缓存预取数据量的比例。</dd></div><div><dt>逐出分配</dt><dd>前级缓存释放缓存行后，将该行数据分配到系统缓存，以便之后可能再次访问。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">接纳判断用哪一组请求的统计</a></li><li><a href="#fig-2">接纳逐出数据前的三条消息</a></li><li><a href="#fig-3">干净行和脏行怎样绕过 SLC</a></li><li><a href="#fig-4">同一逐出行在两种缺失积压下的去向</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">接纳判断用哪一组请求的统计</h3></div>
-    <a class="paper-open" href="../mechanisms/US10963392B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="接纳判断用哪一组请求的统计">
-    <img class="paper-image native-image" src="../mechanisms/US10963392B1/fig-1/diagram.svg" width="759" height="488"
-         style="--paper-width:759px" alt="接纳判断用哪一组请求的统计。控制器根据前级中其他数据的取入或使用量估计用途，再决定是否接纳当前替换候选行。">
-  </div>
-  <figcaption>
-    <span>控制器根据前级中其他数据的取入或使用量估计用途，再决定是否接纳当前替换候选行。</span>
-    <span class="figure-evidence">图 1、图 5、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/ac/c3/3e/ebcf36b46d9dd0/US10963392.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">接纳逐出数据前的三条消息</h3></div>
-    <a class="paper-open" href="../mechanisms/US10963392B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="接纳逐出数据前的三条消息">
-    <img class="paper-image native-image" src="../mechanisms/US10963392B1/fig-2/diagram.svg" width="560" height="380"
-         style="--paper-width:560px" alt="接纳逐出数据前的三条消息。说明书第 0063 段的一种实现先发接纳通知，收到系统缓存允许发送的回复后，再提交数据。脏数据若仍在 L1，送往系统缓存前要先回收至前级 LLC。">
-  </div>
-  <figcaption>
-    <span>说明书第 0063 段的一种实现先发接纳通知，收到系统缓存允许发送的回复后，再提交数据。脏数据若仍在 L1，送往系统缓存前要先回收至前级 LLC。</span>
-    <span class="figure-evidence">说明书 0063，原图 6；三消息为实施例 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/ac/c3/3e/ebcf36b46d9dd0/US10963392.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">干净行和脏行怎样绕过 SLC</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">用途／条件</th><th scope="col">系统缓存</th><th scope="col">修改值怎么办</th></tr></thead><tbody><tr><th scope="row">用途超过门槛</th><td>允许分配</td><td>可分配到系统缓存；原图 3 部分实现也写内存</td></tr><tr><th scope="row">未过门槛且干净</th><td>旁路 SLC</td><td>丢弃前级副本</td></tr><tr><th scope="row">未过门槛且脏</th><td>旁路 SLC</td><td class="emphasis">把修改数据写入系统内存</td></tr></tbody></table>
-  <figcaption>
-    <span>绕过时，带修改的数据仍需到达合乎协议的目的地。表中列出各支路的数据去向。</span>
-    <span class="figure-evidence">图 3、图 4，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>。 · <a href="https://patentimages.storage.googleapis.com/ac/c3/3e/ebcf36b46d9dd0/US10963392.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">同一逐出行在两种缺失积压下的去向</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">当前逐出行</th><th scope="col">其他未完成缺失请求数</th><th scope="col">估计用途</th><th scope="col">系统缓存分配</th></tr></thead><tbody><tr><th scope="row">干净 V</th><td>5 笔</td><td>较高</td><td class="emphasis">允许</td></tr><tr><th scope="row">同一干净 V</th><td>12 笔</td><td>较低</td><td class="emphasis">旁路</td></tr></tbody></table>
-  <figcaption>
-    <span>设未完成缺失数是唯一输入，阈值为 8 笔，且当前逐出行内容和状态相同。两种去向仅来自其他请求的积压差异。</span>
-    <span class="figure-evidence">图 5、图 6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>；教学对照，非固定阈值。 · <a href="https://patentimages.storage.googleapis.com/ac/c3/3e/ebcf36b46d9dd0/US10963392.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>以取入统计筛选逐出分配</dt><dd>限制低用途行占用 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>；原图 4–6</span></dd></div><div><dt>将脏逐出行旁路写回</dt><dd>保留内存修改值 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>；原图 3–4</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>按用途筛选有机会降低 SLC 的竞争，但脏数据绕过后实际流量移至下层。衡量时应分开记录被拒绝的 SLC 分配、直接内存写字节和后续因绕过而发生的重取。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若高占用恰好来自会很快重用的脏数据，既绕过 SLC 又直接写内存可能提高下层总流量。该情形是根据权利要求 8 与工作负载的组合推导的，阈值由实现决定。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设未完成缺失数是唯一信号，门槛为 8。两个时段分别有 5 项和 12 项未完成缺失，且都要逐出同一条干净行。</dd></div><div><dt>处理结果</dt><dd>其他条件相同时，简化策略将 5 项对应的访问流判为用途较高，可以填入 SLC。12 项对应的流判为较低，逐出行绕过 SLC。</dd></div><div><dt>结果解读</dt><dd>改变的是其他请求的统计，替换候选行本身相同。阈值是假定的，加入其他信号后也可能改变判断。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、17 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -134,50 +157,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=a%20memory%3B%20a%20first%20cache%20configured%20to%20store%20data%20fetched%20from%20the%20memory">F13</a></th><td>系统包括内存和存储内存取回数据的前级缓存。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20various%20embodiments%2C%20rather%20than%20allocate%20all%20evicted%20data%20to%20cache%20150%20%2C%20each%20of%20allocators">说明书 0034</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=a%20system%20cache%20configured%20to%20store%20data%20evicted%20from%20the%20first%20cache">F14</a></th><td>系统缓存具备接纳前级逐出数据的能力。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20various%20embodiments%2C%20rather%20than%20allocate%20all%20evicted%20data%20to%20cache%20150%20%2C%20each%20of%20allocators">说明书 0034</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=a%20prefetcher%20configured%20to%3A%20detect%20given%20data%20stored%20in%20an%20entry%20within%20the%20first%20cache%20is">F15</a></th><td>负责检测待逐出行的是预取器。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20some%20embodiments%2C%20counter%20670%20stores%20a%20value%20corresponding%20to%20dirty%20data%20selected%20to%20be%20evicted.">说明书 0063</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=evict%20the%20given%20data%20from%20the%20first%20cache">F16</a></th><td>将该数据从前级缓存逐出。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20some%20embodiments%2C%20a%20count%20of%20a%20number%20of%20parameters%20exceeding%20a%20corresponding%20threshold%20is%20maintained.">说明书 0051</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=a%20usefulness%20of%20data%20fetched%20into%20the%20first%20cache%2C%20other%20than%20the%20given%20data%2C%20exceeds%20a">F17</a></th><td>前级取入的其他数据用途超过阈值是接纳该行的依据之一。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20various%20embodiments%2C%20a%20prefetch%20request%20includes%20a%20hint%20that%20a%20corresponding%20one%20of%20prefetchers%20120">说明书 0036</a> · 原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=bypass%20storing%20the%20given%20data%20that%20has%20been%20evicted%20from%20the%20first%20cache%20in%20the%20system">F18</a></th><td>用途未超过阈值是旁路系统缓存的依据之一。</td><td><a href="https://patents.google.com/patent/US10963392B1/en#:~:text=In%20various%20embodiments%2C%20the%20sum%20has%20an%20inverse%20relationship%20with%20the%20usefulness%20of%20data%20fetched%20into">说明书 0048</a> · 原图 4</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>装置用不同于当前逐出数据的前级取入数据评估用途。用途超过阈值支持接纳，未超过阈值支持旁路。见原图 1、3–4。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>未完成缺失数未超阈值可判为用途较高，超过阈值则可判为用途较低。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>分别记录取入数据是需求取数或预取，以及预取数据有没有被访问。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>把各个因素与各自的阈值比较，再对比较结果计算加权和。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>按预取已访问量除以预取总量计算比例，并与阈值比较。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-2">2</a></td><td>另以未完成缺失请求待取回的数据量与阈值比较。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-2">2</a></td><td>另以带流式提示的未完成缺失请求待取数据量与阈值比较。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-2">2</a></td><td>待逐出的脏数据量过阈值时旁路系统缓存写内存，否则允许系统缓存分配。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先识别前级待逐出数据并评估包含其他前级取入数据的用途，再逐出；用途过阈值时把数据分配进系统缓存。见原图 3。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>以未完成缺失请求数是否超过阈值作为用途高低的判断之一。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>保存需求取入或预取的指示，并记录处理器是否访问了预取数据。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>分别比较多个因素和各自阈值，再对比较结果做加权求和。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-11">11</a></td><td>用预取中已被访问的数据量除以预取总量，并与阈值比较。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-10">10</a></td><td>增加未完成缺失请求待取数据量的阈值比较。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-10">10</a></td><td>增加带流式提示的未完成缺失请求待取数据量的阈值比较。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-9">9</a></td><td>对另一条逐出数据，若含其他取入数据的用途未过阈值，则旁路系统缓存。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td>独立项</td><td>系统有内存、前级缓存、系统缓存及预取器。预取器识别并逐出该数据，根据其他取入数据的用途阈值决定接纳或旁路。见原图 1、6。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>增加处理器，并以未完成缺失请求数是否过阈值判断用途高低。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-18">18</a></td><td>增加未完成预取请求待取数据量的阈值比较。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-18">18</a></td><td>增加未完成缺失请求待取数据量的阈值比较。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>按前级中其他取入数据的用途是否过门槛，决定把被逐出数据写入系统缓存或绕过。</dd></div><div><dt>图 3–6</dt><dd>图 3–6 给出逐出分支、计数队列与分配器的实现。</dd></div><div><dt>从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10963392B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>从属项描述根据未完成缺失量判断用途、合成多个因素，以及处理脏逐出行。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US10963392B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11886354B1.html#engineering">用两级指标检测缓存抖动</a>
-<p>US11886354B1 对照前后两级的性能指标。前一级未达到一个阈值而第二级达到更高的阈值时，在下一组周期更换前一级插入规则。US10963392B1 决定是否接纳从前级逐出的当前行，评分来自前级中其他取入数据的用途。可分别检查插入规则的观察窗口和逐出接纳的评分对象。</p></li><li><a href="US11822480B2.html#engineering">按关键性插入并概率保护缓存行</a>
-<p>关键性方案在选中替换候选行后，可以把这条行的关键性值随数据传到下一级，之后仍能追踪这条行。SLC 替换候选行接纳查看的是前级中其他数据的取入用途，达到门槛才接纳当前替换候选行。比较同一笔逐出可看出，两件专利的输入分别是该行携带的属性与近期工作集的特征。</p></li><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>US10963392B1 依前级其他取入数据的用途决定是否接纳逐出行；US9201796B2 在系统缓存处理推测读时，提前准备缺失队列并等标签确认后再发片外读。可分别检验哪些数据留在系统缓存，以及单笔读缺失等待多久才获下发资格。</p></li></ul>
-    <p><a href="../index.html?patent=US10963392B1#knowledge">在全量关系图上定位 US10963392B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2018-07-30</dd></div>
-    <div><dt>美国申请日</dt><dd>2018-07-30</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2021-03-30</dd></div>
-    <div><dt>美国申请号</dt><dd>US16/048,645</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Sandeep Gupta、Perumal R. Subramoniam</dd></div><div><dt>分类号</dt><dd>G06F12/0891、G06F12/0811、G06F12/084、G06F12/0862、G06F12/0888、G06F12/126、G06F2212/1008、G06F2212/1021、G06F2212/1024、G06F2212/602、G06F2212/6028</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US10963392B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US10963392B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 72 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US10963392B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

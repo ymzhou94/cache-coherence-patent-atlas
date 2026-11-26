@@ -1,119 +1,162 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11899061B2 用接收端错误触发发送端供电电压留存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>远端发现数据错误，怎样保留本端的发送电压历史 · US11899061B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11899061B2</code> · <a href="https://patents.google.com/patent/US11899061B2/en">专利全文</a></p>
+<h1>远端发现数据错误，怎样保留本端的发送电压历史</h1><p class="reading-question">接收接口发现错码时，发送端的电压变化可能已经结束。调试主机怎么找回发送前后的记录？</p>
+<p class="reading-answer">发送端的片上实时示波器（RTO）持续采样 Vdd 并维护近期历史。远端检出差错才反向送出 Error，发送端收到后停止转换，然后导出已有样本。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-02-13</dd></div><div><dt>申请号</dt><dd>US17/347,284</dd></div><div><dt>最早优先权</dt><dd>2021-06-14</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Fabien S. Faure、Si Chen、Mansour Keramat、Arnaud J. Forestier</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#trigger-path">查错在接收端，电压观测在发送端</a></li><li><a href="#window">先查瞬态采到了没有，再查 FIFO 有没有留住</a></li><li><a href="#directions">双向接口要按发送方向选择电压记录</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="trigger-path"><h2>查错在接收端，电压观测在发送端</h2><p>图 1 从同一个 Vdd 节点分出两路，一路给发送器供电，另一路接 RTO 里 ADC 的采样输入 In。发送器向另一物理接口发数据。示例中的远端 ECC 在接收以后查错，把 Error 反向送回发送端 ADC 的 Stop。</p><p>图 2 按时间列出发送、检出和接收 Stop。反馈路径会留下一些发送之后的采样点。它也会让固定大小的 FIFO 多写一些后续数据，把最旧的采样覆盖。调试主机稍后经调试接口读取数字电压历史。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　接收端发现错码后，错误指示回到哪一侧</h3>
+    <p id="fig-1-basis">数据从发送端走向远端，ECC 查错产生的 Error 再返回发送端 RTO。片上 ADC 监测的是本端发送器的 Vdd。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="接收端发现错码后，错误指示回到哪一侧" style="--figure-width:1360px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 716" role="img" aria-labelledby="us11899061b2-fig-1-svg-title us11899061b2-fig-1-svg-desc">
+<title id="us11899061b2-fig-1-svg-title">接收端发现错码后，错误指示回到哪一侧</title>
+<desc id="us11899061b2-fig-1-svg-desc">数据从发送端走向远端，ECC 查错产生的 Error 再返回发送端 RTO。片上 ADC 监测的是本端发送器的 Vdd。</desc>
+<defs><marker id="us11899061b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11899061b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11899061b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11899061b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11899061b2-fig-1-supply-tx" d="M 307 154 L 439 154" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11899061b2-fig-1-arrow-main)"/>
+<path id="us11899061b2-fig-1-voltage-tap" d="M 164 207 L 164 326 Q 164 334 172 334 L 506 334 Q 514 334 514 342 L 514 402" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11899061b2-fig-1-arrow-main)"/>
+<path id="us11899061b2-fig-1-payload" d="M 747 154 L 978 154" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-1-arrow-data)"/>
+<path id="us11899061b2-fig-1-stop" d="M 1127 206 L 1127 291 Q 1127 299 1119 299 L 673 299 Q 665 299 665 307 L 665 402" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-1-arrow-return)"/>
+<path id="us11899061b2-fig-1-adc-clock" d="M 307 473 L 439 473" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-1-arrow-control)"/>
+<path id="us11899061b2-fig-1-formats" d="M 747 458 L 978 458" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-1-arrow-data)"/>
+<path id="us11899061b2-fig-1-export" d="M 1145 514 L 1145 594" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-1-arrow-data)"/>
+<rect x="320" y="124" width="102" height="18" fill="#f5f5f5"/><text x="371" y="138" class="arrow-label" text-anchor="middle">电源轨供电</text>
+<rect x="273.5" y="305" width="109" height="18" fill="#f5f5f5"/><text x="328" y="319" class="arrow-label" text-anchor="middle">Vdd 接 In</text>
+<rect x="792" y="124" width="144" height="18" fill="#f5f5f5"/><text x="864" y="138" class="arrow-label" text-anchor="middle">发送位跨越接口</text>
+<rect x="821" y="271" width="164" height="18" fill="#f5f5f5"/><text x="903" y="285" class="arrow-label" text-anchor="middle">远端 Error 接 Stop</text>
+<rect x="344" y="442" width="56" height="18" fill="#f5f5f5"/><text x="372" y="456" class="arrow-label" text-anchor="middle">Clk</text>
+<rect x="771.5" y="428" width="185" height="18" fill="#f5f5f5"/><text x="864" y="442" class="arrow-label" text-anchor="middle">按采样顺序写数字代码</text>
+<rect x="1170.5" y="538" width="123" height="18" fill="#f5f5f5"/><text x="1232" y="552" class="arrow-label" text-anchor="middle">导出电压历史</text>
+<g id="us11899061b2-fig-1-vdd"><rect x="31" y="104" width="276" height="103" rx="6" fill="#f5f5f5"/><rect x="31" y="104" width="276" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169" y="130" class="node-name" text-anchor="middle">发送端供电 Vdd</text><text x="169" y="152" class="node-detail" text-anchor="middle">同一观测节点供给发送器</text><text x="169" y="170" class="node-detail" text-anchor="middle">也接片上采样端</text></g>
+<g id="us11899061b2-fig-1-tx"><rect x="439" y="104" width="308" height="103" rx="6" fill="#f5f5f5"/><rect x="439" y="104" width="308" height="103" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="593" y="130" class="node-name" text-anchor="middle">发送器（TX）</text><text x="593" y="152" class="node-detail" text-anchor="middle">用本地 Vdd 驱动接口信号</text></g>
+<g id="us11899061b2-fig-1-rx"><rect x="978" y="104" width="335" height="102" rx="6" fill="#f5f5f5"/><rect x="978" y="104" width="335" height="102" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1145.5" y="130" class="node-name" text-anchor="middle">远端接收器与 ECC</text><text x="1145.5" y="152" class="node-detail" text-anchor="middle">接收位并对数据查错</text></g>
+<g id="us11899061b2-fig-1-clock"><rect x="31" y="426" width="276" height="91" rx="6" fill="#f5f5f5"/><rect x="31" y="426" width="276" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169" y="452" class="node-name" text-anchor="middle">ADC 采样时钟</text><text x="169" y="474" class="node-detail" text-anchor="middle">每周期转换一次的实施例</text></g>
+<g id="us11899061b2-fig-1-convert"><rect x="439" y="402" width="308" height="120" rx="6" fill="#f5f5f5"/><rect x="439" y="402" width="308" height="120" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="593" y="428" class="node-name" text-anchor="middle">发送端 RTO 的 ADC</text><text x="593" y="450" class="node-detail" text-anchor="middle">In 接 Vdd，Stop 接错误指示</text></g>
+<g id="us11899061b2-fig-1-fifo"><rect x="978" y="402" width="335" height="112" rx="6" fill="#f5f5f5"/><rect x="978" y="402" width="335" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1145.5" y="428" class="node-name" text-anchor="middle">RTO 的 FIFO</text><text x="1145.5" y="450" class="node-detail" text-anchor="middle">按顺序写入代码，保留近期样本</text></g>
+<g id="us11899061b2-fig-1-host"><rect x="978" y="594" width="335" height="87" rx="6" fill="#f5f5f5"/><rect x="978" y="594" width="335" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1145.5" y="620" class="node-name" text-anchor="middle">外部调试主机</text><text x="1145.5" y="642" class="node-detail" text-anchor="middle">从调试接口取得数字样本</text></g>
+<text x="31" y="45" class="signal-title" text-anchor="start">发送位向前走，远端查错信号反向停止本端采样</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11899061b2-fig-1-voltage-tap">Vdd 接 In</a> 原图 3 的 ADC 从 In 采同一个供给本地发送器的 Vdd。调试信号的走向与电源供应的走向分开。</li><li><a href="#us11899061b2-fig-1-payload">发送位跨越接口</a> 示例把并行位送到另一裸片。从设备权利要求 1 到系统权利要求 14，核心是从一端发送并由另一端查错。</li><li><a href="#us11899061b2-fig-1-stop">远端 Error 接 Stop</a> 远端接收器的错误检测电路发现差错后回送 Error。原图 3 中 Error 连接发送端 ADC 的 Stop 输入，控制停止继续转换。</li><li><a href="#us11899061b2-fig-1-export">导出电压历史</a> 片上 FIFO 保留过去采到的数字电压代码。调试主机通过调试路径分析这些代码，可与已知的发送数据对应。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、5、6；说明书归档段 0003、0004、0005、0014、0015、0016、0017、0018、0021、0022、0023、0025、0026、0027、0028、0029、0030、0031、0032、0043、0044、0045、0046、0047、0048、0049、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11899061B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>受监测节点 / 片上实时示波器（RTO）</dt><dd>FIG. 1 · V1 / 102</dd></div><div><dt>发送端 Vdd / 发送器 / 远端接收器</dt><dd>FIG. 3 · Vdd / 306 / 320</dd></div><div><dt>远端 ECC / 错误指示</dt><dd>FIG. 3 · 324 / Error</dd></div><div><dt>ADC / 采样输入 / 停止采样</dt><dd>FIG. 3 · 303 / In / Stop</dd></div><div><dt>采样时钟源 / 时钟输入 / 采样 FIFO</dt><dd>FIG. 3 · 309 / Clk / 304</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　错码检出和发送端停止采样之间隔着什么</h3>
+    <p id="fig-2-basis">从发出数据到停止采样包含正向传输、远端查错和 Error 回传。ADC 在等待 Error 到达的期间仍可转换。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="错码检出和发送端停止采样之间隔着什么" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 504" role="img" aria-labelledby="us11899061b2-fig-2-svg-title us11899061b2-fig-2-svg-desc">
+<title id="us11899061b2-fig-2-svg-title">错码检出和发送端停止采样之间隔着什么</title>
+<desc id="us11899061b2-fig-2-svg-desc">从发出数据到停止采样包含正向传输、远端查错和 Error 回传。ADC 在等待 Error 到达的期间仍可转换。</desc>
+<defs><marker id="us11899061b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11899061b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11899061b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11899061b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11899061b2-fig-2-armed"><path d="M 601 114 L 625 114 Q 633 114 633 122 L 633 124 Q 633 132 625 132 L 601 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11899061b2-fig-2-arrow-control)"/><rect x="598" y="90" width="234" height="18" fill="#f5f5f5"/><text x="715" y="104" class="arrow-label" text-anchor="middle">调试模式持续采样，FIFO 滚动写入</text></g>
+<g id="us11899061b2-fig-2-send"><path d="M 116 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-2-arrow-data)"/><rect x="172" y="144" width="130" height="18" fill="#f5f5f5"/><text x="237" y="158" class="arrow-label" text-anchor="middle">传送正在排查的数据位</text></g>
+<g id="us11899061b2-fig-2-check"><path d="M 358 210 L 382 210 Q 390 210 390 218 L 390 220 Q 390 228 382 228 L 358 228" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11899061b2-fig-2-arrow-control)"/><rect x="381" y="186" width="182" height="18" fill="#f5f5f5"/><text x="472" y="200" class="arrow-label" text-anchor="middle">接收后查错并置位 Error</text></g>
+<g id="us11899061b2-fig-2-feedback"><path d="M 358 264 L 601 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-2-arrow-return)"/><rect x="421" y="240" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">错误指示返回发送端</text></g>
+<g id="us11899061b2-fig-2-hold"><path d="M 601 306 L 625 306 Q 633 306 633 314 L 633 316 Q 633 324 625 324 L 601 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11899061b2-fig-2-arrow-control)"/><rect x="578.5" y="282" width="273" height="18" fill="#f5f5f5"/><text x="715" y="296" class="arrow-label" text-anchor="middle">Stop 停 ADC，保留 FIFO 样本</text></g>
+<g id="us11899061b2-fig-2-readout"><path d="M 601 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11899061b2-fig-2-arrow-main)"/><rect x="644.5" y="336" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">调试接口读取已存电压代码</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">发送端 TX</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">远端 RX 与 ECC</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">本端 RTO</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">外部调试主机</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。发送、接收端检测和返回后 Stop 分占三个时点，实际间隔由实现决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11899061b2-fig-2-send">传送正在排查的数据位</a> 发送瞬间是把电压变化和发送位对齐时要记录的时间。它先于远端接收完成及差错检测。</li><li><a href="#us11899061b2-fig-2-check">接收后查错并置位 Error</a> 远端的错误码校验可检出差错。即使该实现还能更正某些错码，RTO 用到的依然是由错误检测产生的指示。</li><li><a href="#us11899061b2-fig-2-feedback">错误指示返回发送端</a> Error 返回的延迟给调试留下发送之后的电压样本。返回太慢时，也会让有限 FIFO 覆盖掉发送前的部分历史。</li><li><a href="#us11899061b2-fig-2-hold">Stop 停 ADC，保留 FIFO 样本</a> ADC 收到 Stop 停止转换后，才可以导出最近一段数字代码。导出发生得晚，时间对齐仍依赖此次发送、检出和冻结的关系。</li></ul>
+  <p class="figure-evidence">原图 2、3、5、6；说明书归档段 0016、0017、0018、0023、0025、0026、0027、0028、0029、0030、0031、0032、0043、0044、0046、0047、0048、0049、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11899061B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>发送器 / 接收器 / ECC 检查</dt><dd>FIG. 3 · 306 / 320 / 324</dd></div><div><dt>错误指示 / 停止输入</dt><dd>FIG. 3 · Error / Stop</dd></div><div><dt>ADC / 样本 FIFO</dt><dd>FIG. 3 · 303 / 304</dd></div><div><dt>传输 / 采样存储 / 停止转换 / 调试导出</dt><dd>FIG. 6 · 605 / 610 / 615 / 620</dd></div></dl></details>
+</figure></section><section id="window"><h2>先查瞬态采到了没有，再查 FIFO 有没有留住</h2><p>图 3 设发送在 10.1 ns，远端检出在 12.1 ns，ADC 于 15.1 ns 收到停止。指定采样周期为 1 ns，并假设代码完成写入的时间等于取样时点。深度为 8 时停止后能读 8–15 ns 共八点，其中 10 ns 的样本落在所画的瞬态压降（droop）内。表 4 对照深度 4 的结果，发送附近的采样已被覆盖。更短的瞬态还可能恰好躲开采样点。</p><p>冻结捕获给调试留下相关性证据。发送时的同时翻转可能引起供电瞬态，错码也可能源自其他环节。检查时应把发送时刻和实际采样代码对齐，并校核采样精度和反馈路径是怎样延后的。图 3 的时间及压降形状只说明采样逻辑。专利未量化 ADC 带宽、链路报错率或真实往返延时。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　冻结会留到哪个时刻，发送附近的瞬态还在吗</h3>
+    <p id="fig-3-basis">示例从发送到 Stop 隔了 5 ns。取样周期取 1 ns，深度 8 的 FIFO 留到 8–15 ns，因而保留了 10 ns 的瞬态样本。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="冻结会留到哪个时刻，发送附近的瞬态还在吗" style="--figure-width:1220px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1220 670" role="img" aria-labelledby="us11899061b2-fig-3-svg-title us11899061b2-fig-3-svg-desc">
+<title id="us11899061b2-fig-3-svg-title">冻结会留到哪个时刻，发送附近的瞬态还在吗</title>
+<desc id="us11899061b2-fig-3-svg-desc">示例从发送到 Stop 隔了 5 ns。取样周期取 1 ns，深度 8 的 FIFO 留到 8–15 ns，因而保留了 10 ns 的瞬态样本。</desc>
+<defs><marker id="us11899061b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11899061b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11899061b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11899061b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">模型时间 / ns · 同一轴上对齐发送、检测和冻结</text>
+<g id="us11899061b2-fig-3-retained"><rect x="313" y="255" width="447" height="116" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="533" y="273" class="arrow-label" text-anchor="middle">最后保留 8 个样本：8–15 ns</text></g>
+<line x1="313" x2="313" y1="83" y2="609" stroke="#4f5d75" opacity=".18"/>
+<text x="313" y="74" class="arrow-label" text-anchor="middle">t=8</text>
+<line x1="445" x2="445" y1="83" y2="609" stroke="#4f5d75" opacity=".18"/>
+<text x="445" y="74" class="arrow-label" text-anchor="middle">t_tx=10.1</text>
+<line x1="571" x2="571" y1="83" y2="609" stroke="#4f5d75" opacity=".18"/>
+<text x="571" y="74" class="arrow-label" text-anchor="middle">t_rx=12.1</text>
+<line x1="760" x2="760" y1="83" y2="609" stroke="#4f5d75" opacity=".18"/>
+<text x="760" y="74" class="arrow-label" text-anchor="middle">t_stop=15.1</text>
+<line x1="942" x2="942" y1="83" y2="609" stroke="#4f5d75" opacity=".18"/>
+<text x="942" y="74" class="arrow-label" text-anchor="middle">导出稍后进行</text>
+<g id="us11899061b2-fig-3-vdd"><text x="24" y="186" class="node-name" text-anchor="start">发送端 Vdd</text>
+<line x1="250" x2="1006" y1="145" y2="145" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1014" y="149" class="arrow-label" text-anchor="start">标称位置</text>
+<polyline points="250,145 407,145 429,199 439,219 456,186 464,145 1006,145" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="us11899061b2-fig-3-samples"><text x="24" y="316" class="node-name" text-anchor="start">完成 FIFO 写入</text>
+<line x1="250" x2="1006" y1="306" y2="306" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1014" y="310" class="arrow-label" text-anchor="start">每次转换的样本</text>
+<polyline points="250,340 250,306 258,306 258,340 313,340 313,306 321,306 321,340 376,340 376,306 384,306 384,340 439,340 439,306 447,306 447,340 502,340 502,306 510,306 510,340 565,340 565,306 573,306 573,340 628,340 628,306 636,306 636,340 691,340 691,306 699,306 699,340 754,340 754,306 762,306 762,340 1006,340" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="us11899061b2-fig-3-err"><text x="24" y="437" class="node-name" text-anchor="start">Error 回传过程</text>
+<line x1="250" x2="1006" y1="412" y2="412" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1014" y="416" class="arrow-label" text-anchor="start">从远端发出到本端收到</text>
+<polyline points="250,458 571,458 571,412 760,412 760,458 1006,458" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="us11899061b2-fig-3-gate"><text x="24" y="550" class="node-name" text-anchor="start">本端 ADC 转换</text>
+<line x1="250" x2="1006" y1="527" y2="527" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1014" y="531" class="arrow-label" text-anchor="start">继续转换</text>
+<line x1="250" x2="1006" y1="573" y2="573" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1014" y="577" class="arrow-label" text-anchor="start">停止</text>
+<polyline points="250,527 760,527 760,573 1006,573" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="us11899061b2-fig-3-voltage"><circle cx="439" cy="219" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="439.5" y="229" width="179" height="18" fill="#f5f5f5"/><text x="529" y="243" class="arrow-label" text-anchor="middle">10 ns 的样本落在瞬态内</text></g>
+<g id="us11899061b2-fig-3-transmission"><circle cx="445" cy="102" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="481.5" y="103" width="125" height="18" fill="#f5f5f5"/><text x="544" y="117" class="arrow-label" text-anchor="middle">发送该组数据位</text></g>
+<g id="us11899061b2-fig-3-remote"><circle cx="571" cy="412" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="574.5" y="383" width="127" height="18" fill="#f5f5f5"/><text x="638" y="397" class="arrow-label" text-anchor="middle">远端检出错误</text></g>
+<g id="us11899061b2-fig-3-freeze"><circle cx="760" cy="573" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="759.5" y="578" width="175" height="18" fill="#f5f5f5"/><text x="847" y="592" class="arrow-label" text-anchor="middle">收到 Stop，保留最后样本</text></g>
+<text x="24" y="648" class="legend" text-anchor="start">定性模拟电压与数字行为。横轴来自教学模型。不代表产品时延、采样精度或最低 Vdd。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11899061b2-fig-3-voltage">10 ns 的样本落在瞬态内</a> 这里画的是发送电源节点相对电压。10 ns 恰有一个样本落在下降窗口。若瞬态在相邻采样点之间，FIFO 加深也不能补回未采的点。</li><li><a href="#us11899061b2-fig-3-transmission">发送该组数据位</a> 数据位的发送时点略晚于 10 ns。用于对齐的是本端发送，而不是远端查错时刻。</li><li><a href="#us11899061b2-fig-3-remote">远端检出错误</a> 示例把远端查错放在 12.1 ns。后续再经过返回路径，Stop 才能生效，期间本端采样继续。</li><li><a href="#us11899061b2-fig-3-freeze">收到 Stop，保留最后样本</a> 16 ns 的样本不再写入。冻结时最近的样本为 15 ns，深度 8 时最旧的是 8 ns。时钟和返回延迟都是模型值。</li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0004、0014、0017、0018、0025、0026、0027、0028、0029、0030、0031、0032、0045、0046、0049、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US11899061B2/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>发送端 Vdd / 采样时钟源 / ADC 时钟</dt><dd>FIG. 3 · Vdd / 309 / Clk</dd></div><div><dt>发送器 / 远端 ECC / 错误指示 / 停止输入</dt><dd>FIG. 3 · 306 / 324 / Error / Stop</dd></div><div><dt>采样 FIFO</dt><dd>FIG. 3 · 304</dd></div><div><dt>定期转换并保存 / 停止转换</dt><dd>FIG. 6 · 610 / 615</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">表 4　同一个 Stop 到达时，FIFO 深度怎样改变可追溯范围</h3>
+    <p id="fig-4-basis">图 3 保持发送和反馈时点固定。改 FIFO 深度改变保留跨度，改采样率还改变一次瞬态能有多少送入 FIFO 的样本。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">条件</th><th scope="col">冻结并导出时看见什么</th><th scope="col">解释</th></tr></thead><tbody><tr id="fig-4-eight"><th scope="row">深度 8，1 ns 间隔</th><td>8、9、10、11、12、13、14、15 ns</td><td>10 ns 恰采到瞬态，还有前后的样本</td></tr><tr id="fig-4-four"><th scope="row">深度 4，1 ns 间隔</th><td>12、13、14、15 ns</td><td>观测不到 10 ns 的已采样瞬态</td></tr><tr id="fig-4-phase"><th scope="row">深度不变，改变采样相位</th><td>保留下来的时间范围近似，离散采样点改位</td><td>短瞬态可能落在相邻采样点之间</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-4-eight">深度 8，1 ns 间隔</a> 例中 FIFO 深度 8，冻结时保存 8–15 ns，共 8 个采样点。9 ns 和更早的保留样本可用于建立下降前基线。</li><li><a href="#fig-4-four">深度 4，1 ns 间隔</a> 深度减到 4 后，保留区变为 12–15 ns，10 ns 的样本已经被新数据覆盖。</li><li><a href="#fig-4-phase">深度不变，改变采样相位</a> 即使保存着整个时间窗口，1 ns 采样间隔也可能跳过更短的下降。采样速率、相位和 FIFO 深度要分开验证。</li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0014、0017、0018、0025、0026、0027、0028、0029、0030、0031、0032、0046、0049、0050；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00017" aria-label="原文权利要求 17">17</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>采样 FIFO</dt><dd>FIG. 3 · 304</dd></div><div><dt>周期采样的时钟 / 冻结时点</dt><dd>FIG. 3 · Clk / Stop</dd></div><div><dt>采样和写入 / 停止转换 / 调试导出</dt><dd>FIG. 6 · 610 / 615 / 620</dd></div></dl></details>
+</figure></section><section id="directions"><h2>双向接口要按发送方向选择电压记录</h2><p>图 5 上半部沿 A → B 数据的 Error 找到 A 的 Vdd1 记录。下半部对 B → A 作同样追踪，最终落在 B 的 Vdd2。原图 4 明确绘出调试主机连接 A 的 RTO，文中还允许连接 B 的 RTO。</p><p>装置权利要求 1 和方法权利要求 7 规定一端监测、另一端检错且向外部主机提供状态。系统权利要求 14 还明确监测发送器供电。停止转换、FIFO、使用 ECC 和不同裸片等要求分别在从属权利要求展开。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　双向接口怎样把两类错码归回正确的发送轨</h3>
+    <p id="fig-5-basis">A → B 的错码由 B 检出并冻结 A 的 Vdd1 记录。反向则由 A 检出，让 B 保留 Vdd2 的采样记录。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="双向接口怎样把两类错码归回正确的发送轨" style="--figure-width:1360px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 760" role="img" aria-labelledby="us11899061b2-fig-5-svg-title us11899061b2-fig-5-svg-desc">
+<title id="us11899061b2-fig-5-svg-title">双向接口怎样把两类错码归回正确的发送轨</title>
+<desc id="us11899061b2-fig-5-svg-desc">A → B 的错码由 B 检出并冻结 A 的 Vdd1 记录。反向则由 A 检出，让 B 保留 Vdd2 的采样记录。</desc>
+<defs><marker id="us11899061b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11899061b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11899061b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11899061b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11899061b2-fig-5-ab-data" d="M 347 294 L 900 294 Q 908 294 908 286 L 908 191 Q 908 183 916 183 L 1010 183" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-5-arrow-data)"/>
+<path id="us11899061b2-fig-5-ab-error" d="M 1010 137 L 347 137" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-5-arrow-return)"/>
+<path id="us11899061b2-fig-5-ba-data" d="M 1010 427 L 347 427" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11899061b2-fig-5-arrow-data)"/>
+<path id="us11899061b2-fig-5-ba-error" d="M 199 484 L 199 522 Q 199 530 207 530 L 1147 530 Q 1155 530 1155 538 L 1155 565" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-5-arrow-return)"/>
+<path id="us11899061b2-fig-5-primary-read" d="M 33 167 L 26 167 Q 19 167 19 174 L 19 702 Q 19 710 27 710 L 672 710 Q 680 710 680 702 L 680 659" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11899061b2-fig-5-arrow-main)"/>
+<path id="us11899061b2-fig-5-optional-read" d="M 1010 613 L 845 613" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11899061b2-fig-5-arrow-control)"/>
+<rect x="568" y="265" width="126" height="18" fill="#f5f5f5"/><text x="631" y="279" class="arrow-label" text-anchor="middle">A → B 数据</text>
+<rect x="567" y="107" width="224" height="18" fill="#f5f5f5"/><text x="679" y="121" class="arrow-label" text-anchor="middle">B 检出，回送到 A 的 ADC</text>
+<rect x="607" y="398" width="134" height="18" fill="#f5f5f5"/><text x="674" y="412" class="arrow-label" text-anchor="middle">B → A 数据</text>
+<rect x="564.5" y="500" width="219" height="18" fill="#f5f5f5"/><text x="674" y="514" class="arrow-label" text-anchor="middle">A 检出，回送到 B 的 ADC</text>
+<rect x="276.5" y="681" width="141" height="18" fill="#f5f5f5"/><text x="347" y="695" class="arrow-label" text-anchor="middle">原图画出 A 导出</text>
+<rect x="875.5" y="585" width="107" height="18" fill="#f5f5f5"/><text x="929" y="599" class="arrow-label" text-anchor="middle">也可读取 B</text>
+<g id="us11899061b2-fig-5-rto-a"><rect x="33" y="108" width="314" height="94" rx="6" fill="#f5f5f5"/><rect x="33" y="108" width="314" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="190" y="134" class="node-name" text-anchor="middle">裸片 A 的 RTO</text><text x="190" y="156" class="node-detail" text-anchor="middle">采样发送器 A 的 Vdd1</text></g>
+<g id="us11899061b2-fig-5-rx-b"><rect x="1010" y="108" width="314" height="94" rx="6" fill="#f5f5f5"/><rect x="1010" y="108" width="314" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1167" y="134" class="node-name" text-anchor="middle">裸片 B 的 RX 与 ECC</text><text x="1167" y="156" class="node-detail" text-anchor="middle">检查 A → B 的数据</text></g>
+<g id="us11899061b2-fig-5-tx-a"><rect x="33" y="250" width="314" height="92" rx="6" fill="#f5f5f5"/><rect x="33" y="250" width="314" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="190" y="276" class="node-name" text-anchor="middle">裸片 A 的 TX</text><text x="190" y="298" class="node-detail" text-anchor="middle">发送方向 A → B</text></g>
+<g id="us11899061b2-fig-5-tx-b"><rect x="1010" y="392" width="314" height="92" rx="6" fill="#f5f5f5"/><rect x="1010" y="392" width="314" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1167" y="418" class="node-name" text-anchor="middle">裸片 B 的 TX</text><text x="1167" y="440" class="node-detail" text-anchor="middle">发送方向 B → A</text></g>
+<g id="us11899061b2-fig-5-rx-a"><rect x="33" y="392" width="314" height="92" rx="6" fill="#f5f5f5"/><rect x="33" y="392" width="314" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="190" y="418" class="node-name" text-anchor="middle">裸片 A 的 RX 与 ECC</text><text x="190" y="440" class="node-detail" text-anchor="middle">检查 B → A 的数据</text></g>
+<g id="us11899061b2-fig-5-rto-b"><rect x="1010" y="565" width="314" height="96" rx="6" fill="#f5f5f5"/><rect x="1010" y="565" width="314" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1167" y="591" class="node-name" text-anchor="middle">裸片 B 的 RTO</text><text x="1167" y="613" class="node-detail" text-anchor="middle">采样发送器 B 的 Vdd2</text></g>
+<g id="us11899061b2-fig-5-debug"><rect x="511" y="565" width="334" height="94" rx="6" fill="#f5f5f5"/><rect x="511" y="565" width="334" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="678" y="591" class="node-name" text-anchor="middle">外部调试主机</text><text x="678" y="613" class="node-detail" text-anchor="middle">原图明确画出读取 A 的路径</text><text x="678" y="631" class="node-detail" text-anchor="middle">B 的路径也可以接入</text></g>
+<text x="33" y="44" class="signal-title" text-anchor="start">双向都可追踪时，哪一端报错就冻结对端的发送电压记录</text>
+<text x="669" y="224" class="legend" text-anchor="start">A → B 错误：看 Vdd1</text>
+<text x="452" y="473" class="legend" text-anchor="start">B → A 错误：看 Vdd2</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11899061b2-fig-5-ab-error">B 检出，回送到 A 的 ADC</a> A 的数据在 B 的接收器查错。B 发出 Error 后，回到 A 的采样电路，所以导出记录对应 Vdd1。</li><li><a href="#us11899061b2-fig-5-ba-error">A 检出，回送到 B 的 ADC</a> 反向数据错码在 A 的接收器发现，却停 B 的电压采样。对称接线得到对应 Vdd2 记录。</li><li><a href="#us11899061b2-fig-5-primary-read">原图画出 A 导出</a> 原图 4 只明确画出 A 的数字样本出口。B 的 RTO 也可接外部调试主机，图中用虚线给出这个实施选项。</li></ul>
+  <p class="figure-evidence">原图 3、4；说明书归档段 0015、0016、0017、0018、0027、0028、0029、0030、0031、0032、0033、0034、0035、0036、0037、0038、0039、0040、0048；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US11899061B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>A 的 TX / B 的接收器 / B 的 ECC</dt><dd>FIG. 4 · 406 / 420 / 424</dd></div><div><dt>B 的 TX / A 的接收器 / A 的 ECC</dt><dd>FIG. 4 · 416 / 410 / 414</dd></div><div><dt>A 的 RTO / A 的发送电压</dt><dd>FIG. 4 · 402 / Vdd1</dd></div><div><dt>B 的 RTO / B 的发送电压</dt><dd>FIG. 4 · 422 / Vdd2</dd></div><div><dt>外部调试主机</dt><dd>FIG. 4 · 460</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=supply#catalog">硬件供电与保护</a></p>
-  <p class="document-id"><code>US11899061B2</code><span>美国授权专利</span><time datetime="2024-02-13">2024-02-13</time></p>
-  <h1>用接收端错误触发发送端供电电压留存</h1>
-  <p class="english-title" lang="en">Voltage monitoring circuit for interface</p>
-  <p class="document-question">接收端检出错码后，怎样找回发送该数据时的供电电压？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">链路接收端的错误指示送回事件捕获电路，触发保留发送端的供电电压信息。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>错误通知到达采样端有跨芯粒延迟。时间对齐只能建立相关性。</dd></div><div><dt>验证方法</dt><dd>在发送端注入带时间标记的扰动，对照接收端错误、通知返回与波形冻结时刻。检查事件前历史是否仍在留存窗口。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11899061B2/en#CLM-00014">原文权利要求 14</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">待排查的扰动位于发送端，而链路错误通常由接收端检出。事件捕获要覆盖从发送数据、远端检错到错误标志返回的延迟。</p>
-    <p>调试模式下，发送侧事件捕获电路监测发送端电压。接收端检错后把错误标志送回，发送侧可停止转换，保留已有样本并供外部主机读取。</p>
-    <ol class="walkthrough"><li><h3>在发送端保存最近的电压样本</h3><p>模数转换器（ADC）采样发送端供电。原图 3 中，FIFO 304 按时间顺序保存和淘汰样本。</p></li><li><h3>接收端报告错误</h3><p>原图 3 的接收端用纠错码（ECC）电路检错，再把错误标志返回发送端。权 18 才将系统的检错器限定为 ECC。</p></li><li><h3>收到标志后停止转换</h3><p>权 16 的实施方式在错误指示到达后停止 ADC 转换。被冻结的数据仍可包含部分错误之后采到的样本。</p></li><li><h3>与链路事件对齐</h3><p>外部主机通过调试接口读取样本。比较出错数据的发送拍、接收检错拍和停采拍，确定保留区间。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> 要求接收端检错和发送端提供电压状态。停止转换、FIFO、ECC 和跨裸片实现分别由权 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00019" aria-label="原文权利要求 19">19</a> 限定。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>物理接口（PHY）</dt><dd>在传输媒介上驱动和恢复链路信号的电路。</dd></div><div><dt>先进先出缓冲（FIFO）</dt><dd>按写入顺序读出或淘汰样本的缓冲。</dd></div><div><dt>纠错码（ECC）</dt><dd>利用冗余信息检测错误，部分实现还能纠正错误。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">发送端量测与接收端错误回传</a></li><li><a href="#fig-2">从错码检出到导出电压历史</a></li><li><a href="#fig-4">8 项 FIFO 的故障前后时间窗</a></li><li><a href="#fig-3">冻结时哪一段原始波形仍在</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">发送端量测与接收端错误回传</h3></div>
-    <a class="paper-open" href="../mechanisms/US11899061B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="发送端量测与接收端错误回传">
-    <img class="paper-image native-image" src="../mechanisms/US11899061B2/fig-1/diagram.svg" width="797" height="664"
-         style="--paper-width:797px" alt="发送端量测与接收端错误回传。发送端的同一电压给发射器供电，也供监测电路取样。接收端检错后反馈给发送端，保留的样本经调试通道输出。">
-  </div>
-  <figcaption>
-    <span>发送端的同一电压给发射器供电，也供监测电路取样。接收端检错后反馈给发送端，保留的样本经调试通道输出。</span>
-    <span class="figure-evidence">图 3、4，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/f4/2a/14/853ec4a15d2eff/US11899061.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">从错码检出到导出电压历史</h3></div>
-    <a class="paper-open" href="../mechanisms/US11899061B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="从错码检出到导出电压历史">
-    <img class="paper-image native-image" src="../mechanisms/US11899061B2/fig-2/diagram.svg" width="920" height="458"
-         style="--paper-width:920px" alt="从错码检出到导出电压历史。FIFO 在发送前后持续更新。接收端检出错误并返回标志后，采集电路停止转换，调试主机再读出记录。">
-  </div>
-  <figcaption>
-    <span>FIFO 在发送前后持续更新。接收端检出错误并返回标志后，采集电路停止转换，调试主机再读出记录。</span>
-    <span class="figure-evidence">图 3、6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/f4/2a/14/853ec4a15d2eff/US11899061.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">8 项 FIFO 的故障前后时间窗</h3></div>
-    <a class="paper-open" href="../mechanisms/US11899061B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="8 项 FIFO 的故障前后时间窗">
-    <img class="paper-image native-image" src="../mechanisms/US11899061B2/fig-4/diagram.svg" width="532" height="440"
-         style="--paper-width:532px" alt="8 项 FIFO 的故障前后时间窗。t13 停采时，最近的样本是 t12，最老的是 t5。图中分别标出 t10 之前、t10 当拍和之后的样本。">
-  </div>
-  <figcaption>
-    <span>t13 停采时，最近的样本是 t12，最老的是 t5。图中分别标出 t10 之前、t10 当拍和之后的样本。</span>
-    <span class="figure-evidence">图 3；本文采样算例 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/f4/2a/14/853ec4a15d2eff/US11899061.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">冻结时哪一段原始波形仍在</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">停采时刻</th><th scope="col">冻结后样本</th><th scope="col">t10 前保留数</th></tr></thead><tbody><tr><th scope="row">t10</th><td>t2–t9</td><td>8</td></tr><tr><th scope="row">t13</th><td class="emphasis">t5–t12</td><td>5</td></tr><tr><th scope="row">t17</th><td>t9–t16</td><td>1</td></tr><tr><th scope="row">t19</th><td>t11–t18</td><td class="emphasis">0</td></tr></tbody></table>
-  <figcaption>
-    <span>示例每拍采一次，FIFO 深度为 8，停止拍不写入。t10 代表出错数据对应的发送时刻。</span>
-    <span class="figure-evidence">图 3；本文采样窗口 · <a href="https://patentimages.storage.googleapis.com/f4/2a/14/853ec4a15d2eff/US11899061.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>接收端错误回传</dt><dd>定位调试触发时刻 <span class="subdued">原图 3、4，权 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></span></dd></div><div><dt>发送端滚动采样</dt><dd>保留事件前后电压 <span class="subdued">原图 3，说明书 0032</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>用采样率乘以从错误数据发送到停采的时间，估算至少须保留多少样本，再加所需的故障前观察窗。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>在接收端引入时钟抖动也可能造成错误并触发记录。若发送端电压平稳，应把此组当作对照，继续检查接收侧时序。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设 FIFO 深度为 8，每拍写入一个样本。与错误数据发送对应的样本在 t10，错误标志在 t13 到达并使 t13 不再采样。</dd></div><div><dt>处理结果</dt><dd>保留 t5 到 t12，包括发送事件前 5 个样本、t10 的 1 个样本和之后的 2 个样本。</dd></div><div><dt>结果解读</dt><dd>窗口内的 t10 是模型对齐的发送时刻。真实事件对齐要从接收端检错时间扣除已测的路径延迟。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、7、14 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +180,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11899061B2/en#:~:text=error%20detection%20circuitry%20configured%20to%20assert%20an%20indication%20in%20response%20to%20detecting%20an%20error%20in%20the">F7</a></th><td>接收端检错并发出错误指示</td><td>原图 3 · 原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11899061B2/en#:~:text=monitor%20the%20supply%20voltage%20provided%20to%20the%20transmitter%20circuitry">F8</a></th><td>捕获电路监测发送器的供电电压</td><td>原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11899061B2/en#:~:text=information%20indicative%20of%20a%20state%20of%20the%20supply%20voltage%20at%20a%20time%20the%20error%20was%20detected">F9</a></th><td>向外部主机提供检错时的供电状态信息</td><td>原图 3 · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>实时示波电路监测第一接口的电压，并在接收错误指示后向外部主机提供错误时的电压状态。见原图 1 至 3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>被测电压限定为第一接口内发送器的供电电压。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>实时示波电路加入 ADC 和保存数字值的存储器。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>权 3 的存储器限定为 FIFO。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>收到错误指示时 ADC 停止将被测电压转换成数字值。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>两套物理接口位于不同集成电路裸片。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>方法权项包含前向发送数据、调试量测、接收错误指示与主机导出。见原图 3、6。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>被测量限定为发送器供电，数据位由发送器并行传输。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-7">7</a></td><td>以 ADC 取得电压样本的数字值并保存至存储器。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>收到错误指示后停止转换样本。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>借实现捕获电路的集成电路调试接口向主机传送数字值。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-7">7</a></td><td>使用 ECC 电路检错并由它发出错误标志。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-7">7</a></td><td>数据位跨裸片发送，错误指示从第二裸片返回第一裸片。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>系统权项按发送器、接收端检错器和发送端事件捕获电路划清责任。见原图 3、4。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>捕获电路包含电压采样 ADC 和样本存储器。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>ADC 收到错误指示后停止转换。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>权 15 的存储器采用 FIFO。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>接收端的错误检测电路采用 ECC。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>发送与接收物理接口分别在两个裸片上。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>两个裸片向系统软件呈现为单一系统，软件无需感知多裸片结构。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>实时示波电路监测第一接口的电压，并在接收错误指示后向外部主机提供错误时的电压状态。见原图 1 至 3。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>被测电压限定为第一接口内发送器的供电电压。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>实时示波电路加入 ADC 和保存数字值的存储器。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>权 3 的存储器限定为 FIFO。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-3">3</a></td><td>收到错误指示时 ADC 停止将被测电压转换成数字值。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>两套物理接口位于不同集成电路裸片。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td>独立项</td><td>方法权项包含前向发送数据、调试量测、接收错误指示与主机导出。见原图 3、6。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>被测量限定为发送器供电，数据位由发送器并行传输。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-7">7</a></td><td>用 ADC 将发送端供电电压转换为数字样本并保存至存储器。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>收到错误指示后停止转换样本。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>借实现捕获电路的集成电路调试接口向主机传送数字值。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-7">7</a></td><td>使用 ECC 电路检错并由它发出错误标志。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-7">7</a></td><td>数据位跨裸片发送，错误指示从第二裸片返回第一裸片。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>系统权项按发送器、接收端检错器和发送端事件捕获电路划清责任。见原图 3、4。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>捕获电路包含电压采样 ADC 和样本存储器。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>ADC 收到错误指示后停止转换。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>权 15 的存储器采用 FIFO。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>接收端的错误检测电路采用 ECC。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>发送与接收物理接口分别在两个裸片上。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>两个裸片向系统软件呈现为单一系统，软件无需感知多裸片结构。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 2、3，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>电压示波模块向接口外的主机提供事件状态。</dd></div><div><dt>图 4、5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11899061B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>接收端检测错码并返回触发，TX 电压由发送端记录。</dd></div><div><dt>图 6</dt><dd>ADC 停采、历史数据输送至调试主机的实施流程。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11899061B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11736111B2.html#engineering">检测供电扰动并暂时延长时钟周期</a>
-<p>电压波形可以用来动作，也可以留给故障诊断。US11736111B2 按局部供电事件直接暂时拉长周期。US11899061B2 用远端传输错误作为事件触发，保存发送端附近的电压历史供外部主机查看。错码给出了查找波形的时间锚点，单凭两者同时出现仍无法确认压降是错码的原因。</p></li></ul>
-    <p><a href="../index.html?patent=US11899061B2#knowledge">在全量关系图上定位 US11899061B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-06-14</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-06-14</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-02-13</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/347,284</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Fabien S. Faure、Si Chen、Mansour Keramat、Arnaud J. Forestier</dd></div><div><dt>分类号</dt><dd>G01R31/31713、G01R13/0272、G01R13/029、G01R19/2503、G01R31/31705、G06F11/10、H03M1/12、G01R19/2509</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11899061B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11899061B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 收录的美国专利，覆盖 83 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11899061B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

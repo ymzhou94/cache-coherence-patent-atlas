@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>将写回挪出读突发窗口，读请求少等待什么</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(.8rem,3vw,2rem);background:#f5f5f5;color:#2d3142;font:16px/1.55 'Geist','Microsoft YaHei','PingFang SC',sans-serif}
+main{max-width:960px;margin:auto;min-width:0}
+h1{font:normal clamp(1.5rem,3vw,2rem)/1.25 'Instrument Serif','Noto Serif SC',serif;margin:0 0 .65rem}
+p{margin:.6rem 0}
+figure{margin:1.25rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #bfc0c0}
+svg{display:block;width:100%;min-width:960px;font-family:'Geist','Microsoft YaHei','PingFang SC',sans-serif;fill:#2d3142}
+.node-name{font-weight:600;font-size:17px}
+.node-detail,.arrow-label,.legend{font:14px 'Geist Mono','Microsoft YaHei','PingFang SC',monospace;fill:#4f5d75}
+.signal-title{font-weight:600;font-size:16px}
+ol{padding-inline-start:1.45rem}
+li+li{margin-top:.45rem}
+a{color:#2e5aa8;text-underline-offset:.19em}
+.component-index dt{font-weight:600}
+.component-index dd{margin:0 0 .45rem}
+svg :target{scroll-margin:1rem}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#bf4520;stroke-width:2.6}
+@media print{.diagram-container{overflow-x:visible}svg{min-width:0}}
+</style>
+</head>
+<body><main>
+<h1>将写回挪出读突发窗口，读请求少等待什么</h1>
+<p>原图 1C 将部分写回从后一轮读突发挪到前面的可用带宽。下面的单服务槽模型显示的是争用关系，R 为读缺失，W 为同一行的脏数据写回。</p>
+<figure>
+<div class="diagram-container" tabindex="0" role="region" aria-label="将写回挪出读突发窗口，读请求少等待什么"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 383" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">将写回挪出读突发窗口，读请求少等待什么</title>
+<desc id="fig-4-svg-desc">原图 1C 将部分写回从后一轮读突发挪到前面的可用带宽。下面的单服务槽模型显示的是争用关系，R 为读缺失，W 为同一行的脏数据写回。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">后台窗口开始</text>
+<line x1="391.385" y1="76" x2="391.385" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="391.385" y="64" class="arrow-label" text-anchor="middle">同一读突发到达</text>
+<line x1="690.462" y1="76" x2="690.462" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="690.462" y="64" class="arrow-label" text-anchor="middle">提前扫查的尾读完成</text>
+<line x1="840" y1="76" x2="840" y2="304" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">基线尾读完成</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">阶段顺序</text>
+</g>
+<g id="fig-4-baseline"><text x="24" y="136" class="node-name" text-anchor="start">不提前写回</text>
+<rect x="192" y="112" width="149.538" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="266.769" y="136" class="arrow-label" text-anchor="middle">可用窗口</text>
+<rect x="391.385" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="416.308" y="136" class="arrow-label" text-anchor="middle">R0</text>
+<rect x="441.231" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="466.154" y="136" class="arrow-label" text-anchor="middle">W0</text>
+<rect x="491.077" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">R1</text>
+<rect x="540.923" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="565.846" y="136" class="arrow-label" text-anchor="middle">W1</text>
+<rect x="590.769" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="615.692" y="136" class="arrow-label" text-anchor="middle">R2</text>
+<rect x="640.615" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="665.538" y="136" class="arrow-label" text-anchor="middle">W2</text>
+<rect x="690.462" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="715.385" y="136" class="arrow-label" text-anchor="middle">R3</text>
+<rect x="740.308" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="765.231" y="136" class="arrow-label" text-anchor="middle">R4</text>
+<rect x="790.154" y="112" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="815.077" y="136" class="arrow-label" text-anchor="middle">R5</text>
+<circle cx="840" cy="131" r="5" fill="#4f5d75"/>
+<text x="840" y="171" class="arrow-label" text-anchor="end">尾端读完成</text></g>
+<g id="fig-4-scrub"><text x="24" y="228" class="node-name" text-anchor="start">写回移到后台</text>
+<rect x="192" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="216.923" y="228" class="arrow-label" text-anchor="middle">W0</text>
+<rect x="241.846" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="266.769" y="228" class="arrow-label" text-anchor="middle">W1</text>
+<rect x="291.692" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="316.615" y="228" class="arrow-label" text-anchor="middle">W2</text>
+<rect x="391.385" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="416.308" y="228" class="arrow-label" text-anchor="middle">R0</text>
+<rect x="441.231" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="466.154" y="228" class="arrow-label" text-anchor="middle">R1</text>
+<rect x="491.077" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="228" class="arrow-label" text-anchor="middle">R2</text>
+<rect x="540.923" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="565.846" y="228" class="arrow-label" text-anchor="middle">R3</text>
+<rect x="590.769" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="615.692" y="228" class="arrow-label" text-anchor="middle">R4</text>
+<rect x="640.615" y="204" width="49.8462" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="665.538" y="228" class="arrow-label" text-anchor="middle">R5</text>
+<circle cx="690.462" cy="223" r="5" fill="#bf4520"/>
+<text x="690.462" y="263" class="arrow-label" text-anchor="end">尾端读完成</text></g>
+<text x="24" y="328" class="legend" text-anchor="start">任一时槽只服务一个读或写。图未计入 DRAM bank 并行、读写切换以及正常流量。</text>
+</svg></div>
+<figcaption>依据 原图 1A、1B、1C、说明书 0030、0031、0032、0034、0040、0042、0043、0044、权利要求 1、5、15</figcaption>
+</figure>
+<ol aria-label="图中机制"><li><a href="#fig-4-baseline">读突发与脏逐出共用通道</a> 读到前三个待替换脏行时，各增加一次写回。模型把写回排在对应读服务之后、下一读服务之前，因此尾端读排队更久。</li><li><a href="#fig-4-scrub">背景写预先提交、保留缓存行</a> 假设在突发到达前写完相同的三份脏数据，并且三行未被重新写脏。读缺失仍然存在，随后不需为这些替换项发重复写回。</li><li><a href="#fig-4-axis">对齐同一读突发的到达点</a> 模型先给后台 3 个服务槽，之后同在第 4 槽发出 6 个读。图中差异来自写回所在的时间窗。表 5 展开重写和未扫完两种边界。</li></ol>
+<details class="component-index"><summary>原图标号对照</summary><dl><div><dt>原图 1A 两次读突发</dt><dd>20、40</dd></div><div><dt>原图 1A 与读争用的脏逐出</dt><dd>25、45</dd></div><div><dt>原图 1C 在可用窗口完成的后台写回</dt><dd>60、80</dd></div><div><dt>原图 1C 后一轮读突发</dt><dd>90</dd></div></dl></details>
+</main></body>
+</html>

@@ -1,123 +1,191 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20260203067A1 检测 PC 相对运算以提前发出预取 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>在指令缓存回填时计算 PC 相对 load 地址 · US20260203067A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20260203067A1</code> · <a href="https://patents.google.com/patent/US20260203067A1/en">专利全文</a></p>
+<h1>在指令缓存回填时计算 PC 相对 load 地址</h1><p class="reading-question">load 的目标地址只由 PC 和立即数确定时，怎样在该指令进入执行流水线前请求数据？</p>
+<p class="reading-answer">指令缓存回填时，序列检测器就能识别 PC 相对运算和后续 load，把相应的程序计数器、运算和立即数交给预取单元。预取地址经过发出队列查重和访存仲裁，数据缓存未命中才向下一级请求。是否真正缩短 load 等待，还要看回填和需求访问的先后。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2026-07-16</dd></div><div><dt>申请号</dt><dd>US19/018,977</dd></div><div><dt>最早优先权</dt><dd>2025-01-13</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Srinivas Keshav、Niket K. Choudhary、Eric J. Furbish</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#paths">从地址生成到数据回填，两条请求路径在哪里合流</a></li><li><a href="#operands">用 ADRP 自己的 PC 和三个立即数求得目标地址</a></li><li><a href="#admission">计算出地址之后，先查重再等可用表项</a></li><li><a href="#overlap">发出时间领先，才可能缩短需求访问的等待</a></li><li><a href="#cross-beat">同一次指令缓存回填跨两拍时如何恢复识别</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="paths"><h2>从地址生成到数据回填，两条请求路径在哪里合流</h2><p>原图 3 从回填内容检测序列，再把 PC、运算类型及立即数送入预取算术逻辑单元（ALU）。原图 5 中，早算出的地址先进入前端的预取发出队列，再转入 PC 相对预取队列。预取候选包括这里的地址和其他预取器的地址。第一次选择在预取队列之间进行，第二次把选出的预取与保留站的常规 load/store 操作送往访存单元（LSU）。</p><p>图 1 把仲裁输入与数据返回放在一起。LSU 对预取先查数据缓存标签。缺失时才请求下一级缓存，返回的缓存行填入数据缓存。正常 load 从保留站走自己的执行路径，仍须算出有效地址并取得数据。权利要求第 7 项也允许对匹配了 PC 相对运算的分支地址发指令预取，目标为指令缓存。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　PC 相对预取与常规 load 在 LSU 前合流</h3>
+    <p id="fig-1-basis">前端生成提前地址；两级选择把不同来源的预取、常规访存送到 LSU。预取在数据缓存缺失时才请求下级回填。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="PC 相对预取与常规 load 在 LSU 前合流" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 730" role="img" aria-labelledby="us20260203067a1-fig-1-svg-title us20260203067a1-fig-1-svg-desc">
+<title id="us20260203067a1-fig-1-svg-title">PC 相对预取与常规 load 在 LSU 前合流</title>
+<desc id="us20260203067a1-fig-1-svg-desc">前端生成提前地址；两级选择把不同来源的预取、常规访存送到 LSU。预取在数据缓存缺失时才请求下级回填。</desc>
+<defs><marker id="us20260203067a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260203067a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260203067a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260203067a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20260203067a1-fig-1-ops" d="M 198 92 L 348 92" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-addr" d="M 535 92 L 686 92" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-main)"/>
+<path id="us20260203067a1-fig-1-send" d="M 755 130 L 755 192" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-credit" d="M 859 192 L 859 130" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-1-arrow-return)"/>
+<path id="us20260203067a1-fig-1-a" d="M 686 228 L 535 228" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-b" d="M 218 228 L 330 228" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-picked" d="M 432 266 L 432 362" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-normal" d="M 218 398 L 330 398" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-grant" d="M 432 436 L 432 528" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-tags" d="M 330 550 L 218 550" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-data)"/>
+<path id="us20260203067a1-fig-1-tagreply" d="M 218 586 L 330 586" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-1-arrow-return)"/>
+<path id="us20260203067a1-fig-1-miss" d="M 535 550 L 686 550" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-1-arrow-main)"/>
+<path id="us20260203067a1-fig-1-fill" d="M 805 604 L 805 653 Q 805 661 797 661 L 136 661 Q 128 661 128 653 L 128 604" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-1-arrow-return)"/>
+<rect x="211" y="62" width="126" height="18" fill="#f5f5f5"/><text x="274" y="76" class="arrow-label" text-anchor="middle">PC、运算、立即数</text>
+<rect x="550" y="62" width="118" height="18" fill="#f5f5f5"/><text x="609" y="76" class="arrow-label" text-anchor="middle">计算出的地址</text>
+<rect x="664" y="150" width="82" height="18" fill="#f5f5f5"/><text x="705" y="164" class="arrow-label" text-anchor="middle">地址与请求</text>
+<rect x="872" y="150" width="70" height="18" fill="#f5f5f5"/><text x="907" y="164" class="arrow-label" text-anchor="middle">腾空表项</text>
+<rect x="556" y="198" width="108" height="18" fill="#f5f5f5"/><text x="610" y="212" class="arrow-label" text-anchor="middle">PC 相对预取</text>
+<rect x="232" y="198" width="84" height="18" fill="#f5f5f5"/><text x="274" y="212" class="arrow-label" text-anchor="middle">其他预取</text>
+<rect x="446" y="305" width="98" height="18" fill="#f5f5f5"/><text x="495" y="319" class="arrow-label" text-anchor="middle">选中的预取</text>
+<rect x="232" y="368" width="84" height="18" fill="#f5f5f5"/><text x="274" y="382" class="arrow-label" text-anchor="middle">load/store</text>
+<rect x="446.5" y="471" width="85" height="18" fill="#f5f5f5"/><text x="489" y="485" class="arrow-label" text-anchor="middle">仲裁获准</text>
+<rect x="234" y="520" width="80" height="18" fill="#f5f5f5"/><text x="274" y="534" class="arrow-label" text-anchor="middle">标签查询</text>
+<rect x="231.5" y="556" width="83" height="18" fill="#f5f5f5"/><text x="273" y="570" class="arrow-label" text-anchor="middle">命中结果</text>
+<rect x="557" y="520" width="108" height="18" fill="#f5f5f5"/><text x="611" y="534" class="arrow-label" text-anchor="middle">预取缺失请求</text>
+<rect x="414.5" y="631" width="131" height="18" fill="#f5f5f5"/><text x="480" y="645" class="arrow-label" text-anchor="middle">数据缓存行回填</text>
+<g id="us20260203067a1-fig-1-det"><rect x="34" y="56" width="164" height="74" rx="6" fill="#f5f5f5"/><rect x="34" y="56" width="164" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="116" y="82" class="node-name" text-anchor="middle">序列检测器</text><text x="116" y="104" class="node-detail" text-anchor="middle">扫描指令缓存回填内容</text></g>
+<g id="us20260203067a1-fig-1-al"><rect x="348" y="56" width="187" height="74" rx="6" fill="#f5f5f5"/><rect x="348" y="56" width="187" height="74" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="441.5" y="82" class="node-name" text-anchor="middle">预取 ALU</text><text x="441.5" y="104" class="node-detail" text-anchor="middle">按模式计算候选地址</text></g>
+<g id="us20260203067a1-fig-1-launch"><rect x="686" y="56" width="233" height="74" rx="6" fill="#f5f5f5"/><rect x="686" y="56" width="233" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="82" class="node-name" text-anchor="middle">预取发出队列</text><text x="802.5" y="104" class="node-detail" text-anchor="middle">查重并等待下游可接纳</text></g>
+<g id="us20260203067a1-fig-1-pcq"><rect x="686" y="192" width="233" height="74" rx="6" fill="#f5f5f5"/><rect x="686" y="192" width="233" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="218" class="node-name" text-anchor="middle">PC 相对预取队列</text><text x="802.5" y="240" class="node-detail" text-anchor="middle">存放已发出的候选</text></g>
+<g id="us20260203067a1-fig-1-other"><rect x="36" y="192" width="182" height="74" rx="6" fill="#f5f5f5"/><rect x="36" y="192" width="182" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127" y="218" class="node-name" text-anchor="middle">其他预取队列</text><text x="127" y="240" class="node-detail" text-anchor="middle">例如地址图预取</text></g>
+<g id="us20260203067a1-fig-1-muxp"><rect x="330" y="192" width="205" height="74" rx="6" fill="#f5f5f5"/><rect x="330" y="192" width="205" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="432.5" y="218" class="node-name" text-anchor="middle">预取选择器</text><text x="432.5" y="240" class="node-detail" text-anchor="middle">在预取源之间仲裁</text></g>
+<g id="us20260203067a1-fig-1-rs"><rect x="36" y="362" width="182" height="74" rx="6" fill="#f5f5f5"/><rect x="36" y="362" width="182" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127" y="388" class="node-name" text-anchor="middle">保留站常规访存</text><text x="127" y="410" class="node-detail" text-anchor="middle">指令就绪后发出</text></g>
+<g id="us20260203067a1-fig-1-muxl"><rect x="330" y="362" width="205" height="74" rx="6" fill="#f5f5f5"/><rect x="330" y="362" width="205" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="432.5" y="388" class="node-name" text-anchor="middle">LSU 输入选择器</text><text x="432.5" y="410" class="node-detail" text-anchor="middle">在预取与常规操作间选</text></g>
+<g id="us20260203067a1-fig-1-lsu"><rect x="330" y="528" width="205" height="78" rx="6" fill="#f5f5f5"/><rect x="330" y="528" width="205" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="432.5" y="554" class="node-name" text-anchor="middle">访存单元（LSU）</text><text x="432.5" y="576" class="node-detail" text-anchor="middle">处理请求并检查数据缓存</text></g>
+<g id="us20260203067a1-fig-1-dc"><rect x="36" y="530" width="182" height="74" rx="6" fill="#f5f5f5"/><rect x="36" y="530" width="182" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="127" y="556" class="node-name" text-anchor="middle">数据缓存</text><text x="127" y="578" class="node-detail" text-anchor="middle">查询标签，安装回填行</text></g>
+<g id="us20260203067a1-fig-1-lower"><rect x="686" y="530" width="233" height="74" rx="6" fill="#f5f5f5"/><rect x="686" y="530" width="233" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="802.5" y="556" class="node-name" text-anchor="middle">下一级缓存</text><text x="802.5" y="578" class="node-detail" text-anchor="middle">为数据缓存缺失提供回填</text></g>
+<text x="36" y="706" class="legend" text-anchor="start">预取生成地址，不提交 load 的架构结果。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260203067a1-fig-1-det">序列检测器</a> 序列检测器从指令缓存的回填内容取得指令，向预取 ALU 提供程序计数器、运算及立即数。</li><li><a href="#us20260203067a1-fig-1-al">预取 ALU</a> ALU 根据模式选取运算，可以专用或共享，第 11 项单列专用单周期加法器。</li><li><a href="#us20260203067a1-fig-1-launch">预取发出队列</a> 先查前端预取发出队列，再向 PC 相对预取队列交付地址。两者的容量与角色不同。</li><li><a href="#us20260203067a1-fig-1-muxp">预取选择器</a> 第一层多路选择在 PC 相对预取队列与其他预取队列之间仲裁。</li><li><a href="#us20260203067a1-fig-1-muxl">LSU 输入选择器</a> 第二层在选中的预取与保留站的访存操作之间仲裁。</li><li><a href="#us20260203067a1-fig-1-miss">预取缺失请求</a> 预取通过访存单元检查数据缓存标签。缺失才从下一缓存层取行。</li></ul>
+  <p class="figure-evidence">原图 1、3、5、6；说明书归档段 0016、0017、0018、0027、0028、0029、0037、0038、0039、0040、0041、0042、0043、0051；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US20260203067A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>序列检测器</dt><dd>320</dd></div><div><dt>PC 相对预取单元／预取 ALU</dt><dd>110/330</dd></div><div><dt>预取发出队列／PC 相对预取队列</dt><dd>520/530</dd></div><div><dt>其他预取队列／保留站</dt><dd>540/550</dd></div><div><dt>预取选择器／LSU 输入选择器</dt><dd>552/554</dd></div><div><dt>访存单元／数据缓存</dt><dd>560/570</dd></div></dl></details>
+</figure></section><section id="operands"><h2>用 ADRP 自己的 PC 和三个立即数求得目标地址</h2><p>表 2 逐步复算原图 2。ADRP 采用自己的 PC，清除低 12 位，再加按页缩放的立即数。ADD 读取前一步写入的 X21 并加 72，LDR 仍以 X21 为基址再加 168。预取路径使用这条寄存器依赖关系提取立即数，计算中间值而不写 X21，也不为 LDR 写 X22。若依赖跨过同一次回填的两拍，检测器可按图 5 的顺序保存和读出候选。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">表 2　原图 2 的 ADRP、ADD、LDR 地址计算</h3>
+    <p id="fig-2-basis">在确定每一步的寄存器依赖后，地址由 ADRP 指令自身 PC 和三个立即数求出。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-2-title"><thead><tr><th scope="col">指令与依赖</th><th scope="col">计算输入</th><th scope="col">输出</th></tr></thead><tbody><tr id="fig-2-adrp"><th scope="row">ADRP，写 X21</th><td>(0x192FBD314 清低 12 位) + (0x5ABE6 × 4096)</td><td>0x1EDBA3000</td></tr><tr id="fig-2-add"><th scope="row">ADD，读写 X21</th><td>0x1EDBA3000 + 72</td><td>0x1EDBA3048</td></tr><tr id="fig-2-ldr"><th scope="row">LDR，读 X21</th><td>0x1EDBA3048 + 168</td><td>目标地址 0x1EDBA30F0</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-2-adrp">ADRP，写 X21</a> 从原图的 ADRP PC 0x192FBD314 得到页基址 0x192FBD000，再加按页缩放的立即数。</li><li><a href="#fig-2-add">ADD，读写 X21</a> ADD 的立即数 72 以十进制表示，低位结果为 0x048。</li><li><a href="#fig-2-ldr">LDR，读 X21</a> LDR 的字节偏移 168 为 0xA8，最后得到 0x1EDBA30F0。该地址与实际执行该依赖序列时的地址一致。</li></ul>
+  <p class="figure-evidence">原图 2；说明书归档段 0014、0019、0020、0021、0022、0023、0024；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>ADRP、ADD、LDR 指令组</dt><dd>200</dd></div><div><dt>依赖计算结果与 load 目标地址</dt><dd>210</dd></div></dl></details>
+</figure></section><section id="admission"><h2>计算出地址之后，先查重再等可用表项</h2><p>原图 4 在计算地址后对预取发出队列查重，队列里已存在的地址会被丢弃。地址未重复时加入该队列，并等待到达队首。如果等待时遇到冲刷事件，可清除该队列并重置读写指针。说明书举例包括特权级变化。这里的清除作用于尚待发出的队列内容，不能据此推出已发出的回填一律撤销。</p><p>原图 5 另有 PC 相对预取队列。信用量（credit）可代表这一队列的可接纳容量，下游表项腾空后回送。图 3 合画两张原图，标出前端查重、等队首、下游信用量分别起作用的环节。说明书还允许将地址转换缓存（TLB）查询放到这一段。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　预取发出队列在哪三处暂停或丢弃候选</h3>
+    <p id="fig-3-basis">同址条目使新候选丢弃。新候选入队后等队首，冲刷可清除等待条目，下游信用量限制实际交付。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预取发出队列在哪三处暂停或丢弃候选" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 630" role="img" aria-labelledby="us20260203067a1-fig-3-svg-title us20260203067a1-fig-3-svg-desc">
+<title id="us20260203067a1-fig-3-svg-title">预取发出队列在哪三处暂停或丢弃候选</title>
+<desc id="us20260203067a1-fig-3-svg-desc">同址条目使新候选丢弃。新候选入队后等队首，冲刷可清除等待条目，下游信用量限制实际交付。</desc>
+<defs><marker id="us20260203067a1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260203067a1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260203067a1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260203067a1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20260203067a1-fig-3-candidate" d="M 204 84 L 325 84" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-isdup" d="M 583 84 L 728 84" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-new" d="M 454 126 L 454 180" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-stage" d="M 454 242 L 454 282" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-nohead" d="M 326 324 L 263 324" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-again" d="M 150 282 L 150 259 Q 150 251 158 251 L 382 251 Q 390 251 390 259 L 390 303" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-3-arrow-return)"/>
+<path id="us20260203067a1-fig-3-flushed" d="M 150 366 L 150 472" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-data)"/>
+<path id="us20260203067a1-fig-3-ready" d="M 582 324 L 656 324" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-main)"/>
+<path id="us20260203067a1-fig-3-permit" d="M 789 366 L 789 472" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-3-arrow-main)"/>
+<path id="us20260203067a1-fig-3-wait" d="M 923 324 L 932 324 Q 940 324 940 316 L 940 260 Q 940 252 932 252 L 797.5 252 Q 789.5 252 789.5 260 L 789.5 282" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-3-arrow-return)"/>
+<rect x="225.5" y="54" width="79" height="18" fill="#f5f5f5"/><text x="265" y="68" class="arrow-label" text-anchor="middle">目标地址</text>
+<rect x="618" y="55" width="68" height="18" fill="#f5f5f5"/><text x="652" y="69" class="arrow-label" text-anchor="middle">已存在</text>
+<rect x="468.5" y="139" width="65" height="18" fill="#f5f5f5"/><text x="501" y="153" class="arrow-label" text-anchor="middle">未查到</text>
+<rect x="465" y="251" width="90" height="18" fill="#f5f5f5"/><text x="510" y="265" class="arrow-label" text-anchor="middle">等待到队首</text>
+<rect x="261" y="295" width="64" height="18" fill="#f5f5f5"/><text x="293" y="309" class="arrow-label" text-anchor="middle">未到队首</text>
+<rect x="183" y="221" width="116" height="18" fill="#f5f5f5"/><text x="241" y="235" class="arrow-label" text-anchor="middle">未冲刷，继续等</text>
+<rect x="170" y="402" width="96" height="18" fill="#f5f5f5"/><text x="218" y="416" class="arrow-label" text-anchor="middle">检测到冲刷</text>
+<rect x="584.5" y="296" width="69" height="18" fill="#f5f5f5"/><text x="619" y="310" class="arrow-label" text-anchor="middle">已到队首</text>
+<rect x="798.5" y="404" width="105" height="18" fill="#f5f5f5"/><text x="851" y="418" class="arrow-label" text-anchor="middle">有足够信用量</text>
+<rect x="805.5" y="221" width="113" height="18" fill="#f5f5f5"/><text x="862" y="235" class="arrow-label" text-anchor="middle">等待表项腾空</text>
+<g id="us20260203067a1-fig-3-a"><rect x="34" y="50" width="170" height="62" rx="6" fill="#f5f5f5"/><rect x="34" y="50" width="170" height="62" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="119" y="76" class="node-name" text-anchor="middle">预取 ALU 产出地址</text><text x="119" y="98" class="node-detail" text-anchor="middle">已检测到完整序列</text></g>
+<g id="us20260203067a1-fig-3-dup"><polygon points="454,42 583,84 454,126 325,84" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454" y="81" class="node-name" text-anchor="middle">发出队列同址命中？</text><text x="454" y="102" class="node-detail" text-anchor="middle">用待发地址查重</text></g>
+<g id="us20260203067a1-fig-3-drop"><rect x="728" y="52" width="193" height="62" rx="6" fill="#f5f5f5"/><rect x="728" y="52" width="193" height="62" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="824.5" y="78" class="node-name" text-anchor="middle">丢弃新候选</text><text x="824.5" y="100" class="node-detail" text-anchor="middle">队列已保存同址</text></g>
+<g id="us20260203067a1-fig-3-enqueue"><rect x="349" y="180" width="211" height="62" rx="6" fill="#f5f5f5"/><rect x="349" y="180" width="211" height="62" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454.5" y="206" class="node-name" text-anchor="middle">加入预取发出队列</text><text x="454.5" y="228" class="node-detail" text-anchor="middle">地址未重复</text></g>
+<g id="us20260203067a1-fig-3-head"><polygon points="454,282 582,324 454,366 326,324" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="454" y="321" class="node-name" text-anchor="middle">已到发出队列队首？</text><text x="454" y="342" class="node-detail" text-anchor="middle">检查待发顺序</text></g>
+<g id="us20260203067a1-fig-3-ff"><polygon points="150,282 263,324 150,366 37,324" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150" y="321" class="node-name" text-anchor="middle">等待时发生冲刷？</text><text x="150" y="342" class="node-detail" text-anchor="middle">例如特权级变化</text></g>
+<g id="us20260203067a1-fig-3-flush"><rect x="43" y="472" width="214" height="67" rx="6" fill="#f5f5f5"/><rect x="43" y="472" width="214" height="67" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150" y="498" class="node-name" text-anchor="middle">清除发出队列</text><text x="150" y="520" class="node-detail" text-anchor="middle">可重置读写指针</text></g>
+<g id="us20260203067a1-fig-3-credit"><polygon points="789.5,282 923,324 789.5,366 656,324" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="789.5" y="321" class="node-name" text-anchor="middle">下游可接纳？</text><text x="789.5" y="342" class="node-detail" text-anchor="middle">信用量可代表可用表项</text></g>
+<g id="us20260203067a1-fig-3-pass"><rect x="677" y="472" width="225" height="67" rx="6" fill="#f5f5f5"/><rect x="677" y="472" width="225" height="67" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="789.5" y="498" class="node-name" text-anchor="middle">交付 PC 相对预取队列</text><text x="789.5" y="520" class="node-detail" text-anchor="middle">下游确认可接纳</text></g>
+<text x="35" y="590" class="legend" text-anchor="start">队首与冲刷检查来自原图 4。下游信用量由原图 5 的队列接口补充。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260203067a1-fig-3-dup">发出队列同址命中？</a> 内容可寻址存储器（CAM）可在候选入队前做同址查重。队列也可在发出后继续保留地址用于抑制重复。</li><li><a href="#us20260203067a1-fig-3-head">已到发出队列队首？</a> 未到首位时观察冲刷事件；继续等待时不重复向后端提交。</li><li><a href="#us20260203067a1-fig-3-flush">清除发出队列</a> 冲刷事件发生后，原图 4 清前端发出队列。这个回路不代表已进入下一缓存层的请求被撤回。</li><li><a href="#us20260203067a1-fig-3-credit">下游可接纳？</a> 原图 5 的容量检查独立于查重，队首有请求并且目标队列允许接纳才交付。</li></ul>
+  <p class="figure-evidence">原图 4、5；说明书归档段 0033、0034、0035、0036、0038、0039、0043、0051、0052；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a> <a href="../diagrams/US20260203067A1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>同址查重／丢弃候选</dt><dd>440/445</dd></div><div><dt>加入发出队列／确认到队首</dt><dd>450/460</dd></div><div><dt>检测冲刷事件／清除发出队列</dt><dd>475/480</dd></div><div><dt>预取发出队列／PC 相对预取队列</dt><dd>520/530</dd></div></dl></details>
+</figure></section><section id="overlap"><h2>发出时间领先，才可能缩短需求访问的等待</h2><p>图 4 使用一组模型周期说明等待在哪里被重叠。假设两种情形下下一级服务均占 12 拍，无预取时需求 load 在第 16 拍查缓存并触发填充，第 28 拍收回填。预取情形在第 3 拍发填充，第 15 拍回填。第 16 拍需求访问时缓存行仍有效，因缺失而等待的时间才被覆盖。</p><p>这个模型只比较缺失等待，未计入命中本身的时延。预取越早，越可能发生在 load 所在的路径得到确认之前。实际提前量受队列拥塞、地址转换与下级缓存服务时间影响，过早也可能导致数据在使用前被逐出。评估时要把缓存行回填时刻与 load 的流水线阶段对齐，同时计入无用预取流量。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　提前回填怎样覆盖需求 load 的缺失等待</h3>
+    <p id="fig-4-basis">两路下级服务各占 12 拍，差别在开始服务的时刻。提前回填时，需求 load 在第 16 拍可查到缓存行。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前回填怎样覆盖需求 load 的缺失等待" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 452" role="img" aria-labelledby="us20260203067a1-fig-4-svg-title us20260203067a1-fig-4-svg-desc">
+<title id="us20260203067a1-fig-4-svg-title">提前回填怎样覆盖需求 load 的缺失等待</title>
+<desc id="us20260203067a1-fig-4-svg-desc">两路下级服务各占 12 拍，差别在开始服务的时刻。提前回填时，需求 load 在第 16 拍可查到缓存行。</desc>
+<defs><marker id="us20260203067a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260203067a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260203067a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260203067a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us20260203067a1-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="261.429" y1="76" x2="261.429" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="261.429" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="539.143" y1="76" x2="539.143" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="539.143" y="64" class="arrow-label" text-anchor="middle">15</text>
+<line x1="562.286" y1="76" x2="562.286" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="562.286" y="64" class="arrow-label" text-anchor="middle">16</text>
+<line x1="840" y1="76" x2="840" y2="396" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">28</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us20260203067a1-fig-4-prefetch"><text x="24" y="136" class="node-name" text-anchor="start">预取路径</text>
+<rect x="192" y="112" width="69.4286" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="226.714" y="136" class="arrow-label" text-anchor="middle">提前生成</text>
+<rect x="261.429" y="112" width="277.714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="400.286" y="136" class="arrow-label" text-anchor="middle">下级缓存服务</text>
+<circle cx="539.143" cy="131" r="5" fill="#4f5d75"/>
+<text x="539.143" y="171" class="arrow-label" text-anchor="end">回填</text></g>
+<g id="us20260203067a1-fig-4-base"><text x="24" y="228" class="node-name" text-anchor="start">无预取，需求 load</text>
+<rect x="562.286" y="204" width="277.714" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="701.143" y="228" class="arrow-label" text-anchor="middle">查缓存缺失，等待下级回填</text>
+<circle cx="840" cy="223" r="5" fill="#4f5d75"/>
+<text x="840" y="263" class="arrow-label" text-anchor="end">需求回填</text></g>
+<g id="us20260203067a1-fig-4-demand"><text x="24" y="320" class="node-name" text-anchor="start">有预取，需求 load</text>
+<rect x="192" y="296" width="370.286" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="377.143" y="320" class="arrow-label" text-anchor="middle">执行到需求 load 查缓存的阶段</text>
+<circle cx="562.286" cy="315" r="5" fill="#bf4520"/>
+<text x="562.286" y="355" class="arrow-label" text-anchor="end">查到已回填的缓存行</text></g>
+<text x="24" y="420" class="legend" text-anchor="start">教学模型。固定 12 拍下级服务延迟，忽略命中耗时与队列竞争。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260203067a1-fig-4-prefetch">预取路径</a> 模型令检测、地址生成和批准发出占最初 3 拍。真正的流水线分段与等待周期数由实现和运行负载决定。</li><li><a href="#us20260203067a1-fig-4-base">无预取，需求 load</a> 没有预取时，第 16 拍开始查缓存。模型把缺失受理并开始下级服务放在同一拍，第 28 拍将行填回。</li><li><a href="#us20260203067a1-fig-4-demand">有预取，需求 load</a> 有预取时，第 15 拍已回填。第 16 拍查缓存，假定该行未逐出，主路径仍需经过缓存命中操作。</li><li><a href="#us20260203067a1-fig-4-axis">时间刻度</a> 同一请求地址与相同下级服务时间用于比较。第 16 拍是需求 LSU 查缓存的时刻。</li></ul>
+  <p class="figure-evidence">原图 3、5、6；说明书归档段 0017、0018、0029、0041、0042、0043、0051、0053；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US20260203067A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>预取发出队列</dt><dd>520</dd></div><div><dt>访存单元／数据缓存</dt><dd>560/570</dd></div><div><dt>启动目标地址的预取</dt><dd>650</dd></div></dl></details>
+</figure></section><section id="cross-beat"><h2>同一次指令缓存回填跨两拍时如何恢复识别</h2><p>在图 5 的两次传输例中，ADRP 位于第一次传输末尾，ADD、LDR 在同一次缓存行回填的下一拍。支持跨拍的实施例保留第一次传输的一部分内容，以便下一拍恢复模式判定。第 5 项要求在非末拍保存状态，未规定缓存的字段或传输拍内指令数。图中的候选状态只展示一种足以完成匹配的表示。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　指令序列跨两个回填拍时保存什么</h3>
+    <p id="fig-5-basis">看到起始指令时保存候选。下一拍补齐依赖和立即数，确认整个序列后才让预取 ALU 生成地址。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="指令序列跨两个回填拍时保存什么" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 464" role="img" aria-labelledby="us20260203067a1-fig-5-svg-title us20260203067a1-fig-5-svg-desc">
+<title id="us20260203067a1-fig-5-svg-title">指令序列跨两个回填拍时保存什么</title>
+<desc id="us20260203067a1-fig-5-svg-desc">看到起始指令时保存候选。下一拍补齐依赖和立即数，确认整个序列后才让预取 ALU 生成地址。</desc>
+<defs><marker id="us20260203067a1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20260203067a1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20260203067a1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20260203067a1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us20260203067a1-fig-5-first"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-5-arrow-data)"/><rect x="172" y="96" width="130" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">前一拍末尾：ADRP</text></g>
+<g id="us20260203067a1-fig-5-hold"><path d="M 358 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-5-arrow-main)"/><rect x="414.5" y="144" width="130" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">保存 ADRP 候选</text></g>
+<g id="us20260203067a1-fig-5-second"><path d="M 116 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-5-arrow-data)"/><rect x="165.5" y="192" width="143" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">下一拍：ADD、LDR</text></g>
+<g id="us20260203067a1-fig-5-recover"><path d="M 601 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20260203067a1-fig-5-arrow-return)"/><rect x="440.5" y="240" width="78" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">返回先前候选</text></g>
+<g id="us20260203067a1-fig-5-deps"><path d="M 358 306 L 382 306 Q 390 306 390 314 L 390 316 Q 390 324 382 324 L 358 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-5-arrow-control)"/><rect x="407" y="282" width="130" height="18" fill="#f5f5f5"/><text x="472" y="296" class="arrow-label" text-anchor="middle">确认 X21 依赖链</text></g>
+<g id="us20260203067a1-fig-5-tuple"><path d="M 358 360 L 844 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20260203067a1-fig-5-arrow-main)"/><rect x="529.5" y="336" width="143" height="18" fill="#f5f5f5"/><text x="601" y="350" class="arrow-label" text-anchor="middle">PC、运算与三个立即数</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">指令缓存回填</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">序列检测器</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">跨拍候选状态</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">预取 ALU</text>
+<text x="28" y="436" class="legend" text-anchor="start">时间向下。两次传输属于同一次指令缓存行回填，横向消息只表达数据与控制方向。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20260203067a1-fig-5-first">前一拍末尾：ADRP</a> 模型把 ADRP 作为同一次指令缓存行回填的前一拍末尾。第一遍检查起始操作。</li><li><a href="#us20260203067a1-fig-5-hold">保存 ADRP 候选</a> 可只保存前一拍的指令，也可在教学例中等价地保留起始 PC、目的寄存器、已译码立即数及模式状态。</li><li><a href="#us20260203067a1-fig-5-second">下一拍：ADD、LDR</a> 下一拍到达 ADD、LDR。比较各步读写寄存器以确认同一地址的依赖链。</li><li><a href="#us20260203067a1-fig-5-deps">确认 X21 依赖链</a> ADRP 写 X21，ADD 读写 X21，LDR 将 X21 用于有效地址。这一步不要求读取运行中的 X21。</li><li><a href="#us20260203067a1-fig-5-tuple">PC、运算与三个立即数</a> 匹配后才把起始指令的 PC、运算类型和立即数送给 ALU。若只按拍内检测，图中跨拍候选不会产生这个请求。</li></ul>
+  <p class="figure-evidence">原图 2、3、4；说明书归档段 0014、0025、0027、0028、0029、0030、0031、0032、0033、0034、0048、0049；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00017" aria-label="原文权利要求 17">17</a> <a href="../diagrams/US20260203067A1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>序列检测器</dt><dd>320</dd></div><div><dt>扫描回填传输／判断序列匹配</dt><dd>410/420</dd></div><div><dt>预取 ALU</dt><dd>330</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US20260203067A1</code><span>美国公开申请</span><time datetime="2026-07-16">2026-07-16</time></p>
-  <h1>检测 PC 相对运算以提前发出预取</h1>
-  <p class="english-title" lang="en">Prefetcher based on PC-relative Operations</p>
-  <p class="document-question">load 的地址只取决于 PC 和立即数时，能提前多久算出来？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">序列检测逻辑找到 PC 相对运算及消费结果的 load，从指令编码提取立即数计算地址，提前发数据预取。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>必须能匹配地址计算与后续 load 的寄存器依赖。可发出的时点还受地址翻译及队列额度约束。</dd></div><div><dt>验证方法</dt><dd>固定 ADRP、ADD、LDR 序列和页映射，比较预取启用与关闭。先核对预取地址等于实际 load 地址，再测双方发出时差与实际需求等待。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">常规 load 要等地址生成指令进入流水线，再得到可用于发读的地址。对地址完全由 PC 和立即数决定的指令序列，该公开申请让预取逻辑提前计算。</p>
-    <p>硬件从取指块识别 PC 相对运算及使用结果的 load，再用指令中的立即数提前算目标地址。原图 4–5 的实现先查启动队列去重，再按下一个预取队列的可用条目决定何时发出。</p>
-    <ol class="walkthrough"><li><h3>识别起始运算和后续 load</h3><p>处理器先匹配起始模式，再依次扫描后续指令。部分实施例检查寄存器依赖，排除与地址运算无关的 load。</p></li><li><h3>按照指令语义合成地址</h3><p>对 ADRP、ADD、LDR 一类序列，预取逻辑先把 PC 对齐到页基点，再按每条指令的语义累加偏移。</p></li><li><h3>检查请求资格并入队</h3><p>一些从属实现会先查重和检查可用额度，然后把地址送到 load 单元或相应缓存路径。若已经有目标数据，也可按实施例过滤掉该候选。</p></li><li><h3>等待需求使用，或在清空前端时取消</h3><p>前端 flush 可清掉仍在队列的请求。如果后续 load 实际执行，就有机会使用预取的数据。若 load 未执行，这笔预取会消耗额外资源。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>图 4 的启动队列在请求到队首时才把它送给 LSU。排队期间发生清空事件可删除尚未发出的候选，说明书举了权限级变化和 guarded transition。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>PC 相对地址</dt><dd>用指令自身相关的 PC 和编码立即数计算的目标。</dd></div><div><dt>启动队列</dt><dd>记录部分待发预取，用于查重，并按可用信用向后一队列发送。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">预取器从指令编码计算 load 地址</a></li><li><a href="#fig-2">ADRP、ADD、LDR 如何得到目标地址</a></li><li><a href="#fig-4">预取与实际 load 的发出时差</a></li><li><a href="#fig-3">地址算出后，还要查重和检查队列</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">预取器从指令编码计算 load 地址</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260203067A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="预取器从指令编码计算 load 地址">
-    <img class="paper-image native-image" src="../mechanisms/US20260203067A1/fig-1/diagram.svg" width="480" height="536"
-         style="--paper-width:480px" alt="预取器从指令编码计算 load 地址。检测器识别可提前计算的指令序列。加法器用 PC 和立即数算出目标，送入查重和流控阶段。">
-  </div>
-  <figcaption>
-    <span>检测器识别可提前计算的指令序列。加法器用 PC 和立即数算出目标，送入查重和流控阶段。</span>
-    <span class="figure-evidence">图 1、图 3、图 5，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">ADRP、ADD、LDR 如何得到目标地址</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260203067A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="ADRP、ADD、LDR 如何得到目标地址">
-    <img class="paper-image native-image" src="../mechanisms/US20260203067A1/fig-2/diagram.svg" width="920" height="386"
-         style="--paper-width:920px" alt="ADRP、ADD、LDR 如何得到目标地址。示例从 PC 0x12034 所在的 4 KiB 页基点起算。LDR 的偏移已换算成字节。">
-  </div>
-  <figcaption>
-    <span>示例从 PC 0x12034 所在的 4 KiB 页基点起算。LDR 的偏移已换算成字节。</span>
-    <span class="figure-evidence">图 2，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>；教学算例。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">预取与实际 load 的发出时差</h3></div>
-    <a class="paper-open" href="../mechanisms/US20260203067A1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="预取与实际 load 的发出时差">
-    <img class="paper-image native-image" src="../mechanisms/US20260203067A1/fig-4/diagram.svg" width="658" height="440"
-         style="--paper-width:658px" alt="预取与实际 load 的发出时差。时轴按逻辑阶段排列。权利要求 10、19 的提早边界是先于从指令缓存取得对应 load；数据是否赶上正式需求仍取决于回填和仲裁。">
-  </div>
-  <figcaption>
-    <span>时轴按逻辑阶段排列。权利要求 10、19 的提早边界是先于从指令缓存取得对应 load；数据是否赶上正式需求仍取决于回填和仲裁。</span>
-    <span class="figure-evidence">图 2、图 5、图 6，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>。横轴表示阶段。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">地址算出后，还要查重和检查队列</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">场景</th><th scope="col">地址形成</th><th scope="col">队列或发出</th></tr></thead><tbody><tr><th scope="row">依赖不匹配</th><td>模式尚未成立</td><td>继续扫描，无此候选</td></tr><tr><th scope="row">目标已在启动／预取队列记录</th><td>地址已算出</td><td class="emphasis">去重，拦下新候选</td></tr><tr><th scope="row">接收队列有信用且候选到队首</th><td>地址已算出</td><td>可以向预取队列交付</td></tr><tr><th scope="row">查数据缓存已命中</th><td>候选已进入访存路径</td><td class="emphasis">该实例不向下层发回填</td></tr><tr><th scope="row">清空事件</th><td>候选尚在队列</td><td>清除队列内相应记录</td></tr></tbody></table>
-  <figcaption>
-    <span>相应从属权利要求涵盖查重、命中检查和 credit。发生 flush 时，可撤销还在队列中的请求。</span>
-    <span class="figure-evidence">图 4、图 5，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>从指令编码提前算址</dt><dd>减少等待地址生成 <span class="subdued">原图 2–3，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></span></dd></div><div><dt>队列去重并限制信用</dt><dd>避免重复或超量入队 <span class="subdued">原图 4–5，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>在取指阶段算出目标地址之后，请求还要获得队列名额、相关翻译和数据路径资源。静态依赖清楚只缩短地址产生等待，计算完的地址在队列中也可能迟到。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若进入一个经过权限切换后才开始执行的代码段，候选可能在到达队首前被清空。即使它的 PC 和立即数组合已经算对，切换后也可能要从正常需求路径取数。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>设 ADRP 的 PC 为 0x12034，页大小为 4 KiB。ADRP 相对页基点加 0x2000，关联 ADD 加 0x30，LDR 的字节偏移为 0x08。</dd></div><div><dt>处理结果</dt><dd>页基点为 0x12000。三次加法依次得到 0x14000、0x14030、0x14038。模式匹配确认后，可对 0x14038 发起数据预取。</dd></div><div><dt>结果解读</dt><dd>本例的 LDR 偏移已按指令语义换成字节。何时能入队、完成地址翻译和发出预取，取决于具体实现。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、15、20 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 2–5。检测依赖 PC 和立即数的模式，计算 load 目标并发数据预取。</p>
+  <p>原图 2–5。检测依赖 PC 和立即数的模式，计算 load 目标并发数据预取。编码中的立即数与程序计数器共同确定预取目标地址。预取识别发生在正式 load 执行前。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=detect%20a%20set%20of%20one%20or%20more%20instructions%20that%20specify%20a%20PC-relative%20arithmetic%20operation">F1</a></th><td>从指令中识别依赖立即数的 PC 相对算术，并识别随后发生的 load</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=Certain%20sequences%20of%20instructions%20may%20benefit%20from%20non-traditional%20prefetch%20techniques%20discussed%20herein.%20For%20example%2C%20one%20or">说明书 0013</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=perform%20the%20PC-relative%20arithmetic%20operation%20to%20determine%20a%20target%20address%20for%20the%20load%20operation">F2</a></th><td>识别成功后在预取路径执行 PC 相对算术，算出该 load 的访存目标</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=At%20640%20%2C%20in%20the%20illustrated%20embodiment%2C%20the%20prefetch%20circuitry%20performs%2C%20in%20response%20to%20the%20detection%2C">说明书 0050</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=initiate%20a%20data%20prefetch%20to%20the%20determined%20target%20address">F3</a></th><td>向算得的目标地址启动数据预取</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20illustrating%20example%20PC-relative%20prefetch%20circuitry%2C%20according%20to%20some%20embodiments.%20In">说明书 0017</a> · 原图 5</td></tr></tbody>
@@ -137,48 +205,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=instructions%20of%20a%20hardware%20description%20programming%20language%20stored%20thereon">F8</a></th><td>介质存用于生成硬件模型的硬件描述。</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=detect%20a%20set%20of%20one%20or%20more%20instructions%20that%20specify%20a%20PC-relative%20arithmetic%20operation">F9</a></th><td>模型识别表达地址计算的指令。</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=Note%20that%20prefetch%20circuitry%20110%20may%20support%20various%20instruction%20sequences%20of%20instructions%20and%20example%20sequence%20detector">说明书 0025</a> · <a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=In%20some%20embodiments%2C%20detector%20circuitry%20320%20performs%20a%20multi-pass%20scan%20technique.%20For%20example%2C%20detector%20circuitry%20may">说明书 0030</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=that%20depends%20on%20one%20or%20more%20immediate%20values%20in%20the%20one%20or%20more%20instructions%2C%20followed%20by">F10</a></th><td>运算用指令立即数，且有后续 load。</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=For%20example%2C%20prefetch%20circuitry%20110%20may%20include%20adder%20circuitry%20configured%20to%20add%20the%20program%20counter%20of">说明书 0024</a> · <a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=In%20some%20embodiments%2C%20detector%20circuitry%20320%20performs%20a%20multi-pass%20scan%20technique.%20For%20example%2C%20detector%20circuitry%20may">说明书 0030</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=perform%20the%20PC-relative%20arithmetic%20operation%20to%20determine%20a%20target%20address%20for%20the%20load%20operation">F11</a></th><td>执行 PC 相对运算，得出 load 目标。</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=For%20example%2C%20prefetch%20circuitry%20110%20may%20include%20adder%20circuitry%20configured%20to%20add%20the%20program%20counter%20of">说明书 0024</a> · <a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=At%20420%20%2C%20detector%20circuitry%20320%20determines%20whether%20there%20is%20a%20sequence%20match.%20If%20not%2C%20flow">说明书 0034</a> · 原图 2 · 原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=initiate%20a%20data%20prefetch%20to%20the%20determined%20target%20address">F12</a></th><td>为该地址发起数据预取。</td><td><a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=At%20440%20%2C%20in%20the%20illustrated%20example%2C%20control%20circuitry%20determines%20whether%20there%20is%20a%20hit%20in">说明书 0035</a> · <a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=If%20the%20prefetch%20request%20reaches%20the%20head%20of%20the%20launch%20queue%20at%20460%20%2C%20the%20control">说明书 0036</a> · <a href="https://patents.google.com/patent/US20260203067A1/en#:~:text=FIG.%206%20is%20a%20flow%20diagram%20illustrating%20an%20example%20method%20for%20PC-relative-based%20prefetching%2C%20according%20to%20some">说明书 0044</a> · 原图 4 · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–5。检测依赖 PC 和立即数的模式，计算 load 目标并发数据预取。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将检测对象限定为含 PC 相对运算和 load 的多指令模式。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>先扫描模式起始指令，命中时继续扫描剩余指令。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>在指令缓存回填的指令组中检测模式。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>为跨多个回填拍的匹配保存前几拍状态。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>同批回填可检测多个多指令模式并分别发预取。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>还可识别 PC 相对运算后的 branch，并发出指令预取。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>启动数据预取前查目标地址是否已在预取队列。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>正式预取前查询数据缓存，并将下层预取的数据填入数据缓存。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>在从指令缓存取相关 load 前就执行数据预取。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>用专用单周期加法器计算 PC 相对地址。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-1">1</a></td><td>可使用预取队列，在发生 flush 时清队列。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>根据信用值判断预取队列是否能接收请求。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-1">1</a></td><td>设备还包含显示器、CPU 和网络接口。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>找出 PC 相对运算与后续 load，用立即数算目的地址并发数据预取。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>检测限定为足以表达运算和 load 的多指令模式。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>在指令缓存回填携带的指令中检测模式。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>执行预取前查询数据缓存，并以它作为预取目的缓存。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>从指令缓存取得对应 load 之前就启动预取。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td>独立项</td><td>硬件描述模型包含识别 PC 相对 load、算目的地址并发数据预取的电路。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 2–5。检测依赖 PC 和立即数的模式，计算 load 目标并发数据预取。编码中的立即数与程序计数器共同确定预取目标地址。预取识别发生在正式 load 执行前。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>将检测对象限定为含 PC 相对运算和 load 的多指令模式。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>先扫描模式起始指令，命中时继续扫描剩余指令。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>在指令缓存回填的指令组中检测模式。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>为跨多个回填拍的匹配保存前几拍状态。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>同批回填可检测多个多指令模式并分别发预取。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>还可识别 PC 相对运算后的 branch，并发出指令预取。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>启动数据预取前查目标地址是否已在预取队列。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>正式预取前查询数据缓存，并将下层预取的数据填入数据缓存。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-1">1</a></td><td>在从指令缓存取相关 load 前就执行数据预取。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>用专用单周期加法器计算 PC 相对地址。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-1">1</a></td><td>可使用预取队列，在发生 flush 时清队列。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>根据信用值判断预取队列是否能接收请求。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-1">1</a></td><td>设备还包含显示器、CPU 和网络接口。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>找出 PC 相对运算与后续 load，用立即数算目的地址并发数据预取。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>检测限定为足以表达运算和 load 的多指令模式。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>在指令缓存回填携带的指令中检测模式。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>执行预取前查询数据缓存，并以它作为预取目的缓存。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>从指令缓存取得对应 load 之前就启动预取。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td>独立项</td><td>硬件描述模型包含识别 PC 相对 load、算目的地址并发数据预取的电路。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>按 PC 相对运算及后续 load 识别有效模式，再计算目标并启动数据预取。</dd></div><div><dt>图 2–5</dt><dd>图中给出地址累加的例子、序列检测和预取请求队列。</dd></div><div><dt>公开从属权 <a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20260203067A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>这些项进一步规定查重、部分命中检查、预取时点、flush 以及 credit。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20260203067A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12001847B1.html#engineering">顺序执行流水线在加载缺失期间重叠独立访存</a>
-<p>US20260203067A1 从指令编码提取立即数，再结合该指令的 PC 提前计算后续 load 的地址。US12001847B1 先检测到第一笔数据缺失，再在等待时推测执行后续指令，从中发出第二笔缺失读。两种提前量分别来自地址可从指令求得，以及首笔缺失等待期间还能继续执行。</p></li></ul>
-    <p><a href="../index.html?patent=US20260203067A1#knowledge">在全量关系图上定位 US20260203067A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2025-01-13</dd></div>
-    <div><dt>美国申请日</dt><dd>2025-01-13</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2026-07-16</dd></div>
-    <div><dt>美国申请号</dt><dd>US19/018,977</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Srinivas Keshav、Niket K. Choudhary、Eric J. Furbish</dd></div><div><dt>分类号</dt><dd>G06F9/383、G06F12/0862、G06F9/3001、G06F9/30043、G06F9/30047、G06F9/3005、G06F9/30058、G06F9/323、G06F9/3455、G06F9/3802、G06F9/3804、G06F9/3806、G06F9/3814、G06F9/3832、G06F9/3842</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20260203067A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20260203067A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 公布全文与图文说明，覆盖 116 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 3、图 5、图 2、图 4、图 6。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20260203067A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

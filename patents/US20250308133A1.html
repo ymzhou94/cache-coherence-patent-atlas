@@ -1,123 +1,166 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US20250308133A1 用帧提交的剩余时间提前渲染或下调功率设置 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>按提交余量提前处理帧数据，或降低处理器功耗设置 · US20250308133A1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US20250308133A1</code> · <a href="https://patents.google.com/patent/US20250308133A1/en">专利全文</a></p>
+<h1>按提交余量提前处理帧数据，或降低处理器功耗设置</h1><p class="reading-question">一帧临近提交前还有时间，怎样判断该提前做下一帧的工作，还是把当前工作放到较低功耗设置执行？</p>
+<p class="reading-answer">更新调度器给出提交截止和当前时刻之间的余量。空闲调度器据此选择可提前准备的候选，或估计较低功耗设置下的当前工作仍能否按时完成。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-10-02</dd></div><div><dt>申请号</dt><dd>US19/239,776</dd></div><div><dt>最早优先权</dt><dd>2021-06-06</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler M. Fox、Andrey Pokrovskiy、Aditya Krishnadevan、James R. MONTGOMERIE</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#observers">先确定哪一部分工作可以提前</a></li><li><a href="#prefetch">提交、渲染和显示各有自己的时点</a></li><li><a href="#setting">同一余量也可以用来降低处理器设置</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="observers"><h2>先确定哪一部分工作可以提前</h2><p>如图 1，系统例程提供当前时刻、处理器活动、刷新率等信息。更新调度器确定提交截止并计算余量，空闲调度器询问应用侧观察者。候选可以是即将滚入屏幕的单元格，也可来自触笔轨迹等推断。</p><p>候选处理完成后，可以先缓存准备结果，等需要时交给渲染模块。这里缓存的是处理结果，文献没有指定 CPU cache 的层级。图中的空闲观察者和内核的可运行线程也位于不同层。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　谁计算提交余量，谁给出可以提前的工作</h3>
+    <p id="fig-1-basis">更新调度器基于系统信息计算余量。空闲调度器询问观察者，并决定哪些候选可以在截止前完成。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="谁计算提交余量，谁给出可以提前的工作" style="--figure-width:1340px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 705" role="img" aria-labelledby="us20250308133a1-fig-1-svg-title us20250308133a1-fig-1-svg-desc">
+<title id="us20250308133a1-fig-1-svg-title">谁计算提交余量，谁给出可以提前的工作</title>
+<desc id="us20250308133a1-fig-1-svg-desc">更新调度器基于系统信息计算余量。空闲调度器询问观察者，并决定哪些候选可以在截止前完成。</desc>
+<defs><marker id="us20250308133a1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250308133a1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250308133a1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250308133a1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250308133a1-fig-1-status" d="M 317 165 L 499 165" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250308133a1-fig-1-arrow-data)"/>
+<path id="us20250308133a1-fig-1-slack" d="M 798 165 L 990 165" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-1-arrow-control)"/>
+<path id="us20250308133a1-fig-1-query" d="M 1106 223 L 1106 421" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-1-arrow-control)"/>
+<path id="us20250308133a1-fig-1-reply" d="M 1191 421 L 1191 223" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-1-arrow-return)"/>
+<path id="us20250308133a1-fig-1-run" d="M 990 474 L 798 474" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-1-arrow-control)"/>
+<path id="us20250308133a1-fig-1-commit" d="M 499 474 L 317 474" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250308133a1-fig-1-arrow-main)"/>
+<rect x="333" y="134" width="150" height="18" fill="#f5f5f5"/><text x="408" y="148" class="arrow-label" text-anchor="middle">系统活动与刷新信息</text>
+<rect x="811.5" y="134" width="165" height="18" fill="#f5f5f5"/><text x="894" y="148" class="arrow-label" text-anchor="middle">截止时间与当前余量</text>
+<rect x="942.5" y="305" width="149" height="18" fill="#f5f5f5"/><text x="1017" y="319" class="arrow-label" text-anchor="middle">查询候选或安排执行</text>
+<rect x="1194" y="305" width="112" height="18" fill="#f5f5f5"/><text x="1250" y="319" class="arrow-label" text-anchor="middle">耗时与未来帧</text>
+<rect x="822" y="443" width="144" height="18" fill="#f5f5f5"/><text x="894" y="457" class="arrow-label" text-anchor="middle">应用侧处理候选</text>
+<rect x="336" y="443" width="146" height="18" fill="#f5f5f5"/><text x="409" y="457" class="arrow-label" text-anchor="middle">提交已准备的结果</text>
+<g id="us20250308133a1-fig-1-system"><rect x="35" y="108" width="282" height="107" rx="6" fill="#f5f5f5"/><rect x="35" y="108" width="282" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="176" y="134" class="node-name" text-anchor="middle">系统例程</text><text x="176" y="156" class="node-detail" text-anchor="middle">提供时钟、刷新率、VSync</text><text x="176" y="174" class="node-detail" text-anchor="middle">并报告处理器活动与功耗设置</text></g>
+<g id="us20250308133a1-fig-1-update"><rect x="499" y="107" width="299" height="112" rx="6" fill="#f5f5f5"/><rect x="499" y="107" width="299" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="648.5" y="133" class="node-name" text-anchor="middle">更新调度器</text><text x="648.5" y="155" class="node-detail" text-anchor="middle">给出提交截止时间</text><text x="648.5" y="173" class="node-detail" text-anchor="middle">减去当前时刻得到剩余时间</text></g>
+<g id="us20250308133a1-fig-1-idle"><rect x="990" y="101" width="313" height="122" rx="6" fill="#f5f5f5"/><rect x="990" y="101" width="313" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1146.5" y="127" class="node-name" text-anchor="middle">空闲调度器与预测引擎</text><text x="1146.5" y="149" class="node-detail" text-anchor="middle">依据候选执行时长和截止调度</text><text x="1146.5" y="167" class="node-detail" text-anchor="middle">预测引擎也可位于观察者</text></g>
+<g id="us20250308133a1-fig-1-observer"><rect x="990" y="421" width="313" height="121" rx="6" fill="#f5f5f5"/><rect x="990" y="421" width="313" height="121" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1146.5" y="447" class="node-name" text-anchor="middle">空闲观察者与 UI 组件</text><text x="1146.5" y="469" class="node-detail" text-anchor="middle">如 UITableView、UICollectionView</text><text x="1146.5" y="487" class="node-detail" text-anchor="middle">返回候选、预计耗时、结果所需帧</text></g>
+<g id="us20250308133a1-fig-1-work"><rect x="499" y="422" width="299" height="118" rx="6" fill="#f5f5f5"/><rect x="499" y="422" width="299" height="118" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="648.5" y="448" class="node-name" text-anchor="middle">执行获准工作</text><text x="648.5" y="470" class="node-detail" text-anchor="middle">访问并处理单元格的数据</text><text x="648.5" y="488" class="node-detail" text-anchor="middle">可以先缓存结果，稍后提交</text></g>
+<g id="us20250308133a1-fig-1-render"><rect x="35" y="422" width="282" height="119" rx="6" fill="#f5f5f5"/><rect x="35" y="422" width="282" height="119" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="176" y="448" class="node-name" text-anchor="middle">渲染模块与显示阶段</text><text x="176" y="470" class="node-detail" text-anchor="middle">接收已提交结果，生成帧</text><text x="176" y="488" class="node-detail" text-anchor="middle">随后交给显示流程</text></g>
+<text x="30" y="44" class="signal-title" text-anchor="start">提交通知、候选工作和准备结果走不同方向</text>
+<text x="30" y="680" class="legend" text-anchor="start">这是 UI 框架与渲染流程的调度。系统例程也可包括内核，但文献在此没有指定选核策略。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250308133a1-fig-1-slack">截止时间与当前余量</a> 更新调度器以当前时刻为起点，以相关数据的提交截止为终点。它将余量交给空闲调度器。</li><li><a href="#us20250308133a1-fig-1-query">查询候选或安排执行</a> 空闲调度器按优先级、公平性和剩余时间选择询问哪些已注册观察者。</li><li><a href="#us20250308133a1-fig-1-reply">耗时与未来帧</a> 观察者可报告预估耗时、操作划分和预计使用结果的周期。预测引擎也可以独立于空闲调度器。</li><li><a href="#us20250308133a1-fig-1-commit">提交已准备的结果</a> 处理结果可以先缓存在软件定义的存储中，也能提交给渲染模块。提交完成是下一阶段的输入条件。</li></ul>
+  <p class="figure-evidence">原图 4、5、7、9；说明书归档段 0043、0044、0045、0046、0047、0048、0049、0050、0051、0052、0055、0056、0057、0058、0059、0061、0062、0063、0064、0094、0095、0097、0099、0100、0134；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20250308133A1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>系统例程 / 更新调度器 / 空闲调度器 / 预测引擎</dt><dd>FIG. 4 · 402 / 404 / 406 / 430</dd></div><div><dt>空闲观察者 / 系统信息 / 空闲通知</dt><dd>FIG. 4 · 408a–c / 409 / 411</dd></div><div><dt>查询 / 候选答复 / 调度消息 / 操作结果</dt><dd>FIG. 4 · 413 / 410 / 415 / 420</dd></div><div><dt>调度器、空闲观察者与提交结果</dt><dd>USPTO PDF [0053]–[0074]</dd></div></dl></details>
+</figure></section><section id="prefetch"><h2>提交、渲染和显示各有自己的时点</h2><p>图 2 把原图 6A 和 6B 的结果放到同一时间轴。模拟中重操作需要 9 ms，到 16 ms 再开始就超过 24 ms 的提交截止。若可把其中 5 ms 提至较早的空档，剩余 4 ms 在 20 ms 完成，读图时还要经过 24 ms 开始的渲染与 32 ms 的显示。</p><p>公开申请的独立权利要求 1 和 15 写明用第二操作的结果在第一提交截止前渲染第二帧。原图 6B 是说明书中另一个具体时序，允许先准备部分数据，稍后再提交给渲染模块。原图 7 对候选的时长条件写明“总处理时长小于余量”，可校正该申请概述有一处反写的比较关系。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　提前处理哪一段，能让同一帧赶上提交</h3>
+    <p id="fig-2-basis">重负载操作在目标窗口内做不完时，可把可拆分部分移到更早的空档。提前得到的数据仍需交给渲染模块。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前处理哪一段，能让同一帧赶上提交" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 528" role="img" aria-labelledby="us20250308133a1-fig-2-svg-title us20250308133a1-fig-2-svg-desc">
+<title id="us20250308133a1-fig-2-svg-title">提前处理哪一段，能让同一帧赶上提交</title>
+<desc id="us20250308133a1-fig-2-svg-desc">重负载操作在目标窗口内做不完时，可把可拆分部分移到更早的空档。提前得到的数据仍需交给渲染模块。</desc>
+<defs><marker id="us20250308133a1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250308133a1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250308133a1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250308133a1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us20250308133a1-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="321.6" y1="76" x2="321.6" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="451.2" y1="76" x2="451.2" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">16</text>
+<line x1="580.8" y1="76" x2="580.8" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">24 提交截止</text>
+<line x1="710.4" y1="76" x2="710.4" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">32 原显示时点</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">40</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（ms）</text>
+</g>
+<g id="us20250308133a1-fig-2-baseline"><text x="24" y="136" class="node-name" text-anchor="start">按需处理</text>
+<rect x="451.2" y="112" width="145.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="524.1" y="136" class="arrow-label" text-anchor="middle">准备重负载单元格</text>
+<circle cx="597" cy="131" r="5" fill="#4f5d75"/>
+<text x="597" y="171" class="arrow-label" text-anchor="end">25 ms，超过提交</text></g>
+<g id="us20250308133a1-fig-2-early"><text x="24" y="228" class="node-name" text-anchor="start">提前准备</text>
+<rect x="224.4" y="204" width="81" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="264.9" y="228" class="arrow-label" text-anchor="middle">提前准备</text>
+<rect x="451.2" y="204" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="483.6" y="228" class="arrow-label" text-anchor="middle">余段</text>
+<circle cx="516" cy="223" r="5" fill="#bf4520"/>
+<text x="516" y="263" class="arrow-label" text-anchor="end">20 ms，结果可提交</text></g>
+<g id="us20250308133a1-fig-2-render"><text x="24" y="320" class="node-name" text-anchor="start">渲染同一帧</text>
+<rect x="580.8" y="296" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="613.2" y="320" class="arrow-label" text-anchor="middle">渲染</text>
+<rect x="710.4" y="296" width="64.8" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="742.8" y="320" class="arrow-label" text-anchor="middle">补渲染</text>
+<circle cx="775.2" cy="315" r="5" fill="#4f5d75"/>
+<text x="775.2" y="355" class="arrow-label" text-anchor="end">原目标显示时点：32 ms</text></g>
+<g id="us20250308133a1-fig-2-display"><text x="24" y="412" class="node-name" text-anchor="start">显示是否按计划</text>
+<rect x="710.4" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="412" class="arrow-label" text-anchor="middle">提前例按时显示</text>
+<circle cx="840" cy="407" r="5" fill="#4f5d75"/>
+<text x="840" y="447" class="arrow-label" text-anchor="end">按需例推迟到 40 ms</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">合成时序。处理、提交、渲染和显示是不同动作。提前的工作块与原图 6B 对应。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250308133a1-fig-2-baseline">按需处理</a> 模型忽略提交开销。16 ms 才开始准备耗时 9 ms 的工作会到 25 ms，错过 24 ms 的数据提交截止。</li><li><a href="#us20250308133a1-fig-2-early">提前准备</a> 把可拆分的 5 ms 放在 2–7 ms，余下 4 ms 在 16–20 ms 完成。原图 6B 也允许把部分结果移到更早周期。</li><li><a href="#us20250308133a1-fig-2-render">渲染同一帧</a> 提前例能进入 24 ms 开始的渲染窗口。按需例错过后等 32 ms 的窗口。这里把渲染时长单独取 4 ms。</li><li><a href="#us20250308133a1-fig-2-display">显示是否按计划</a> 最终显示时点和数据提交截止不同。模型中提前例在 32 ms 显示，未提前的分支在 40 ms 才显示。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、6A、6B、7；说明书归档段 0014、0015、0016、0017、0020、0021、0022、0025、0029、0030、0031、0033、0034、0073、0074、0075、0078、0079、0080、0083、0084、0085、0086、0087、0088、0089、0099、0100、0101、0102；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US20250308133A1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>操作处理 / 渲染 / 显示三层</dt><dd>FIG. 2 · 201 / 202 / 203</dd></div><div><dt>按需重负载处理 / 错过的提交截止</dt><dd>FIG. 6A · 610a / 640d</dd></div><div><dt>提前及余段处理 / 提交的结果 / 显示帧</dt><dd>FIG. 6B · 610a / 610b / 610c</dd></div><div><dt>原有周期、提前周期、允许缓存</dt><dd>USPTO PDF [0083]–[0099]</dd></div></dl></details>
+</figure></section><section id="setting"><h2>同一余量也可以用来降低处理器设置</h2><p>图 3 上方说明显式设置的实施例。空闲调度器估计下一工作在既有设置和较低功耗设置下所需的时间，经更新调度器把要求交给系统例程。另一实施例依据 CPU 利用率、出帧速率和漏截止反馈逐步调整。功耗设置沿用公开申请的用语，能耗还取决于处理器运行的时长和后续空闲。</p><p>图 4 用合成数据验证变更截止的边界。当前时刻 2 ms，截止由 8 ms 提前至 6 ms，余量由 6 ms 变为 4 ms。包含预留与候选的 5.5 ms 已经超窗。继续只做必做工作时，较低设置的 3.2 ms 加 0.5 ms 预留仍能按时。余量再缩短到 3.5 ms，原设置的 2 ms 加预留才可容纳。权利要求 9 明确相邻提交间隔不同，权利要求 10–14 继续限定时间比较或具体设置方。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　下一帧工作量不大时，低功耗设置从哪里下发</h3>
+    <p id="fig-3-basis">调度方案根据余量和耗时估计给出设置。另一个实施方式让性能控制器利用执行反馈慢速调节。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="下一帧工作量不大时，低功耗设置从哪里下发" style="--figure-width:1330px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1330 746" role="img" aria-labelledby="us20250308133a1-fig-3-svg-title us20250308133a1-fig-3-svg-desc">
+<title id="us20250308133a1-fig-3-svg-title">下一帧工作量不大时，低功耗设置从哪里下发</title>
+<desc id="us20250308133a1-fig-3-svg-desc">调度方案根据余量和耗时估计给出设置。另一个实施方式让性能控制器利用执行反馈慢速调节。</desc>
+<defs><marker id="us20250308133a1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250308133a1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250308133a1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250308133a1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250308133a1-fig-3-budget" d="M 324 177 L 391 177 Q 399 177 399 185 L 399 275 Q 399 283 407 283 L 472 283" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-3-arrow-control)"/>
+<path id="us20250308133a1-fig-3-cost" d="M 324 510 L 395 510 Q 403 510 403 502 L 403 353 Q 403 345 411 345 L 472 345" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us20250308133a1-fig-3-arrow-data)"/>
+<path id="us20250308133a1-fig-3-choice" d="M 793 286 L 868 286 Q 876 286 876 278 L 876 172 Q 876 164 884 164 L 977 164" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250308133a1-fig-3-arrow-main)"/>
+<path id="us20250308133a1-fig-3-apply" d="M 1133 218 L 1133 368" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-3-arrow-control)"/>
+<path id="us20250308133a1-fig-3-alt" d="M 793 607 L 1125 607 Q 1133 607 1133 599 L 1133 476" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-3-arrow-return)"/>
+<rect x="326.5" y="177" width="143" height="18" fill="#f5f5f5"/><text x="398" y="191" class="arrow-label" text-anchor="middle">截止时间与原设置</text>
+<rect x="331" y="478" width="122" height="18" fill="#f5f5f5"/><text x="392" y="492" class="arrow-label" text-anchor="middle">预计执行成本</text>
+<rect x="828" y="133" width="126" height="18" fill="#f5f5f5"/><text x="891" y="147" class="arrow-label" text-anchor="middle">建议降低设置</text>
+<rect x="1142" y="282" width="140" height="18" fill="#f5f5f5"/><text x="1212" y="296" class="arrow-label" text-anchor="middle">系统例程请求生效</text>
+<rect x="866" y="576" width="188" height="18" fill="#f5f5f5"/><text x="960" y="590" class="arrow-label" text-anchor="middle">另一实施例由反馈环调节</text>
+<g id="us20250308133a1-fig-3-time"><rect x="35" y="128" width="289" height="103" rx="6" fill="#f5f5f5"/><rect x="35" y="128" width="289" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="179.5" y="154" class="node-name" text-anchor="middle">更新调度器与余量</text><text x="179.5" y="176" class="node-detail" text-anchor="middle">提供新提交时点与当前时间</text></g>
+<g id="us20250308133a1-fig-3-ops"><rect x="35" y="460" width="289" height="102" rx="6" fill="#f5f5f5"/><rect x="35" y="460" width="289" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="179.5" y="486" class="node-name" text-anchor="middle">空闲观察者</text><text x="179.5" y="508" class="node-detail" text-anchor="middle">提供下一处理工作的预计耗时</text></g>
+<g id="us20250308133a1-fig-3-policy"><rect x="472" y="249" width="321" height="130" rx="6" fill="#f5f5f5"/><rect x="472" y="249" width="321" height="130" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="632.5" y="275" class="node-name" text-anchor="middle">空闲调度器评估下一操作</text><text x="632.5" y="297" class="node-detail" text-anchor="middle">比较原设置与较低设置下的完成时间</text><text x="632.5" y="315" class="node-detail" text-anchor="middle">选能在提交前完成的设置</text></g>
+<g id="us20250308133a1-fig-3-update"><rect x="977" y="112" width="314" height="106" rx="6" fill="#f5f5f5"/><rect x="977" y="112" width="314" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1134" y="138" class="node-name" text-anchor="middle">更新调度器转发设置</text><text x="1134" y="160" class="node-detail" text-anchor="middle">把降功耗要求送给系统例程</text></g>
+<g id="us20250308133a1-fig-3-sys"><rect x="977" y="368" width="314" height="108" rx="6" fill="#f5f5f5"/><rect x="977" y="368" width="314" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1134" y="394" class="node-name" text-anchor="middle">系统例程与处理器执行</text><text x="1134" y="416" class="node-detail" text-anchor="middle">处理器按所选设置运行</text><text x="1134" y="434" class="node-detail" text-anchor="middle">结果用于按时提交</text></g>
+<g id="us20250308133a1-fig-3-feedback"><rect x="471" y="551" width="322" height="113" rx="6" fill="#f5f5f5"/><rect x="471" y="551" width="322" height="113" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="632" y="577" class="node-name" text-anchor="middle">可选性能控制器</text><text x="632" y="599" class="node-detail" text-anchor="middle">观测 CPU 利用率、出帧速率和漏截止</text><text x="632" y="617" class="node-detail" text-anchor="middle">独立地调处理器功耗设置</text></g>
+<text x="30" y="44" class="signal-title" text-anchor="start">低功耗设置归属于处理器执行前的另一次选择</text>
+<text x="30" y="721" class="legend" text-anchor="start">虚线替代路径从实际反馈出发。功耗设置按文献原词保留。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250308133a1-fig-3-budget">截止时间与原设置</a> 更新调度器送来下一次提交的余量。和本文的提前准备分支相同，余量随刷新周期和当前时间变化。</li><li><a href="#us20250308133a1-fig-3-choice">建议降低设置</a> 空闲调度器判断所需操作能否在较低设置下完成。预估完成时间小于窗口才合适。</li><li><a href="#us20250308133a1-fig-3-apply">系统例程请求生效</a> 原图 5 进一步区分空闲调度器给出的选择、更新调度器转发，以及系统例程要求处理器使用所选设置。</li><li><a href="#us20250308133a1-fig-3-alt">另一实施例由反馈环调节</a> 另一个实施方式用 CPU 利用率、帧产出、提交时刻及是否漏截止反馈调节。性能控制器可在空闲调度器未发降功耗命令时自行调整。</li></ul>
+  <p class="figure-evidence">原图 5、8；说明书归档段 0007、0008、0065、0066、0067、0068、0069、0070、0071、0072、0105、0106、0108、0109、0110、0111、0112、0113、0114、0115；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US20250308133A1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>系统例程 / 更新调度器 / 空闲调度器</dt><dd>FIG. 5 · 502 / 504 / 506</dd></div><div><dt>工作答复 / 功耗消息 / 功耗设置命令</dt><dd>FIG. 5 · 510 / 515 / 520</dd></div><div><dt>识别工作 / 选择功耗设置 / 执行 / 渲染</dt><dd>FIG. 8 · 803–806</dd></div><div><dt>显式设置与可选性能控制器</dt><dd>USPTO PDF [0075]–[0082]</dd></div><div><dt>低功耗路径的详细时序</dt><dd>USPTO PDF [0115]–[0125]</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　提交截止随刷新率提前，两个分支要怎样重新判断</h3>
+    <p id="fig-4-basis">重新计算当前余量。先保护必做工作，再比较可提前的额外工作或低功耗设置所需的完成时间。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提交截止随刷新率提前，两个分支要怎样重新判断" style="--figure-width:1350px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1350 721" role="img" aria-labelledby="us20250308133a1-fig-4-svg-title us20250308133a1-fig-4-svg-desc">
+<title id="us20250308133a1-fig-4-svg-title">提交截止随刷新率提前，两个分支要怎样重新判断</title>
+<desc id="us20250308133a1-fig-4-svg-desc">重新计算当前余量。先保护必做工作，再比较可提前的额外工作或低功耗设置所需的完成时间。</desc>
+<defs><marker id="us20250308133a1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us20250308133a1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us20250308133a1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us20250308133a1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us20250308133a1-fig-4-shorter" d="M 330 157 L 503 157" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-4-arrow-control)"/>
+<path id="us20250308133a1-fig-4-guard" d="M 813 157 L 990 157" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-4-arrow-control)"/>
+<path id="us20250308133a1-fig-4-combine" d="M 1148 218 L 1148 357" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us20250308133a1-fig-4-arrow-main)"/>
+<path id="us20250308133a1-fig-4-required" d="M 990 191 L 913 191 Q 905 191 905 199 L 905 484 Q 905 492 897 492 L 830 492" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us20250308133a1-fig-4-arrow-return)"/>
+<rect x="336" y="126" width="160" height="18" fill="#f5f5f5"/><text x="416" y="140" class="arrow-label" text-anchor="middle">刷新率变化后重算</text>
+<rect x="832" y="126" width="138" height="18" fill="#f5f5f5"/><text x="901" y="140" class="arrow-label" text-anchor="middle">重新比较时长</text>
+<rect x="1151.5" y="271" width="187" height="18" fill="#f5f5f5"/><text x="1245" y="285" class="arrow-label" text-anchor="middle">候选与必做工作都放得下</text>
+<rect x="856.5" y="465" width="129" height="18" fill="#f5f5f5"/><text x="921" y="479" class="arrow-label" text-anchor="middle">只排必做工作</text>
+<g id="us20250308133a1-fig-4-change"><rect x="31" y="104" width="299" height="111" rx="6" fill="#f5f5f5"/><rect x="31" y="104" width="299" height="111" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="180.5" y="130" class="node-name" text-anchor="middle">新提交截止时间</text><text x="180.5" y="152" class="node-detail" text-anchor="middle">更新调度器依据刷新变化</text><text x="180.5" y="170" class="node-detail" text-anchor="middle">重新计算未发生的提交截止</text></g>
+<g id="us20250308133a1-fig-4-remain"><rect x="503" y="106" width="310" height="112" rx="6" fill="#f5f5f5"/><rect x="503" y="106" width="310" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="658" y="132" class="node-name" text-anchor="middle">重新算可用时长</text><text x="658" y="154" class="node-detail" text-anchor="middle">以当前时刻 t 为起点</text><text x="658" y="172" class="node-detail" text-anchor="middle">余量 = 截止 D − t</text></g>
+<g id="us20250308133a1-fig-4-need"><rect x="990" y="105" width="319" height="113" rx="6" fill="#f5f5f5"/><rect x="990" y="105" width="319" height="113" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1149.5" y="131" class="node-name" text-anchor="middle">保护当前帧工作</text><text x="1149.5" y="153" class="node-detail" text-anchor="middle">必做工作的执行和必要开销先预留</text></g>
+<g id="us20250308133a1-fig-4-prefetch"><rect x="990" y="357" width="319" height="104" rx="6" fill="#f5f5f5"/><rect x="990" y="357" width="319" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1149.5" y="383" class="node-name" text-anchor="middle">提前准备下一帧</text><text x="1149.5" y="405" class="node-detail" text-anchor="middle">必做与候选合并后仍可按时</text><text x="1149.5" y="423" class="node-detail" text-anchor="middle">候选还需值得执行</text></g>
+<g id="us20250308133a1-fig-4-small"><rect x="478" y="432" width="352" height="115" rx="6" fill="#f5f5f5"/><rect x="478" y="432" width="352" height="115" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="654" y="458" class="node-name" text-anchor="middle">只做必做工作并选设置</text><text x="654" y="480" class="node-detail" text-anchor="middle">仍有余量时可估算低功耗耗时</text><text x="654" y="498" class="node-detail" text-anchor="middle">较低设置不满足就保留原设置</text></g>
+<text x="30" y="44" class="signal-title" text-anchor="start">刷新率变动后，先重算余量，再决定使用哪条路径</text>
+<text x="30" y="696" class="legend" text-anchor="start">合成例：当前 2 ms。提交从 8 ms 改到 6 ms 后，剩余时间从 6 ms 变为 4 ms。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us20250308133a1-fig-4-shorter">刷新率变化后重算</a> 原文允许先设截止再因刷新率变化而更新。若刷新周期缩短，已经计算过的余量也会一起变。</li><li><a href="#us20250308133a1-fig-4-guard">重新比较时长</a> 在合成例中，2 ms 的必做工作和 0.5 ms 预留先占窗口。预留来自本页模型，用来让临界条件可重复验证。</li><li><a href="#us20250308133a1-fig-4-combine">候选与必做工作都放得下</a> 若再加入预计 3 ms 的额外工作，共需 5.5 ms。余量 6 ms 时可执行，变成 4 ms 时就不够。</li><li><a href="#us20250308133a1-fig-4-required">只排必做工作</a> 仅做必做工作时，较低设置约需 3.2 ms，连同预留为 3.7 ms。若余量进一步降到 3.5 ms，就需要使用原设置。</li></ul>
+  <p class="figure-evidence">原图 4、5、7、8；说明书归档段 0005、0006、0007、0008、0045、0046、0052、0053、0054、0055、0056、0061、0062、0063、0064、0066、0069、0070、0071、0094、0099、0100、0103、0109、0110、0111、0112、0113；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US20250308133A1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>更新调度器 / 截止与余量信息</dt><dd>FIG. 4 · 404 / 411</dd></div><div><dt>计算余量 / 审核总时长 / 执行</dt><dd>FIG. 7 · 704 / 707 / 708</dd></div><div><dt>确定较低设置 / 用该设置执行</dt><dd>FIG. 8 · 804 / 805</dd></div><div><dt>变更截止 / 拿到余量 / 对照总处理时长</dt><dd>USPTO PDF [0056] / [0065] / [0073]</dd></div><div><dt>较低设置和完成时间估计</dt><dd>USPTO PDF [0121]–[0123]</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US20250308133A1</code><span>美国公开申请</span><time datetime="2025-10-02">2025-10-02</time></p>
-  <h1>用帧提交的剩余时间提前渲染或下调功率设置</h1>
-  <p class="english-title" lang="en">Prediction and use of processor inactivity for rendering frames</p>
-  <p class="document-question">当相邻帧的提交周期不同时，调度器怎样决定提前做下一项工作或采用较低功率设置？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">控制器在首帧提交截止前评估剩余时间，预测并执行后续工作，使第二帧可在当前截止前渲染。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>预测的后续操作须有可用输入，执行还要受同一截止时间约束。按下一帧周期调整功耗是另一项权项的机制。</dd></div><div><dt>验证方法</dt><dd>重放相同帧到达和输入流，对照分别在各自窗口渲染与前一窗口预做。记录第二帧开始时间、结果是否可用、失帧和重做次数。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">帧处理、渲染、提交和屏幕显示在不同位置发生。申请分别描述在一次提交之前提前渲染下一帧，以及在不同长度的提交周期下选择较低功率设置。</p>
-    <p>更新调度器计算距下一次提交截止的剩余时间。提前渲染方案在当前余量内预测并执行后续操作，另一方案在较低功率设置下仍按时完成下一项操作。</p>
-    <ol class="walkthrough"><li><h3>计算距提交截止的余量</h3><p>更新调度器读当前时间与提交截止。可变刷新率下，相邻提交周期可以不同。</p></li><li><h3>预测后继帧所需操作</h3><p>空闲调度器可以查询应用观察者，预测引擎用当前帧和内容顺序估计候选工作。</p></li><li><h3>在同一提交时限内渲染第二帧</h3><p>权 1 要求使用第二操作的结果在第一次提交截止前渲染第二帧。说明书还描述将提前处理结果缓存到后续窗口的实现。</p></li><li><h3>可选择仍能守时的更低功率设置</h3><p>权 9 针对不同长度的相邻提交周期。更新调度器可转发功率设置，也可由性能控制器依据提交信息单独作出决定。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>本申请的权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a> 要求在第一次提交截止前渲染第二帧；同族 US12361630B2 的权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a> 采用第二次提交截止前渲染第三帧。权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a> 单列功率设置和不同提交周期。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>帧提交截止</dt><dd>规定该帧相关操作须交出结果的时点。</dd></div><div><dt>性能控制器</dt><dd>可根据提交截止信息调整处理单元功率设置的控制部件。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">利用前一帧截止前的空档</a></li><li><a href="#fig-1">任务预测和提交时限共同决定下一步</a></li><li><a href="#fig-3">给定 8 ms 提交余量时的候选功率设置</a></li><li><a href="#fig-4">两个控制动作各自受什么约束</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">利用前一帧截止前的空档</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250308133A1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="利用前一帧截止前的空档">
-    <img class="paper-image native-image" src="../mechanisms/US20250308133A1/fig-2/diagram.svg" width="920" height="458"
-         style="--paper-width:920px" alt="利用前一帧截止前的空档。预测引擎给出后继操作，空闲调度器核算时间。权 1 要求第二帧利用预测结果，在第一次提交截止之前渲染。">
-  </div>
-  <figcaption>
-    <span>预测引擎给出后继操作，空闲调度器核算时间。权 1 要求第二帧利用预测结果，在第一次提交截止之前渲染。</span>
-    <span class="figure-evidence">图 4、6B–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">任务预测和提交时限共同决定下一步</h3></div>
-    <a class="paper-open" href="../mechanisms/US20250308133A1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="任务预测和提交时限共同决定下一步">
-    <img class="paper-image native-image" src="../mechanisms/US20250308133A1/fig-1/diagram.svg" width="946" height="324"
-         style="--paper-width:946px" alt="任务预测和提交时限共同决定下一步。更新调度器给出提交前的空闲信息。应用观察者和预测引擎提供候选操作；设置功率的实现由更新调度器把消息送给系统例程。">
-  </div>
-  <figcaption>
-    <span>更新调度器给出提交前的空闲信息。应用观察者和预测引擎提供候选操作；设置功率的实现由更新调度器把消息送给系统例程。</span>
-    <span class="figure-evidence">图 4–5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">给定 8 ms 提交余量时的候选功率设置</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">设置和耗时假设</th><th scope="col">预计耗时</th><th scope="col">距截止的剩余时间</th></tr></thead><tbody><tr><th scope="row">高功率设置</th><td>4 ms</td><td>4 ms</td></tr><tr><th scope="row">低功率设置</th><td>7 ms</td><td>1 ms</td></tr><tr><th scope="row">低功率设置且多耗 2 ms</th><td>9 ms</td><td>超出 1 ms</td></tr></tbody></table>
-  <figcaption>
-    <span>预计时间为示例参数。表中只检查能否按时完成，能量还需实测。</span>
-    <span class="figure-evidence">图 5、8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>；教学算例</span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">两个控制动作各自受什么约束</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">判据</th><th scope="col">允许的动作</th><th scope="col">需要核验</th></tr></thead><tbody><tr><th scope="row">可预测且可在当前余量完成</th><td>提前处理后继帧任务</td><td>未来是否复用结果</td></tr><tr><th scope="row">低功耗档也能及时完成</th><td class="emphasis">改变下一周期执行档位</td><td>重新估算截止余量</td></tr><tr><th scope="row">估计耗时超出截止</th><td>不按该候选提前或降档</td><td>后续时序与过期记录</td></tr></tbody></table>
-  <figcaption>
-    <span>提前操作需要可用输入与足够余量。选择较低功率设置也须保证第二项操作按第二次提交截止完成。</span>
-    <span class="figure-evidence">图 4–5、7–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测下一帧操作</dt><dd>提前获得下一帧结果 <span class="subdued">原图 4、6B，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>按截止调整功率设置</dt><dd>保持下一操作及时完成 <span class="subdued">原图 5、8，公开权 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>对每帧记录预测工作实际复用情况、提交晚点比例和每个成功显示帧的能量。重算与废弃结果也计入对应工作量。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>输入方向改变时，提前完成的处理或渲染结果可能被废弃，侵占随后提交所需的计算资源。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>第一个教学例中，当前帧操作结束后还剩 3 ms，预测预取耗时 2 ms。第二个例中，提交余量为 8 ms，高、低功率设置分别预计需 4 和 7 ms。</dd></div><div><dt>处理结果</dt><dd>预测预取可提前安排。低功率设置预计能完成第二个例的工作；若实际比估计多 2 ms，则会超过截止。</dd></div><div><dt>结果解读</dt><dd>数值用于核查时限，其间的能量取决于处理时间和实际功率。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>第一次提交截止前计算余量并预测第二操作在同一时限内执行，再用第二结果在该截止前渲染第二帧。见原图 4、6B。</p>
+  <p>第一次提交截止前计算余量，并预测第二项操作，再用它的结果在该截止前渲染第二帧。原图 4、6B 展开提前准备的实施方式，具体渲染时点以本项文字为准。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=performing%20a%20first%20operation%20before%20a%20first%20commit%20deadline">F1</a></th><td>首项操作在第一次提交截止前执行</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=determining%20a%20remaining%20time%20to%20the%20first%20commit%20deadline%20relative%20to%20a%20current%20time">F2</a></th><td>根据当前时间计算离第一次提交截止还有多久</td><td>原图 4 · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=predicting%20a%20second%20operation%20to%20be%20performed%20before%20the%20first%20commit%20deadline">F3</a></th><td>预测第一次提交截止前可执行的第二项操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=rendering%2C%20using%20the%20second%20result%20of%20the%20second%20operation%2C%20a%20second%20frame%20before%20the%20first%20commit">F4</a></th><td>用第二操作结果赶在第一次提交截止前渲染第二帧</td><td>原图 6B</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=performing%20a%20first%20operation%20before%20a%20first%20commit%20deadline">F1</a></th><td>首项操作在第一次提交截止前执行</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=determining%20a%20remaining%20time%20to%20the%20first%20commit%20deadline%20relative%20to%20a%20current%20time">F2</a></th><td>根据当前时间计算离第一次提交截止还有多久</td><td>原图 4 · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=predicting%20a%20second%20operation%20to%20be%20performed%20before%20the%20first%20commit%20deadline">F3</a></th><td>预测第一次提交截止前可执行的第二项操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=rendering%2C%20using%20the%20second%20result%20of%20the%20second%20operation%2C%20a%20second%20frame%20before%20the%20first%20commit">F4</a></th><td>用第二操作结果在第一次提交截止前渲染第二帧。原图 6B 另画提前准备与后续使用结果。</td><td></td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
   <h4 id="independent-9-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></h4>
@@ -128,54 +171,18 @@
   </table>
 </section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
   <h4 id="independent-15-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></h4>
-  <p>设备包含存储器和执行方法的处理器；按第一次提交截止安排第二操作和第二帧渲染。见原图 4、6B。</p>
+  <p>设备含存储器与运行指令的处理器。第一次提交截止同时约束所预测的第二项操作及利用结果渲染第二帧。原图 6B 展示提前准备及后续显示的另一时序。</p>
   <table class="comparison-table" aria-labelledby="independent-15-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=performing%20a%20first%20operation%20before%20a%20first%20commit%20deadline">F8</a></th><td>首项操作在第一次提交截止前执行</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=determining%20a%20remaining%20time%20to%20the%20first%20commit%20deadline%20relative%20to%20a%20current%20time">F9</a></th><td>根据当前时间计算离第一次提交截止还有多久</td><td>原图 4 · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=predicting%20a%20second%20operation%20to%20be%20performed%20before%20the%20first%20commit%20deadline">F10</a></th><td>预测第一次提交截止前可执行的第二项操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=rendering%2C%20using%20the%20second%20result%20of%20the%20second%20operation%2C%20a%20second%20frame%20before%20the%20first%20commit">F11</a></th><td>用第二操作结果赶在第一次提交截止前渲染第二帧</td><td>原图 6B</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=performing%20a%20first%20operation%20before%20a%20first%20commit%20deadline">F8</a></th><td>首项操作在第一次提交截止前执行</td><td>原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=determining%20a%20remaining%20time%20to%20the%20first%20commit%20deadline%20relative%20to%20a%20current%20time">F9</a></th><td>根据当前时间计算离第一次提交截止还有多久</td><td>原图 4 · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=predicting%20a%20second%20operation%20to%20be%20performed%20before%20the%20first%20commit%20deadline">F10</a></th><td>预测第一次提交截止前可执行的第二项操作</td><td>原图 4</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US20250308133A1/en#:~:text=rendering%2C%20using%20the%20second%20result%20of%20the%20second%20operation%2C%20a%20second%20frame%20before%20the%20first%20commit">F11</a></th><td>用第二操作结果在第一次提交截止前渲染第二帧。原图 6B 另画提前准备与后续使用结果。</td><td></td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>第一次提交截止前计算余量并预测第二操作在同一时限内执行，再用第二结果在该截止前渲染第二帧。见原图 4、6B。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>第一次提交截止由刷新率决定。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>第一次提交截止的周期可变。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>第二操作限定为预取操作。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>第二操作响应滚动，滚动未让新图像的一部分显示。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>第二操作使新图像至少一部分得以显示。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>由更新调度器算余量，预测引擎按当前帧和图像顺序预测第二操作。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>从未来发生概率超过阈值的候选操作中选择。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>不同长度的相邻提交周期内，使用较低的第二功率设置仍须在第二截止前完成操作。见原图 5、8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>以第一功率设置估计完成时间，并与第二次提交截止前的剩余时间比较。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>两个提交截止均由刷新率决定。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>与界面例程交互的调度器决定并指示使用第二设置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>该调度器估计第二设置下的完成时间须小于剩余时间。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>接收提交截止信息的性能控制器可决定并调节第二设置。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>设备包含存储器和执行方法的处理器；按第一次提交截止安排第二操作和第二帧渲染。见原图 4、6B。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>设备中的第一次提交截止由刷新率决定。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>设备执行的第二操作为预取。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>从发生概率超过阈值的多个候选中选第二操作。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>第二操作响应未使新图像的一部分显示的滚动。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>由更新调度器计算余量，预测引擎据当前帧和图像顺序预测第二及额外操作。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>第一次提交截止前计算余量，并预测第二项操作，再用它的结果在该截止前渲染第二帧。原图 4、6B 展开提前准备的实施方式，具体渲染时点以本项文字为准。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>第一次提交截止由刷新率决定。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>第一次提交截止的周期可变。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>第二操作限定为预取操作。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>第二操作响应滚动，滚动未让新图像的一部分显示。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>第二操作使新图像至少一部分得以显示。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>由更新调度器算余量，预测引擎按当前帧和图像顺序预测第二操作。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>从未来发生概率超过阈值的候选操作中选择。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>不同长度的相邻提交周期内，使用较低的第二功率设置仍须在第二截止前完成操作。见原图 5、8。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>以第一功率设置估计完成时间，并与第二次提交截止前的剩余时间比较。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>两个提交截止均由刷新率决定。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>与界面例程交互的调度器决定并指示使用第二设置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-12">12</a></td><td>该调度器估计第二设置下的完成时间须小于剩余时间。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>接收提交截止信息的性能控制器可决定并调节第二设置。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>设备含存储器与运行指令的处理器。第一次提交截止同时约束所预测的第二项操作及利用结果渲染第二帧。原图 6B 展示提前准备及后续显示的另一时序。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>设备中的第一次提交截止由刷新率决定。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>设备执行的第二操作为预取。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>从发生概率超过阈值的多个候选中选第二操作。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>第二操作响应未使新图像的一部分显示的滚动。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>由更新调度器计算余量，预测引擎据当前帧和图像顺序预测第二及额外操作。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 4、6A–B、7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00008" aria-label="原文权利要求 8">8</a></dt><dd>空闲调度、预测后续工作以及同一截止的轨迹对照。</dd></div><div><dt>图 5、8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US20250308133A1/en#CLM-00014" aria-label="原文权利要求 14">14</a></dt><dd>另一方案按后续任务完成时间和截止选择更低功耗状态。</dd></div><div><dt>图 2–3</dt><dd>图示区分处理、渲染、实际显示流水线，在昂贵内容时可能发生卡顿。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US20250308133A1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12361630B2.html#engineering">在帧提交截止前提前渲染或采用较低功率设置</a>
-<p>公开申请继续自 US18/731,141。两份权 1 分别利用第一、第二个提交期限前的剩余时间预测后续图形操作。对照时先确认计时边界，再判断可用于节能的空档。</p></li></ul>
-    <p><a href="../index.html?patent=US20250308133A1#knowledge">在全量关系图上定位 US20250308133A1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-06-06</dd></div>
-    <div><dt>美国申请日</dt><dd>2025-06-16</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-10-02</dd></div>
-    <div><dt>美国申请号</dt><dd>US19/239,776</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler M. Fox、Andrey Pokrovskiy、Aditya Krishnadevan、James R. MONTGOMERIE</dd></div><div><dt>分类号</dt><dd>G06T15/005、G06T1/20、G09G5/003、G09G2320/103</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US20250308133A1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US20250308133A1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 原始公开全文，覆盖 166 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US20250308133A1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

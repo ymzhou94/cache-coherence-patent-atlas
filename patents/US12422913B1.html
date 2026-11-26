@@ -1,133 +1,180 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12422913B1 反馈控制同时限制通电占空比和处理器运行点 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU 的通电占空限制和后续运行点怎样共同调节 · US12422913B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12422913B1</code> · <a href="https://eureka.patsnap.com/patent/US12422913B1">专利全文</a></p>
+<h1>GPU 的通电占空限制和后续运行点怎样共同调节</h1><p class="reading-question">实际功率偏离电池续航目标时，控制器什么时候应缩短通电时间，什么时候要改后续频率和供电？</p>
+<p class="reading-answer">功率误差先约束固定窗口的通电上限；GPU 控制单元再用实际通电时长选下一运行点。提前完成还可能让后续某次通电超过通常上限。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-09-23</dd></div><div><dt>申请号</dt><dd>US18/051,820</dd></div><div><dt>最早优先权</dt><dd>2011-04-20</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Patrick Y. Law、Robert A. Drebin、Keith Cox、James S. ISMAIL</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#loop">一次功率测量如何产生两个执行动作</a></li><li><a href="#actuation">通电上限随停机请求下降，降到下限后保持</a></li><li><a href="#carry">提前完成可影响后续窗口的通电许可</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="loop"><h2>一次功率测量如何产生两个执行动作</h2><p>图 1 从 GPU 的功率观测开始。控制器可以直接量专用 VGPU 轨的电流并结合供电电压，也可以依据 GPU 活动与已校准的系数估计功率。可选低通把这些观测送入较慢的控制环。目标功率在独立权利要求 1、11 中以电池剩余续航为依据；原图 3 则展示由温度误差产生目标的实施例。</p><p>功率误差送入 PI 控制器，比例项响应当前差值，积分项带限幅。原图的非负限制使合成的停机请求不能小于零。GPU 控制单元同时做两件事。它把结果换成本窗口通电上限，再根据实际通电时长从运行点表选择后续工作的频率和供电电压。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　同一个功率误差怎样影响通电上限和下一运行点</h3>
+    <p id="fig-1-basis">功率闭环产生停机请求，GPU 控制单元据此限制通电并观察利用率；运行点表提供下一次供电时的频率和电压。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一个功率误差怎样影响通电上限和下一运行点" style="--figure-width:1340px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 730" role="img" aria-labelledby="us12422913b1-fig-1-svg-title us12422913b1-fig-1-svg-desc">
+<title id="us12422913b1-fig-1-svg-title">同一个功率误差怎样影响通电上限和下一运行点</title>
+<desc id="us12422913b1-fig-1-svg-desc">功率闭环产生停机请求，GPU 控制单元据此限制通电并观察利用率；运行点表提供下一次供电时的频率和电压。</desc>
+<defs><marker id="us12422913b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12422913b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12422913b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12422913b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12422913b1-fig-1-target" d="M 295 177 L 392 177" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-1-arrow-control)"/>
+<path id="us12422913b1-fig-1-tracking" d="M 624 176 L 718 176" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-data)"/>
+<path id="us12422913b1-fig-1-off-command" d="M 965 179 L 1061 179" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-main)"/>
+<path id="us12422913b1-fig-1-to-gates" d="M 1183 231 L 1183 362" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-main)"/>
+<path id="us12422913b1-fig-1-to-opp" d="M 1115 231 L 1115 277 Q 1115 285 1107 285 L 822 285 Q 814 285 814 293 L 814 362" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-1-arrow-control)"/>
+<path id="us12422913b1-fig-1-do-gate" d="M 1183 449 L 1183 576" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-main)"/>
+<path id="us12422913b1-fig-1-set-opp" d="M 800 458 L 800 611 Q 800 619 808 619 L 1040 619" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-main)"/>
+<path id="us12422913b1-fig-1-feedback-activity" d="M 1040 645 L 648 645" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-1-arrow-return)"/>
+<path id="us12422913b1-fig-1-util" d="M 1290 606 L 1310 606 Q 1318 606 1318 598 L 1318 260 Q 1318 252 1310 252 L 1288 252 Q 1280 252 1280 244 L 1280 231" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-1-arrow-return)"/>
+<path id="us12422913b1-fig-1-smooth" d="M 389 618 L 296 618" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12422913b1-fig-1-arrow-data)"/>
+<path id="us12422913b1-fig-1-return" d="M 167 572 L 167 327 Q 167 319 175 319 L 485 319 Q 493 319 493 311 L 493 226" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-1-arrow-return)"/>
+<rect x="300" y="151" width="88" height="18" fill="#f5f5f5"/><text x="344" y="165" class="arrow-label" text-anchor="middle">目标功率</text>
+<rect x="627.5" y="151" width="87" height="18" fill="#f5f5f5"/><text x="671" y="165" class="arrow-label" text-anchor="middle">e 进入反馈</text>
+<rect x="969" y="152" width="88" height="18" fill="#f5f5f5"/><text x="1013" y="166" class="arrow-label" text-anchor="middle">停机请求</text>
+<rect x="1193" y="281" width="136" height="18" fill="#f5f5f5"/><text x="1261" y="295" class="arrow-label" text-anchor="middle">本窗口通电上限</text>
+<rect x="877" y="259" width="168" height="18" fill="#f5f5f5"/><text x="961" y="273" class="arrow-label" text-anchor="middle">按实际通电时间选择</text>
+<rect x="1193" y="495" width="114" height="18" fill="#f5f5f5"/><text x="1250" y="509" class="arrow-label" text-anchor="middle">开关 GPU 域</text>
+<rect x="836" y="592" width="166" height="18" fill="#f5f5f5"/><text x="919" y="606" class="arrow-label" text-anchor="middle">改变后续频率和供电</text>
+<rect x="762.5" y="621" width="169" height="18" fill="#f5f5f5"/><text x="847" y="635" class="arrow-label" text-anchor="middle">VGPU 供电或活动计数</text>
+<rect x="1162.5" y="536" width="145" height="18" fill="#f5f5f5"/><text x="1235" y="550" class="arrow-label" text-anchor="middle">实际通电利用率</text>
+<rect x="302" y="591" width="82" height="18" fill="#f5f5f5"/><text x="343" y="605" class="arrow-label" text-anchor="middle">测得功率</text>
+<rect x="263.5" y="293" width="141" height="18" fill="#f5f5f5"/><text x="334" y="307" class="arrow-label" text-anchor="middle">滤波后的功率</text>
+<g id="us12422913b1-fig-1-battery"><rect x="41" y="133" width="254" height="107" rx="6" fill="#f5f5f5"/><rect x="41" y="133" width="254" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168" y="159" class="node-name" text-anchor="middle">目标功率输入</text><text x="168" y="181" class="node-detail" text-anchor="middle">独权以电池剩余续航为依据</text><text x="168" y="199" class="node-detail" text-anchor="middle">其他例也可用温度或寄存器</text></g>
+<g id="us12422913b1-fig-1-error"><rect x="392" y="133" width="232" height="93" rx="6" fill="#f5f5f5"/><rect x="392" y="133" width="232" height="93" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="508" y="159" class="node-name" text-anchor="middle">功率误差</text><text x="508" y="181" class="node-detail" text-anchor="middle">e = 测得功率 − 目标功率</text></g>
+<g id="us12422913b1-fig-1-pi"><rect x="718" y="132" width="247" height="98" rx="6" fill="#f5f5f5"/><rect x="718" y="132" width="247" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="841.5" y="158" class="node-name" text-anchor="middle">功率跟踪控制</text><text x="841.5" y="180" class="node-detail" text-anchor="middle">比例项加受限积分项</text><text x="841.5" y="198" class="node-detail" text-anchor="middle">负的停机请求压到零</text></g>
+<g id="us12422913b1-fig-1-controller"><rect x="1061" y="131" width="249" height="100" rx="6" fill="#f5f5f5"/><rect x="1061" y="131" width="249" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1185.5" y="157" class="node-name" text-anchor="middle">GPU 控制单元</text><text x="1185.5" y="179" class="node-detail" text-anchor="middle">换算通电上限并读取利用率</text></g>
+<g id="us12422913b1-fig-1-gates"><rect x="1033" y="362" width="270" height="87" rx="6" fill="#f5f5f5"/><rect x="1033" y="362" width="270" height="87" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1168" y="388" class="node-name" text-anchor="middle">电源门控</text><text x="1168" y="410" class="node-detail" text-anchor="middle">控制本窗口内通电时间</text></g>
+<g id="us12422913b1-fig-1-opp"><rect x="690" y="362" width="253" height="96" rx="6" fill="#f5f5f5"/><rect x="690" y="362" width="253" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="816.5" y="388" class="node-name" text-anchor="middle">运行点表与控制</text><text x="816.5" y="410" class="node-detail" text-anchor="middle">时钟源、供电幅度</text><text x="816.5" y="428" class="node-detail" text-anchor="middle">决定后续通电时的频率／电压</text></g>
+<g id="us12422913b1-fig-1-gpu"><rect x="1040" y="576" width="250" height="87" rx="6" fill="#f5f5f5"/><rect x="1040" y="576" width="250" height="87" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1165" y="602" class="node-name" text-anchor="middle">GPU 电源域</text><text x="1165" y="624" class="node-detail" text-anchor="middle">执行任务并返回通电利用率</text></g>
+<g id="us12422913b1-fig-1-measure"><rect x="389" y="572" width="259" height="92" rx="6" fill="#f5f5f5"/><rect x="389" y="572" width="259" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="518.5" y="598" class="node-name" text-anchor="middle">GPU 功率测量</text><text x="518.5" y="620" class="node-detail" text-anchor="middle">VGPU 专用轨测量或活动估计</text></g>
+<g id="us12422913b1-fig-1-filter"><rect x="42" y="572" width="254" height="90" rx="6" fill="#f5f5f5"/><rect x="42" y="572" width="254" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="169" y="598" class="node-name" text-anchor="middle">可选低通滤波</text><text x="169" y="620" class="node-detail" text-anchor="middle">将快速功率观测送入较慢控制</text></g>
+<text x="32" y="44" class="signal-title" text-anchor="start">功率误差通过停机请求限制本窗口；利用率改变后续通电运行点</text>
+<text x="34" y="708" class="legend" text-anchor="start">图中以原图 3 的 PI 路径为例。部分实现还可加应用指定的停机时间。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12422913b1-fig-1-error">功率误差</a> 原图 3 以测得功率减目标功率送入功率跟踪控制。目标可以由温控产生，独立权项要求目标依据电池剩余续航，期望持续时长属于从属权项。</li><li><a href="#us12422913b1-fig-1-off-command">停机请求</a> PI 的比例项跟踪当前误差，积分项累积慢变化并经限幅。原图中合成的负停机请求被压到零，另可加应用指定的停机时间。</li><li><a href="#us12422913b1-fig-1-to-gates">本窗口通电上限</a> GPU 控制单元把停机请求换算为本窗口通电上限。芯片内的电源门控可关掉下游 GPU 域，不等同调低时钟频率。</li><li><a href="#us12422913b1-fig-1-to-opp">按实际通电时间选择</a> GPU 控制单元也按实际通电时间在表里选择后续通电运行点，再通过时钟和电源调节器改变频率或供电幅度。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5、8；说明书归档段 0022、0023、0024、0025、0026、0027、0028、0029、0030、0031、0036、0037、0038、0039、0041、0042、0043、0044、0045、0046、0047、0049、0051、0052、0056；权利要求 1、2、3、4、5、6、8、9、11、12、13、14 <a href="../diagrams/US12422913B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>电源管理单元 PMU</dt><dd>FIG. 2 · 26</dd></div><div><dt>时钟发生器 / 电源</dt><dd>FIG. 2 · 28 / 32</dd></div><div><dt>VGPU 供电测量电路</dt><dd>FIG. 2 · 34</dd></div><div><dt>温度控制单元</dt><dd>FIG. 3 · 42</dd></div><div><dt>功率误差计算</dt><dd>FIG. 3 · 44</dd></div><div><dt>GPU 功率测量 / 可选低通滤波</dt><dd>FIG. 3 · 46 / 48</dd></div><div><dt>功率跟踪控制 / 比例 / 积分 / 限幅 / 非负停机请求</dt><dd>FIG. 3 · 49 / 50 / 52 / 54 / 58</dd></div><div><dt>GPU 控制单元 / 运行点表</dt><dd>FIG. 3 · 62 / 64</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　不要把通电上限、利用率或功率当成同一个观测值</h3>
+    <p id="fig-3-basis">控制器的输出是通电上限，利用率是执行结果。频率与供电电压只描述通电运行点。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">观测量</th><th scope="col">读数位置</th><th scope="col">在闭环中的含义</th></tr></thead><tbody><tr id="fig-3-limit"><th scope="row">通电上限 L</th><td>通电占空控制器 / GPU 控制单元</td><td>固定窗最多允许通电的时长；可写成 L/T</td></tr><tr id="fig-3-util"><th scope="row">实际通电利用率</th><td>GPU 域电源状态与固定窗时间</td><td>实际通电 t_on/T，可随任务结束提前下降</td></tr><tr id="fig-3-operating-point"><th scope="row">通电运行点</th><td>时钟发生器、GPU 供电与状态表</td><td>GPU 有电时的非零频率和电压</td></tr><tr id="fig-3-power"><th scope="row">功率误差 ΔP</th><td>GPU 供电测量 / 活动估计与目标值</td><td>决定停机请求，可先经低通；单位 W</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-limit">通电上限 L</a> 固定窗口 T 的通电上限 L 受功率反馈限制。早完成时实际通电时长可以低于 L。</li><li><a href="#fig-3-operating-point">通电运行点</a> 频率和供电电压属于通电状态的参数。把断电区间算在分母里的平均频率，会掩盖实际运行点。</li><li><a href="#fig-3-power">功率误差 ΔP</a> 功率可以由专用 GPU 供电轨测电流再结合供电电压，或根据 GPU 活动估计。看数据时要标出采样位置和滤波窗口。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、6、7；说明书归档段 0022、0024、0025、0027、0029、0031、0036、0041、0042、0043、0044、0049、0053、0054；权利要求 1、3、4、7、8、9、11、13、14、16 </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>GPU 供电轨与测量电路</dt><dd>FIG. 2 · VGPU / 34</dd></div><div><dt>功率误差与低通滤波</dt><dd>FIG. 3 · 44 / 48</dd></div><div><dt>GPU 控制单元和运行点表</dt><dd>FIG. 3 · 62 / 64</dd></div><div><dt>通电占空比 / 停机时间</dt><dd>FIG. 6 · Duty Cycle / Off Time</dd></div></dl></details>
+</figure></section><section id="actuation"><h2>通电上限随停机请求下降，降到下限后保持</h2><p>图 5 将停机时间请求映射到通电占空比上限。示例在线性区减少允许通电的比例，达到配置的最小占空比后保持。这个最小占空比约束上限的计算。即使控制器不再下调上限，任务提早完成也可让实际通电时间更短。</p><p>图 4 把实际通电和工作时钟画成两条轨。同一固定窗口可分几段供电和关断；运行点只描述有电时的频率与电压。控制器见到低实际利用率，可以选更低运行点，让相同的工作在更低电压下运行更久。较高的实际利用率与已达到最大通电上限，是另一项提高后续运行点的条件。</p><p>以纯计算模型核对这一权衡。假设窗口内最多可通电 10 ms，当工作量为 500 万周期时，600 MHz 需要约 8.33 ms，800 MHz 需要 6.25 ms。若工作量升为 700 万周期，则分别需要约 11.67 ms 和 8.75 ms，前者超出通电许可。假设电压分别为 0.70 V 与 0.82 V，且单位周期的开关活动相同，只算动态能量时低电压点约为高电压点的 73%。这组数值为教学假设，未计唤醒、漏电或内存等待。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　通电可分段，降低后续运行点也会延长工作时间</h3>
+    <p id="fig-4-basis">固定窗内可分多段通电；相邻窗又可以采用两种非零频率与供电电压组成的通电运行点。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="通电可分段，降低后续运行点也会延长工作时间" style="--figure-width:1320px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1320 638" role="img" aria-labelledby="us12422913b1-fig-4-svg-title us12422913b1-fig-4-svg-desc">
+<title id="us12422913b1-fig-4-svg-title">通电可分段，降低后续运行点也会延长工作时间</title>
+<desc id="us12422913b1-fig-4-svg-desc">固定窗内可分多段通电；相邻窗又可以采用两种非零频率与供电电压组成的通电运行点。</desc>
+<defs><marker id="us12422913b1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12422913b1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12422913b1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12422913b1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">对齐两次固定窗口 · 通电许可与本次运行点分开记录</text>
+<g id="us12422913b1-fig-4-window-first"><rect x="240" y="431" width="440" height="39" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="460" y="455" class="arrow-label" text-anchor="middle">通电时长累计到任务完成或窗口上限</text></g>
+<g id="us12422913b1-fig-4-window-next"><rect x="681" y="431" width="450" height="39" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="906" y="455" class="arrow-label" text-anchor="middle">本窗口重新按实际通电时长累计</text></g>
+<line x1="240" x2="240" y1="73" y2="583" stroke="#4f5d75" opacity=".18"/>
+<text x="240" y="64" class="arrow-label" text-anchor="middle">第一个窗口开始</text>
+<line x1="470" x2="470" y1="73" y2="583" stroke="#4f5d75" opacity=".18"/>
+<text x="470" y="64" class="arrow-label" text-anchor="middle">当前任务完成</text>
+<line x1="681" x2="681" y1="73" y2="583" stroke="#4f5d75" opacity=".18"/>
+<text x="681" y="64" class="arrow-label" text-anchor="middle">后续窗口开始</text>
+<line x1="1065" x2="1065" y1="73" y2="583" stroke="#4f5d75" opacity=".18"/>
+<text x="1065" y="64" class="arrow-label" text-anchor="middle">后续任务完成</text>
+<g id="us12422913b1-fig-4-rail"><text x="24" y="163" class="node-name" text-anchor="start">GPU 门控后的供电</text>
+<line x1="240" x2="1132" y1="135" y2="135" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1140" y="139" class="arrow-label" text-anchor="start">域通电</text>
+<line x1="240" x2="1132" y1="201" y2="201" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1140" y="205" class="arrow-label" text-anchor="start">域断电</text>
+<polyline points="240,201 240,135 334,135 334,201 356,201 356,135 470,135 470,201 681,201 681,135 867,135 867,201 899,201 899,135 1065,135 1065,201 1132,201" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="us12422913b1-fig-4-clock"><text x="24" y="303" class="node-name" text-anchor="start">实际工作时钟设定</text>
+<line x1="240" x2="1132" y1="259" y2="259" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1140" y="263" class="arrow-label" text-anchor="start">当前频率</text>
+<line x1="240" x2="1132" y1="300" y2="300" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1140" y="304" class="arrow-label" text-anchor="start">后续频率</text>
+<line x1="240" x2="1132" y1="357" y2="357" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1140" y="361" class="arrow-label" text-anchor="start">门控，无有效时钟</text>
+<polyline points="240,357 240,259 334,259 334,357 356,357 356,259 470,259 470,357 681,357 681,300 867,300 867,357 899,357 899,300 1065,300 1065,357 1132,357" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="us12422913b1-fig-4-fr1"><circle cx="470" cy="135" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="443" y="99" width="140" height="18" fill="#f5f5f5"/><text x="513" y="113" class="arrow-label" text-anchor="middle">当前任务提前完成</text></g>
+<g id="us12422913b1-fig-4-settle"><circle cx="470" cy="201" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="505" y="204" width="216" height="18" fill="#f5f5f5"/><text x="613" y="218" class="arrow-label" text-anchor="middle">本窗口由供电门控进入断电</text></g>
+<g id="us12422913b1-fig-4-fr2"><circle cx="681" cy="300" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="678.5" y="271" width="203" height="18" fill="#f5f5f5"/><text x="780" y="285" class="arrow-label" text-anchor="middle">下一次通电可用另一运行点</text></g>
+<g id="us12422913b1-fig-4-fr2complete"><circle cx="1065" cy="135" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="903.5" y="99" width="205" height="18" fill="#f5f5f5"/><text x="1006" y="113" class="arrow-label" text-anchor="middle">较低运行点示例占用更长</text></g>
+<text x="24" y="616" class="legend" text-anchor="start">定性重绘原图 7 的不等通电区间。电源门控后的局部域与外部 VGPU 输出不是同一测点。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12422913b1-fig-4-fr1">当前任务提前完成</a> 任务提前完成时可直接关 GPU 域。一个固定窗内的通电时长是各段高电平时长之和。</li><li><a href="#us12422913b1-fig-4-settle">本窗口由供电门控进入断电</a> 片上电源门控关断的是本域后级供电。外部电源可以仍按相应幅度输出到开关前级。</li><li><a href="#us12422913b1-fig-4-fr2">下一次通电可用另一运行点</a> 后续工作时钟采用另一非零频率。图内示意频率降低，供电电压仍由运行点表一起确定，断电区间不属于工作运行点。</li><li><a href="#us12422913b1-fig-4-fr2complete">较低运行点示例占用更长</a> 同等工作量在较低频率下往往需要更久。是否按期完成，要比较执行与唤醒等开销的总时长和本固定窗的允许通电时间。</li></ul>
+  <p class="figure-evidence">原图 2、4、7；说明书归档段 0006、0024、0025、0031、0041、0042、0048、0049、0053、0054；权利要求 1、3、4、7、11、13、14 <a href="../diagrams/US12422913B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>GPU 域通电 / 断电</dt><dd>FIG. 7 · GPU On / GPU Off</dd></div><div><dt>固定帧时间</dt><dd>FIG. 7 · Frame Times</dd></div><div><dt>芯片内电源门控</dt><dd>FIG. 2 · Power Gate</dd></div><div><dt>GPU 时钟 / 外部 GPU 供电</dt><dd>FIG. 2 · GPU Clk / VGPU</dd></div><div><dt>选更低 / 更高通电运行点</dt><dd>FIG. 4 · 72 / 76</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　停机请求变大时，通电占空比在哪一段还会下降</h3>
+    <p id="fig-5-basis">功率控制器的输出是停机时间请求，GPU 控制单元把它折算为通电上限，并在最小占空比处限制下降幅度。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="停机请求变大时，通电占空比在哪一段还会下降" style="--figure-width:1190px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1190 567" role="img" aria-labelledby="us12422913b1-fig-5-svg-title us12422913b1-fig-5-svg-desc">
+<title id="us12422913b1-fig-5-svg-title">停机请求变大时，通电占空比在哪一段还会下降</title>
+<desc id="us12422913b1-fig-5-svg-desc">功率控制器的输出是停机时间请求，GPU 控制单元把它折算为通电上限，并在最小占空比处限制下降幅度。</desc>
+<defs><marker id="us12422913b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12422913b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12422913b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12422913b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">横轴为停机时长请求，纵轴为允许的通电占空比</text>
+<g id="us12422913b1-fig-5-saturated"><rect x="657" y="400" width="368" height="38" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="841" y="424" class="arrow-label" text-anchor="middle">增大停机请求也不再减少通电许可</text></g>
+<line x1="214" x2="214" y1="82" y2="450" stroke="#4f5d75" opacity=".18"/>
+<text x="214" y="73" class="arrow-label" text-anchor="middle">零请求</text>
+<line x1="657" x2="657" y1="82" y2="450" stroke="#4f5d75" opacity=".18"/>
+<text x="657" y="73" class="arrow-label" text-anchor="middle">最大有效停机时间</text>
+<line x1="1023" x2="1023" y1="82" y2="450" stroke="#4f5d75" opacity=".18"/>
+<text x="1023" y="73" class="arrow-label" text-anchor="middle">更大的请求</text>
+<g id="us12422913b1-fig-5-duty"><text x="24" y="198" class="node-name" text-anchor="start">通电占空比上限</text>
+<line x1="214" x2="1023" y1="138" y2="138" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1031" y="142" class="arrow-label" text-anchor="start">100%</text>
+<line x1="214" x2="1023" y1="367" y2="367" stroke="#4f5d75" stroke-dasharray="5,4" opacity=".6"/><text x="1031" y="371" class="arrow-label" text-anchor="start">最小通电占空比</text>
+<polyline points="214,138 657,367 1023,367" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="us12422913b1-fig-5-unlimited"><circle cx="214" cy="138" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="259.5" y="109" width="201" height="18" fill="#f5f5f5"/><text x="360" y="123" class="arrow-label" text-anchor="middle">不增加控制器停机时间</text></g>
+<g id="us12422913b1-fig-5-decrease"><circle cx="427" cy="248" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="432.5" y="199" width="223" height="18" fill="#f5f5f5"/><text x="544" y="213" class="arrow-label" text-anchor="middle">有效请求越大，通电许可越短</text></g>
+<g id="us12422913b1-fig-5-clamp"><circle cx="657" cy="367" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="704" y="330" width="192" height="18" fill="#f5f5f5"/><text x="800" y="344" class="arrow-label" text-anchor="middle">占空比到下限后保持</text></g>
+<text x="24" y="545" class="legend" text-anchor="start">重绘原图 6 的分段关系。斜率和最小占空比随实施配置而定，忽略另行施加的应用停机请求。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12422913b1-fig-5-unlimited">不增加控制器停机时间</a> 停机请求为零，原图 6 的通电上限是完整的固定窗。应用另有停机时间请求时，应先合并完整的停机控制输入。</li><li><a href="#us12422913b1-fig-5-decrease">有效请求越大，通电许可越短</a> 有效停机请求增加会减少本窗通电许可。实际通电仍取决于任务完成与门控动作，不能直接由曲线读作利用率。</li><li><a href="#us12422913b1-fig-5-clamp">占空比到下限后保持</a> 到最小占空比后，继续增加请求不再降低输出。这个下限在通电上限的映射处，PI 的积分限幅在前级，两处作用对象不同。</li></ul>
+  <p class="figure-evidence">原图 3、5、6；说明书归档段 0036、0037、0038、0039、0041、0050、0051、0052、0053；权利要求 1、3、4、11、13、14 <a href="../diagrams/US12422913B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>积分快慢项与限幅</dt><dd>FIG. 3 · 52 / 54</dd></div><div><dt>去除负停机请求 / 合并应用指定的停机时间</dt><dd>FIG. 3 · 58 / 60</dd></div><div><dt>减少／增加通电占空比</dt><dd>FIG. 5 · 82 / 86</dd></div><div><dt>尚能减少通电许可的斜段</dt><dd>FIG. 6 · 90</dd></div><div><dt>通电占空比下限</dt><dd>FIG. 6 · 92</dd></div></dl></details>
+</figure></section><section id="carry"><h2>提前完成可影响后续窗口的通电许可</h2><p>图 2 对照权利要求 16、17。任务提前完成后，积分控制器可累计未用的通电时间。专利允许后续任务在满足前述条件时超过通常上限。原图 1 另画低功耗时段与瞬时功率高于静态限制的例子。两者分别讨论通电时间和功率，不能把滤波器的功率输出直接当成累积时长。</p><p>现场验证至少要记录 GPU 电源状态、运行点、实际通电耗时和任务完成边界。外部电源测量与片上门控位置不同，平均功率是否符合目标还要用明确的采样时间和观测点检验。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　提前完成的窗口会怎样改变后续一次通电许可</h3>
+    <p id="fig-2-basis">独立权利要求 16 允许在一个或多个提前完成的固定窗口之后超过通常上限。这里用两帧演示累计未用时间、后续任务和超额许可的关系。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="提前完成的窗口会怎样改变后续一次通电许可" style="--figure-width:1270px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1270 639" role="img" aria-labelledby="us12422913b1-fig-2-svg-title us12422913b1-fig-2-svg-desc">
+<title id="us12422913b1-fig-2-svg-title">提前完成的窗口会怎样改变后续一次通电许可</title>
+<desc id="us12422913b1-fig-2-svg-desc">独立权利要求 16 允许在一个或多个提前完成的固定窗口之后超过通常上限。这里用两帧演示累计未用时间、后续任务和超额许可的关系。</desc>
+<defs><marker id="us12422913b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12422913b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12422913b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12422913b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12422913b1-fig-2-finish" d="M 333 150 L 432 150" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12422913b1-fig-2-arrow-data)"/>
+<path id="us12422913b1-fig-2-unused" d="M 722 148 L 856 148" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-2-arrow-main)"/>
+<path id="us12422913b1-fig-2-credit" d="M 1017 193 L 1017 381" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12422913b1-fig-2-arrow-main)"/>
+<path id="us12422913b1-fig-2-need" d="M 333 431 L 432 431" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12422913b1-fig-2-arrow-data)"/>
+<path id="us12422913b1-fig-2-excess" d="M 722 431 L 856 431" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12422913b1-fig-2-arrow-control)"/>
+<rect x="335.5" y="123" width="93" height="18" fill="#f5f5f5"/><text x="382" y="137" class="arrow-label" text-anchor="middle">计通电时间</text>
+<rect x="730" y="122" width="118" height="18" fill="#f5f5f5"/><text x="789" y="136" class="arrow-label" text-anchor="middle">上限 − 已用</text>
+<rect x="784" y="320" width="270" height="18" fill="#f5f5f5"/><text x="919" y="334" class="arrow-label" text-anchor="middle">此前累计的未用通电时间可用于后续窗口</text>
+<rect x="335.5" y="405" width="95" height="18" fill="#f5f5f5"/><text x="383" y="419" class="arrow-label" text-anchor="middle">任务所需时长</text>
+<rect x="747" y="405" width="82" height="18" fill="#f5f5f5"/><text x="788" y="419" class="arrow-label" text-anchor="middle">超额请求</text>
+<g id="us12422913b1-fig-2-limit1"><rect x="54" y="107" width="279" height="86" rx="6" fill="#f5f5f5"/><rect x="54" y="107" width="279" height="86" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="193.5" y="133" class="node-name" text-anchor="middle">窗口一的通电上限</text><text x="193.5" y="155" class="node-detail" text-anchor="middle">假设上限为固定窗口的 70 单位</text></g>
+<g id="us12422913b1-fig-2-used"><rect x="432" y="107" width="290" height="86" rx="6" fill="#f5f5f5"/><rect x="432" y="107" width="290" height="86" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="577" y="133" class="node-name" text-anchor="middle">前一任务提前完成</text><text x="577" y="155" class="node-detail" text-anchor="middle">实际使用 52 单位，随即关电</text></g>
+<g id="us12422913b1-fig-2-carry"><rect x="856" y="107" width="320" height="86" rx="6" fill="#f5f5f5"/><rect x="856" y="107" width="320" height="86" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1016" y="133" class="node-name" text-anchor="middle">累计未用通电时间</text><text x="1016" y="155" class="node-detail" text-anchor="middle">前一窗口剩余 18 单位</text></g>
+<g id="us12422913b1-fig-2-limit2"><rect x="54" y="392" width="279" height="85" rx="6" fill="#f5f5f5"/><rect x="54" y="392" width="279" height="85" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="193.5" y="418" class="node-name" text-anchor="middle">窗口二的名义通电上限</text><text x="193.5" y="440" class="node-detail" text-anchor="middle">维持 70 单位的教学假设</text></g>
+<g id="us12422913b1-fig-2-later"><rect x="432" y="392" width="290" height="85" rx="6" fill="#f5f5f5"/><rect x="432" y="392" width="290" height="85" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="577" y="418" class="node-name" text-anchor="middle">后续任务需通电 84 单位</text><text x="577" y="440" class="node-detail" text-anchor="middle">超过原上限 14 单位</text></g>
+<g id="us12422913b1-fig-2-grant"><rect x="856" y="381" width="320" height="108" rx="6" fill="#f5f5f5"/><rect x="856" y="381" width="320" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1016" y="407" class="node-name" text-anchor="middle">允许本次额外通电</text><text x="1016" y="429" class="node-detail" text-anchor="middle">示例使用累计时长的 14 单位</text><text x="1016" y="447" class="node-detail" text-anchor="middle">本窗口实际通电 84，仍小于完整窗口</text></g>
+<text x="33" y="45" class="signal-title" text-anchor="start">权利要求 16–17 的跨窗口情形 · 固定窗口均设为 100 个任意时间单位</text>
+<text x="33" y="562" class="legend" text-anchor="start">实际工作仍在固定窗口内完成。举例以未用时长对照额外通电；数值、扣减和初始化策略属于解释模型。</text>
+<text x="33" y="593" class="legend" text-anchor="start">原图 1 画的是功率随时间变化，未直接画出这两个固定窗口。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12422913b1-fig-2-finish">计通电时间</a> 第一帧到任务结束只使用 52 个时间单位。权利要求 7 对应提前完成即可关电，即使 70 个单位的本窗上限尚未用完。</li><li><a href="#us12422913b1-fig-2-unused">上限 − 已用</a> 本例用 70−52 得到 18。权利要求 17 明确积分控制器累计未用通电时间；该量是时间。</li><li><a href="#us12422913b1-fig-2-excess">超额请求</a> 第二帧任务若需 84 个时间单位，就比原上限多 14。权利要求 16 允许在先前提前完成之后超出第一上限。</li><li><a href="#us12422913b1-fig-2-grant">允许本次额外通电</a> 示例从此前累计量中取 14 个单位使任务在固定窗口内完成。专利没有规定此处示意的扣减策略、窗口可持续累计数量或统一释放条件。</li></ul>
+  <p class="figure-evidence">原图 1、3、7；说明书归档段 0019、0020、0024、0025、0036、0037、0044、0054；权利要求 7、10、15、16、17 <a href="../diagrams/US12422913B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>低功耗区间，说明书的反馈背景</dt><dd>FIG. 1 · 16</dd></div><div><dt>积分控制器</dt><dd>FIG. 3 · 52</dd></div><div><dt>固定窗口的示例背景</dt><dd>FIG. 7 · Frame Times</dd></div><div><dt>后续窗口的额外通电许可 / 累计未用时间</dt><dd>权利要求 16 / 17</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=power#catalog">功耗与热控制</a></p>
-  <p class="document-id"><code>US12422913B1</code><span>美国授权专利</span><time datetime="2025-09-23">2025-09-23</time></p>
-  <h1>反馈控制同时限制通电占空比和处理器运行点</h1>
-  <p class="english-title" lang="en">Power management for a graphics processing unit or other circuit</p>
-  <p class="document-question">处理器如何同时约束固定周期的通电时长和下一通电阶段的运行点？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">反馈控制器用电池剩余续航决定目标功率。根据功率偏差，它限制当前窗口的通电时间，并更新后续通电阶段的电压和频率。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>通电占空比限制和 DVFS 运行点影响不同的活动区间。工作负载须允许在固定窗口内暂停和恢复。</dd></div><div><dt>验证方法</dt><dd>固定工作到达和目标功率，对照仅改占空比、仅改运行点和联合控制。记录各窗口的占空比、实际电压频率、功率误差与吞吐。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://eureka.patsnap.com/patent/US12422913B1">原文权利要求 1（全文）</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">电池剩余使用时间可被换算为处理器的目标功率。功率监测电路提供实际测量值。</p>
-    <p>反馈控制器用功率误差计算当前运行点的通电时长上限，再根据非零通电时长选择后续运行点。在固定周期剩余部分断电。权 16 另覆盖提前完成后允许后续周期超出时长上限。</p>
-    <ol class="walkthrough"><li><h3>从电池状态得到目标功率</h3><p>目标还可参考希望保持的续航时间。</p></li><li><h3>测量处理器功率</h3><p>监测电路提供反馈值，控制器计算与目标功率的偏差。</p></li><li><h3>限制固定周期内的通电时间</h3><p>处理器在许可时间内以当前运行点运行，周期余下部分断电。</p></li><li><h3>计算下一个运行点</h3><p>控制器可根据非零许可通电时长选择后续的电压和频率组合。权 3 描述窗口短于门槛时降工作点。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 1、11 都限定当前与后续通电运行点的频率和电压非零，并以非零通电时长参与选择后续运行点。权 16 保护单独的允许超额条件。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>通电占空比（duty cycle）</dt><dd>固定周期内实际通电时间所占的比例，权项限定通电的时间上限。</dd></div><div><dt>运行点（operating point）</dt><dd>本案通电期间使用的电压和频率组合。</dd></div><div><dt>功率误差（power error）</dt><dd>目标功率与监测功率之差，用于计算每轮控制动作。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">提前完成如何改变后续通电许可</a></li><li><a href="#fig-1">一个功率误差输入，两种调节对象</a></li><li><a href="#fig-4">一个完整周期的通电与断电阶段</a></li><li><a href="#fig-3">通电时长、运行点与功率误差的观测口径</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">提前完成如何改变后续通电许可</h3></div>
-    <a class="paper-open" href="../mechanisms/US12422913B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="提前完成如何改变后续通电许可">
-    <img class="paper-image native-image" src="../mechanisms/US12422913B1/fig-2/diagram.svg" width="560" height="380"
-         style="--paper-width:560px" alt="提前完成如何改变后续通电许可。权 16 要求处理器在每个固定周期处理任务。若先前任务更早完成，可在后续周期允许超过原时长上限。">
-  </div>
-  <figcaption>
-    <span>权 16 要求处理器在每个固定周期处理任务。若先前任务更早完成，可在后续周期允许超过原时长上限。</span>
-    <span class="figure-evidence">原图 1，权利要求 16–17 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12422913">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12422913B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">一个功率误差输入，两种调节对象</h3></div>
-    <a class="paper-open" href="../mechanisms/US12422913B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="一个功率误差输入，两种调节对象">
-    <img class="paper-image native-image" src="../mechanisms/US12422913B1/fig-1/diagram.svg" width="852" height="332"
-         style="--paper-width:852px" alt="一个功率误差输入，两种调节对象。监控电路测功率，控制器与目标比较后约束当前通电时长。后续运行点由通电窗口参与决定。">
-  </div>
-  <figcaption>
-    <span>监控电路测功率，控制器与目标比较后约束当前通电时长。后续运行点由通电窗口参与决定。</span>
-    <span class="figure-evidence">原图 2–3、6–7，权利要求 1、11 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12422913">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12422913B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-4-title">一个完整周期的通电与断电阶段</h3></div>
-    <a class="paper-open" href="../mechanisms/US12422913B1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="一个完整周期的通电与断电阶段">
-    <img class="paper-image native-image" src="../mechanisms/US12422913B1/fig-4/diagram.svg" width="528" height="440"
-         style="--paper-width:528px" alt="一个完整周期的通电与断电阶段。当前点只在许可通电时长内有效。周期余段断电，下一次通电采用后续点。横列只表示阶段。">
-  </div>
-  <figcaption>
-    <span>当前点只在许可通电时长内有效。周期余段断电，下一次通电采用后续点。横列只表示阶段。</span>
-    <span class="figure-evidence">原图 1、7，权利要求 1、11 · <a href="#claim-features">权利要求与出处</a> · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12422913">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12422913B1">专利全文</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">通电时长、运行点与功率误差的观测口径</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">调节对象</th><th scope="col">受控量</th><th scope="col">适用阶段</th></tr></thead><tbody><tr><th scope="row">占空比</th><td>周期内许可通电时间</td><td>当前工作点</td></tr><tr><th scope="row">运行点</th><td>频率和供电电压组合</td><td>后续通电阶段</td></tr><tr><th scope="row">反馈目标</th><td>测量功率与目标的偏差</td><td>每轮反馈</td></tr></tbody></table>
-  <figcaption>
-    <span>通电时长和频率、电压组合是不同量。平均功率须用固定周期的能量除以周期时长。</span>
-    <span class="figure-evidence">原图 3、6–7，权利要求 1、11 · <a href="https://image-ppubs.uspto.gov/dirsearch-public/print/downloadPdf/12422913">专利 PDF</a> · <a href="https://eureka.patsnap.com/patent/US12422913B1">专利全文</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>限制固定周期通电时间</dt><dd>调节处理器平均功率 <span class="subdued">原图 1、3、6，权利要求 1、11</span></dd></div><div><dt>按许可通电时长调节运行点</dt><dd>使下一通电阶段的处理能力随控制结果改变 <span class="subdued">原图 7，权利要求 1、3</span></dd></div><div><dt>把提前完成计入后续时长许可</dt><dd>允许部分后续周期超出通电时长上限 <span class="subdued">原图 1，权利要求 16</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>测同一窗口内执行能量、上电和断电过渡能量，以及板上未关断部分的背景能量。把实际通电时长、运行点驻留和任务完成量分别记录。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>让短交互任务频繁在固定周期的断电段到达。若降低通电比使从到达到开始执行的 P99 增大，而各次过渡能量抵消了节省，配额不适合当前到达相位。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>实际功率超过续航目标给出的限制，控制器算得许可通电窗口较短。</dd></div><div><dt>处理结果</dt><dd>先约束当前周期的通电窗口，并按控制律决定后续运行点。若触发相应门槛，还可换到较低工作点。</dd></div><div><dt>结果解读</dt><dd>将固定周期中通电比例和运行点记录为两个变量。分别比较处理器能耗、工作量和完成时延。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、11、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 1</h4>
   <p>芯片含处理器、功率监测和反馈控制器，用剩余电池使用时间设目标并联合调整通电时长和后续运行点。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=power%20monitor%20circuitry%20coupled%20to%20the%20processor">F1</a></th><td>芯片包含与处理器相连的功率监测电路。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=controller%20circuitry%20coupled%20to%20the%20power%20monitor%20circuitry%20and%20the%20processor">F2</a></th><td>反馈控制电路连接功率监测电路与处理器，多轮执行控制。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20the%20power%20management%20unit%20described%20below%20may%20be%20configured%20to%20manage%20the%20duty">说明书 0020</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20power%20measurement%20representing%20power%20consumed%20in%20the%20processor">F3</a></th><td>得到表示处理器消耗功率的测量值。</td><td>原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20target%20power%20measurement%20based%20on%20an%20amount%20of%20remaining%20battery%20life">F4</a></th><td>以供电电池剩余使用时间形成目标功率。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20target%20power%20may%20be%20determined%20in%20a%20variety%20of%20fashions.%20For%20example%2C%20the%20target%20power">说明书 0026</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=an%20error%20between%20the%20target%20power%20measurement%20and%20a%20power%20measurement%20generated%20by%20the%20power%20monitor">F5</a></th><td>求目标功率与监测电路给出的测量值之差。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20summator%2044%20may%20be%20the%20beginning%20of%20the%20negative%20feedback%20loop%20that%20is%20configured%20to">说明书 0037</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20first%20amount%20of%20time%20within%20a%20given%20fixed%20time%20period">F6</a></th><td>依据功率误差设置固定周期内的通电时间上限。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 1 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=powered%20off%20during%20a%20remainder%20of%20the%20fixed%20time%20period%20beyond%20the%20limit">F7</a></th><td>超出允许时长的周期余段对处理器断电。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=at%20a%20current%20powered%20first%20operating%20point%20of%20the%20processor%20having%20a%20first%20non-zero%20frequency%20and">F8</a></th><td>在当前通电运行点求上限，此时频率和电压均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20powered%20second%20operating%20point%2C%20having%20a%20second%20non-zero%20frequency%20and%20a%20second%20non-zero%20supply%20voltage">F9</a></th><td>控制器另选择后续通电运行点，电压与频率均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=select%20the%20second%20operating%20point%20based%20on%20a%20non-zero%20length%20of%20the%20first%20amount%20of%20time">F10</a></th><td>后续运行点选择取决于前述非零通电时长。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 7</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=power%20monitor%20circuitry%20coupled%20to%20the%20processor">F1</a></th><td>芯片包含与处理器相连的功率监测电路。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=controller%20circuitry%20coupled%20to%20the%20power%20monitor%20circuitry%20and%20the%20processor">F2</a></th><td>反馈控制电路连接功率监测电路与处理器，多轮执行控制。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20the%20power%20management%20unit%20described%20below%20may%20be%20configured%20to%20manage%20the%20duty">说明书 0020</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20power%20measurement%20representing%20power%20consumed%20in%20the%20processor">F3</a></th><td>得到表示处理器消耗功率的测量值。</td><td>原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20target%20power%20measurement%20based%20on%20an%20amount%20of%20remaining%20battery%20life">F4</a></th><td>以供电电池剩余使用时间形成目标功率。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20target%20power%20may%20be%20determined%20in%20a%20variety%20of%20fashions.%20For%20example%2C%20the%20target%20power">说明书 0026</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=an%20error%20between%20the%20target%20power%20measurement%20and%20a%20power%20measurement%20generated%20by%20the%20power%20monitor">F5</a></th><td>求目标功率与监测电路给出的测量值之差。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20summator%2044%20may%20be%20the%20beginning%20of%20the%20negative%20feedback%20loop%20that%20is%20configured%20to">说明书 0037</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20first%20amount%20of%20time%20within%20a%20given%20fixed%20time%20period">F6</a></th><td>依据功率误差设置固定周期内的通电时间上限。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 1 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=powered%20off%20during%20a%20remainder%20of%20the%20fixed%20time%20period%20beyond%20the%20limit">F7</a></th><td>超出允许时长的周期余段对处理器断电。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=at%20a%20current%20powered%20first%20operating%20point%20of%20the%20processor%20having%20a%20first%20non-zero%20frequency%20and">F8</a></th><td>在当前通电运行点求上限，此时频率和电压均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20powered%20second%20operating%20point%2C%20having%20a%20second%20non-zero%20frequency%20and%20a%20second%20non-zero%20supply%20voltage">F9</a></th><td>控制器另选择后续通电运行点，电压与频率均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=select%20the%20second%20operating%20point%20based%20on%20a%20non-zero%20length%20of%20the%20first%20amount%20of%20time">F10</a></th><td>后续运行点选择取决于前述非零通电窗口。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 7</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-11" aria-labelledby="independent-11-title">
   <h4 id="independent-11-title">权利要求 11</h4>
   <p>方法循环测功率并与电池状态导出的目标比较，确定当前点通电窗口及下一通电运行点。</p>
   <table class="comparison-table" aria-labelledby="independent-11-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=performing%2C%20by%20a%20computing%20system%2C%20the%20following%20procedure%20multiple%20times%20in%20a%20feedback%20loop">F11</a></th><td>计算系统循环执行下列控制动作。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20the%20power%20management%20unit%20described%20below%20may%20be%20configured%20to%20manage%20the%20duty">说明书 0020</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20power%20measurement%20representing%20power%20consumed%20in%20a%20processor">F12</a></th><td>得到表示处理器消耗功率的测量值。</td><td>原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20target%20power%20measurement%20based%20on%20an%20amount%20of%20remaining%20battery%20life">F13</a></th><td>以供电电池剩余使用时间形成目标功率。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20target%20power%20may%20be%20determined%20in%20a%20variety%20of%20fashions.%20For%20example%2C%20the%20target%20power">说明书 0026</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=an%20error%20between%20the%20target%20power%20measurement%20and%20the%20power%20measurement">F14</a></th><td>求目标功率与监测电路给出的测量值之差。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20summator%2044%20may%20be%20the%20beginning%20of%20the%20negative%20feedback%20loop%20that%20is%20configured%20to">说明书 0037</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20first%20amount%20of%20time%20within%20a%20given%20fixed%20time%20period">F15</a></th><td>依据功率误差设置固定周期内的通电时间上限。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 1 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=powered%20off%20during%20a%20remainder%20of%20the%20fixed%20time%20period%20beyond%20the%20limit">F16</a></th><td>超出允许时长的周期余段对处理器断电。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=at%20a%20current%20powered%20operating%20point%20of%20the%20processor%20having%20a%20first%20non-zero%20frequency%20and%20a">F17</a></th><td>在当前通电运行点求上限，此时频率和电压均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20powered%20second%20operating%20point%2C%20having%20a%20second%20non-zero%20frequency%20and%20a%20second%20non-zero%20supply%20voltage">F18</a></th><td>控制器另选择后续通电运行点，电压与频率均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=select%20the%20second%20operating%20point%20based%20on%20a%20non-zero%20length%20of%20the%20first%20amount%20of%20time">F19</a></th><td>后续运行点选择取决于前述非零通电时长。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 7</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=performing%2C%20by%20a%20computing%20system%2C%20the%20following%20procedure%20multiple%20times%20in%20a%20feedback%20loop">F11</a></th><td>计算系统循环执行下列控制动作。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20the%20power%20management%20unit%20described%20below%20may%20be%20configured%20to%20manage%20the%20duty">说明书 0020</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20power%20measurement%20representing%20power%20consumed%20in%20a%20processor">F12</a></th><td>得到表示处理器消耗功率的测量值。</td><td>原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20target%20power%20measurement%20based%20on%20an%20amount%20of%20remaining%20battery%20life">F13</a></th><td>以供电电池剩余使用时间形成目标功率。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20target%20power%20may%20be%20determined%20in%20a%20variety%20of%20fashions.%20For%20example%2C%20the%20target%20power">说明书 0026</a> · 原图 2 · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=an%20error%20between%20the%20target%20power%20measurement%20and%20the%20power%20measurement">F14</a></th><td>求目标功率与监测电路给出的测量值之差。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20summator%2044%20may%20be%20the%20beginning%20of%20the%20negative%20feedback%20loop%20that%20is%20configured%20to">说明书 0037</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20first%20amount%20of%20time%20within%20a%20given%20fixed%20time%20period">F15</a></th><td>依据功率误差设置固定周期内的通电时间上限。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 1 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=powered%20off%20during%20a%20remainder%20of%20the%20fixed%20time%20period%20beyond%20the%20limit">F16</a></th><td>超出允许时长的周期余段对处理器断电。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=at%20a%20current%20powered%20operating%20point%20of%20the%20processor%20having%20a%20first%20non-zero%20frequency%20and%20a">F17</a></th><td>在当前通电运行点求上限，此时频率和电压均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 6 · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=a%20powered%20second%20operating%20point%2C%20having%20a%20second%20non-zero%20frequency%20and%20a%20second%20non-zero%20supply%20voltage">F18</a></th><td>控制器另选择后续通电运行点，电压与频率均非零。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20supply%20voltage%20to%20power-gated%20circuits%20such%20as%20the%20GPU%2024%20may%20be%20controlled%20via%20voltage">说明书 0024</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=select%20the%20second%20operating%20point%20based%20on%20a%20non-zero%20length%20of%20the%20first%20amount%20of%20time">F19</a></th><td>后续运行点选择取决于前述非零通电窗口。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 7</td></tr></tbody>
   </table>
 </section><section class="independent-claim" id="independent-16" aria-labelledby="independent-16-title">
   <h4 id="independent-16-title">权利要求 16</h4>
@@ -137,48 +184,12 @@
     <tbody><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=generating%20a%20power%20measurement%20representing%20power%20consumed%20in%20a%20processor">F20</a></th><td>测量处理器消耗的功率。</td><td>原图 2</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=generating%20a%20target%20power%20measurement%20for%20the%20processor">F21</a></th><td>形成处理器的功率目标。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20the%20power%20management%20unit%20described%20below%20may%20be%20configured%20to%20manage%20the%20duty">说明书 0020</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=determining%20an%20error%20between%20the%20target%20power%20measurement%20and%20the%20power%20measurement">F22</a></th><td>计算测量功率与目标功率的差量。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=The%20summator%2044%20may%20be%20the%20beginning%20of%20the%20negative%20feedback%20loop%20that%20is%20configured%20to">说明书 0037</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=the%20first%20limit%20amount%20is%20determined%20at%20a%20current%20operating%20point%20of%20the%20processor%20based%20on">F23</a></th><td>固定周期通电时长的上限由当前运行点下的功率误差决定。</td><td><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=In%20one%20embodiment%2C%20a%20system%20includes%20power%20management%20control%20that%20controls%20a%20duty%20cycle%20of%20a">说明书 0006</a> · 原图 1 · 原图 6</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=the%20processor%20performs%20a%20task%20within%20each%20of%20the%20plurality%20of%20fixed%20time%20periods">F24</a></th><td>处理器在各固定周期执行一项任务。</td><td>原图 1</td></tr><tr><th scope="row"><a href="https://eureka.patsnap.com/patent/US12422913B1#:~:text=permitting%20the%20processor%20to%20exceed%20the%20first%20limit%20amount%20subsequent%20to%20one%20or%20more%20of%20the">F25</a></th><td>早先至少一个周期内任务提前完成后，允许后续周期超过先前的通电时长上限。</td><td>原图 1</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>芯片含处理器、功率监测和反馈控制器，用剩余电池使用时间设目标并联合调整通电时长和后续运行点。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>生成目标功率时增加电池剩余电量的期望续航时长。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>通电时长低于第一阈值时降低下一运行点。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>通电时长高于第二阈值，且通电上限已达最大时，提升下一运行点。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>用第二处理器执行介质中的指令实现部分控制功能。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>其余控制功能再由控制器内的硬件电路实现。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>任务完成即可在固定周期内断电，即使尚未耗尽通电上限。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>根据处理器活动估算被观测的功率。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>直接测量处理器供电侧的功耗作为观测值。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>先前有周期提前完成时，允许后续周期超过原通电时长上限。</td></tr><tr id="claim-11"><th scope="row">11</th><td>独立项</td><td>方法循环测功率并与电池状态导出的目标比较，确定当前点通电窗口及下一通电运行点。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-11">11</a></td><td>方法另以电池剩余电量的目标持续时间决定目标功率。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-11">11</a></td><td>检测到窗口内通电时长偏低后降低下一运行点。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-13">13</a></td><td>通电时长高于第二阈值且上限达到最大后才提高下一运行点。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-11">11</a></td><td>先前固定周期内提前完成任务后允许后续周期越过原上限。</td></tr><tr id="claim-16"><th scope="row">16</th><td>独立项</td><td>固定周期运行任务，按功率误差求当前点通电上限，若之前一个或多个周期提前完成则以后可超过上限。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-16">16</a></td><td>使用积分控制器累计先前若干固定窗口未耗用的时间。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>图 2–3，权 1–2</dt><dd>功率监测、目标来源和反馈控制器。</dd></div><div><dt>图 6–7，权 1、3</dt><dd>固定周期内的通电占空比与运行点联动。</dd></div><div><dt>图 1、权 11</dt><dd>用重复反馈过程解释功率随时间变化。</dd></div></dl>
-    <p class="source-links"><a href="https://eureka.patsnap.com/patent/US12422913B1">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11513576B2.html#engineering">按客户端响应速度并行分配功率预算</a>
-<p>US12422913B1 由功率误差限制一段固定周期内处理器的通电时长，并据通电时长选后续电压与频率运行点。US11513576B2 则为响应速度不同的客户端设置并行反馈环并分配功率预算。比较两者时应分开测量处理器实际通电时长、运行点与各客户端获配的预算。</p></li></ul>
-    <p><a href="../index.html?patent=US12422913B1#knowledge">在全量关系图上定位 US12422913B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2011-04-20</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-11-01</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-09-23</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/051,820</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Patrick Y. Law、Robert A. Drebin、Keith Cox、James S. ISMAIL</dd></div><div><dt>分类号</dt><dd>G06F1/3265、G06F1/206、G06F1/3203、G06F1/3206、G06F1/3218、G06F1/324、G06F1/3287、G06F1/3296、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12422913B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://eureka.patsnap.com/patent/US12422913B1">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对授权专利全文，覆盖 57 个说明书段落、17 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12422913B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

@@ -1,119 +1,152 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11544193B2 用预期缓存状态处理探测与回填竞态 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用预期缓存状态处理早到的 snoop · US11544193B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11544193B2</code> · <a href="https://patents.google.com/patent/US11544193B2/en">专利全文</a></p>
+<h1>用预期缓存状态处理早到的 snoop</h1><p class="reading-question">目录已经把独占副本记给 CA0，下一笔 snoop 却先于给 CA0 的回填到达。CA0 怎样避免提前转发？</p>
+<p class="reading-answer">控制器把目录所见的 CA0 状态 E 放入这条 snoop。CA0 当下查到 I，便暂存 snoop，等前一笔回填使本地状态匹配后再转发数据。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-01-03</dd></div><div><dt>申请号</dt><dd>US17/315,725</dd></div><div><dt>最早优先权</dt><dd>2020-09-11</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>James Vash、Gaurav Garg、Brian P. Lilly、Ramesh B. Gunna、Steven R. Hutsell、Lital Levy-Rubin、Per H. Hammarlund、Harshavardhan Kaushikkar</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#state-order">控制器排请求，代理排到达后的操作</a></li><li><a href="#races">两种早到消息各自在什么事件后可执行</a></li><li><a href="#completions">重新比较发生在前一笔请求完成之后</a></li><li><a href="#boundary">预期字段决定能否处理，snoop 类型决定做什么</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="state-order"><h2>控制器排请求，代理排到达后的操作</h2><p>控制器按地址处理请求。发出本轮 snoop 后，实施例中的目录可先记下本轮将导致的缓存状态，再受理同址后续请求。后续 snoop 带上目录已经记录的目标代理状态。</p><p>代理把本地状态与 snoop 携带的预期状态比较。如果不匹配，它等待较早请求的相关消息改变本地状态，再处理暂存 snoop。具体实现可将本地 M 作为目录所记 E 的一致状态。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　目录记录与本地缓存标签在接收端会合</h3>
+    <p id="fig-1-basis">一条 snoop 同时有预期当前状态和操作类型。接收端先验证状态，再执行转发、失效或应答。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="目录记录与本地缓存标签在接收端会合" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 578" role="img" aria-labelledby="us11544193b2-fig-1-svg-title us11544193b2-fig-1-svg-desc">
+<title id="us11544193b2-fig-1-svg-title">目录记录与本地缓存标签在接收端会合</title>
+<desc id="us11544193b2-fig-1-svg-desc">一条 snoop 同时有预期当前状态和操作类型。接收端先验证状态，再执行转发、失效或应答。</desc>
+<defs><marker id="us11544193b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11544193b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11544193b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11544193b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11544193b2-fig-1-lookup" d="M 114 166 L 114 218" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-1-arrow-data)"/>
+<path id="us11544193b2-fig-1-expected" d="M 224 250 L 401 250" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-1-arrow-control)"/>
+<path id="us11544193b2-fig-1-compare" d="M 224 407 L 299 407 Q 307 407 307 399 L 307 299 Q 307 291 315 291 L 401 291" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-1-arrow-data)"/>
+<path id="us11544193b2-fig-1-pend" d="M 440 315 L 440 411" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-1-arrow-control)"/>
+<path id="us11544193b2-fig-1-replay" d="M 595 411 L 595 315" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-1-arrow-return)"/>
+<path id="us11544193b2-fig-1-go" d="M 633 265 L 763 265" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11544193b2-fig-1-arrow-main)"/>
+<rect x="128.5" y="184" width="75" height="18" fill="#f5f5f5"/><text x="166" y="198" class="arrow-label" text-anchor="middle">目标状态</text>
+<rect x="238" y="223" width="146" height="18" fill="#f5f5f5"/><text x="311" y="237" class="arrow-label" text-anchor="middle">snoop 类型＋预期状态</text>
+<rect x="311.5" y="265" width="79" height="18" fill="#f5f5f5"/><text x="351" y="279" class="arrow-label" text-anchor="middle">本地状态</text>
+<rect x="323" y="356" width="98" height="18" fill="#f5f5f5"/><text x="372" y="370" class="arrow-label" text-anchor="middle">不匹配时暂存</text>
+<rect x="612" y="377" width="120" height="18" fill="#f5f5f5"/><text x="672" y="391" class="arrow-label" text-anchor="middle">前序完成后重检</text>
+<rect x="651" y="238" width="92" height="18" fill="#f5f5f5"/><text x="697" y="252" class="arrow-label" text-anchor="middle">数据或应答</text>
+<g id="us11544193b2-fig-1-dir"><rect x="38" y="88" width="170" height="78" rx="6" fill="#f5f5f5"/><rect x="38" y="88" width="170" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="123" y="114" class="node-name" text-anchor="middle">一致性目录</text><text x="123" y="136" class="node-detail" text-anchor="middle">记录各代理的状态</text></g>
+<g id="us11544193b2-fig-1-cc"><rect x="38" y="218" width="186" height="78" rx="6" fill="#f5f5f5"/><rect x="38" y="218" width="186" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="131" y="244" class="node-name" text-anchor="middle">一致性控制器</text><text x="131" y="266" class="node-detail" text-anchor="middle">选择目标与 snoop 类型</text></g>
+<g id="us11544193b2-fig-1-cache"><rect x="38" y="368" width="186" height="78" rx="6" fill="#f5f5f5"/><rect x="38" y="368" width="186" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="131" y="394" class="node-name" text-anchor="middle">本地缓存</text><text x="131" y="416" class="node-detail" text-anchor="middle">提供实际标签状态</text></g>
+<g id="us11544193b2-fig-1-ctrl"><rect x="401" y="211" width="232" height="104" rx="6" fill="#f5f5f5"/><rect x="401" y="211" width="232" height="104" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="517" y="237" class="node-name" text-anchor="middle">代理请求控制电路</text><text x="517" y="259" class="node-detail" text-anchor="middle">对照预期状态与本地状态</text><text x="517" y="277" class="node-detail" text-anchor="middle">按 snoop 类型执行</text></g>
+<g id="us11544193b2-fig-1-buf"><rect x="402" y="411" width="232" height="88" rx="6" fill="#f5f5f5"/><rect x="402" y="411" width="232" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="518" y="437" class="node-name" text-anchor="middle">待处理 snoop 缓冲项</text><text x="518" y="459" class="node-detail" text-anchor="middle">保存动作和预期状态</text><text x="518" y="477" class="node-detail" text-anchor="middle">等待前序完成</text></g>
+<g id="us11544193b2-fig-1-dst"><rect x="763" y="225" width="160" height="80" rx="6" fill="#f5f5f5"/><rect x="763" y="225" width="160" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="843" y="251" class="node-name" text-anchor="middle">完成消息目的端</text><text x="843" y="273" class="node-detail" text-anchor="middle">读请求方或控制器</text></g>
+<text x="38" y="53" class="signal-title" text-anchor="start">预期状态和实际状态在代理端比较</text>
+<text x="38" y="546" class="legend" text-anchor="start">操作类型指定要执行的动作。状态匹配后，代理才可执行它。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11544193b2-fig-1-expected">snoop 的预期字段</a> 控制器从一致性目录 取目标代理状态。snoop 带两个条件。预期状态用于判断是否可以执行，操作类型指定应执行的动作。</li><li><a href="#us11544193b2-fig-1-compare">接收端状态比较</a> 把 snoop 携带的状态和本地缓存 实际标签作比较。不匹配的消息可挂起，待另一个请求推动状态。</li><li><a href="#us11544193b2-fig-1-replay">前序完成后重试</a> 回填或其他完成消息推动本地状态，与预期相符后处理暂存 snoop。</li></ul>
+  <p class="figure-evidence">原图 1、5、6、8、10；说明书归档段 0030、0033、0034、0045、0054、0055、0058、0064、0065、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11544193B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性控制器</dt><dd>24</dd></div><div><dt>一致性目录</dt><dd>26</dd></div><div><dt>本地缓存</dt><dd>18</dd></div><div><dt>代理请求控制电路</dt><dd>60</dd></div><div><dt>在途请求缓冲区</dt><dd>62</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　预期 E 的 snoop 如何处理本地 I、E 和 M</h3>
+    <p id="fig-3-basis">表内只讨论预期状态 E 的 snoop。M 是否可匹配 E 取决于目录如何编码该状态。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">本地状态</th><th scope="col">能否按预期 E 处理</th><th scope="col">动作</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">I</th><td>否</td><td>挂起，等待前一笔回填或状态更新</td></tr><tr id="fig-3-table-row-2"><th scope="row">E</th><td>可</td><td>按 snoop 类型作状态变更并返回数据或应答</td></tr><tr id="fig-3-table-row-3"><th scope="row">M</th><td>取决于目录编码</td><td>若目录用 E 记录 M，可匹配并按需交付修改数据</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-table-row-1">有效副本尚未到达</a> I 与 E 不匹配。等待前一笔独占回填改变状态。</li><li><a href="#fig-3-table-row-3">M 可由 E 表示</a> 披露的一种目录编码不单列 M。代理可以通过一致判断后发送包含实际修改数据的响应。</li></ul>
+  <p class="figure-evidence">原图 3、7、8；说明书归档段 0049、0050、0060、0061、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>前序独占回填 FillE</dt><dd>40</dd></div><div><dt>转发并失效 snoop SnpFwdI(E)</dt><dd>42</dd></div></dl></details>
+</figure></section><section id="races"><h2>两种早到消息各自在什么事件后可执行</h2><p>图 3 中 MC 先受理 CA0 的独占读，再受理 CA1 的同址独占读。CA0 先收到针对 CA1 的 SnpFwdI(E)，但还无副本。FillE 到达 CA0 后，CA0 获得独占副本。实施例允许 CA0 先进行至少一次访问以取得进展，因此随后交给 CA1 的副本可能已经修改。</p><p>图 4 的竞争方向相反。MC 在 CA0 的写回前先排序 CA1 的共享读。CA0 先收到写回 Ack(S)，本地为 M，必须留住副本。较早排序的 SnpFwdS(E) 到达后，CA0 先向 CA1 供数并降为 S，Ack 才可让 CA0 丢弃副本。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　第一读请求方先收到转发 snoop，随后才收到自己的回填</h3>
+    <p id="fig-2-basis">两条消息的到达顺序与控制器排序不同。SnpFwdI(E) 在 CA0 本地 I 时等待，FillE 到达后才能处理。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="第一读请求方先收到转发 snoop，随后才收到自己的回填" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us11544193b2-fig-2-svg-title us11544193b2-fig-2-svg-desc">
+<title id="us11544193b2-fig-2-svg-title">第一读请求方先收到转发 snoop，随后才收到自己的回填</title>
+<desc id="us11544193b2-fig-2-svg-desc">两条消息的到达顺序与控制器排序不同。SnpFwdI(E) 在 CA0 本地 I 时等待，FillE 到达后才能处理。</desc>
+<defs><marker id="us11544193b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11544193b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11544193b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11544193b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11544193b2-fig-2-r0"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-data)"/><rect x="220" y="96" width="156" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">第一笔独占读 CRdEx</text></g>
+<g id="us11544193b2-fig-2-r1"><path d="M 844 168 L 480 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-data)"/><rect x="584" y="144" width="156" height="18" fill="#f5f5f5"/><text x="662" y="158" class="arrow-label" text-anchor="middle">第二笔独占读 CRdEx</text></g>
+<g id="us11544193b2-fig-2-order"><path d="M 480 210 L 504 210 Q 512 210 512 218 L 512 220 Q 512 228 504 228 L 480 228" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-control)"/><rect x="509.5" y="186" width="169" height="18" fill="#f5f5f5"/><text x="594" y="200" class="arrow-label" text-anchor="middle">先处理第一笔读，目录记 E</text></g>
+<g id="us11544193b2-fig-2-early"><path d="M 480 264 L 116 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-data)"/><rect x="155" y="240" width="286" height="18" fill="#f5f5f5"/><text x="298" y="254" class="arrow-label" text-anchor="middle">转发并失效 snoop SnpFwdI(E)</text></g>
+<g id="us11544193b2-fig-2-pend"><path d="M 116 306 L 140 306 Q 148 306 148 314 L 148 316 Q 148 324 140 324 L 116 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-control)"/><rect x="145.5" y="282" width="169" height="18" fill="#f5f5f5"/><text x="230" y="296" class="arrow-label" text-anchor="middle">本地 I，暂存 snoop</text></g>
+<g id="us11544193b2-fig-2-later"><path d="M 480 360 L 116 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-2-arrow-return)"/><rect x="213.5" y="336" width="169" height="18" fill="#f5f5f5"/><text x="298" y="350" class="arrow-label" text-anchor="middle">独占回填 FillE 后到</text></g>
+<g id="us11544193b2-fig-2-release"><path d="M 116 402 L 140 402 Q 148 402 148 410 L 148 412 Q 148 420 140 420 L 116 420" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-control)"/><rect x="139" y="378" width="182" height="18" fill="#f5f5f5"/><text x="230" y="392" class="arrow-label" text-anchor="middle">状态变 E，恢复 snoop</text></g>
+<g id="us11544193b2-fig-2-forward"><path d="M 116 456 L 844 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11544193b2-fig-2-arrow-main)"/><rect x="369.5" y="432" width="221" height="18" fill="#f5f5f5"/><text x="480" y="446" class="arrow-label" text-anchor="middle">交付修改数据 FillM，本地失效</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">第一读请求方（CA0）</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">内存控制器（MC）</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">第二读请求方（CA1）</text>
+<text x="28" y="532" class="legend" text-anchor="start">纵向按消息的接收事件排列。独占回填是内存控制器更早发出的消息。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11544193b2-fig-2-order">控制器的同址顺序</a> 先为 CA0 排定独占读并更新目录，再依据该状态处理 CA1 的独占读。</li><li><a href="#us11544193b2-fig-2-early">早到的 SnpFwdI(E)</a> 包要求 CA0 转发并失效，预期状态为 E。CA0 此时仍为 I，挂起。</li><li><a href="#us11544193b2-fig-2-later">前一笔 FillE 到达</a> CA0 变 E，暂存 snoop 随后执行。若 CA0 在获准的本地访问后修改了该行，可发送 FillM。</li></ul>
+  <p class="figure-evidence">原图 3、8；说明书归档段 0047、0048、0049、0050、0051、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> <a href="../diagrams/US11544193B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>第一笔独占读 CRdEx</dt><dd>36</dd></div><div><dt>第二笔独占读 CRdEx</dt><dd>38</dd></div><div><dt>前序独占回填 FillE</dt><dd>40</dd></div><div><dt>转发并失效 snoop SnpFwdI(E)</dt><dd>42</dd></div><div><dt>携修改值回填 FillM</dt><dd>44</dd></div></dl></details>
+</figure><p class="subdued"><a href="#fig-3">对照表 3　预期 E 的 snoop 如何处理本地 I、E 和 M</a></p></section><section id="completions"><h2>重新比较发生在前一笔请求完成之后</h2><p>图 5 的请求缓冲项含有效位 V、请求描述 Req.、计数有效位 CV 和 CompCnt。图 7 中第一条完成消息按其携带的 Cnt 初始化计数。采用图 2 的少一编码时，Cnt 代表还需等待的完成数。随后每收到一条相关应答就递减。</p><p>计数为零时，控制电路完成本地请求，更新缓存状态，再拿这个状态与暂存 snoop 的预期值比较。若仍不一致，snoop 继续等待。在图 8、10 的实现中，与在途请求同址的 snoop 可由其已有缓冲项吸收，减少对独立 snoop 缓冲的占用。</p><p>图 5 说明暂存位置为什么会影响整个协议的前进。如果每条早到 snoop 都占一项独立缓冲，缓冲满后会对互连产生 backpressure。前一笔回填依赖其他 snoop 产生的 Ack，其他 snoop 却可能在入口受阻。控制器排序在前的请求已占 request buffer 条目时，一致性代理可按缓存块地址找到它，把待处理 snoop 吸收到该条目中。原图 10 保留了无地址冲突时分配独立暂存位置的分支。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　完成计数归零后再检查暂存 snoop</h3>
+    <p id="fig-4-basis">图 7 把收到完成、前一笔请求完成和暂存 snoop 恢复分成三个事件。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="完成计数归零后再检查暂存 snoop" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" role="img" aria-labelledby="us11544193b2-fig-4-svg-title us11544193b2-fig-4-svg-desc">
+<title id="us11544193b2-fig-4-svg-title">完成计数归零后再检查暂存 snoop</title>
+<desc id="us11544193b2-fig-4-svg-desc">图 7 把收到完成、前一笔请求完成和暂存 snoop 恢复分成三个事件。</desc>
+<defs><marker id="us11544193b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11544193b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11544193b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11544193b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11544193b2-fig-4-receive" d="M 216 145 L 347 145" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-4-arrow-control)"/>
+<path id="us11544193b2-fig-4-at-zero" d="M 577 145 L 702 145" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11544193b2-fig-4-arrow-main)"/>
+<path id="us11544193b2-fig-4-local" d="M 811 186 L 811 237 Q 811 245 803 245 L 470 245 Q 462 245 462 253 L 462 329" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11544193b2-fig-4-arrow-data)"/>
+<path id="us11544193b2-fig-4-pending" d="M 216 370 L 347 370" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11544193b2-fig-4-arrow-control)"/>
+<path id="us11544193b2-fig-4-match" d="M 577 370 L 702 370" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11544193b2-fig-4-arrow-main)"/>
+<rect x="231" y="119" width="100" height="18" fill="#f5f5f5"/><text x="281" y="133" class="arrow-label" text-anchor="middle">初始化或递减</text>
+<rect x="602" y="119" width="76" height="18" fill="#f5f5f5"/><text x="640" y="133" class="arrow-label" text-anchor="middle">计数归零</text>
+<rect x="568" y="220" width="134" height="18" fill="#f5f5f5"/><text x="635" y="234" class="arrow-label" text-anchor="middle">更新后的缓存状态</text>
+<rect x="229.5" y="344" width="105" height="18" fill="#f5f5f5"/><text x="282" y="358" class="arrow-label" text-anchor="middle">snoop 预期状态</text>
+<rect x="592.5" y="344" width="91" height="18" fill="#f5f5f5"/><text x="638" y="358" class="arrow-label" text-anchor="middle">一致才执行</text>
+<g id="us11544193b2-fig-4-in"><rect x="34" y="104" width="182" height="82" rx="6" fill="#f5f5f5"/><rect x="34" y="104" width="182" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="125" y="130" class="node-name" text-anchor="middle">回填或确认消息</text><text x="125" y="152" class="node-detail" text-anchor="middle">带事务信息与计数</text></g>
+<g id="us11544193b2-fig-4-count"><rect x="347" y="104" width="230" height="94" rx="6" fill="#f5f5f5"/><rect x="347" y="104" width="230" height="94" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="462" y="130" class="node-name" text-anchor="middle">在途请求缓冲项</text><text x="462" y="152" class="node-detail" text-anchor="middle">计数有效位 CV</text><text x="462" y="170" class="node-detail" text-anchor="middle">完成计数 CompCnt</text></g>
+<g id="us11544193b2-fig-4-done"><rect x="702" y="104" width="219" height="82" rx="6" fill="#f5f5f5"/><rect x="702" y="104" width="219" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="130" class="node-name" text-anchor="middle">本地请求完成</text><text x="811.5" y="152" class="node-detail" text-anchor="middle">交付回填并更新缓存状态</text></g>
+<g id="us11544193b2-fig-4-held"><rect x="34" y="329" width="182" height="82" rx="6" fill="#f5f5f5"/><rect x="34" y="329" width="182" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="125" y="355" class="node-name" text-anchor="middle">待处理 snoop 缓冲项</text><text x="125" y="377" class="node-detail" text-anchor="middle">保存 snoop 预期状态</text></g>
+<g id="us11544193b2-fig-4-cmp"><rect x="347" y="329" width="230" height="82" rx="6" fill="#f5f5f5"/><rect x="347" y="329" width="230" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="462" y="355" class="node-name" text-anchor="middle">比较更新后的状态</text><text x="462" y="377" class="node-detail" text-anchor="middle">检查是否满足 snoop 预期</text></g>
+<g id="us11544193b2-fig-4-run"><rect x="702" y="329" width="219" height="82" rx="6" fill="#f5f5f5"/><rect x="702" y="329" width="219" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="355" class="node-name" text-anchor="middle">恢复暂存 snoop</text><text x="811.5" y="377" class="node-detail" text-anchor="middle">按类型改状态并发送响应</text></g>
+<text x="34" y="55" class="signal-title" text-anchor="start">完成计数与 snoop 重试</text>
+<text x="34" y="469" class="legend" text-anchor="start">计数未归零时继续收集完成消息。重检仍不匹配时保留待处理 snoop。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11544193b2-fig-4-count">计数有效位 CV 与完成计数 CompCnt</a> CV 无效时按第一条完成消息初始化计数，之后按完成消息递减。</li><li><a href="#us11544193b2-fig-4-at-zero">计数归零</a> 前一笔请求完成。回填可更新缓存行状态，才具备再次判断的输入。</li><li><a href="#us11544193b2-fig-4-match">对照预期状态</a> 再次比较一致，才提交暂存 snoop；仍不一致则继续保留。</li></ul>
+  <p class="figure-evidence">原图 5、7、8；说明书归档段 0046、0054、0055、0056、0059、0060、0061、0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US11544193B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>在途请求缓冲区</dt><dd>62</dd></div><div><dt>计数有效位 CV</dt><dd>66</dd></div><div><dt>完成计数 CompCnt</dt><dd>68</dd></div><div><dt>初始化或递减完成计数</dt><dd>80/82/92</dd></div><div><dt>检查计数是否归零并交付数据</dt><dd>84/86</dd></div><div><dt>比较暂存 snoop 预期状态并执行</dt><dd>88/90</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　把冲突 snoop 留在原请求条目，怎样解除队列依赖</h3>
+    <p id="fig-5-basis">冲突 snoop 可以等待本次回填；回填又可能依赖其他 snoop 产生的 Ack。当等待中的 snoop 填满缓冲时，复用冲突请求条目让仍可执行的 snoop 继续前进。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="把冲突 snoop 留在原请求条目，怎样解除队列依赖" style="--figure-width:1140px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 568" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
+<title id="fig-5-svg-title">把冲突 snoop 留在原请求条目，怎样解除队列依赖</title>
+<desc id="fig-5-svg-desc">冲突 snoop 可以等待本次回填；回填又可能依赖其他 snoop 产生的 Ack。当等待中的 snoop 填满缓冲时，复用冲突请求条目让仍可执行的 snoop 继续前进。</desc>
+<defs><marker id="fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-5-filling" d="M 263 132 L 361 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-blocked-peer" d="M 585 132 L 683 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-cycle" d="M 792 188 L 792 235 Q 792 243 784 243 L 159 243 Q 151 243 151 235 L 151 188" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-return)"/>
+<path id="fig-5-conflict" d="M 263 388 L 355 388" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-no-conflict" d="M 151 437 L 151 470" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-make-room" d="M 601 388 L 683 388" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-ack" d="M 792 437 L 792 492 Q 792 500 800 500 L 904 500" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-return)"/>
+<rect x="268" y="104" width="90" height="18" fill="#f5f5f5"/><text x="313" y="118" class="arrow-label" text-anchor="middle">各占一项</text>
+<rect x="590" y="104" width="88" height="18" fill="#f5f5f5"/><text x="634" y="118" class="arrow-label" text-anchor="middle">入口受阻</text>
+<rect x="357" y="215" width="238" height="18" fill="#f5f5f5"/><text x="476" y="229" class="arrow-label" text-anchor="middle">前一笔缺 Ack，仍无法完成</text>
+<rect x="265" y="361" width="88" height="18" fill="#f5f5f5"/><text x="309" y="375" class="arrow-label" text-anchor="middle">地址匹配</text>
+<rect x="160" y="443" width="74" height="18" fill="#f5f5f5"/><text x="197" y="457" class="arrow-label" text-anchor="middle">不匹配</text>
+<rect x="605" y="361" width="74" height="18" fill="#f5f5f5"/><text x="642" y="375" class="arrow-label" text-anchor="middle">腾出入口</text>
+<rect x="791" y="472" width="108" height="18" fill="#f5f5f5"/><text x="845" y="486" class="arrow-label" text-anchor="middle">返回所需 Ack</text>
+<g id="fig-5-blocked"><rect x="39" y="76" width="224" height="112" rx="6" fill="#f5f5f5"/><rect x="39" y="76" width="224" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="151" y="102" class="node-name" text-anchor="middle">冲突 snoop 等待</text><text x="151" y="124" class="node-detail" text-anchor="middle">先排序的回填未完成</text><text x="151" y="142" class="node-detail" text-anchor="middle">本地状态尚未匹配</text></g>
+<g id="fig-5-shared-queue"><rect x="361" y="76" width="224" height="112" rx="6" fill="#f5f5f5"/><rect x="361" y="76" width="224" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="473" y="102" class="node-name" text-anchor="middle">独立暂存位置用尽</text><text x="473" y="124" class="node-detail" text-anchor="middle">冲突 snoop 占满缓冲</text><text x="473" y="142" class="node-detail" text-anchor="middle">backpressure 传入互连</text></g>
+<g id="fig-5-gated"><rect x="683" y="76" width="219" height="112" rx="6" fill="#f5f5f5"/><rect x="683" y="76" width="219" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="792.5" y="102" class="node-name" text-anchor="middle">其他 snoop 受阻</text><text x="792.5" y="124" class="node-detail" text-anchor="middle">相关 Ack 无法生成</text><text x="792.5" y="142" class="node-detail" text-anchor="middle">前一笔回填继续等待</text></g>
+<g id="fig-5-match"><rect x="39" y="338" width="224" height="99" rx="6" fill="#f5f5f5"/><rect x="39" y="338" width="224" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="151" y="364" class="node-name" text-anchor="middle">匹配在途请求地址</text><text x="151" y="386" class="node-detail" text-anchor="middle">只处理需要暂存的 snoop</text><text x="151" y="404" class="node-detail" text-anchor="middle">查 request buffer</text></g>
+<g id="fig-5-absorb"><rect x="355" y="338" width="246" height="99" rx="6" fill="#f5f5f5"/><rect x="355" y="338" width="246" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="478" y="364" class="node-name" text-anchor="middle">复用命中的请求条目</text><text x="478" y="386" class="node-detail" text-anchor="middle">转发与无效化各留一项</text><text x="478" y="404" class="node-detail" text-anchor="middle">该请求完成后才执行</text></g>
+<g id="fig-5-progress"><rect x="683" y="338" width="219" height="99" rx="6" fill="#f5f5f5"/><rect x="683" y="338" width="219" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="792.5" y="364" class="node-name" text-anchor="middle">其他 snoop 继续</text><text x="792.5" y="386" class="node-detail" text-anchor="middle">前进中的 snoop 可产生 Ack</text><text x="792.5" y="404" class="node-detail" text-anchor="middle">已排序请求可以完成</text></g>
+<g id="fig-5-separate"><rect x="39" y="470" width="224" height="71" rx="6" fill="#f5f5f5"/><rect x="39" y="470" width="224" height="71" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="151" y="496" class="node-name" text-anchor="middle">无同址请求</text><text x="151" y="518" class="node-detail" text-anchor="middle">另分配暂存位置</text></g>
+<g id="fig-5-prior-completes"><rect x="904" y="463" width="201" height="76" rx="6" fill="#f5f5f5"/><rect x="904" y="463" width="201" height="76" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1004.5" y="489" class="node-name" text-anchor="middle">先排序请求收齐 Ack</text><text x="1004.5" y="511" class="node-detail" text-anchor="middle">回填可继续</text></g>
+<text x="39" y="48" class="signal-title" text-anchor="start">单独暂存冲突消息时可能出现的循环</text>
+<text x="39" y="308" class="signal-title" text-anchor="start">按地址复用请求条目，保留前进空间</text>
+<text x="356" y="488" class="legend" text-anchor="start">执行吸收的 snoop 前仍检查状态，见图 4。</text>
+<text x="356" y="517" class="legend" text-anchor="start">无冲突时继续使用正常的独立暂存路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-5-blocked">冲突消息早到</a> 目标代理的本地缓存状态尚未达到预期值。若前一笔请求还缺 Ack，就不能完成回填并推进本地状态。</li><li><a href="#fig-5-shared-queue">独立缓冲耗尽</a> 在途冲突消息都占用独立位置时，backpressure 可传到互连。此时需要进来生成 Ack 的其他 snoop 也可能被挡住。</li><li><a href="#fig-5-cycle">Ack 的依赖绕回前一笔请求</a> 这条回边说明死锁条件。恢复先排序请求依赖的正是仍需从该 virtual channel 前进的消息。</li><li><a href="#fig-5-match">按缓存块地址匹配在途请求</a> 对必须暂存的 snoop，先和 request buffer 地址比较。无匹配时按原图 10 分配单独的暂存位置。</li><li><a href="#fig-5-absorb">命中时吸收到同一条目</a> 实施例给既有请求条目预留一个转发 snoop 与一个无效化 snoop 的描述位置，供原请求先完成后处理。</li><li><a href="#fig-5-progress">让其余 snoop 继续</a> 入口有可用空间时，其他可执行的 snoop 可以继续传送并执行。其 Ack 能由完成路径送回前一请求。</li></ul>
+  <p class="figure-evidence">原图 5、7、10；说明书归档段 0054、0055、0059、0061、0068、0069、0070、0071；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US11544193B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>请求缓冲区</dt><dd>62</dd></div><div><dt>与在途请求作地址比较</dt><dd>140</dd></div><div><dt>复用冲突请求的条目</dt><dd>142</dd></div><div><dt>分配单独的暂存位置</dt><dd>144</dd></div></dl></details>
+</figure></section><section id="boundary"><h2>预期字段决定能否处理，snoop 类型决定做什么</h2><p>独立权利要求 1、12、13 都要求比较预期与本地状态，并在不匹配时等不同请求的相关通信改变状态。权利要求 2 和 14 增加完成计数，权利要求 3 和 15 增加发出 snoop 后更新目录，权利要求 4–6 与 16 增加同址 snoop 吸收及后续转发。</p><p>目录可以要求数据交给读方，也可以依据请求属性选择把数据发回一致性控制器。权利要求 7、8、17、18 则另限定条件写所需的独占权限，目录发现发起者已经丢失副本时返回失败。</p><p class="subdued"><a href="#fig-1">对照图 1　目录记录与本地缓存标签在接收端会合</a></p><p class="subdued"><a href="#fig-4">对照图 4　完成计数归零后再检查暂存 snoop</a></p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US11544193B2</code><span>美国授权专利</span><time datetime="2023-01-03">2023-01-03</time></p>
-  <h1>用预期缓存状态处理探测与回填竞态</h1>
-  <p class="english-title" lang="en">Scalable cache coherency protocol</p>
-  <p class="document-question">探测先到、回填后到时，目标缓存根据什么判断能否处理探测？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">snoop 携带目录预期的目标缓存状态，目标代理在本地状态不匹配时等待较早事务推进状态。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>待处理 snoop 针对同一缓存块，目录推进与目标代理接收回填的时点可以不同。</dd></div><div><dt>验证方法</dt><dd>用相同地址重放回填先到与 snoop 先到两种顺序。记录预期状态、本地状态变更以及 snoop 实际处理和应答的周期。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11544193B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">一致性点可以先排好同一缓存块上的事务顺序。互连上的延迟仍可能让较晚发出的探测在较早事务的回填之前到达。</p>
-    <p>内存控制器按一致性目录的排序状态向副本持有者发 snoop，消息携带目标代理的预期状态。目标代理的本地状态若尚未匹配，先暂存 snoop，等待另一请求的消息推进本地状态。</p>
-    <ol class="walkthrough"><li><h3>用目录确定预期状态</h3><p>内存控制器按地址读取目录项，查出块的持有者和各代理应有的状态。</p></li><li><h3>把预期状态随探测发送</h3><p>控制器构造发给目标代理的探测，在消息内写入该代理的预期状态。适用时还可附上完成计数等字段。</p></li><li><h3>收到探测时比较状态</h3><p>目标代理先比较缓存块的实际状态与消息中的预期状态。两者不符时，它暂存这条探测，避免在旧状态下发送数据或修改权限。</p></li><li><h3>等前一条事务推进本地状态</h3><p>另一请求的 fill 或完成消息抵达后，目标代理更新本地状态。状态匹配时，它按探测要求变更状态或发送数据。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 允许目录根据条目状态确定接收代理应看到的完成数。发起代理在收到首次完成时初始化计数器，随后按其他代理的完成消息更新计数器。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>预期状态</dt><dd>控制器依据目录已排序状态，告知目标代理处理此次 snoop 前应具备的缓存状态。</dd></div><div><dt>FillE</dt><dd>携数据的独占状态回填消息。原图 3 中，接收后 CA0 才能让本地 I 变为 E。</dd></div><div><dt>SnpFwdI</dt><dd>要求目标代理提供所缓存块，并使本地副本失效的转发 snoop。</dd></div><div><dt>完成计数</dt><dd>请求代理用应答初始化并递减的状态量，归零表示本请求应收应答到齐。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">后发出的探测先于较早的回填到达</a></li><li><a href="#fig-1">代理用探测携带的预期状态检查本地状态</a></li><li><a href="#fig-4">收齐应答后如何重试暂存 snoop</a></li><li><a href="#fig-3">本地 I、E、M 如何与预期 E 比较</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">后发出的探测先于较早的回填到达</h3></div>
-    <a class="paper-open" href="../mechanisms/US11544193B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="后发出的探测先于较早的回填到达">
-    <img class="paper-image native-image" src="../mechanisms/US11544193B2/fig-2/diagram.svg" width="560" height="536"
-         style="--paper-width:560px" alt="后发出的探测先于较早的回填到达。两笔独占读在控制器按 CA0、CA1 排序。SnpFwdI 先到 CA0 时本地仍为 I；FillE 到后才能处理暂存探测。">
-  </div>
-  <figcaption>
-    <span>两笔独占读在控制器按 CA0、CA1 排序。SnpFwdI 先到 CA0 时本地仍为 I；FillE 到后才能处理暂存探测。</span>
-    <span class="figure-evidence">图 3、8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/70/15/7c222edc29d34e/US11544193.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">代理用探测携带的预期状态检查本地状态</h3></div>
-    <a class="paper-open" href="../mechanisms/US11544193B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="代理用探测携带的预期状态检查本地状态">
-    <img class="paper-image native-image" src="../mechanisms/US11544193B2/fig-1/diagram.svg" width="882" height="300"
-         style="--paper-width:882px" alt="代理用探测携带的预期状态检查本地状态。目录已排序的状态经 snoop 传给目标。目标代理将该预期状态与本地缓存状态比较，再判断能否处理。">
-  </div>
-  <figcaption>
-    <span>目录已排序的状态经 snoop 传给目标。目标代理将该预期状态与本地缓存状态比较，再判断能否处理。</span>
-    <span class="figure-evidence">图 1、5–6、8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/70/15/7c222edc29d34e/US11544193.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">控制流程</p><h3 id="fig-4-title">收齐应答后如何重试暂存 snoop</h3></div>
-    <a class="paper-open" href="../mechanisms/US11544193B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="收齐应答后如何重试暂存 snoop">
-    <img class="paper-image native-image" src="../mechanisms/US11544193B2/fig-4/diagram.svg" width="1018" height="528"
-         style="--paper-width:1018px" alt="收齐应答后如何重试暂存 snoop。首个应答带初始剩余数，其他应答使计数递减。计数归零后，代理完成原请求并更新状态，再按预期状态判断暂存的 snoop 是否可处理。">
-  </div>
-  <figcaption>
-    <span>首个应答带初始剩余数，其他应答使计数递减。计数归零后，代理完成原请求并更新状态，再按预期状态判断暂存的 snoop 是否可处理。</span>
-    <span class="figure-evidence">原图 5、7，说明书 0060–0062；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/b3/70/15/7c222edc29d34e/US11544193.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">本地 I、E、M 如何与预期 E 比较</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">本地状态</th><th scope="col">目录状态在报文中的期望</th><th scope="col">代理动作</th></tr></thead><tbody><tr><th scope="row">I</th><td>E</td><td class="emphasis">暂存探测，等待较早请求的状态更新</td></tr><tr><th scope="row">E</th><td>E</td><td>按探测要求处理</td></tr><tr><th scope="row">M，且目录用 E 表示 M</th><td>E</td><td class="emphasis">按原文的等价关系处理</td></tr></tbody></table>
-  <figcaption>
-    <span>目录已经完成排序时，代理可能仍在 I。图 3 的例子中，先前的回填抵达后，代理状态才与 E 匹配。</span>
-    <span class="figure-evidence">图 3、7–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a> · <a href="https://patentimages.storage.googleapis.com/b3/70/15/7c222edc29d34e/US11544193.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>探测附目标预期状态</dt><dd>约束探测实际处理时点 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>；原图 3、8</span></dd></div><div><dt>初次应答初始化计数</dt><dd>识别所有应答已收齐 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>；原图 7</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>目录可以在发出探测时推进自身记录，发起侧仍须收齐计数所对应的事件。收益在于目录接受后续工作的时机，收敛成本则保留在各代理的同步路径。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若两个供数或失效应答相隔很久，目录忙碌度可能下降，发起事务的完成却仍跟随后一个应答。记录已预期的完成数和最后一个实际应答即可检验该情形。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>模型中，CA0、CA1 先后针对同一缓存块发出独占读。控制器先为 CA0 发出 FillE，再向 CA0 发出用于 CA1 请求的 SnpFwdI。SnpFwdI 比 FillE 早两个模型时间单位到达 CA0。</dd></div><div><dt>处理结果</dt><dd>CA0 尚处于无效状态 I，与 SnpFwdI 的预期状态 E 不符，因此保存该 snoop。FillE 到达后，CA0 获得独占副本，再处理保存的 snoop。</dd></div><div><dt>结果解读</dt><dd>两个模型时间单位是假设。原图 3 的成立条件是 FillE 和 SnpFwdI 可能走不同虚拟通道或遭遇不同的互连等待。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、12、13 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,51 +170,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=a%20directory%20configured%20to%20track%20which%20of%20the%20plurality%20of%20coherent%20agents%20is%20caching%20copies%20of">F12</a></th><td>内存控制器的目录跟踪副本持有方及状态。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=FIG.%203%20illustrates%20a%20race%20condition%20between%20a%20fill%20completion%20for%20one%20transaction%20and%20a%20snoop">说明书 0048</a> · <a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20MC%20selects%20the%20CRdEx%20respect%20from%20CA1%20for%20processing%2C%20and%20detects%20that%20CA0%20has%20the">说明书 0049</a> · 原图 1、3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=reading%2C%20by%20the%20memory%20controller%2C%20an%20entry%20corresponding%20to%20the%20first%20cache%20block%20from%20the%20directory">F13</a></th><td>控制器读取相应缓存块目录项。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=FIG.%203%20illustrates%20a%20race%20condition%20between%20a%20fill%20completion%20for%20one%20transaction%20and%20a%20snoop">说明书 0048</a> · 原图 3、6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=issuing%2C%20by%20the%20memory%20controller%2C%20a%20snoop%20to%20a%20second%20agent%20of%20the%20plurality%20of%20coherent">F14</a></th><td>依该条目向副本持有代理发出 snoop。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20MC%20selects%20the%20CRdEx%20respect%20from%20CA1%20for%20processing%2C%20and%20detects%20that%20CA0%20has%20the">说明书 0049</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=including%2C%20by%20the%20memory%20controller%2C%20an%20identifier%20of%20a%20first%20state%20of%20the%20first%20cache%20block">F15</a></th><td>控制器把目标的预期状态随 snoop 发出。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20MC%20selects%20the%20CRdEx%20respect%20from%20CA1%20for%20processing%2C%20and%20detects%20that%20CA0%20has%20the">说明书 0049</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=comparing%2C%20by%20the%20second%20agent%2C%20the%20first%20state%20to%20a%20second%20state%20of%20the%20first%20cache">F16</a></th><td>目标代理比较两种状态。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20coherent%20agent%2014%20A-%2014%20n%20may%20be%20configured%20to%20check%20the%20expected%20state%20in">说明书 0064</a> · 原图 8</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=delaying%2C%20by%20the%20second%20agent%2C%20the%20processing%20of%20the%20snoop%20based%20on%20the%20first%20state%20not">F17</a></th><td>在另一请求的通信推进到预期状态之前延后处理。</td><td><a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20snoop%20and%20the%20fill%20completion%20may%20reach%20CA0%20in%20either%20order%20in%20time.%20The%20messages">说明书 0050</a> · <a href="https://patents.google.com/patent/US11544193B2/en#:~:text=The%20coherent%20agent%2014%20A-%2014%20n%20may%20be%20configured%20to%20check%20the%20expected%20state%20in">说明书 0064</a> · 原图 3、8</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统内存控制器从目录取目标代理的预期状态，写进 snoop。目标代理判断本地状态，不合时等另一请求的通信推进状态。见原图 3、8。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>控制器从目录得到完成数并随 snoop 发出，请求代理用初次和后续应答推进完成计数。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>控制器可在发出多条 snoop 时更新目录状态，以反映请求完成后的状态。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>原请求发起代理把同一缓存块的后到 snoop 并入该请求。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>完成原请求以后才处理并入的 snoop。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>原请求完成后，把缓存块送给后到 snoop 指定的第三代理。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>条件存储触发条件升为独占；若目录表明代理已失去有效副本，则终止并回应失败。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>条件请求代理仍持有效副本时，向目录指出的其他代理发送 snoop。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>预期主共享时探测要求供数；预期次共享时按本项措辞不供数。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>另允许 snoop 指示次共享副本也要供数。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>该 snoop 是专门送给第二代理的消息。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>独立代理装置权项在缓存和控制电路一侧规定接收 snoop、比较预期和实际状态并等待其他事务推进状态。见原图 5、8。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td>独立项</td><td>方法权项明确由控制器读目录、发 snoop 和写入预期状态，由目标代理比较及延后处理。见原图 3、6、8。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>目录计算预期应答数；首次应答初始化计数，后续应答更新计数，计数判定请求完成。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>发出多条 snoop 后更新目录，反映首个请求完成时的状态。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-13">13</a></td><td>同块后到 snoop 并入原请求，待原请求完成后处理，并将块转发至指定第三代理。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-13">13</a></td><td>条件存储请求升为独占；目录显示请求者已无有效副本时，发失败应答并终止。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>只有仍持有效副本时，按目录向其他代理发 snoop。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-13">13</a></td><td>预期主共享时要求持有者供数，预期次共享时按本项措辞不供数。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>另允许 snoop 指示次共享副本也向请求方供数。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统内存控制器从目录取目标代理的预期状态，写进 snoop。目标代理判断本地状态，不合时等另一请求的通信推进状态。见原图 3、8。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>控制器从目录得到完成数并随 snoop 发出，请求代理用初次和后续应答推进完成计数。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>控制器可在发出多条 snoop 时更新目录状态，以反映请求完成后的状态。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>原请求发起代理把同一缓存块的后到 snoop 并入该请求。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>完成原请求以后才处理并入的 snoop。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>原请求完成后，把缓存块送给后到 snoop 指定的第三代理。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>条件存储触发条件升为独占；若目录表明代理已失去有效副本，则终止并回应失败。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>条件请求代理仍持有效副本时，向目录指出的其他代理发送 snoop。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-1">1</a></td><td>预期主共享时snoop要求供数；预期次共享时按本项措辞不供数。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>另允许 snoop 指示次共享副本也要供数。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>该 snoop 是专门送给第二代理的消息。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td>独立项</td><td>独立代理装置权项在缓存和控制电路一侧规定接收 snoop、比较预期和实际状态并等待其他事务推进状态。见原图 5、8。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td>独立项</td><td>方法权项明确由控制器读目录、发 snoop 和写入预期状态，由目标代理比较及延后处理。见原图 3、6、8。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>目录计算预期应答数；首次应答初始化计数，后续应答更新计数，计数判定请求完成。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>发出多条 snoop 后更新目录，反映首个请求完成时的状态。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-13">13</a></td><td>同块后到 snoop 并入原请求，待原请求完成后处理，并将块转发至指定第三代理。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-13">13</a></td><td>条件存储请求升为独占；目录显示请求者已无有效副本时，发失败应答并终止。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>只有仍持有效副本时，按目录向其他代理发 snoop。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-13">13</a></td><td>预期主共享时要求持有者供数，预期次共享时按本项措辞不供数。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>另允许 snoop 指示次共享副本也向请求方供数。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00012" aria-label="原文权利要求 12">12</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>探测消息须带预期状态。代理比较本地状态，必要时等另一请求使本地状态推进。</dd></div><div><dt>图 3–4、图 8</dt><dd>展示回填或确认消息与后续探测的竞态，以及代理比较预期状态和本地状态的过程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11544193B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></dt><dd>涵盖完成计数、发出探测后的目录更新，以及把探测吸收到已有请求条目的实施例。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11544193B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
-<p>US11947457B2 权 1 在生成供数探测前，优先选择目录中的主共享持有者，未记录主共享持有者时可在次共享持有者中选择。母案 US11544193B2 权 1 处理另一阶段的状态竞态：目标收到探测后，若本地状态与预期状态不符，等待另一笔通信把状态推进到匹配后再处理。</p></li><li><a href="US11586551B2.html#engineering">空闲核的存储阵列失效维护</a>
-<p>US11586551B2 由电源管理逻辑记录空闲核收到的失效，恢复执行前再清理对应阵列。US11544193B2 让代理对照探测中的预期状态，在本地状态未匹配时等待先前事务推进。前者的等待边界由核心电源状态决定，后者的等待边界由缓存块一致性状态决定。</p></li><li><a href="US12332792B2.html#engineering">把早到探测吸收到同地址在途请求</a>
-<p>US12332792B2 的参考文献表列出 US11544193B2。同一文献还可以出现在申请沿革中。比较协议时，可转到机制连线具体查看由谁供数、何时转发探测。</p></li><li><a href="https://patents.google.com/patent/US12164445B1/en">Amazon 的一致性访问代理 · US12164445B1</a>
-<p>该案在应用加速器与一致性互连之间加入代理，由代理取得数据使用状态并据此授权访问。参考文献表列出本案。</p></li></ul>
-    <p><a href="../index.html?patent=US11544193B2#knowledge">在全量关系图上定位 US11544193B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2020-09-11</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-05-10</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2023-01-03</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/315,725</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>James Vash、Gaurav Garg、Brian P. Lilly、Ramesh B. Gunna、Steven R. Hutsell、Lital Levy-Rubin、Per H. Hammarlund、Harshavardhan Kaushikkar</dd></div><div><dt>分类号</dt><dd>G06F12/0824、G06F12/0815、G06F12/0831、G06F2212/1024、G06F2212/1032、G06F2212/1048</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11544193B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11544193B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 138 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、13、14。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US11868258B2.html"><code>US11868258B2</code> 一致性代理按本地状态延迟处理状态变更消息</a></li><li><a href="US11947457B2.html"><code>US11947457B2</code> 优先由主共享副本向请求方供数</a></li><li><a href="US12332792B2.html"><code>US12332792B2</code> 把早到探测吸收到同地址在途请求</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11544193B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

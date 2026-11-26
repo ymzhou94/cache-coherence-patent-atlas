@@ -1,123 +1,239 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12001847B1 顺序执行流水线在加载缺失期间重叠独立访存 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>顺序处理器如何重叠两个 load 缺失，并从更早的指令重执行 · US12001847B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12001847B1</code> · <a href="https://patents.google.com/patent/US12001847B1/en">专利全文</a></p>
+<h1>顺序处理器如何重叠两个 load 缺失，并从更早的指令重执行</h1><p class="reading-question">较老的 load A 缺数据时，顺序流水线怎样提早发出独立 load B 的请求，又能保持程序顺序？</p>
+<p class="reading-answer">load 缺失管理电路为 A 发请求，并在指令缓冲区保留重执行起点。它允许继续推测执行后续指令，遇到独立缺失可以提早发 B 的请求。到达依赖、内存属性、容量等停止条件后，流水线等 A 数据可用，再从 A 按程序顺序重执行。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2024-06-04</dd></div><div><dt>申请号</dt><dd>US17/823,279</dd></div><div><dt>最早优先权</dt><dd>2022-08-30</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Justin M DEINLEIN、Michael L Karm、Brett S Feero、David E Kroesche</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#point">第一次缺失留下起点，回放从哪里重新译码</a></li><li><a href="#overlap">后续独立 load 怎么在 A 返回之前发出去</a></li><li><a href="#stop">继续推测与停止等待分别检查哪些条件</a></li><li><a href="#latency">第二个请求早到，什么时候对顺序端可用</a></li><li><a href="#bypass">推测结果如何传给更年轻的指令</a></li><li><a href="#response">可缓存回填、不可缓存合并和顺序交付怎样分工</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="point"><h2>第一次缺失留下起点，回放从哪里重新译码</h2><p>原图 1 的顺序流水线包含取指、译码、执行及写结果。load/store 单元（LSU）中的缺失管理电路在 A 缺所需数据时发请求，并指示指令缓冲区把 A 留作重执行起点。原图 3 画出指令缓冲区中按顺序保存的年轻指令，以及不同线路上传递的推测中间结果。</p><p>图 1 追踪两条控制线。第一次缺失时指示缓冲区保留起点，停止推测、A 数据可用后发回放指示，译码器从已保留指令开始。指令缓冲区保存指令，BIU 可另外缓冲尚未按程序顺序交付的数据。两个缓冲承担不同事务。</p><p>授权第 1、9、16 项要求在停止条件成立后等待 A 所需数据，再按程序顺序重执行。第 6、14、20 项写明指令缓冲区与重新译码。说明书允许预先启动前级重执行以对齐数据可用时间，也描述能复用部分推测结果的实施方式。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　首次 load 缺失的保持、回放与数据路径</h3>
+    <p id="fig-1-basis">第一次缺失写入重执行起点，控制线随后令译码器从被保留的指令重新译码。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="首次 load 缺失的保持、回放与数据路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 652" role="img" aria-labelledby="us12001847b1-fig-1-svg-title us12001847b1-fig-1-svg-desc">
+<title id="us12001847b1-fig-1-svg-title">首次 load 缺失的保持、回放与数据路径</title>
+<desc id="us12001847b1-fig-1-svg-desc">第一次缺失写入重执行起点，控制线随后令译码器从被保留的指令重新译码。</desc>
+<defs><marker id="us12001847b1-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12001847b1-fig-1-read" d="M 266 151 L 354 151" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-1-arrow-data)"/>
+<path id="us12001847b1-fig-1-issue" d="M 583 151 L 686 151" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-1-arrow-data)"/>
+<path id="us12001847b1-fig-1-access" d="M 801 191 L 801 237 Q 801 245 793 245 L 559 245 Q 551 245 551 253 L 551 335" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-1-arrow-data)"/>
+<path id="us12001847b1-fig-1-mark" d="M 354 376 L 158 376 Q 150 376 150 368 L 150 191" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-1-arrow-return)"/>
+<path id="us12001847b1-fig-1-replay" d="M 442 335 L 442 191" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-1-arrow-return)"/>
+<path id="us12001847b1-fig-1-send" d="M 583 357 L 686 357" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-1-arrow-main)"/>
+<path id="us12001847b1-fig-1-recv" d="M 686 392 L 583 392" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-1-arrow-return)"/>
+<rect x="261" y="119" width="92" height="18" fill="#f5f5f5"/><text x="307" y="133" class="arrow-label" text-anchor="middle">取缓冲指令</text>
+<rect x="587.5" y="119" width="87" height="18" fill="#f5f5f5"/><text x="631" y="133" class="arrow-label" text-anchor="middle">译码操作</text>
+<rect x="618" y="215" width="124" height="18" fill="#f5f5f5"/><text x="680" y="229" class="arrow-label" text-anchor="middle">访问所需数据</text>
+<rect x="120.5" y="345" width="167" height="18" fill="#f5f5f5"/><text x="204" y="359" class="arrow-label" text-anchor="middle">记录 A 为重执行起点</text>
+<rect x="304" y="251" width="136" height="18" fill="#f5f5f5"/><text x="372" y="265" class="arrow-label" text-anchor="middle">数据可用后回放</text>
+<rect x="591.5" y="327" width="85" height="18" fill="#f5f5f5"/><text x="634" y="341" class="arrow-label" text-anchor="middle">发读请求</text>
+<rect x="593.5" y="398" width="83" height="18" fill="#f5f5f5"/><text x="635" y="412" class="arrow-label" text-anchor="middle">数据返回</text>
+<g id="us12001847b1-fig-1-buffer"><rect x="35" y="113" width="231" height="78" rx="6" fill="#f5f5f5"/><rect x="35" y="113" width="231" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150.5" y="139" class="node-name" text-anchor="middle">指令缓冲区</text><text x="150.5" y="161" class="node-detail" text-anchor="middle">保留 A 及后续指令</text></g>
+<g id="us12001847b1-fig-1-decode"><rect x="354" y="113" width="229" height="78" rx="6" fill="#f5f5f5"/><rect x="354" y="113" width="229" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="468.5" y="139" class="node-name" text-anchor="middle">译码器</text><text x="468.5" y="161" class="node-detail" text-anchor="middle">首次译码或重新译码</text></g>
+<g id="us12001847b1-fig-1-execute"><rect x="686" y="113" width="235" height="78" rx="6" fill="#f5f5f5"/><rect x="686" y="113" width="235" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="139" class="node-name" text-anchor="middle">执行单元</text><text x="803.5" y="161" class="node-detail" text-anchor="middle">执行顺序流水线操作</text></g>
+<g id="us12001847b1-fig-1-lsu"><rect x="354" y="335" width="229" height="82" rx="6" fill="#f5f5f5"/><rect x="354" y="335" width="229" height="82" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="468.5" y="361" class="node-name" text-anchor="middle">load 缺失管理电路</text><text x="468.5" y="383" class="node-detail" text-anchor="middle">位于 LSU，检测数据缺失</text></g>
+<g id="us12001847b1-fig-1-data"><rect x="686" y="335" width="235" height="82" rx="6" fill="#f5f5f5"/><rect x="686" y="335" width="235" height="82" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="361" class="node-name" text-anchor="middle">L1 数据缓存与内存</text><text x="803.5" y="383" class="node-detail" text-anchor="middle">缺失请求与数据返回</text></g>
+<text x="37" y="523" class="legend" text-anchor="start">实线用于说明操作和请求方向，虚线用于回放控制或数据返回。</text>
+<text x="37" y="549" class="legend" text-anchor="start">至少保留最早缺失指令，才能从原位置按程序顺序推进。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-1-buffer">指令缓冲区</a> 指令缓冲区为 A 保留重执行位置，并可保留后续经过推测执行的指令。</li><li><a href="#us12001847b1-fig-1-decode">译码器</a> 回放时由译码器取保存的 A，展开为可执行操作。</li><li><a href="#us12001847b1-fig-1-execute">执行单元</a> 顺序执行通路推进最初的 A，也在有余量时尝试 B 等后续指令。</li><li><a href="#us12001847b1-fig-1-lsu">load 缺失管理电路</a> LSU 的 load 缺失管理电路检测所需数据不可用，并生成保留起点及之后的回放控制。</li><li><a href="#us12001847b1-fig-1-data">L1 数据缓存与内存</a> L1 数据缓存以及更远的内存资源承担缺失响应。这里同时画请求与回填方向。</li><li><a href="#us12001847b1-fig-1-replay">数据可用后回放</a> 停止推测且数据可用后，回放控制返回译码端。</li></ul>
+  <p class="figure-evidence">原图 1、3、4、7；说明书归档段 0018、0019、0020、0021、0022、0024、0025、0026、0028、0029、0032、0038、0039、0044、0063；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12001847B1/fig-1.html">打开独立图稿</a></p>
+  
+</figure></section><section id="overlap"><h2>后续独立 load 怎么在 A 返回之前发出去</h2><p>图 2 用同类普通可缓存访问 A 与 B 展示请求一先一后发出，内存事务在时间上重叠。若 B 的地址与所需操作数独立于 A，B 可以在 A 未返回时继续到 LSU。若 B 也缺失，LSU 发出第二个取数请求，再依窗口状态决定是否继续扫描后续指令。</p><p>图中的后续指令 C 需要 A 的数据。看到 C 后，流水线停止推测执行。等待阶段已经发出的 B 请求仍可完成。A 返回时，A 成为最早重执行点。B 重发时可利用回填结果或仍需等待数据，取决于 B 的完成时点和数据交付路径。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　load A 在途时，独立的 load B 能继续发请求</h3>
+    <p id="fig-2-basis">年轻 B 所需数据独立于 A。等待 A 时可提前创建 B 的读事务，直到出现无法继续推测的条件。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="load A 在途时，独立的 load B 能继续发请求" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 512" role="img" aria-labelledby="us12001847b1-fig-2-svg-title us12001847b1-fig-2-svg-desc">
+<title id="us12001847b1-fig-2-svg-title">load A 在途时，独立的 load B 能继续发请求</title>
+<desc id="us12001847b1-fig-2-svg-desc">年轻 B 所需数据独立于 A。等待 A 时可提前创建 B 的读事务，直到出现无法继续推测的条件。</desc>
+<defs><marker id="us12001847b1-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12001847b1-fig-2-set"><path d="M 601 120 L 116 120" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-2-arrow-return)"/><rect x="306.5" y="96" width="104" height="18" fill="#f5f5f5"/><text x="358.5" y="110" class="arrow-label" text-anchor="middle">保留缺失指令 A</text></g>
+<g id="us12001847b1-fig-2-requesta"><path d="M 601 168 L 844 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-2-arrow-main)"/><rect x="664" y="144" width="117" height="18" fill="#f5f5f5"/><text x="722.5" y="158" class="arrow-label" text-anchor="middle">A 缺失，发读请求</text></g>
+<g id="us12001847b1-fig-2-b"><path d="M 358 216 L 601 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-2-arrow-data)"/><rect x="408" y="192" width="143" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">尝试独立 load B</text></g>
+<g id="us12001847b1-fig-2-requestb"><path d="M 601 264 L 844 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-2-arrow-main)"/><rect x="664" y="240" width="117" height="18" fill="#f5f5f5"/><text x="722.5" y="254" class="arrow-label" text-anchor="middle">B 缺失，再发请求</text></g>
+<g id="us12001847b1-fig-2-dep"><path d="M 358 306 L 382 306 Q 390 306 390 314 L 390 316 Q 390 324 382 324 L 358 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12001847b1-fig-2-arrow-control)"/><rect x="387.5" y="282" width="169" height="18" fill="#f5f5f5"/><text x="472" y="296" class="arrow-label" text-anchor="middle">遇到依赖 A 的 C，暂停</text></g>
+<g id="us12001847b1-fig-2-returna"><path d="M 844 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-2-arrow-return)"/><rect x="670.5" y="336" width="104" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">交付 A 的数据</text></g>
+<g id="us12001847b1-fig-2-resume"><path d="M 601 408 L 358 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-2-arrow-main)"/><rect x="434" y="384" width="91" height="18" fill="#f5f5f5"/><text x="479.5" y="398" class="arrow-label" text-anchor="middle">从 A 重执行</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">指令缓冲区</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">顺序流水线</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">LSU</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">内存层次</text>
+<text x="28" y="484" class="legend" text-anchor="start">时间向下。两次缺失同属可缓存读，B 在 A 数据返回之前已发出。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-2-requesta">A 缺失，发读请求</a> A 缺数据，常规请求送到存储层次。此时已经保留回放点。</li><li><a href="#us12001847b1-fig-2-b">尝试独立 load B</a> 在 A 未完成期间，按程序顺序遇到 B。B 的地址与 A 无数据依赖。</li><li><a href="#us12001847b1-fig-2-requestb">B 缺失，再发请求</a> B 也缺数据。推测执行窗口允许 LSU 提前发 B 的请求。</li><li><a href="#us12001847b1-fig-2-dep">遇到依赖 A 的 C，暂停</a> 遇到 C 需要 A 的结果，停止继续推测。已发的内存事务仍可进展。</li><li><a href="#us12001847b1-fig-2-returna">交付 A 的数据</a> A 数据返回。图画 A 领先返回的顺序，图 4 另画 B 先回 BIU 的边界。</li><li><a href="#us12001847b1-fig-2-resume">从 A 重执行</a> 重新译码 A。之后仍按程序顺序处理 B 和 C。</li></ul>
+  <p class="figure-evidence">原图 1、4、6、7、9；说明书归档段 0021、0022、0024、0025、0026、0027、0028、0029、0032、0034、0039、0044、0062、0063、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12001847B1/fig-2.html">打开独立图稿</a></p>
+  
+</figure></section><section id="stop"><h2>继续推测与停止等待分别检查哪些条件</h2><p>图 3 将停止条件分为四组。后续指令直接或间接依赖尚未返回的 A 数据时停止。遇到需要的旧推测结果已从旁路丢失、且寄存器文件仍是旧值时，无法用旧值继续。某些实施方式还依据不同访存类型、指令缓冲区容量判断停止。原图 9、10 单独展示依赖与访存类型的检查。</p><p>第 2、10、17 项覆盖依赖停止。第 3、11 项覆盖不同访存指令类型的停止实施方式。若首个缺失先解决，说明书也允许立即结束推测、优先回放 A。图把停止和重执行准备分别可视化。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　哪些判定结束推测窗口，哪些输入允许继续</h3>
+    <p id="fig-3-basis">数据依赖、旁路缺值、访存类型和保存空间都可能限制继续执行；A 已可用时可主动启动回放。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="哪些判定结束推测窗口，哪些输入允许继续" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 686" role="img" aria-labelledby="us12001847b1-fig-3-svg-title us12001847b1-fig-3-svg-desc">
+<title id="us12001847b1-fig-3-svg-title">哪些判定结束推测窗口，哪些输入允许继续</title>
+<desc id="us12001847b1-fig-3-svg-desc">数据依赖、旁路缺值、访存类型和保存空间都可能限制继续执行；A 已可用时可主动启动回放。</desc>
+<defs><marker id="us12001847b1-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12001847b1-fig-3-now" d="M 290 137 L 485 137 Q 493 137 493 145 L 493 274" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-3-arrow-data)"/>
+<path id="us12001847b1-fig-3-opr" d="M 290 309 L 372 309" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-3-arrow-data)"/>
+<path id="us12001847b1-fig-3-mem" d="M 290 493 L 474 493 Q 482 493 482 485 L 482 351" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-3-arrow-data)"/>
+<path id="us12001847b1-fig-3-finish" d="M 602 295 L 638 295 Q 646 295 646 287 L 646 165 Q 646 157 654 157 L 689 157" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-3-arrow-main)"/>
+<path id="us12001847b1-fig-3-continue" d="M 602 329 L 638 329 Q 646 329 646 337 L 646 478 Q 646 486 654 486 L 689 486" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-3-arrow-data)"/>
+<rect x="325.5" y="108" width="143" height="18" fill="#f5f5f5"/><text x="397" y="122" class="arrow-label" text-anchor="middle">检测 A 的可用性</text>
+<rect x="286.5" y="279" width="89" height="18" fill="#f5f5f5"/><text x="331" y="293" class="arrow-label" text-anchor="middle">操作数状态</text>
+<rect x="329.5" y="461" width="105" height="18" fill="#f5f5f5"/><text x="382" y="475" class="arrow-label" text-anchor="middle">分类和容量</text>
+<rect x="605" y="205" width="86" height="18" fill="#f5f5f5"/><text x="648" y="219" class="arrow-label" text-anchor="middle">结束推测</text>
+<rect x="604.5" y="385" width="87" height="18" fill="#f5f5f5"/><text x="648" y="399" class="arrow-label" text-anchor="middle">继续推测</text>
+<g id="us12001847b1-fig-3-node"><rect x="54" y="99" width="236" height="74" rx="6" fill="#f5f5f5"/><rect x="54" y="99" width="236" height="74" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="172" y="125" class="node-name" text-anchor="middle">年轻指令进入窗口</text><text x="172" y="147" class="node-detail" text-anchor="middle">同时观察 A 是否已可用</text></g>
+<g id="us12001847b1-fig-3-dep"><rect x="54" y="274" width="236" height="77" rx="6" fill="#f5f5f5"/><rect x="54" y="274" width="236" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="172" y="300" class="node-name" text-anchor="middle">操作数检查</text><text x="172" y="322" class="node-detail" text-anchor="middle">缺 A 的结果或旁路失效</text></g>
+<g id="us12001847b1-fig-3-attrs"><rect x="54" y="457" width="236" height="77" rx="6" fill="#f5f5f5"/><rect x="54" y="457" width="236" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="172" y="483" class="node-name" text-anchor="middle">访存属性与容量</text><text x="172" y="505" class="node-detail" text-anchor="middle">不同类型／缓冲区无条目</text></g>
+<g id="us12001847b1-fig-3-decision"><rect x="372" y="274" width="230" height="77" rx="6" fill="#f5f5f5"/><rect x="372" y="274" width="230" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="487" y="300" class="node-name" text-anchor="middle">load 缺失管理电路</text><text x="487" y="322" class="node-detail" text-anchor="middle">评估是否结束推测</text></g>
+<g id="us12001847b1-fig-3-wait"><rect x="689" y="119" width="231" height="76" rx="6" fill="#f5f5f5"/><rect x="689" y="119" width="231" height="76" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="804.5" y="145" class="node-name" text-anchor="middle">从 A 回放</text><text x="804.5" y="167" class="node-detail" text-anchor="middle">先等 A 可用，再重新译码</text></g>
+<g id="us12001847b1-fig-3-next"><rect x="689" y="448" width="231" height="77" rx="6" fill="#f5f5f5"/><rect x="689" y="448" width="231" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="804.5" y="474" class="node-name" text-anchor="middle">继续到下一指令</text><text x="804.5" y="496" class="node-detail" text-anchor="middle">可发合格的下一缺失请求</text></g>
+<text x="40" y="601" class="legend" text-anchor="start">只有准备好的推测操作数才可被后续指令使用。A 已返回时可以直接进入回放。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-3-node">年轻指令进入窗口</a> 每次到一条年轻指令，根据该指令、A 缺失状态和缓冲条目容量判定。</li><li><a href="#us12001847b1-fig-3-dep">操作数检查</a> 数据依赖和旁路有效性检查可在尝试消费操作数时阻止继续。</li><li><a href="#us12001847b1-fig-3-attrs">访存属性与容量</a> 比较访问属性及指令缓冲区的保留能力。设备内存动作还受顺序要求。</li><li><a href="#us12001847b1-fig-3-decision">load 缺失管理电路</a> 任一适用停止条件成立时结束推测。A 已返回也可以触发结束，优先尝试回放。</li><li><a href="#us12001847b1-fig-3-wait">从 A 回放</a> 如果 A 尚未可用，先等待；A 可用后从缓冲区回放。</li><li><a href="#us12001847b1-fig-3-next">继续到下一指令</a> 可用独立操作继续推测执行。碰到下一缺失并满足实施条件时，可以发另一个请求。</li></ul>
+  <p class="figure-evidence">原图 3、6、7、8、9、10；说明书归档段 0022、0027、0028、0029、0030、0033、0035、0036、0038、0062、0063、0064、0065、0066；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12001847B1/fig-3.html">打开独立图稿</a></p>
+  
+</figure></section><section id="latency"><h2>第二个请求早到，什么时候对顺序端可用</h2><p>图 4 用两条各自独立、时长固定的读请求说明两个观察点。串行例中 A 在第 0 拍发出、第 8 拍可见。下一 load B 在第 9 拍发出、第 12 拍可见。推测例 B 在第 2 拍发出、第 5 拍先返回到 BIU，原始返回先于 A。在每拍最多交付一个结果、需保持 A 后 B 顺序的模型里，B 等到第 9 拍才交付，两个结果都交付的时刻从第 12 拍缩到第 9 拍。</p><p>这个差值忽略缓存和内存端口竞争，也没有计入译码、回放和退休成本。若 B 在 A 返回前没有发出去，重叠为零；若 B 在重执行走到它之前仍没有数据，B 仍可停顿。B 的发请求到返回时间保持 3 拍，图比较的是两项数据都交付的窗口与 BIU 顺序等待。若 A 在拍 a 交付，B 在拍 b 返回 BIU，则模型最早在 max(a+1, b) 交付 B。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　在原始响应与顺序交付两处观察两笔读</h3>
+    <p id="fig-4-basis">B 先回 BIU 时，在顺序交付前仍等待 A。相对串行例，提前发 B 请求缩短两笔数据都交付的时间。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="在原始响应与顺序交付两处观察两笔读" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 544" role="img" aria-labelledby="us12001847b1-fig-4-svg-title us12001847b1-fig-4-svg-desc">
+<title id="us12001847b1-fig-4-svg-title">在原始响应与顺序交付两处观察两笔读</title>
+<desc id="us12001847b1-fig-4-svg-desc">B 先回 BIU 时，在顺序交付前仍等待 A。相对串行例，提前发 B 请求缩短两笔数据都交付的时间。</desc>
+<defs><marker id="us12001847b1-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12001847b1-fig-4-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">0</text>
+<line x1="246" y1="76" x2="246" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="246" y="64" class="arrow-label" text-anchor="middle">1</text>
+<line x1="300" y1="76" x2="300" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="300" y="64" class="arrow-label" text-anchor="middle">2</text>
+<line x1="354" y1="76" x2="354" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="354" y="64" class="arrow-label" text-anchor="middle">3</text>
+<line x1="408" y1="76" x2="408" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="408" y="64" class="arrow-label" text-anchor="middle">4</text>
+<line x1="462" y1="76" x2="462" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="462" y="64" class="arrow-label" text-anchor="middle">5</text>
+<line x1="516" y1="76" x2="516" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="516" y="64" class="arrow-label" text-anchor="middle">6</text>
+<line x1="570" y1="76" x2="570" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="570" y="64" class="arrow-label" text-anchor="middle">7</text>
+<line x1="624" y1="76" x2="624" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="624" y="64" class="arrow-label" text-anchor="middle">8</text>
+<line x1="678" y1="76" x2="678" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="678" y="64" class="arrow-label" text-anchor="middle">9</text>
+<line x1="732" y1="76" x2="732" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="732" y="64" class="arrow-label" text-anchor="middle">10</text>
+<line x1="786" y1="76" x2="786" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="786" y="64" class="arrow-label" text-anchor="middle">11</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">12</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（拍）</text>
+</g>
+<g id="us12001847b1-fig-4-seriala"><text x="24" y="136" class="node-name" text-anchor="start">串行 · A</text>
+<rect x="192" y="112" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="408" y="136" class="arrow-label" text-anchor="middle">A 读取在途</text>
+<circle cx="624" cy="131" r="5" fill="#4f5d75"/>
+<text x="624" y="171" class="arrow-label" text-anchor="end">交付 A</text></g>
+<g id="us12001847b1-fig-4-serialb"><text x="24" y="228" class="node-name" text-anchor="start">串行 · B</text>
+<rect x="678" y="204" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="759" y="228" class="arrow-label" text-anchor="middle">B 读取在途</text>
+<circle cx="840" cy="223" r="5" fill="#4f5d75"/>
+<text x="840" y="263" class="arrow-label" text-anchor="end">交付 B</text></g>
+<g id="us12001847b1-fig-4-speca"><text x="24" y="320" class="node-name" text-anchor="start">推测 · A</text>
+<rect x="192" y="296" width="432" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="408" y="320" class="arrow-label" text-anchor="middle">A 读取在途</text>
+<circle cx="624" cy="315" r="5" fill="#4f5d75"/>
+<text x="624" y="355" class="arrow-label" text-anchor="end">交付 A</text></g>
+<g id="us12001847b1-fig-4-specb"><text x="24" y="412" class="node-name" text-anchor="start">推测 · B</text>
+<rect x="300" y="388" width="162" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="381" y="412" class="arrow-label" text-anchor="middle">B 读取在途</text>
+<rect x="462" y="388" width="216" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="570" y="412" class="arrow-label" text-anchor="middle">数据暂存在 BIU</text>
+<circle cx="678" cy="407" r="5" fill="#bf4520"/>
+<text x="678" y="447" class="arrow-label" text-anchor="end">交付 B</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">模型设 A 读取 8 拍、B 读取 3 拍，BIU 每拍最多交付一项。未计缓存争用、重译码与退休。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-4-seriala">串行 · A</a> 串行基线发 A 后等到第 8 拍交付。</li><li><a href="#us12001847b1-fig-4-serialb">串行 · B</a> 串行 B 第 9 拍发出、第 12 拍回到流水线。</li><li><a href="#us12001847b1-fig-4-speca">推测 · A</a> 推测例 A 的请求和返回时刻与基线一样。</li><li><a href="#us12001847b1-fig-4-specb">推测 · B</a> B 的第 2 拍请求与 A 重叠，在第 5 拍先到 BIU。随后排队收敛至程序顺序交付。</li></ul>
+  <p class="figure-evidence">原图 2、6、7；说明书归档段 0022、0023、0026、0028、0029、0032、0033、0034、0062、0063；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12001847B1/fig-4.html">打开独立图稿</a></p>
+  
+</figure></section><section id="bypass"><h2>推测结果如何传给更年轻的指令</h2><p>说明书第 0026–0030 段让独立运算生成结果，再把结果传给后续运算。图 5 将其具体化为 B 的算术操作计算地址，旁路网络把地址交给后续 load C 的 LSU。只要地址尚在旁路并符合其他约束，后续 load 可在 A 未返回时发请求。第 4、12、19 项覆盖推测结果用于后续指令。</p><p>推测值可能暂存在旁路网络。若应该更新的寄存器仍保存旧值，记分牌标记旧值不能直接使用。年轻指令找不到该结果时，应停住而非从旧寄存器值构造地址。这个旁路与 BIU 的返回数据重排分别发生在执行侧和存储返回侧。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　推测地址通过旁路送给更年轻 load，旧寄存器值如何被挡住</h3>
+    <p id="fig-5-basis">当中间地址可用时，年轻 load 可继续；旁路结果失效后，记分牌阻止读旧寄存器值。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="推测地址通过旁路送给更年轻 load，旧寄存器值如何被挡住" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 655" role="img" aria-labelledby="us12001847b1-fig-5-svg-title us12001847b1-fig-5-svg-desc">
+<title id="us12001847b1-fig-5-svg-title">推测地址通过旁路送给更年轻 load，旧寄存器值如何被挡住</title>
+<desc id="us12001847b1-fig-5-svg-desc">当中间地址可用时，年轻 load 可继续；旁路结果失效后，记分牌阻止读旧寄存器值。</desc>
+<defs><marker id="us12001847b1-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12001847b1-fig-5-spec" d="M 150 176 L 150 271" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-data)"/>
+<path id="us12001847b1-fig-5-val" d="M 269 309 L 358 309" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-main)"/>
+<path id="us12001847b1-fig-5-mark" d="M 232 271 L 232 226 Q 232 218 240 218 L 463 218 Q 471 218 471 210 L 471 177" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-data)"/>
+<path id="us12001847b1-fig-5-fwd" d="M 587 327 L 686 327" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-data)"/>
+<path id="us12001847b1-fig-5-status" d="M 587 151 L 617 151 Q 625 151 625 159 L 625 280 Q 625 288 633 288 L 686 288" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-data)"/>
+<path id="us12001847b1-fig-5-use" d="M 790 269 L 790 179" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-5-arrow-main)"/>
+<path id="us12001847b1-fig-5-blocked" d="M 801 346 L 801 437" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-5-arrow-return)"/>
+<rect x="53.5" y="210" width="85" height="18" fill="#f5f5f5"/><text x="96" y="224" class="arrow-label" text-anchor="middle">同一窗口</text>
+<rect x="272.5" y="278" width="83" height="18" fill="#f5f5f5"/><text x="314" y="292" class="arrow-label" text-anchor="middle">临时地址</text>
+<rect x="306" y="189" width="90" height="18" fill="#f5f5f5"/><text x="351" y="203" class="arrow-label" text-anchor="middle">标记旧值</text>
+<rect x="594" y="298" width="80" height="18" fill="#f5f5f5"/><text x="634" y="312" class="arrow-label" text-anchor="middle">旁路值</text>
+<rect x="583.5" y="217" width="87" height="18" fill="#f5f5f5"/><text x="627" y="231" class="arrow-label" text-anchor="middle">提供标记</text>
+<rect x="798" y="210" width="94" height="18" fill="#f5f5f5"/><text x="845" y="224" class="arrow-label" text-anchor="middle">旁路有效</text>
+<rect x="653.5" y="381" width="141" height="18" fill="#f5f5f5"/><text x="724" y="395" class="arrow-label" text-anchor="middle">需要的值已失效</text>
+<g id="us12001847b1-fig-5-a"><rect x="37" y="103" width="232" height="73" rx="6" fill="#f5f5f5"/><rect x="37" y="103" width="232" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="153" y="129" class="node-name" text-anchor="middle">更早的 load A</text><text x="153" y="151" class="node-detail" text-anchor="middle">等待缺失数据</text></g>
+<g id="us12001847b1-fig-5-b"><rect x="37" y="271" width="232" height="75" rx="6" fill="#f5f5f5"/><rect x="37" y="271" width="232" height="75" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="153" y="297" class="node-name" text-anchor="middle">独立运算 B</text><text x="153" y="319" class="node-detail" text-anchor="middle">生成地址中间值</text></g>
+<g id="us12001847b1-fig-5-route"><rect x="358" y="271" width="229" height="75" rx="6" fill="#f5f5f5"/><rect x="358" y="271" width="229" height="75" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="472.5" y="297" class="node-name" text-anchor="middle">推测旁路网络</text><text x="472.5" y="319" class="node-detail" text-anchor="middle">暂存并传递中间值</text></g>
+<g id="us12001847b1-fig-5-score"><rect x="358" y="104" width="229" height="73" rx="6" fill="#f5f5f5"/><rect x="358" y="104" width="229" height="73" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="472.5" y="130" class="node-name" text-anchor="middle">寄存器记分牌</text><text x="472.5" y="152" class="node-detail" text-anchor="middle">目的寄存器仍含旧值</text></g>
+<g id="us12001847b1-fig-5-check"><rect x="686" y="269" width="235" height="77" rx="6" fill="#f5f5f5"/><rect x="686" y="269" width="235" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803.5" y="295" class="node-name" text-anchor="middle">load C 检查地址</text><text x="803.5" y="317" class="node-detail" text-anchor="middle">读取旁路与记分牌</text></g>
+<g id="us12001847b1-fig-5-load"><rect x="686" y="102" width="235" height="77" rx="6" fill="#f5f5f5"/><rect x="686" y="102" width="235" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="803.5" y="128" class="node-name" text-anchor="middle">年轻 load C</text><text x="803.5" y="150" class="node-detail" text-anchor="middle">LSU 使用有效旁路地址</text></g>
+<g id="us12001847b1-fig-5-stop"><rect x="686" y="437" width="235" height="77" rx="6" fill="#f5f5f5"/><rect x="686" y="437" width="235" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="803.5" y="463" class="node-name" text-anchor="middle">停止继续推测</text><text x="803.5" y="485" class="node-detail" text-anchor="middle">等待可用值并回放</text></g>
+<text x="37" y="576" class="legend" text-anchor="start">图以地址中间值为例。它需要在旁路内有效，才能帮助年轻 load 提早发请求。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-5-a">更早的 load A</a> 更早的 A 仍在等待缺失数据，体系结构结果保持程序顺序。</li><li><a href="#us12001847b1-fig-5-b">独立运算 B</a> 独立的运算 B 能先求出地址，原文允许该中间结果被更年轻指令临时使用。</li><li><a href="#us12001847b1-fig-5-route">推测旁路网络</a> 旁路网络暂存中间值，可送至其他执行单元或 LSU。</li><li><a href="#us12001847b1-fig-5-score">寄存器记分牌</a> 标记目标寄存器仍含旧值，旁路失效时不能回退读取这个旧值。</li><li><a href="#us12001847b1-fig-5-check">load C 检查地址</a> 先检查旁路是否有值，再依据记分牌排除旧寄存器值。</li><li><a href="#us12001847b1-fig-5-load">年轻 load C</a> 当旁路地址有效，年轻 load C 可以从该地址发请求。</li><li><a href="#us12001847b1-fig-5-stop">停止继续推测</a> 若旁路查不到且寄存器已标旧，当前 C 的地址无法确定，停在推测边界。</li></ul>
+  <p class="figure-evidence">原图 1、3、4、8、9；说明书归档段 0025、0026、0027、0028、0029、0030、0038、0044、0045、0046、0062、0064、0065；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00017" aria-label="原文权利要求 17">17</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00019" aria-label="原文权利要求 19">19</a> <a href="../diagrams/US12001847B1/fig-5.html">打开独立图稿</a></p>
+  
+</figure></section><section id="response"><h2>可缓存回填、不可缓存合并和顺序交付怎样分工</h2><p>原图 2 的总线接口单元（BIU）介于内存控制器与 L1 缓存/流水线之间。授权第 8、15 项用 BIU 对独立读请求的返回数据恢复程序顺序。可缓存数据可以回填 L1 数据缓存；普通不可缓存和设备内存返回可经暂存直接交 LSU，具体排序规则仍取决于该访问类型。</p><p>图 6 额外画出授权第 7 项的同一普通不可缓存地址范围读取合并。这里的缓存行是对齐的地址范围，内存仍带不可缓存属性。若两个地址可在同一笔访问覆盖，可让一笔访问供给两个请求。设备内存可具有强顺序及副作用，说明书另列其属性。</p><figure class="exhibit" id="fig-6">
+  <figcaption><h3 id="fig-6-title">图 6　相同不可缓存地址范围可合并读取，返回仍按顺序交付</h3>
+    <p id="fig-6-basis">请求侧可把同一范围的普通不可缓存读合并；存储返回经 BIU 重排后按程序顺序到达流水线。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="相同不可缓存地址范围可合并读取，返回仍按顺序交付" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 637" role="img" aria-labelledby="us12001847b1-fig-6-svg-title us12001847b1-fig-6-svg-desc">
+<title id="us12001847b1-fig-6-svg-title">相同不可缓存地址范围可合并读取，返回仍按顺序交付</title>
+<desc id="us12001847b1-fig-6-svg-desc">请求侧可把同一范围的普通不可缓存读合并；存储返回经 BIU 重排后按程序顺序到达流水线。</desc>
+<defs><marker id="us12001847b1-fig-6-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12001847b1-fig-6-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12001847b1-fig-6-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12001847b1-fig-6-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12001847b1-fig-6-class" d="M 264 156 L 363 156" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-6-arrow-data)"/>
+<path id="us12001847b1-fig-6-send" d="M 595 156 L 689 156" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12001847b1-fig-6-arrow-data)"/>
+<path id="us12001847b1-fig-6-ret" d="M 807 195 L 807 345" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-6-arrow-return)"/>
+<path id="us12001847b1-fig-6-cache" d="M 689 383 L 595 383" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12001847b1-fig-6-arrow-main)"/>
+<path id="us12001847b1-fig-6-unc" d="M 807 423 L 807 528 Q 807 536 799 536 L 595 536" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12001847b1-fig-6-arrow-return)"/>
+<rect x="257.5" y="124" width="105" height="18" fill="#f5f5f5"/><text x="310" y="138" class="arrow-label" text-anchor="middle">判断能否合并</text>
+<rect x="589.5" y="125" width="101" height="18" fill="#f5f5f5"/><text x="640" y="139" class="arrow-label" text-anchor="middle">发有效请求</text>
+<rect x="810" y="261" width="80" height="18" fill="#f5f5f5"/><text x="850" y="275" class="arrow-label" text-anchor="middle">读响应</text>
+<rect x="595" y="352" width="94" height="18" fill="#f5f5f5"/><text x="642" y="366" class="arrow-label" text-anchor="middle">可缓存数据</text>
+<rect x="644.5" y="504" width="119" height="18" fill="#f5f5f5"/><text x="704" y="518" class="arrow-label" text-anchor="middle">不可缓存数据</text>
+<g id="us12001847b1-fig-6-lsu"><rect x="36" y="118" width="228" height="77" rx="6" fill="#f5f5f5"/><rect x="36" y="118" width="228" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150" y="144" class="node-name" text-anchor="middle">LSU 的读请求</text><text x="150" y="166" class="node-detail" text-anchor="middle">地址与内存属性</text></g>
+<g id="us12001847b1-fig-6-merge"><rect x="363" y="118" width="232" height="77" rx="6" fill="#f5f5f5"/><rect x="363" y="118" width="232" height="77" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="479" y="144" class="node-name" text-anchor="middle">按地址范围合并</text><text x="479" y="166" class="node-detail" text-anchor="middle">同一普通不可缓存范围</text></g>
+<g id="us12001847b1-fig-6-mc"><rect x="689" y="118" width="234" height="77" rx="6" fill="#f5f5f5"/><rect x="689" y="118" width="234" height="77" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="806" y="144" class="node-name" text-anchor="middle">内存控制器</text><text x="806" y="166" class="node-detail" text-anchor="middle">执行一笔或多笔访问</text></g>
+<g id="us12001847b1-fig-6-biu"><rect x="689" y="345" width="234" height="78" rx="6" fill="#f5f5f5"/><rect x="689" y="345" width="234" height="78" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="806" y="371" class="node-name" text-anchor="middle">BIU 重排电路</text><text x="806" y="393" class="node-detail" text-anchor="middle">按程序顺序交付</text></g>
+<g id="us12001847b1-fig-6-l1"><rect x="363" y="345" width="232" height="78" rx="6" fill="#f5f5f5"/><rect x="363" y="345" width="232" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479" y="371" class="node-name" text-anchor="middle">L1 数据缓存</text><text x="479" y="393" class="node-detail" text-anchor="middle">处理可缓存回填</text></g>
+<g id="us12001847b1-fig-6-nc"><rect x="363" y="497" width="232" height="78" rx="6" fill="#f5f5f5"/><rect x="363" y="497" width="232" height="78" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="479" y="523" class="node-name" text-anchor="middle">LSU 返回数据端口</text><text x="479" y="545" class="node-detail" text-anchor="middle">普通不可缓存暂存或直达</text></g>
+<text x="37" y="612" class="legend" text-anchor="start">普通不可缓存地址可按同一对齐范围合并。设备内存的排序另由其属性约束。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12001847b1-fig-6-lsu">LSU 的读请求</a> LSU 跟踪两个 load 的地址及访问属性。原图 2 分可缓存、普通不可缓存和设备内存。</li><li><a href="#us12001847b1-fig-6-merge">按地址范围合并</a> 在第 7 项的同一普通不可缓存对齐范围内，两个请求可合为一次内存访问，分别取各自所需字节。</li><li><a href="#us12001847b1-fig-6-mc">内存控制器</a> 内存控制器执行请求并返回数据。多个未合并请求可以不同顺序返回。</li><li><a href="#us12001847b1-fig-6-biu">BIU 重排电路</a> BIU 内重排电路识别响应对应的指令，按程序顺序向流水线交付。</li><li><a href="#us12001847b1-fig-6-l1">L1 数据缓存</a> 可缓存返回可回填 L1 数据缓存，并可在回填时转发给等待的 load。</li><li><a href="#us12001847b1-fig-6-nc">LSU 返回数据端口</a> 普通不可缓存返回可暂存或直接送 LSU，不因地址范围按行对齐就获得 L1 缓存属性。</li></ul>
+  <p class="figure-evidence">原图 1、2、4、6、10；说明书归档段 0019、0021、0022、0023、0026、0032、0033、0034、0035、0037、0039、0043、0044、0048、0062、0066；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US12001847B1/fig-6.html">打开独立图稿</a></p>
+  
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=latency#catalog">访存延迟与预取</a></p>
-  <p class="document-id"><code>US12001847B1</code><span>美国授权专利</span><time datetime="2024-06-04">2024-06-04</time></p>
-  <h1>顺序执行流水线在加载缺失期间重叠独立访存</h1>
-  <p class="english-title" lang="en">Processor implementing parallel in-order execution during load misses</p>
-  <p class="document-question">第一条 load 等待缺失数据回填时，顺序执行流水线如何提前发出独立访存请求？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">顺序流水线保存首个缺失的重执行起点，并在等待时推测执行后续指令、提前发出独立读。首读返回后从保存位置重走。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>后续读的地址在首读返回前已可计算。若下一条需要首读结果，则停下推测执行。</dd></div><div><dt>验证方法</dt><dd>固定两笔下层读的服务时间，对照首缺失即停与停前允许再发独立读。分别量发出间隔、两笔数据均可用的时点及按序重执行完成时点。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12001847B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">如果第一条 load 一缺失就停住流水线，后面地址已知的独立访存也必须排在它后面。让后续读先在内存中进行，可以重叠两笔等待，同时保留顺序执行的起点。</p>
-    <p>流水线在第一个缺失请求在途时推测执行后继指令，可以提前发出第二个缺失请求。遇到停止条件后，流水线等首个请求返回，再从原来的第一条指令按序重执行。</p>
-    <ol class="walkthrough"><li><h3>发出首个缺失请求</h3><p>首条 load 找不到需要的数据时发读。流水线在指令队列或关联状态中保存重执行起点。</p></li><li><h3>在等待期间推测执行后继</h3><p>首读在途时，流水线可以继续执行部分后继指令。可用旁路暂存中间结果，并把临时状态分开维护。若发现独立的第二个缺失，也发出相应读请求。</p></li><li><h3>在停顿条件成立时停止推进</h3><p>后续操作依赖首读时，要等该结果。若出现不同内存类型的第三次缺失，可按权利要求 3 停止推测。图 3 的临时旁路若丢失后续指令所需的中间结果，也会让执行停止。</p></li><li><h3>首读返回后从第一条重走</h3><p>流水线从保存的起点按序重新执行。后续读若已经完成，可缩短重走时的等待，指令仍按原程序顺序提交。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>依权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>，推测段中的第三个缺失若属于与首条不同的访存指令类型，可以停止推测执行。权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 又允许一条推测指令使用另一条推测指令生成的中间结果。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>推测执行段</dt><dd>首个缺失在途时，顺序流水线临时执行部分后续指令并可向下层发读。</dd></div><div><dt>重执行起点</dt><dd>首个缺失的指令位置，数据可用后从该指令按序重新执行。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">A 等返回时先发独立的 B</a></li><li><a href="#fig-1">顺序流水线须记下重执行起点</a></li><li><a href="#fig-4">两个独立读何时都已返回</a></li><li><a href="#fig-3">哪些条件会停止推测执行</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">A 等返回时先发独立的 B</h3></div>
-    <a class="paper-open" href="../mechanisms/US12001847B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="A 等返回时先发独立的 B">
-    <img class="paper-image native-image" src="../mechanisms/US12001847B1/fig-2/diagram.svg" width="560" height="494"
-         style="--paper-width:560px" alt="A 等返回时先发独立的 B。流水线在 A 数据就绪前发出 B。B 的内存请求可以与 A 重叠，最终退休仍服从程序顺序。">
-  </div>
-  <figcaption>
-    <span>流水线在 A 数据就绪前发出 B。B 的内存请求可以与 A 重叠，最终退休仍服从程序顺序。</span>
-    <span class="figure-evidence">说明书图 3、6–7，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/df/0e/9e/32427aec7fb06d/US12001847.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">顺序流水线须记下重执行起点</h3></div>
-    <a class="paper-open" href="../mechanisms/US12001847B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="顺序流水线须记下重执行起点">
-    <img class="paper-image native-image" src="../mechanisms/US12001847B1/fig-1/diagram.svg" width="664" height="460"
-         style="--paper-width:664px" alt="顺序流水线须记下重执行起点。首个缺失在途时，顺序流水线可以另外发出 B。指令缓冲保留第一个缺失指令，以便收到数据后按序重执行。">
-  </div>
-  <figcaption>
-    <span>首个缺失在途时，顺序流水线可以另外发出 B。指令缓冲保留第一个缺失指令，以便收到数据后按序重执行。</span>
-    <span class="figure-evidence">原图 1–4、6–7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/df/0e/9e/32427aec7fb06d/US12001847.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">同轴时序对照</p><h3 id="fig-4-title">两个独立读何时都已返回</h3></div>
-    <a class="paper-open" href="../mechanisms/US12001847B1/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="两个独立读何时都已返回">
-    <img class="paper-image native-image" src="../mechanisms/US12001847B1/fig-4/diagram.svg" width="644" height="564"
-         style="--paper-width:644px" alt="两个独立读何时都已返回。固定两笔下层读皆为 20 拍。串行路径在第 40 拍两笔都可用，重叠路径在第 25 拍两笔都可用。差 15 拍仅指这个无下游竞争的读请求模型。">
-  </div>
-  <figcaption>
-    <span>固定两笔下层读皆为 20 拍。串行路径在第 40 拍两笔都可用，重叠路径在第 25 拍两笔都可用。差 15 拍仅指这个无下游竞争的读请求模型。</span>
-    <span class="figure-evidence">以图 3、6–7 为依据的简化模型，只计最后一笔读何时就绪。重执行和总线竞争另计。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/df/0e/9e/32427aec7fb06d/US12001847.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">哪些条件会停止推测执行</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">后继状态</th><th scope="col">可继续推进</th><th scope="col">理由</th></tr></thead><tbody><tr><th scope="row">后续指令独立且操作数可用</th><td>可继续</td><td>遇后续缺失可提前发读</td></tr><tr><th scope="row">下一条依赖首读</th><td>停</td><td class="emphasis">首读结果未可用</td></tr><tr><th scope="row">新缺失与第一笔的内存类型不同</th><td>可停</td><td>适用权利要求 3 的类型约束</td></tr><tr><th scope="row">临时旁路中的操作数已失效</th><td>可停</td><td>原图 3 的中间值不能继续使用</td></tr></tbody></table>
-  <figcaption>
-    <span>后继指令只有在可执行且符合实施例的访存约束时，才能提前向下层发读。</span>
-    <span class="figure-evidence">图 6–10，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>。不同场景依选定实施例。 · <a href="https://patentimages.storage.googleapis.com/df/0e/9e/32427aec7fb06d/US12001847.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>首缺失时先发后读</dt><dd>重叠两笔缺失等待 <span class="subdued">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></span></dd></div><div><dt>保留首缺失指令</dt><dd>从固定位置恢复顺序 <span class="subdued">原图 7，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>独立于首缺失的数据依赖仍可能在推测段内形成短链，能够生成更多已知地址。串行重执行的成本则落在原来的指令流水线，包括已经执行过的中间地址运算。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若第二条独立 load 同首条访问相同的繁忙通道，提前发出的请求可能只是在下游等待。数据返回仍近似串行，而重走地址链可能增加执行工作。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定 A 在第 0 拍发读，第 20 拍返回。独立的 B 在第 5 拍发读，也需要 20 拍。之后 C 要用 A 的数据，推测执行在这里停止。</dd></div><div><dt>处理结果</dt><dd>暂不计重执行开销时，A 与 B 分别在第 20、25 拍就绪。若等 A 返回才在第 20 拍发 B，最后一笔要到第 40 拍完成。两笔并发在本例中早 15 拍就绪。</dd></div><div><dt>结果解读</dt><dd>若 B 的地址也依赖 A，就无法在第 5 拍发出。实际指令用时还包括重执行、仲裁和排队。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 6–7。处理器权项按首缺失等待、第二次缺失请求、停止和顺序恢复组织流水线。</p>
+  <p>原图 6–7。处理器权项按首缺失等待、第二次缺失请求、停止和顺序恢复组织流水线。等待先行访存返回时，流水线按程序顺序执行后续操作；推测段和体系结构状态更新由恢复流程衔接。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=an%20instruction%20pipeline%20configured%20to%20execute%20a%20sequence%20of%20instructions%20in-order">F1</a></th><td>原流水线顺序执行程序，首条缺数据的指令形成恢复点</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=FIG.%201%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20a%20portion%20of%20a%20processor%20including">说明书 0005</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=send%20a%20first%20request%20to%20load%20the%20missing%20data%20for%20the%20first%20instruction">F2</a></th><td>为首个缺失发出取数请求，在等待期间进入推测路径</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=send%20a%20second%20request%20to%20load%20the%20missing%20data%20for%20the%20second%20instruction">F3</a></th><td>推测执行发现另一次缺失时，可以另外发出取数请求</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=stop%20execution%20of%20the%20instruction%20pipeline%20until%20the%20missing%20data%20for%20the%20first%20instruction%20is%20available">F4</a></th><td>遇到推测不可继续的条件就停流水线，等首个缺失返回后回到首条缺失指令顺序重执行</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%207%20%2C%20a%20flowchart%20illustrating%20another%20example%20embodiment%20of%20operation%20of%20a">说明书 0063</a> · 原图 7</td></tr></tbody>
@@ -137,50 +253,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=an%20instruction%20pipeline%20of%20a%20processor%20that%20executes%20a%20sequence%20of%20instructions%20in-order">F12</a></th><td>用顺序执行流水线检测第一条指令的数据缺失。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=sending%2C%20by%20the%20instruction%20pipeline%2C%20a%20first%20request%20to%20load%20the%20missing%20data%20for%20the%20first">F13</a></th><td>由流水线发出首个缺失请求。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=speculatively%20executing%2C%20by%20the%20instruction%20pipeline%2C%20the%20one%20or%20more%20instructions">F14</a></th><td>首读在途期间推测执行后续指令。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=sending%20a%20second%20request%20to%20load%20the%20missing%20data%20for%20the%20second%20instruction">F15</a></th><td>推测期间看到第二次缺失则发第二笔读。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%206%20%2C%20a%20flowchart%20illustrating%20one%20example%20embodiment%20of%20the%20operation%20of">说明书 0062</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=stopping%20execution%20of%20the%20instruction%20pipeline%20until%20the%20missing%20data%20for%20the%20first%20instruction%20is%20available">F16</a></th><td>遇停止条件时停住，直到首读可用。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%207%20%2C%20a%20flowchart%20illustrating%20another%20example%20embodiment%20of%20operation%20of%20a">说明书 0063</a> · 原图 7</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=re-executing%20the%20sequence%20of%20instructions%20in-order%20starting%20at%20the%20first%20instruction">F17</a></th><td>从首缺失指令起按序重新执行。</td><td><a href="https://patents.google.com/patent/US12001847B1/en#:~:text=Turning%20now%20to%20FIG.%207%20%2C%20a%20flowchart%20illustrating%20another%20example%20embodiment%20of%20operation%20of%20a">说明书 0063</a> · 原图 7</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 6–7。处理器权项按首缺失等待、第二次缺失请求、停止和顺序恢复组织流水线。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>把另一指令需要首个缺失的数据明确为停止推测的条件。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>把随后碰到不同访存类型且缺失的指令列为停止条件。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>允许后续推测指令使用推测段内另一指令的计算结果。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>停止后在顺序重执行时使用首缺失已经加载的数据。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>首缺失的指令保留在指令缓冲，重执行时重新译码。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两个缺失对准不可缓存内存的同一行时合为单个请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>由总线接口单元维持两笔返回数据送入流水线的程序顺序。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>设备存有程序，顺序流水线在首缺失期间另发后读，停止后回到首缺失重执行。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>另一指令依赖首缺失数据时，即满足推测停止条件。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>推测段遇第三次缺失且内存类型不同时，停止推测。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>第四条指令在推测段中使用第三条的执行结果。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>首数据可用后用它按序重执行。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>将首个缺失的程序指令存入缓冲，重执行时从中取出并译码。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>用总线接口单元将两笔缺失返回数据按程序顺序送入流水线。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>顺序流水线发出首缺失，等待期间推测发第二笔，遇停止条件后回到第一条重执行。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>让另一条指令对首缺失数据的依赖触发停止。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>推测中检测第三次缺失，且另一条指令需要首缺失数据时判定停顿。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>推测执行第四条时可使用第三条临时生成的结果。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>重新译码缓冲中的首缺失指令，用返回数据从该指令按序重执行。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 6–7。处理器权项按首缺失等待、第二次缺失请求、停止和顺序恢复组织流水线。等待先行访存返回时，流水线按程序顺序执行后续操作；推测段和体系结构状态更新由恢复流程衔接。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>把另一指令需要首个缺失的数据明确为停止推测的条件。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>把随后碰到不同访存类型且缺失的指令列为停止条件。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>允许后续推测指令使用推测段内另一指令的计算结果。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>停止后在顺序重执行时使用首缺失已经加载的数据。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-5">5</a></td><td>首缺失的指令保留在指令缓冲，重执行时重新译码。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>两个缺失对准不可缓存内存的同一行时合为单个请求。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>由总线接口单元维持两笔返回数据送入流水线的程序顺序。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>设备存有程序，顺序流水线在首缺失期间另发后读，停止后回到首缺失重执行。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>另一指令依赖首缺失数据时，即满足推测停止条件。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-9">9</a></td><td>推测段遇第三次缺失且内存类型不同时，停止推测。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-9">9</a></td><td>第四条指令在推测段中使用第三条的执行结果。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>首数据可用后用它按序重执行。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>将首个缺失的程序指令存入缓冲，重执行时从中取出并译码。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>用总线接口单元将两笔缺失返回数据按程序顺序送入流水线。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>顺序流水线发出首缺失，等待期间推测发第二笔，遇停止条件后回到第一条重执行。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>让另一条指令对首缺失数据的依赖触发停止。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-16">16</a></td><td>推测中检测第三次缺失，且另一条指令需要首缺失数据时判定停顿。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>推测执行第四条时可使用第三条临时生成的结果。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>重新译码缓冲中的首缺失指令，用返回数据从该指令按序重执行。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>首个缺失在途时，流水线推测执行后继并发出第二个缺失。遇到停止条件后等待首读，首数据可用后按序重走。</dd></div><div><dt>说明书图 3、图 6–7</dt><dd>图中依次标出缺失入队、后继发出请求、回到保存的起点重新执行。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12001847B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>依赖首数据和访存类型不同都可能使推测停止。有些实施例允许后续推测指令暂用中间结果。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12001847B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US9201796B2.html#engineering">查标签期间提前准备 SLC 缺失队列</a>
-<p>顺序流水线等待 A 的数据时可推测执行后续指令，先发 B 的缺失请求，之后从 A 按序重执行。在下层 SLC，合格的推测读可趁标签未出先排进缺失队列，片外读仍等缺失确认。放在同一条访存路径上看，前者提前发出第二笔请求，后者提前准备这一笔请求到外存的队列资源。</p></li><li><a href="US20260203067A1.html#engineering">检测 PC 相对运算以提前发出预取</a>
-<p>US20260203067A1 从指令编码提取立即数，再结合该指令的 PC 提前计算后续 load 的地址。US12001847B1 先检测到第一笔数据缺失，再在等待时推测执行后续指令，从中发出第二笔缺失读。两种提前量分别来自地址可从指令求得，以及首笔缺失等待期间还能继续执行。</p></li><li><a href="US12657031B2.html#engineering">协处理器指令交付前预取操作数</a>
-<p>US12657031B2 由主处理器先交付操作数地址，协处理器预取电路在主处理器发送对应指令前生成预取。US12001847B1 在第一笔缺失等待时继续推测执行，第二条缺失读可于此时发出。遇到阻止条件后等首笔数据返回，再从第一条指令按序重执行。</p></li></ul>
-    <p><a href="../index.html?patent=US12001847B1#knowledge">在全量关系图上定位 US12001847B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-08-30</dd></div>
-    <div><dt>美国申请日</dt><dd>2022-08-30</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2024-06-04</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/823,279</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Justin M DEINLEIN、Michael L Karm、Brett S Feero、David E Kroesche</dd></div><div><dt>分类号</dt><dd>G06F9/3842、G06F9/3838、G06F9/3861、G06F9/3867</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12001847B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12001847B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 101 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6、图 7、图 8、图 9、图 10、图 11、图 12。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12001847B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

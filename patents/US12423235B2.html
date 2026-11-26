@@ -1,132 +1,141 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12423235B2 在缓存代理保存一致性目录路指示 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>缓存块逐出时，目录路指示缩小查找范围 · US12423235B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12423235B2</code> · <a href="https://patents.google.com/patent/US12423235B2/en">专利全文</a></p>
+<h1>缓存块逐出时，目录路指示缩小查找范围</h1><p class="reading-question">缓存代理逐出一个块时，系统如何减少一致性目录的 tag 比较，又能正确处理同址副本和迟到写回？</p>
+<p class="reading-answer">目录为缓存块分配条目时，将该条目所在的路或路子集发给各持有代理。代理逐出时连同块标识返回指示。目录缩小搜索范围后仍核对当前块和持有者，再决定如何更新。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-09-23</dd></div><div><dt>申请号</dt><dd>US18/433,118</dd></div><div><dt>最早优先权</dt><dd>2023-09-26</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Amanvir Singh Sidana、Sandeep Gupta、Tom Greenshtein、Vivek Venkatraman</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#send-marker">目录生成的指示随缓存块送给两个代理</a></li><li><a href="#eviction">逐出第一份与最后一份副本对应两次更新</a></li><li><a href="#enable">什么时候收到指示也不保存</a></li><li><a href="#stale">旧块写回遇到目录槽复用时怎样避免误更新</a></li><li><a href="#scope">目录读操作数量和延迟需要分别测量</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="send-marker"><h2>目录生成的指示随缓存块送给两个代理</h2><p>图 1 左侧从代理看到回填通知，右侧看一致性目录分配条目。第一次存入 X 时，目录为 X 在某一路建立条目并记录 A 是持有者。B 随后缓存 X 时，目录只把 B 加入同一条目。两个代理在各自缓存中同时保存 X 和能定位 X 目录项的指示。</p><p>目录的路和代理本地数据缓存的路各有自己的组织与寻址。指示的作用范围是目录。说明书 ¶0085 允许代理的指示字段宽度不同，例如 A 的 1 bit 能指示两路组成的子集，B 的 2 bit 能精确找到其中一路。两种编码都能限定搜索范围。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　目录为首份副本分配条目，向后续持有者也返回指示</h3>
+    <p id="fig-1-basis">一份目录条目对应同一个缓存块，多个持有者各保存可定位该条目的目录路指示。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="目录为首份副本分配条目，向后续持有者也返回指示" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12423235b2-fig-1-svg-title us12423235b2-fig-1-svg-desc">
+<title id="us12423235b2-fig-1-svg-title">目录为首份副本分配条目，向后续持有者也返回指示</title>
+<desc id="us12423235b2-fig-1-svg-desc">一份目录条目对应同一个缓存块，多个持有者各保存可定位该条目的目录路指示。</desc>
+<defs><marker id="us12423235b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12423235b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12423235b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12423235b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12423235b2-fig-1-a-fill" d="M 254 147 L 293 147 Q 301 147 301 155 L 301 253 Q 301 261 309 261 L 388 261" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-1-arrow-main)"/>
+<path id="us12423235b2-fig-1-b-fill" d="M 254 463 L 293 463 Q 301 463 301 455 L 301 357 Q 301 349 309 349 L 388 349" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-1-arrow-main)"/>
+<path id="us12423235b2-fig-1-a-hint" d="M 388 285 L 340 285 Q 332 285 332 277 L 332 202 Q 332 194 324 194 L 254 194" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-1-arrow-return)"/>
+<path id="us12423235b2-fig-1-b-hint" d="M 388 323 L 340 323 Q 332 323 332 331 L 332 404 Q 332 412 324 412 L 254 412" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-1-arrow-return)"/>
+<path id="us12423235b2-fig-1-update" d="M 599 258 L 643 258 Q 651 258 651 250 L 651 227 Q 651 219 659 219 L 728 219" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-1-arrow-main)"/>
+<path id="us12423235b2-fig-1-subset" d="M 823 260 L 823 362" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-1-arrow-control)"/>
+<path id="us12423235b2-fig-1-encode" d="M 728 409 L 658 409 Q 650 409 650 401 L 650 344 Q 650 336 642 336 L 599 336" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-1-arrow-return)"/>
+<rect x="223" y="88" width="166" height="18" fill="#f5f5f5"/><text x="306" y="102" class="arrow-label" text-anchor="middle">首个回填通知，块 ID=X</text>
+<rect x="200" y="496" width="188" height="18" fill="#f5f5f5"/><text x="294" y="510" class="arrow-label" text-anchor="middle">另一个回填通知，块 ID=X</text>
+<rect x="251.5" y="204" width="159" height="18" fill="#f5f5f5"/><text x="331" y="218" class="arrow-label" text-anchor="middle">A 收到目录路指示</text>
+<rect x="258.5" y="384" width="159" height="18" fill="#f5f5f5"/><text x="338" y="398" class="arrow-label" text-anchor="middle">B 收到目录路指示</text>
+<rect x="591.5" y="188" width="149" height="18" fill="#f5f5f5"/><text x="666" y="202" class="arrow-label" text-anchor="middle">分配或更新 X 项</text>
+<rect x="733" y="304" width="170" height="18" fill="#f5f5f5"/><text x="818" y="318" class="arrow-label" text-anchor="middle">以分配结果确定子集</text>
+<rect x="608" y="428" width="134" height="18" fill="#f5f5f5"/><text x="675" y="442" class="arrow-label" text-anchor="middle">返回对应的编码</text>
+<g id="us12423235b2-fig-1-a"><rect x="47" y="114" width="207" height="109" rx="6" fill="#f5f5f5"/><rect x="47" y="114" width="207" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150.5" y="140" class="node-name" text-anchor="middle">一致性代理 A</text><text x="150.5" y="162" class="node-detail" text-anchor="middle">首个缓存块 X 的副本</text><text x="150.5" y="180" class="node-detail" text-anchor="middle">tag 中保存目录路指示</text></g>
+<g id="us12423235b2-fig-1-b"><rect x="47" y="388" width="207" height="109" rx="6" fill="#f5f5f5"/><rect x="47" y="388" width="207" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="150.5" y="414" class="node-name" text-anchor="middle">一致性代理 B</text><text x="150.5" y="436" class="node-detail" text-anchor="middle">随后保存 X 的另一份副本</text><text x="150.5" y="454" class="node-detail" text-anchor="middle">也保存该块的目录路指示</text></g>
+<g id="us12423235b2-fig-1-dir"><rect x="388" y="238" width="211" height="132" rx="6" fill="#f5f5f5"/><rect x="388" y="238" width="211" height="132" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="493.5" y="264" class="node-name" text-anchor="middle">一致性目录控制</text><text x="493.5" y="286" class="node-detail" text-anchor="middle">首份副本时分配目录项</text><text x="493.5" y="304" class="node-detail" text-anchor="middle">新增副本时更新持有者</text></g>
+<g id="us12423235b2-fig-1-slot"><rect x="728" y="143" width="182" height="117" rx="6" fill="#f5f5f5"/><rect x="728" y="143" width="182" height="117" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="819" y="169" class="node-name" text-anchor="middle">X 的目录项</text><text x="819" y="191" class="node-detail" text-anchor="middle">位于四路中的一路</text><text x="819" y="209" class="node-detail" text-anchor="middle">持有者由 {A} 变 {A,B}</text></g>
+<g id="us12423235b2-fig-1-mark"><rect x="728" y="362" width="182" height="117" rx="6" fill="#f5f5f5"/><rect x="728" y="362" width="182" height="117" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="819" y="388" class="node-name" text-anchor="middle">构造目录路指示</text><text x="819" y="410" class="node-detail" text-anchor="middle">指出包含 X 项的子集</text><text x="819" y="428" class="node-detail" text-anchor="middle">可按代理可用位数编码</text></g>
+<text x="48" y="62" class="signal-title" text-anchor="start">目录项属于缓存块，目录路指示随块存到各个一致性代理</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12423235b2-fig-1-a-fill">第一个回填通知</a> 目录按块标识查找。若尚无记录，就创建条目并登记 A。</li><li><a href="#us12423235b2-fig-1-slot">X 的目录项</a> B 缓存相同块后，目录的 X 条目增加 B 为持有者。</li><li><a href="#us12423235b2-fig-1-a-hint">代理 A 保存指示</a> 可以把指示存到对应缓存 tag 中，也可存到与该块关联的独立位置。</li><li><a href="#us12423235b2-fig-1-b-hint">代理 B 保存指示</a> B 收到的是能搜索同一个目录项的指示。按 ¶0085，两代理可能使用不同位宽。</li></ul>
+  <p class="figure-evidence">原图 1、2、6、8；说明书归档段 0025、0026、0027、0028、0031、0033、0069、0070、0071、0072、0083、0084、0085、0086；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a> <a href="../diagrams/US12423235B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>105</dd></div><div><dt>一致性目录</dt><dd>110</dd></div><div><dt>目录中的四路示例</dt><dd>112a–112d</dd></div><div><dt>缓存块 X 的目录项</dt><dd>114</dd></div><div><dt>目录路指示</dt><dd>115</dd></div><div><dt>一致性代理 A</dt><dd>130a</dd></div><div><dt>一致性代理 B</dt><dd>130b</dd></div><div><dt>代理 A 的缓存</dt><dd>135a</dd></div><div><dt>代理 B 的缓存</dt><dd>135b</dd></div><div><dt>A 保存 X 的缓存 tag</dt><dd>139</dd></div><div><dt>B 保存 X 的缓存 tag</dt><dd>239</dd></div></dl></details>
+</figure></section><section id="eviction"><h2>逐出第一份与最后一份副本对应两次更新</h2><p>图 2 跟踪同一个 X 的两次逐出。A 先释放本地块并把块 ID 与指示返给目录。目录在指示的路子集查找 X 后发现 B 仍持有副本。从持有者记录删除 A 即可。一致性目录项此时继续服务 B。</p><p>B 后来逐出最后一份副本时，目录再次查找 X，并确认没有其他持有者。此时 X 的目录项才可失效并用于别的块。表 3 按是否收到指示及其覆盖范围列出候选路读操作。目录路指示不提供当下的有效性和所有权结论。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　第一份逐出更新持有者，最后一份逐出释放目录项</h3>
+    <p id="fig-2-basis">读两次目录查找后的持有者检查，明确哪一步释放目录槽。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="第一份逐出更新持有者，最后一份逐出释放目录项" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 455" role="img" aria-labelledby="us12423235b2-fig-2-svg-title us12423235b2-fig-2-svg-desc">
+<title id="us12423235b2-fig-2-svg-title">第一份逐出更新持有者，最后一份逐出释放目录项</title>
+<desc id="us12423235b2-fig-2-svg-desc">读两次目录查找后的持有者检查，明确哪一步释放目录槽。</desc>
+<defs><marker id="us12423235b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12423235b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12423235b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12423235b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="480" y1="80" x2="480" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12423235b2-fig-2-a"><path d="M 116 120 L 480 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-data)"/><rect x="168" y="96" width="260" height="18" fill="#f5f5f5"/><text x="298" y="110" class="arrow-label" text-anchor="middle">A 逐出 X，发送块 ID 与目录路指示</text></g>
+<g id="us12423235b2-fig-2-narrow1"><path d="M 480 162 L 504 162 Q 512 162 512 170 L 512 172 Q 512 180 504 180 L 480 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-control)"/><rect x="509.5" y="138" width="169" height="18" fill="#f5f5f5"/><text x="594" y="152" class="arrow-label" text-anchor="middle">读指示的子集并核对 X 项</text></g>
+<g id="us12423235b2-fig-2-only-b"><path d="M 480 210 L 504 210 Q 512 210 512 218 L 512 220 Q 512 228 504 228 L 480 228" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-main)"/><rect x="490" y="186" width="208" height="18" fill="#f5f5f5"/><text x="594" y="200" class="arrow-label" text-anchor="middle">B 仍持有 X，目录项只去掉 A</text></g>
+<g id="us12423235b2-fig-2-b"><path d="M 844 264 L 480 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-data)"/><rect x="538.5" y="240" width="247" height="18" fill="#f5f5f5"/><text x="662" y="254" class="arrow-label" text-anchor="middle">B 逐出 X，同样发送块 ID 与指示</text></g>
+<g id="us12423235b2-fig-2-narrow2"><path d="M 480 306 L 504 306 Q 512 306 512 314 L 512 316 Q 512 324 504 324 L 480 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-control)"/><rect x="503" y="282" width="182" height="18" fill="#f5f5f5"/><text x="594" y="296" class="arrow-label" text-anchor="middle">定位 X 项并检查其余持有者</text></g>
+<g id="us12423235b2-fig-2-recycle"><path d="M 480 354 L 504 354 Q 512 354 512 362 L 512 364 Q 512 372 504 372 L 480 372" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-2-arrow-main)"/><rect x="503" y="330" width="182" height="18" fill="#f5f5f5"/><text x="594" y="344" class="arrow-label" text-anchor="middle">没有其他持有者，目录项可释放</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">一致性代理 A</text>
+<rect x="392" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="480" y="63" class="node-name" text-anchor="middle">一致性目录</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">一致性代理 B</text>
+<text x="28" y="436" class="legend" text-anchor="start">示例从 A 和 B 都缓存 X 开始。两次逐出对应原图 3A 和原图 4。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12423235b2-fig-2-a">A 逐出时带回指示</a> 通知还携带 X 的块标识。目录用指示选择候选路，用块标识核对条目。</li><li><a href="#us12423235b2-fig-2-only-b">B 仍持有副本</a> 保留原槽与块标识，去掉 A 的持有记录。</li><li><a href="#us12423235b2-fig-2-b">最后一份副本也逐出</a> 仍可用原指示找到 X 的条目。</li><li><a href="#us12423235b2-fig-2-recycle">没有持有者后释放</a> 若目录确认没有其他持有代理，才失效条目以便重用。</li></ul>
+  <p class="figure-evidence">原图 3A、4、7；说明书归档段 0036、0037、0038、0039、0040、0048、0049、0050、0051、0075、0076、0077、0078、0079；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> <a href="../diagrams/US12423235B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性目录</dt><dd>110</dd></div><div><dt>缓存块 X 的目录项</dt><dd>114</dd></div><div><dt>目录路指示</dt><dd>115</dd></div><div><dt>一致性代理 A</dt><dd>130a</dd></div><div><dt>一致性代理 B</dt><dd>130b</dd></div><div><dt>搜索指示的目录路子集</dt><dd>720</dd></div><div><dt>失效已无持有者的目录项</dt><dd>740</dd></div><div><dt>更新仍有持有者的目录项</dt><dd>750</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　4 路目录的候选读操作数</h3>
+    <p id="fig-3-basis">比较目录路指示的编码成本和查询候选路数。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">目录路指示</th><th scope="col">示例编码宽度</th><th scope="col">每次候选读路数</th><th scope="col">典型处理</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">未携带</th><td>—</td><td>4 路</td><td>在全体目录路并行搜索</td></tr><tr id="fig-3-table-row-2"><th scope="row">选择两路子集</th><td>1 bit</td><td>2 路</td><td>在所指的两路比较块标识</td></tr><tr id="fig-3-table-row-3"><th scope="row">选择单路</th><td>2 bit</td><td>1 路</td><td>读取该路并验证条目</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">比较单位</a> 这里只统计搜索开始时要读取的候选目录路数。块标识与当前持有者仍需核查。</li></ul>
+  <p class="figure-evidence">原图 1、3A、7、8、9；说明书归档段 0027、0028、0039、0064、0076、0085、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>目录中的四路示例</dt><dd>112a–112d</dd></div><div><dt>目录路指示</dt><dd>115</dd></div></dl></details>
+</figure></section><section id="enable"><h2>什么时候收到指示也不保存</h2><p>图 4 以 CPU 核发起回填为例。说明书允许对每颗核编程启用位。启用时按实现把指示写进缓存 tag，或用缓存 tag 索引一张独立的目录路指示表。禁用时可以收到但忽略指示，块的回填和目录分配照常发生。</p><p>以后逐出该块，如果消息没有指示，目录需要搜索所有路。原图 5 还显示新块可重用代理的本地缓存槽，旧块的指示进旧块逐出消息，新块从目录收到自己的指示。两个目录项不必位于同一路。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　逐核启用决定是否保存指示，以及逐出时走哪条路径</h3>
+    <p id="fig-4-basis">比较启用后的两种存储位置和禁用后不带提示的逐出路径。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="逐核启用决定是否保存指示，以及逐出时走哪条路径" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 595" role="img" aria-labelledby="us12423235b2-fig-4-svg-title us12423235b2-fig-4-svg-desc">
+<title id="us12423235b2-fig-4-svg-title">逐核启用决定是否保存指示，以及逐出时走哪条路径</title>
+<desc id="us12423235b2-fig-4-svg-desc">比较启用后的两种存储位置和禁用后不带提示的逐出路径。</desc>
+<defs><marker id="us12423235b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12423235b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12423235b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12423235b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12423235b2-fig-4-sent" d="M 241 155 L 370 155" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-4-arrow-main)"/>
+<path id="us12423235b2-fig-4-on-tag" d="M 579 141 L 706 141" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-4-arrow-main)"/>
+<path id="us12423235b2-fig-4-on-table" d="M 579 182 L 632 182 Q 640 182 640 190 L 640 275 Q 640 283 648 283 L 706 283" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-4-arrow-control)"/>
+<path id="us12423235b2-fig-4-off" d="M 470 204 L 470 329" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-4-arrow-control)"/>
+<path id="us12423235b2-fig-4-missing" d="M 579 379 L 632 379 Q 640 379 640 387 L 640 475 Q 640 483 648 483 L 706 483" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-4-arrow-return)"/>
+<rect x="248" y="126" width="112" height="18" fill="#f5f5f5"/><text x="304" y="140" class="arrow-label" text-anchor="middle">回填后发送</text>
+<rect x="586" y="113" width="114" height="18" fill="#f5f5f5"/><text x="643" y="127" class="arrow-label" text-anchor="middle">启用 · 实现 A</text>
+<rect x="588.5" y="253" width="115" height="18" fill="#f5f5f5"/><text x="646" y="267" class="arrow-label" text-anchor="middle">启用 · 实现 B</text>
+<rect x="360.5" y="260" width="105" height="18" fill="#f5f5f5"/><text x="413" y="274" class="arrow-label" text-anchor="middle">禁用指示</text>
+<rect x="575" y="452" width="128" height="18" fill="#f5f5f5"/><text x="639" y="466" class="arrow-label" text-anchor="middle">后续逐出该块</text>
+<g id="us12423235b2-fig-4-m"><rect x="49" y="109" width="192" height="95" rx="6" fill="#f5f5f5"/><rect x="49" y="109" width="192" height="95" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="145" y="135" class="node-name" text-anchor="middle">一致性目录</text><text x="145" y="157" class="node-detail" text-anchor="middle">发送新块的目录路指示</text></g>
+<g id="us12423235b2-fig-4-e"><rect x="370" y="109" width="209" height="95" rx="6" fill="#f5f5f5"/><rect x="370" y="109" width="209" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="474.5" y="135" class="node-name" text-anchor="middle">逐核启用位</text><text x="474.5" y="157" class="node-detail" text-anchor="middle">由发起填充的核决定是否保存</text></g>
+<g id="us12423235b2-fig-4-tag"><rect x="706" y="94" width="207" height="94" rx="6" fill="#f5f5f5"/><rect x="706" y="94" width="207" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="809.5" y="120" class="node-name" text-anchor="middle">写入缓存 tag</text><text x="809.5" y="142" class="node-detail" text-anchor="middle">指示随块的 tag 存放</text></g>
+<g id="us12423235b2-fig-4-table"><rect x="706" y="236" width="207" height="94" rx="6" fill="#f5f5f5"/><rect x="706" y="236" width="207" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="809.5" y="262" class="node-name" text-anchor="middle">写入目录路指示表</text><text x="809.5" y="284" class="node-detail" text-anchor="middle">使用缓存 tag 查独立表</text></g>
+<g id="us12423235b2-fig-4-discard"><rect x="370" y="329" width="209" height="95" rx="6" fill="#f5f5f5"/><rect x="370" y="329" width="209" height="95" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="474.5" y="355" class="node-name" text-anchor="middle">不保存目录路指示</text><text x="474.5" y="377" class="node-detail" text-anchor="middle">仍完成回填并生成目录项</text></g>
+<g id="us12423235b2-fig-4-later"><rect x="706" y="429" width="207" height="102" rx="6" fill="#f5f5f5"/><rect x="706" y="429" width="207" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="809.5" y="455" class="node-name" text-anchor="middle">逐出通知无指示</text><text x="809.5" y="477" class="node-detail" text-anchor="middle">目录并行搜索所有路</text></g>
+<text x="50" y="57" class="signal-title" text-anchor="start">回填时是否保存指示，决定该块将来怎样搜索目录</text>
+<text x="50" y="556" class="legend" text-anchor="start">缓存 tag 和独立指示表是说明书描述的两种存放实现。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12423235b2-fig-4-e">逐核目录指示启用位</a> 发起这次回填的核启用时保存，禁用时忽略本次收到的指示。</li><li><a href="#us12423235b2-fig-4-tag">与缓存 tag 同存</a> 使用该块的缓存 tag 中分出的字段。</li><li><a href="#us12423235b2-fig-4-table">独立的目录路指示表</a> 用该块的缓存 tag 查找表项，是另一种实施方式。</li><li><a href="#us12423235b2-fig-4-later">无指示逐出</a> 如果先前忽略了指示，逐出通知仍带块标识，目录搜索全部路。</li></ul>
+  <p class="figure-evidence">原图 5、9；说明书归档段 0053、0055、0057、0058、0059、0088、0089、0091、0092、0093、0094、0095；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12423235B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性目录</dt><dd>110</dd></div><div><dt>逐出的旧块目录项</dt><dd>514a</dd></div><div><dt>新回填块目录项</dt><dd>514b</dd></div><div><dt>旧块的目录路指示</dt><dd>515a</dd></div><div><dt>新块的目录路指示</dt><dd>515b</dd></div><div><dt>启用指示的处理器核</dt><dd>140e</dd></div><div><dt>禁用指示的处理器核</dt><dd>140f</dd></div><div><dt>旧块缓存 tag</dt><dd>539a</dd></div><div><dt>新块缓存 tag</dt><dd>539b</dd></div><div><dt>忽略收到的目录路指示</dt><dd>940</dd></div><div><dt>无指示时搜索所有目录路</dt><dd>960</dd></div></dl></details>
+</figure></section><section id="stale"><h2>旧块写回遇到目录槽复用时怎样避免误更新</h2><p>图 5 对应原图 3B。A 发出的旧块 X 写回消息尚未到控制器，B 填入不同块 Y，目录释放了 X 的旧槽并把位置用于 Y。在处理覆盖前，控制器向 A 发 X 的写回并失效命令，A 的失效响应仍可携带 X 的写回数据。</p><p>原写回随后到达时，原指示可能仍指向同一组目录路，但当前条目已对应 Y。控制器丢弃旧写回请求，X 的数据由失效响应路径写入内存。即使稍后 B 在别的目录路重新缓存 X，A 也不在 X 的当前持有者集合。用块标识和持有者资格共同检查，可以解释为何不能仅以命中的目录路更新条目。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　旧写回晚到时，当前目录项可能已属于另一个块</h3>
+    <p id="fig-5-basis">区分地址槽位的复用、失效响应携带的写回与迟到请求的处理。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="旧写回晚到时，当前目录项可能已属于另一个块" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 551" role="img" aria-labelledby="us12423235b2-fig-5-svg-title us12423235b2-fig-5-svg-desc">
+<title id="us12423235b2-fig-5-svg-title">旧写回晚到时，当前目录项可能已属于另一个块</title>
+<desc id="us12423235b2-fig-5-svg-desc">区分地址槽位的复用、失效响应携带的写回与迟到请求的处理。</desc>
+<defs><marker id="us12423235b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12423235b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12423235b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12423235b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="500" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12423235b2-fig-5-orig-debug"><path d="M 116 114 L 140 114 Q 148 114 148 122 L 148 124 Q 148 132 140 132 L 116 132" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-control)"/><rect x="113" y="90" width="234" height="18" fill="#f5f5f5"/><text x="230" y="104" class="arrow-label" text-anchor="middle">A 逐出 X，原写回请求发出后尚在途</text></g>
+<g id="us12423235b2-fig-5-fill"><path d="M 601 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-data)"/><rect x="421" y="144" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">B 填入不同块 Y</text></g>
+<g id="us12423235b2-fig-5-move"><path d="M 358 210 L 382 210 Q 390 210 390 218 L 390 220 Q 390 228 382 228 L 358 228" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-control)"/><rect x="355" y="186" width="234" height="18" fill="#f5f5f5"/><text x="472" y="200" class="arrow-label" text-anchor="middle">清除 X 的旧目录项，将原槽用于 Y</text></g>
+<g id="us12423235b2-fig-5-forced"><path d="M 358 264 L 116 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-main)"/><rect x="133" y="240" width="208" height="18" fill="#f5f5f5"/><text x="237" y="254" class="arrow-label" text-anchor="middle">向 A 发写回并失效 X 的命令</text></g>
+<g id="us12423235b2-fig-5-forced-resp"><path d="M 116 312 L 358 312" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-data)"/><rect x="152.5" y="288" width="169" height="18" fill="#f5f5f5"/><text x="237" y="302" class="arrow-label" text-anchor="middle">失效响应带 X 的写回数据</text></g>
+<g id="us12423235b2-fig-5-late"><path d="M 116 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12423235b2-fig-5-arrow-return)"/><rect x="159" y="336" width="156" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">X 的原写回请求随后到达</text></g>
+<g id="us12423235b2-fig-5-discard"><path d="M 358 402 L 382 402 Q 390 402 390 410 L 390 412 Q 390 420 382 420 L 358 420" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-control)"/><rect x="322.5" y="378" width="299" height="18" fill="#f5f5f5"/><text x="472" y="392" class="arrow-label" text-anchor="middle">当前目录项与 X／代理 A 不匹配，丢弃原请求</text></g>
+<g id="us12423235b2-fig-5-write"><path d="M 358 456 L 844 456" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12423235b2-fig-5-arrow-main)"/><rect x="510" y="432" width="182" height="18" fill="#f5f5f5"/><text x="601" y="446" class="arrow-label" text-anchor="middle">用失效响应携带的数据写回 X</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">一致性代理 A</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">内存控制器／目录</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">一致性代理 B</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">系统内存</text>
+<text x="28" y="532" class="legend" text-anchor="start">在途阶段是原图 3B 的逻辑顺序示意。失效响应与原写回请求属于两条不同消息路径。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us12423235b2-fig-5-orig-debug">X 的原写回在途</a> A 已经发出逐出写回，但目录还没有处理这项请求。</li><li><a href="#us12423235b2-fig-5-move">目录槽被 Y 重用</a> B 回填的是不同地址块 Y。X 的旧持有记录被替换后仍需收回 X 的数据。</li><li><a href="#us12423235b2-fig-5-forced-resp">写回并失效响应</a> A 响应目录主动请求，返回 X 的写回数据。</li><li><a href="#us12423235b2-fig-5-discard">丢弃迟到原请求</a> 当前目录项的块或持有者不匹配，原请求不能改写当前条目。</li><li><a href="#us12423235b2-fig-5-write">写回实际数据</a> 控制器采用失效响应路径携带的 X 数据完成写回。</li></ul>
+  <p class="figure-evidence">原图 3B；说明书归档段 0042、0043、0044、0045、0046、0057；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US12423235B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>一致性目录</dt><dd>110</dd></div><div><dt>缓存块 X 的目录项</dt><dd>114</dd></div><div><dt>被逐出的旧缓存块 X</dt><dd>136</dd></div><div><dt>由 B 填入的新缓存块 Y</dt><dd>336</dd></div><div><dt>缓存块 Y 的新目录项</dt><dd>314</dd></div><div><dt>一致性代理 A</dt><dd>130a</dd></div><div><dt>一致性代理 B</dt><dd>130b</dd></div></dl></details>
+</figure></section><section id="scope"><h2>目录读操作数量和延迟需要分别测量</h2><p>权利要求 1 关注多个一致性代理共享块时保存指示。权利要求 9 以回填通知描述目录项的分配与指示返回，权利要求 15 同时涉及旧块逐出与新块回填。搜索路范围和逐核启用分别在第 2、5、6、13、14、18 项等给出。</p><p>表 3 的 4、2、1 是该实施例下搜索的路数。在全路并行比较的实现中，减少活跃比较和 SRAM 路访问主要减少动态活动，查询时钟周期可能一样。另按目录路实际激活次数、tag 或指示表开销、带指示的逐出命中比例统计。原文未提供固定的延迟或能耗收益。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=snoop#catalog">Snoop 与一致性</a></p>
-  <p class="document-id"><code>US12423235B2</code><span>美国授权专利</span><time datetime="2025-09-23">2025-09-23</time></p>
-  <h1>在缓存代理保存一致性目录路指示</h1>
-  <p class="english-title" lang="en">Coherence directory way tracking in coherent agents</p>
-  <p class="document-question">代理逐出缓存块时，怎样帮目录只比较相关的几路？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">目录首次分配条目时向持有该块的代理下发包含选中路的子集指示。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>指示约束目录查找范围。它随副本保存，逐出消息可同时携带块标识以供目录核对。</dd></div><div><dt>验证方法</dt><dd>对同一块生成后续持有者与逐出序列，同时记录目录选择的路、下发给各代理的指示和逐出返回字段。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12423235B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">一致性目录可采用组相联结构，每组包含多路。若逐出通知只带块标识，目录可能要逐路比较同一缓存组的标签。回填时向代理返回的路提示，可以在逐出时用来缩小查询范围。</p>
-    <p>目录首次记录该块时，给它选一个目录路，并向持有者发出涵盖该路的子集指示。其他代理缓存该块后也收到相应指示。逐出通知可以携带指示和块标识。</p>
-    <ol class="walkthrough"><li><h3>建立目录项并下发指示</h3><p>首个代理缓存 X 时，目录选中一个 way，记录 X 的持有者，并发送可覆盖该 way 的子集指示。</p></li><li><h3>把提示发给之后的持有者</h3><p>第二个代理缓存 X 时，目录增加一条持有者记录，并发出相同目录子集的指示。各代理将提示与本地缓存块关联保存。</p></li><li><h3>逐出时回送块标识和提示</h3><p>代理在逐出通知中同时发送块 ID 和 way 指示。目录只查相应的候选 way，再根据块 ID 确认实际条目。</p></li><li><h3>更新持有者或回收目录项</h3><p>还有其他持有者时，目录只清掉发通知的代理。最后一个代理逐出时，目录项可以失效。若未带指示，目录可以并行查多路。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a> 要求逐出消息同时携块标识与子集提示。权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a> 的提示可指向多路并在子集内并行比较，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a> 又规定未带提示时使用全路搜索。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>目录路</dt><dd>组相联一致性目录中一个候选条目的位置。</dd></div><div><dt>路子集指示</dt><dd>至少涵盖目标目录路的定位提示，可包含一条或多条路。</dd></div><div><dt>持有者记录</dt><dd>目录中指示哪些一致性代理缓存当前块的数据。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">子集指示随回填发给各缓存代理</a></li><li><a href="#fig-2">第一份逐出只更新持有者，最后一份可回收目录项</a></li><li><a href="#fig-4">逐核使能及两种提示存放位置</a></li><li><a href="#fig-5">目录槽复用后，迟到的旧写回如何处理</a></li><li><a href="#fig-3">用提示缩小搜索范围，再核对块 ID</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">子集指示随回填发给各缓存代理</h3></div>
-    <a class="paper-open" href="../mechanisms/US12423235B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="子集指示随回填发给各缓存代理">
-    <img class="paper-image native-image" src="../mechanisms/US12423235B2/fig-1/diagram.svg" width="643" height="420"
-         style="--paper-width:643px" alt="子集指示随回填发给各缓存代理。目录路指示随新块或共享副本的通知发出。缓存代理把指示与副本关联保存。">
-  </div>
-  <figcaption>
-    <span>目录路指示随新块或共享副本的通知发出。缓存代理把指示与副本关联保存。</span>
-    <span class="figure-evidence">图 1–2、5，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">第一份逐出只更新持有者，最后一份可回收目录项</h3></div>
-    <a class="paper-open" href="../mechanisms/US12423235B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="第一份逐出只更新持有者，最后一份可回收目录项">
-    <img class="paper-image native-image" src="../mechanisms/US12423235B2/fig-2/diagram.svg" width="560" height="494"
-         style="--paper-width:560px" alt="第一份逐出只更新持有者，最后一份可回收目录项。目录添加 B 后记录两份副本。收到 A 的逐出通知时只删除 A 的记录，B 仍然持有该块。">
-  </div>
-  <figcaption>
-    <span>目录添加 B 后记录两份副本。收到 A 的逐出通知时只删除 A 的记录，B 仍然持有该块。</span>
-    <span class="figure-evidence">图 3A、4、6–8，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-4-title">逐核使能及两种提示存放位置</h3></div>
-    <a class="paper-open" href="../mechanisms/US12423235B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="逐核使能及两种提示存放位置">
-    <img class="paper-image native-image" src="../mechanisms/US12423235B2/fig-4/diagram.svg" width="951" height="420"
-         style="--paper-width:951px" alt="逐核使能及两种提示存放位置。核 140e 的标记使能为 1 时，收到的提示可放在缓存标签或按标签访问的独立表。核 140f 的使能为 0 时忽略提示，逐出没有提示时目录全路查询。">
-  </div>
-  <figcaption>
-    <span>核 140e 的标记使能为 1 时，收到的提示可放在缓存标签或按标签访问的独立表。核 140f 的使能为 0 时忽略提示，逐出没有提示时目录全路查询。</span>
-    <span class="figure-evidence">原图 5、9；说明书 0058–0059、0093；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a> · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-5" aria-labelledby="fig-5-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-5-title">目录槽复用后，迟到的旧写回如何处理</h3></div>
-    <a class="paper-open" href="../mechanisms/US12423235B2/fig-5/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="目录槽复用后，迟到的旧写回如何处理">
-    <img class="paper-image native-image" src="../mechanisms/US12423235B2/fig-5/diagram.svg" width="920" height="464"
-         style="--paper-width:920px" alt="目录槽复用后，迟到的旧写回如何处理。原件图 3B 中，来自 A 的旧写回在目录项被复用后才到达。目录丢弃这条旧请求，内存控制器仍处理由失效命令引出的、带 X 数据的应答。若原请求到达时另一个代理也已缓存 X，说明书还以当前目录项里的持有者身份区分这两笔事务。">
-  </div>
-  <figcaption>
-    <span>原件图 3B 中，来自 A 的旧写回在目录项被复用后才到达。目录丢弃这条旧请求，内存控制器仍处理由失效命令引出的、带 X 数据的应答。若原请求到达时另一个代理也已缓存 X，说明书还以当前目录项里的持有者身份区分这两笔事务。</span>
-    <span class="figure-evidence">原件图 3B 及相邻说明；用于说明权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> 所涉目录查找后为何还需核对条目。 · <a href="#claim-features">权利要求与出处</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">用提示缩小搜索范围，再核对块 ID</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">逐出通知</th><th scope="col">搜索范围</th><th scope="col">动作</th></tr></thead><tbody><tr><th scope="row">带 way 指示</th><td class="emphasis">子集候选</td><td>仍匹配块 ID</td></tr><tr><th scope="row">无 way 指示</th><td class="emphasis">多路或全路</td><td>并行查找</td></tr><tr><th scope="row">与其他事件重叠</th><td>按状态复核</td><td>更新持有者</td></tr></tbody></table>
-  <figcaption>
-    <span>有有效提示时，目录只查候选子集。缺少提示时，实施例可以并行检查多路。与其他更新重叠时还要按状态复核。</span>
-    <span class="figure-evidence">图 3B、7、9，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>逐出带目录路指示</dt><dd>缩小目录搜索范围 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>；原图 3A、7</span></dd></div><div><dt>逐核配置路提示存储</dt><dd>按核选择跟踪成本 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>；原图 5、9</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>提示缩小同一次比较激活的路数，但并行比较原本就能同时发起。即使查找周期未变，比较逻辑的活动和跨代理保存的提示位也会重新分配硬件成本。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若目录每次仍需激活整个存储组，而只有比较使能受提示控制，读阵列的能耗可能没有明显下降。权利要求写明搜索范围，阵列门控粒度属于实现决定。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假设某个目录 set 有 8 个 way。X 进入 way 5，A 和 B 各缓存一份，收到的指示都覆盖 way 4、5。A 随后逐出 X。</dd></div><div><dt>处理结果</dt><dd>目录只查 4、5 两个候选，并用块 ID 找到 X。它删掉 A 的持有者记录，留着 B。B 之后逐出时若无有效提示，目录可查 8 路并回收该项。</dd></div><div><dt>结果解读</dt><dd>8 路以及 4、5 的分组是示例参数。目录用提示缩小比较范围，再凭块 ID 匹配条目，并按持有者记录判断是否回收。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、15 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,7 +146,7 @@
   </table>
 </section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
   <h4 id="independent-9-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></h4>
-  <p>方法先存块并发填入通知，目录未找到条目则建项并返回路子集指示，代理在与块关联位置保存。见原图 6。</p>
+  <p>方法先存块并发缓存回填通知，目录未找到条目则建项并返回路子集指示，代理在与块关联位置保存。见原图 6。</p>
   <table class="comparison-table" aria-labelledby="independent-9-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=storing%2C%20by%20a%20particular%20one%20of%20a%20plurality%20of%20coherent%20agent%20circuits%2C%20a%20particular%20cache%20block">F6</a></th><td>一个代理存储缓存块。</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=a%20fill%20notice%20including%20an%20indication%20of%20the%20particular%20cache%20block">F7</a></th><td>代理向目录报告填入并标识该块。</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=in%20response%20to%20determining%20that%20an%20entry%20associated%20with%20the%20particular%20cache%20block%20does%20not%20currently">F8</a></th><td>缺目录项时在选定路建项。</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=an%20indicator%20identifying%20a%20subset%20of%20the%20plurality%20of%20directory%20ways%20that%20includes%20the%20particular%20entry">F9</a></th><td>目录首次分配条目后向缓存代理发涵盖该条目的路子集指示。</td><td>原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=storing%2C%20by%20the%20particular%20coherent%20agent%20circuit%2C%20the%20indicator%20in%20a%20location%20associated%20with%20the%20particular">F10</a></th><td>代理把提示与缓存块关联保存。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=At%20block%20650%20%2C%20method%20600%20continues%20with%20the%20particular%20coherent%20agent%20circuit%20storing%20the%20indicator">说明书 0072</a> · 原图 6</td></tr></tbody>
@@ -147,53 +156,15 @@
   <p>装置让代理逐出旧块并通知填入新块，两者分别用第一与第二路指示。原文末句指定按第二指示搜索第二子集；原图 5 的旧块查询使用旧块提示。</p>
   <table class="comparison-table" aria-labelledby="independent-15-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
-    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=store%20a%20particular%20cache%20block%20by%20evicting%20a%20different%20cache%20block">F11</a></th><td>通过逐出不同的旧块腾出新块存储空间。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=Moving%20to%20FIG.%205%20%2C%20an%20example%20of%20a%20coherence%20directory%20circuit%20is%20depicted%20in%20conjunction">说明书 0053</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=an%20eviction%20notice%20with%20a%20first%20way%20indicator%20and%20an%20identifier%20for%20the%20different%20cache%20block">F12</a></th><td>逐出通知携带旧块的第一路指示和块标识。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=Moving%20to%20FIG.%205%20%2C%20an%20example%20of%20a%20coherence%20directory%20circuit%20is%20depicted%20in%20conjunction">说明书 0053</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=a%20fill%20notice%20with%20an%20identifier%20for%20the%20particular%20cache%20block">F13</a></th><td>填入通知带新块标识。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=create%20a%20particular%20entry%2C%20associated%20with%20the%20particular%20cache%20block%2C%20in%20a%20selected%20directory%20way">F14</a></th><td>目录为新块在选中路创建条目。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=a%20second%20way%20indicator%20that%20indicates%20a%20first%20subset%20of%20the%20plurality%20of%20directory%20ways%20that">F15</a></th><td>目录返回第二路指示，覆盖新条目所在子集。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=search%20a%20second%20subset%20of%20the%20plurality%20of%20directory%20ways%20indicated%20by%20the%20second%20way%20indicator">F16</a></th><td>依权项字面，搜索由第二路指示给出的第二子集。</td><td>原图 5</td></tr></tbody>
+    <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=store%20a%20particular%20cache%20block%20by%20evicting%20a%20different%20cache%20block">F11</a></th><td>通过逐出不同的旧块腾出新块存储空间。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=Moving%20to%20FIG.%205%20%2C%20an%20example%20of%20a%20coherence%20directory%20circuit%20is%20depicted%20in%20conjunction">说明书 0053</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=an%20eviction%20notice%20with%20a%20first%20way%20indicator%20and%20an%20identifier%20for%20the%20different%20cache%20block">F12</a></th><td>逐出通知携带旧块的第一路指示和块标识。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=Moving%20to%20FIG.%205%20%2C%20an%20example%20of%20a%20coherence%20directory%20circuit%20is%20depicted%20in%20conjunction">说明书 0053</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=a%20fill%20notice%20with%20an%20identifier%20for%20the%20particular%20cache%20block">F13</a></th><td>缓存回填通知带新块标识。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=create%20a%20particular%20entry%2C%20associated%20with%20the%20particular%20cache%20block%2C%20in%20a%20selected%20directory%20way">F14</a></th><td>目录为新块在选中路创建条目。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=a%20second%20way%20indicator%20that%20indicates%20a%20first%20subset%20of%20the%20plurality%20of%20directory%20ways%20that">F15</a></th><td>目录返回第二路指示，覆盖新条目所在子集。</td><td><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=After%20entry%20514%20b%20has%20been%20generated%2C%20coherence%20directory%20circuit%20110%20may%20be%20configured%20to%20send%2C">说明书 0058</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12423235B2/en#:~:text=search%20a%20second%20subset%20of%20the%20plurality%20of%20directory%20ways%20indicated%20by%20the%20second%20way%20indicator">F16</a></th><td>依权项字面，搜索由第二路指示给出的第二子集。</td><td>原图 5</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统为首份副本分配目录路并发送子集指示。有新持有者时更新同一条目，两个代理各自保存指示。见原图 1–2。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>逐出时将块标识和目录路子集指示一并发送，目录据此收窄查找范围。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>若没有其他代理仍持副本，失效相应目录条目。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>若还有其他副本，只在目录中删除刚逐出的代理的持有记录。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-2">2</a></td><td>提示覆盖多条路时，并行比较选中子集。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>收到不带提示的逐出通知时，并行查询目录的所有路。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>把子集指示限定为仅标出一个目录路。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>把路指示保存到该块对应的缓存标签。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先存块并发填入通知，目录未找到条目则建项并返回路子集指示，代理在与块关联位置保存。见原图 6。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>逐出时返回路提示，目录据此只查指定子集。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>若没有其他代理仍持副本，失效相应目录条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>若还有其他副本，只在目录中删除刚逐出的代理的持有记录。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>代理接到停止记录信号后忽略另一缓存块分配时发来的路提示。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>对不带提示的逐出通知选全路搜索，末句仍以 particular entry 指称查询对象。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>装置让代理逐出旧块并通知填入新块，两者分别用第一与第二路指示。原文末句指定按第二指示搜索第二子集；原图 5 的旧块查询使用旧块提示。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>旧块没有其他持有者时失效旧目录项。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>旧块仍有其他持有者时，在其目录项中只移除该代理。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>核逐个配置标记使能位。使能时保存收到提示，禁用时忽略。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>第二个路指示存入新块缓存标签。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>第二个路指示存入可用新块标签访问的独立表。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>系统为首份副本分配目录路并发送子集指示。有新持有者时更新同一条目，两个代理各自保存指示。见原图 1–2。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>逐出时将块标识和目录路子集指示一并发送，目录据此收窄查找范围。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>若没有其他代理仍持副本，失效相应目录条目。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-2">2</a></td><td>若还有其他副本，只在目录中删除刚逐出的代理的持有记录。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-2">2</a></td><td>提示覆盖多条路时，并行比较选中子集。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>收到不带提示的逐出通知时，并行查询目录的所有路。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>把子集指示限定为仅标出一个目录路。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>把路指示保存到该块对应的缓存标签。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>方法先存块并发缓存回填通知，目录未找到条目则建项并返回路子集指示，代理在与块关联位置保存。见原图 6。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>逐出时返回路提示，目录据此只查指定子集。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>若没有其他代理仍持副本，失效相应目录条目。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>若还有其他副本，只在目录中删除刚逐出的代理的持有记录。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>代理接到停止记录信号后忽略另一缓存块分配时发来的路提示。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>对不带提示的逐出通知选全路搜索，末句仍以 particular entry 指称查询对象。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td>独立项</td><td>装置让代理逐出旧块并通知填入新块，两者分别用第一与第二路指示。原文末句指定按第二指示搜索第二子集；原图 5 的旧块查询使用旧块提示。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-15">15</a></td><td>旧块没有其他持有者时失效旧目录项。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-15">15</a></td><td>旧块仍有其他持有者时，在其目录项中只移除该代理。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-15">15</a></td><td>核逐个配置目录路标记使能位。使能时保存收到提示，禁用时忽略。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-15">15</a></td><td>第二个路指示存入新块缓存标签。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-15">15</a></td><td>第二个路指示存入可用新块标签访问的独立表。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></dt><dd>目录首次分配后发送子集指示。后续持有者保存同一定位信息，目录可用它缩小查询范围。</dd></div><div><dt>图 3A–4、图 7</dt><dd>展示两个持有者的记录如何更新、最后一份副本逐出时如何回收，以及目录查找过程。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12423235B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></dt><dd>规定有指示时如何选路、缺少指示时如何并行查多路，以及代理是否接受指示的配置。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12423235B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US8856456B2.html#engineering">通过块追踪项过滤缓存一致性探测</a>
-<p>US8856456B2 用代理的块跟踪表决定是否向另一共享内存设备发 snoop，并在一致性接口另设表。US12423235B2 把包含所选路的子集指示交给缓存代理，逐出时用返回的提示缩小目录候选路集合。前者改变是否发消息，后者减少处理已有逐出消息时需要比较的候选路。</p></li><li><a href="US10157137B1.html#engineering">组相联缓存的双重标签比较与路预测</a>
-<p>组相联缓存先用标签比较预测一路并启动数据读，再确认实际命中 way，误选时放弃原读。目录的候选子集随缓存块分配下发，逐出时由代理带回，目录在这几路中核对块标识。前者预测一次数据读该开哪路，后者把先前的目录分配结果作为后续查询的提示。</p></li><li><a href="US11947457B2.html#engineering">优先由主共享副本向请求方供数</a>
-<p>US12423235B2 让缓存代理保留目录路子集提示，用于缩小后续目录查找范围。US11947457B2 利用目录中的共享状态选择优先供数的缓存代理。一个决策定位目录项，另一个决策选取数据来源。比较收益时区分目录访问开销与数据到达请求方的时延。</p></li></ul>
-    <p><a href="../index.html?patent=US12423235B2#knowledge">在全量关系图上定位 US12423235B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2023-09-26</dd></div>
-    <div><dt>美国申请日</dt><dd>2024-02-05</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-09-23</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/433,118</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Ilya Granovsky、Amanvir Singh Sidana、Sandeep Gupta、Tom Greenshtein、Vivek Venkatraman</dd></div><div><dt>分类号</dt><dd>G06F12/0817、G06F12/0891、G06F2212/1024</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12423235B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12423235B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对Google Patents 授权全文，覆盖 136 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 1、2、3A、3B、4、5、6、7、8、9。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12423235B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

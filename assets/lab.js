@@ -18,7 +18,7 @@
       patents: [["US11893241B1", 2, "权 1，图 2–3"]],
       setup: "每拍最多发出一次读。先发一串远组请求，再发一个近组请求 N。远组 4 拍就绪，近组 1 拍就绪，合流出口每拍只接收一路。基线把每次命中的返回固定在发出后第 4 拍。",
       fields: [num("farBurst", "连续远组请求", 1, 0, 4), num("nearGap", "远组之后的空拍数", 2, 0, 6)],
-      cases: [["同拍碰撞", {}], ["近组独行", { farBurst: 0, nearGap: 0 }], ["三个远组在前", { farBurst: 3, nearGap: 0 }]],
+      cases: [["同拍争用", {}], ["近组无争用", { farBurst: 0, nearGap: 0 }], ["三笔远组连续返回", { farBurst: 3, nearGap: 0 }]],
       run(values) {
         const { far, near } = t.returnTrace(values);
         const wait = near.variable - near.ready;
@@ -39,9 +39,9 @@
       },
     },
     {
-      id: "snoop-limit", name: "实时 snoop", title: "限制普通 snoop 能把哪段等待压下来？",
+      id: "snoop-limit", name: "延迟敏感的 snoop", title: "限制普通 snoop 能缩短哪段等待？",
       patents: [["US10795818B1", 5, "权 1，图 4–7"]],
-      setup: "目标敏感请求在 t0 到达。一个服务端口，服务中途不可打断。已有敏感请求排在普通请求前，每笔占 3 拍。限额方案在目标前保留至多 N 笔普通请求，其余普通请求随后继续服务。",
+      setup: "目标 snoop 在 t0 到达。当前事务占用服务端口直到本次服务结束。已有延迟敏感的 snoop 排在普通请求前，每笔占 3 拍。限额方案在目标前保留至多 N 笔普通请求，其余请求随后继续服务。",
       fields: [num("backlog", "已排队普通请求", 5, 0, 12), num("limit", "目标之前的普通请求上限", 2, 0, 12),
         num("ticksPerRequest", "每笔普通请求占用拍数", 4, 1, 10), num("busy", "在途事务剩余占用拍数", 0, 0, 20),
         num("olderSensitive", "已排队敏感请求", 0, 0, 4)],
@@ -58,7 +58,7 @@
           return [job.id, cycle(job.start), cycle(after.start), plus(after.start - job.start) + " 拍"];
         });
         return {
-          metrics: [["目标开始服务 · FIFO / 限额", baseline.targetStart + " / " + limited.targetStart + " 拍"],
+          metrics: [["目标 snoop 等待服务 · FIFO / 限额", baseline.targetStart + " / " + limited.targetStart + " 拍"],
             ["FIFO 到限额减少", saved + " 拍"], ["最晚普通请求开始时间变化", plus(normalDelay) + " 拍"]],
           explanation: "在途事务和旧敏感请求占 " + floor + " 拍，限额无法缩短这段。两种策略分别在前面留 " +
             values.backlog + " 和 " + Math.min(values.backlog, values.limit) + " 笔普通请求。这里所有请求都服务完，共用 " + baseline.finish + " 拍。",
@@ -69,11 +69,11 @@
       },
     },
     {
-      id: "bypass", name: "跨簇回填旁路", title: "跨簇回填旁路何时会被转换队列拖慢？",
+      id: "bypass", name: "跨 cluster 回填旁路", title: "转换队列何时抵消跨 cluster 回填的收益？",
       patents: [["US11016913B1", 5, "权 1–3、10，图 2–4"], ["US11537538B2", 2, "同族对照"]],
-      setup: "B 连续发出不同缓存行的携数据响应。B 到汇聚点和汇聚点到 A 各需 2 拍。PoC 每跳 1 拍，生成回填用 1 拍。旁路转换单元按 FIFO 串行服务。两种方案各用同样的下行发射间隔。模型为原响应上行预留独立路径。",
-      fields: [num("controllerHops", "汇聚点到 PoC 的单程跳数", 5, 0, 16),
-        num("mergeWork", "节点转换用时", 1, 0, 20), num("controllerWait", "发往 PoC 前的等待", 0, 0, 20),
+      setup: "cluster B 连续发送 copy-back 响应，每笔携带不同缓存行的数据。B 到汇聚节点、汇聚节点到 A 各需 2 拍。到一致性点（CP）的路径按每个互连 hop 1 拍计时，生成回填用 1 拍。旁路转换单元按 FIFO 串行服务，两种方案采用相同的下行发送间隔。模型为原响应预留独立上行路径。",
+      fields: [num("controllerHops", "汇聚点到一致性点的单程 hop 数", 5, 0, 16),
+        num("mergeWork", "节点转换用时", 1, 0, 20), num("controllerWait", "发往一致性点前的等待", 0, 0, 20),
         num("mergeWait", "转换前固定等待", 0, 0, 25), num("sharedWait", "下行前固定等待", 0, 0, 25),
         num("count", "连续响应数", 1, 1, 16), num("gap", "原响应到达间隔", 1, 1, 12),
         num("downlinkInterval", "下行发射间隔", 1, 1, 12)],
@@ -86,24 +86,24 @@
         const lastDiff = last.baseline - last.bypass;
         const start = segment("B 到节点", last.sent, last.toMerge);
         const uplink = [segment("上行等待", last.toMerge, last.toMerge + v.controllerWait, "wait"),
-          segment("节点到 PoC", last.toMerge + v.controllerWait, last.toController)];
+          segment("节点到一致性点", last.toMerge + v.controllerWait, last.toController)];
         const toA = (ready, launch, end) => [
           segment("等下行", ready, launch, "wait"), segment("节点到 A", launch, end),
         ];
         return {
-          metrics: [["末笔回填延迟 · 经 PoC / 旁路", (last.baseline - last.sent) + " / " + (last.bypass - last.sent) + " 拍"],
+          metrics: [["末笔回填延迟 · 经一致性点 / 旁路", (last.baseline - last.sent) + " / " + (last.bypass - last.sent) + " 拍"],
             ["首笔节省", plus(firstDiff) + " 拍"], ["末笔节省", plus(lastDiff) + " 拍"]],
           explanation: "同轴轨迹显示末笔事务。转换单元在前一笔结束后才开始处理下一笔，末笔因此多等 " +
-            (last.conversionStart - last.toMerge - v.mergeWait) + " 拍。表中回填延迟和 PoC 到达延迟均从各笔原响应发出计时。",
+            (last.conversionStart - last.toMerge - v.mergeWait) + " 拍。两项延迟均从各笔 copy-back 响应发出计时，终点分别是 A 收到回填和一致性点收到原响应。",
           lanes: [
-            lane("经 PoC 回填", [start, ...uplink, segment("PoC 生成回填", last.toController, last.toController + 1),
-              segment("PoC 返回节点", last.toController + 1, last.fillAtMerge),
+            lane("经一致性点回填", [start, ...uplink, segment("一致性点生成回填", last.toController, last.toController + 1),
+              segment("一致性点到节点", last.toController + 1, last.fillAtMerge),
               ...toA(last.fillAtMerge, last.baselineSend, last.baseline)], last.baseline),
             lane("汇聚点旁路", [start, segment("等转换资源", last.toMerge, last.conversionStart, "wait"),
               segment("节点转换", last.conversionStart, last.localFill), ...toA(last.localFill, last.bypassSend, last.bypass)], last.bypass),
             lane("并行原响应", [start, ...uplink], last.toController),
           ],
-          data: table("逐笔对照（拍）", ["事务", "发出时刻", "转换排队", "经 PoC 回填", "旁路回填", "原响应到 PoC"], rows.map((row, index) => [
+          data: table("逐笔对照（拍）", ["事务", "发出时刻", "转换排队", "经一致性点回填", "旁路回填", "原响应到一致性点"], rows.map((row, index) => [
             "R" + (index + 1), cycle(row.sent), row.conversionStart - row.toMerge - v.mergeWait,
             row.baseline - row.sent, row.bypass - row.sent, row.toController - row.sent,
           ])),
@@ -113,7 +113,7 @@
     {
       id: "partial-line", name: "部分有效行", title: "补齐一行时，为什么不能直接覆盖缓存？",
       patents: [["US11586552B2", 4, "权 1、9，图 3"], ["US12007901B2", 2, "写入路径"]],
-      setup: "缓存行有四个字。开启有效位代表该字已修改，仍有效的最新值来自缓存。模型用整行返回的下层值对照覆盖与合并。读、写从同一个初始快照独立执行。",
+      setup: "缓存行有四个字。算例将已写入的字设为有效，合并时从缓存保留这些字，其余字取自下层返回。读和写从同一个初始快照独立执行。",
       fields: [yn("v0", "字 0 有效", true), yn("v1", "字 1 有效", false), yn("v2", "字 2 有效", true), yn("v3", "字 3 有效", false),
         num("writeIndex", "写入第几个字（0–3）", 1, 0, 3), num("writeValue", "写入值", 99, 0, 255)],
       cases: [["部分有效行", {}], ["四个字都要取下层", { v0: false, v2: false }], ["写完全部有效", { v3: true }]],
@@ -287,7 +287,7 @@
       fields: [select("pattern", "每窗工作量", "3,3,3,3,18,18,18,18", [
         ["3,3,3,3,18,18,18,18", "低负载后突发"], ["3,3,4,4,3,4,4,3", "持续轻载"],
         ["4,6,8,10,14,17,18,18", "逐渐上升"],
-      ]), num("deadline", "工作窗期限（拍）", 6, 3, 12), num("target", "目标使用时间占比（%）", 75, 45, 85),
+      ]), num("deadline", "工作窗期限（拍）", 6, 3, 12), num("target", "目标执行时间占比（%）", 75, 45, 85),
       num("cap", "后四个窗口的最高性能状态", 3, 1, 3)],
       cases: [["突发负载", {}], ["持续轻载", { pattern: "3,3,4,4,3,4,4,3" }], ["最高性能状态为 2", { cap: 2 }]],
       run(v) {
@@ -313,8 +313,8 @@
     {
       id: "battery-window", name: "供电预测窗", title: "为什么同样的短脉冲连续出现时会触及截止电压？",
       patents: [["US12573870B2", 4, "权 1、12，图 6–8"]],
-      setup: "模型电池初始开路 4 V，截止 3.4 V，欧姆电阻 100 mΩ。脉冲内恒流，脉冲间零负载。单笔比较瞬时限流与按窗限流。连续脉冲比较每次从零极化估计和持续追踪极化两种策略。",
-      fields: [num("horizon", "供电持续时长（ms）", 1000, 50, 5000), num("tau", "极化时间常数（ms）", 1000, 100, 5000),
+      setup: "模型电池初始开路电压 4 V，截止电压 3.4 V，欧姆电阻 100 mΩ。每个脉冲内恒流，脉冲间零负载。单个脉冲比较按欧姆压降限流与按预测窗限流。连续脉冲比较每次假设起始极化为零与跨脉冲追踪极化。",
+      fields: [num("horizon", "预测窗及脉冲长度（ms）", 1000, 50, 5000), num("tau", "极化时间常数（ms）", 1000, 100, 5000),
         num("polarization", "极化电阻（mΩ）", 200, 0, 350), num("demand", "请求电流（mA）", 4000, 0, 6000),
         num("count", "脉冲数", 1, 1, 16), num("idle", "脉冲之间的恢复时间（ms）", 50, 0, 10000)],
       cases: [["单个 200 ms 脉冲", { horizon: 200 }], ["3 s 持续负载", { horizon: 3000 }],
@@ -327,7 +327,7 @@
           const trackedMin = Math.min(...r.pulses.map(row => row.tracked.minimum));
           const misses = r.pulses.filter(row => row.reset.minimum < r.cut - 1e-9).length;
           return {
-            metrics: [["最低端电压 · 按零估计 / 追踪状态", voltage(resetMin) + " / " + voltage(trackedMin)],
+            metrics: [["脉冲内最低电池端电压 · 按零估计 / 追踪状态", voltage(resetMin) + " / " + voltage(trackedMin)],
               ["按零估计的欠压脉冲", misses + " / " + v.count]],
             explanation: "每次脉冲先承担欧姆压降，再随 RC 状态变化。剩余极化衰减需要时间。追踪状态的预测器用本次起始极化估算限流，表中的实际供电电流给出为守住截止电压付出的代价。",
             data: table("逐脉冲比较", ["序号", "起始极化（mV）· 按零估计 / 追踪", "实际供电（A）· 按零估计 / 追踪", "最低端电压 · 按零估计 / 追踪"],
@@ -340,12 +340,12 @@
         const last = r.rows.at(-1);
         const violated = last.staticVoltage < r.cut - 1e-9;
         return {
-          metrics: [["末端电压 · 瞬时 / 按窗限流", voltage(last.staticVoltage) + " / " + voltage(last.windowVoltage)],
-            ["实际供电电流 · 瞬时 / 按窗限流", r.currentStatic.toFixed(2) + " / " + r.currentWindow.toFixed(2) + " A"],
+          metrics: [["窗末电池端电压 · 欧姆压降 / 预测窗限流", voltage(last.staticVoltage) + " / " + voltage(last.windowVoltage)],
+            ["实际供电电流 · 欧姆压降 / 预测窗限流", r.currentStatic.toFixed(2) + " / " + r.currentWindow.toFixed(2) + " A"],
             ["该时窗的最大电流", r.limit.toFixed(2) + " A"]],
           explanation: (violated ? "只按欧姆压降放行会跌穿 3.4 V。较长窗口采用更高的等效阻抗，会提前收紧可用电流。"
-            : "本例的瞬时限流在窗口末仍守住截止线。逐点查看极化压降，对照长脉冲场景。") + " 每个采样点都保留了两条路径的电压。",
-          data: table("相同电池模型下的端电压轨迹", ["时刻（ms）", "等效阻抗（mΩ）", "瞬时限流", "瞬时裕量（mV）", "按窗限流"],
+            : "本例按欧姆压降限流时，脉冲结束的电池端电压仍在截止电压以上。") + " 表中给出两种限流方式在各采样时刻的电池端电压。",
+          data: table("相同电池模型下的端电压轨迹", ["时刻（ms）", "等效阻抗（mΩ）", "欧姆压降限流", "距截止电压（mV）", "预测窗限流"],
             r.rows.map(row => [row.ms, (row.resistance * 1000).toFixed(1), voltage(row.staticVoltage),
               plus(Math.round((row.staticVoltage - r.cut) * 1000)), voltage(row.windowVoltage)])),
         };
@@ -354,7 +354,7 @@
     {
       id: "memory-pause", name: "跨裸片暂停握手", title: "内存暂停前，读缓冲和写缓冲各要准备多少？",
       patents: [["US12332723B2", 2, "权 1–4，专利图 5"]],
-      setup: "两个裸片各有发起访存的代理。主裸片计划暂停内存服务，读端继续取数据，写端继续产生数据。读缓冲和写缓冲各有 12 项容量。内存可用时，读端预取数据、写端排出待写数据，两端并行按每拍 2 项的净速率准备，到各自门槛后维持余量。容量和准备速率由模型设定，确认传播延迟设为零。",
+      setup: "两个裸片各有发起访存的代理。主裸片计划暂停内存服务，读端继续消费数据，写端继续产生数据。读缓冲和写缓冲各有 12 项容量。内存可用时，读端预填缓冲，写端排出待写数据，两端并行按每拍 2 项的净速率准备，到各自门槛后维持余量。容量和准备速率由模型设定，确认传播延迟为零。",
       fields: [num("pause", "内存暂停长度（拍）", 4, 1, 10), num("readRate", "每拍读取（项）", 2, 1, 4),
         num("writeRate", "每拍写入（项）", 1, 1, 4), num("readStock", "初始读缓冲有效数据（项）", 6, 0, 12),
         num("writeFree", "初始写缓冲空闲项", 6, 0, 12)],

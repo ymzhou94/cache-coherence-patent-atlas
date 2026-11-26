@@ -1,120 +1,203 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US10157137B1 组相联缓存的双重标签比较与路预测 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>缓存路预测怎样提前取数，并挡住错误结果 · US10157137B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US10157137B1</code> · <a href="https://patents.google.com/patent/US10157137B1/en">专利全文</a></p>
+<h1>缓存路预测怎样提前取数，并挡住错误结果</h1><p class="reading-question">多路组相联缓存如果等标签全部确认才启动数据路径，要多等一段时间。怎样先选路读取，同时保证预测错时不会交出别的缓存行？</p>
+<p class="reading-answer">按组做快速哈希标签比较，预测一路并提前驱动数据 MUX。同时比较标签的一部分。只有同一路的哈希与部分标签都匹配，验证信号才让数据对请求方可见；不一致时可阻止返回，并在指定条件下更新预测项、重放。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2018-12-18</dd></div><div><dt>申请号</dt><dd>US14/861,470</dd></div><div><dt>最早优先权</dt><dd>2015-09-22</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Prashant Jain、Jason M. Kassoff、Sandeep Gupta</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#split-tags">同一组索引找到三份数据</a></li><li><a href="#same-way-verification">把两个比较结果接到同一路的确认门</a></li><li><a href="#issue-and-return">读取与确认并行，响应只在验证后放行</a></li><li><a href="#incorrect-prediction">不一致时先拦住错路数据，再看是否要重放</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="split-tags"><h2>同一组索引找到三份数据</h2><p>图 1 从地址字段出发。组索引定位哈希标签阵列、缓存状态阵列和数据阵列中的同一组。标签被分成两部分 A、B。说明书给的一种实现把 A XOR B 作为哈希标签 H；另一片阵列保留部分标签 A。行内偏移负责选取数据片段，不参与这个 XOR。</p><p>回填时，三个阵列写入已经选好的同一路。在防止同组重复有效哈希的例子里，两个有效项如果生成同一个 H，写新项的同时可清除旧哈希项的 valid。这个动作只改预测元数据；另外两片阵列仍能保留原缓存行。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　同一缓存组保存哈希标签、部分标签和数据</h3>
+    <p id="fig-1-basis">三片阵列通过相同的组索引对应同一路。取数时快速哈希匹配先给出预测；回填时三片阵列都要写入。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一缓存组保存哈希标签、部分标签和数据" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 697" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">同一缓存组保存哈希标签、部分标签和数据</title>
+<desc id="fig-1-svg-desc">三片阵列通过相同的组索引对应同一路。取数时快速哈希匹配先给出预测；回填时三片阵列都要写入。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-split" d="M 295 152 L 367 152" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-h" d="M 649 139 L 752 139" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-old" d="M 870 244 L 870 183" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-predict" d="M 1067 132 L 1157 132" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-index" d="M 178 225 L 178 286 Q 178 294 186 294 L 752 294" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-fillhash" d="M 295 488 L 473 488 Q 481 488 481 480 L 481 341 Q 481 333 489 333 L 752 333" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-filltag" d="M 295 507 L 633 507 Q 640 507 640 500 L 640 500 Q 640 493 647 493 L 752 493" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-filldata" d="M 173 552 L 173 604 Q 173 612 181 612 L 752 612" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-part-result" d="M 1067 470 L 1154 470" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="913" y="204" width="70" height="18" fill="#f5f5f5"/><text x="948" y="218" class="arrow-label" text-anchor="middle">读出各路</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="431" y="250" width="126" height="18" fill="#f5f5f5"/><text x="494" y="264" class="arrow-label" text-anchor="middle">组索引定位哈希行</text>
+<rect x="562" y="294" width="140" height="18" fill="#f5f5f5"/><text x="632" y="308" class="arrow-label" text-anchor="middle">回填路写 H、valid</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="371.5" y="568" width="179" height="18" fill="#f5f5f5"/><text x="461" y="582" class="arrow-label" text-anchor="middle">填充该缓存路的数据</text>
+<rect x="1077.5" y="430" width="63" height="18" fill="#f5f5f5"/><text x="1109" y="444" class="arrow-label" text-anchor="middle">逐路 A</text>
+<g id="fig-1-request"><rect x="42" y="111" width="253" height="114" rx="6" fill="#f5f5f5"/><rect x="42" y="111" width="253" height="114" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168.5" y="137" class="node-name" text-anchor="middle">缓存地址</text><text x="168.5" y="159" class="node-detail" text-anchor="middle">标签 A、B</text><text x="168.5" y="177" class="node-detail" text-anchor="middle">组索引和行内偏移</text></g>
+<g id="fig-1-xor"><rect x="367" y="91" width="282" height="108" rx="6" fill="#f5f5f5"/><rect x="367" y="91" width="282" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="508" y="117" class="node-name" text-anchor="middle">哈希电路</text><text x="508" y="139" class="node-detail" text-anchor="middle">计算 H = A XOR B</text></g>
+<g id="fig-1-hash-store"><rect x="752" y="244" width="315" height="114" rx="6" fill="#f5f5f5"/><rect x="752" y="244" width="315" height="114" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="909.5" y="270" class="node-name" text-anchor="middle">哈希标签阵列</text><text x="909.5" y="292" class="node-detail" text-anchor="middle">按组读出各路的 H、valid</text><text x="909.5" y="310" class="node-detail" text-anchor="middle">路号与数据阵列一致</text></g>
+<g id="fig-1-cmp"><rect x="752" y="87" width="315" height="96" rx="6" fill="#f5f5f5"/><rect x="752" y="87" width="315" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="909.5" y="113" class="node-name" text-anchor="middle">哈希比较器</text><text x="909.5" y="135" class="node-detail" text-anchor="middle">H 相等且 valid 才预测</text></g>
+<g id="fig-1-result"><rect x="1157" y="88" width="192" height="98" rx="6" fill="#f5f5f5"/><rect x="1157" y="88" width="192" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1253" y="114" class="node-name" text-anchor="middle">预测路</text><text x="1253" y="136" class="node-detail" text-anchor="middle">送数据选择和验证</text></g>
+<g id="fig-1-part"><rect x="752" y="411" width="315" height="106" rx="6" fill="#f5f5f5"/><rect x="752" y="411" width="315" height="106" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="909.5" y="437" class="node-name" text-anchor="middle">标签与缓存状态阵列</text><text x="909.5" y="459" class="node-detail" text-anchor="middle">按同组同路存部分标签 A</text><text x="909.5" y="477" class="node-detail" text-anchor="middle">送图 2 的比较器</text></g>
+<g id="fig-1-data"><rect x="752" y="562" width="315" height="98" rx="6" fill="#f5f5f5"/><rect x="752" y="562" width="315" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="909.5" y="588" class="node-name" text-anchor="middle">缓存数据阵列</text><text x="909.5" y="610" class="node-detail" text-anchor="middle">组索引和行内偏移选数据</text></g>
+<g id="fig-1-fill"><rect x="42" y="453" width="253" height="99" rx="6" fill="#f5f5f5"/><rect x="42" y="453" width="253" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168.5" y="479" class="node-name" text-anchor="middle">缺失回填</text><text x="168.5" y="501" class="node-detail" text-anchor="middle">已选定同一组、同一路</text><text x="168.5" y="519" class="node-detail" text-anchor="middle">填充数据与两份元数据</text></g>
+<g id="fig-1-validation"><rect x="1154" y="412" width="195" height="103" rx="6" fill="#f5f5f5"/><rect x="1154" y="412" width="195" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1251.5" y="438" class="node-name" text-anchor="middle">部分标签比较</text><text x="1251.5" y="460" class="node-detail" text-anchor="middle">用请求的 A 对照</text><text x="1251.5" y="478" class="node-detail" text-anchor="middle">详见图 2</text></g>
+<text x="42" y="42" class="signal-title" text-anchor="start">预测元数据与可信标签状态分开存放</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-xor">标签两部分参与 XOR</a> 图中沿用实施例的 XOR。组索引单独定位阵列项，不参与这个示例的哈希。</li><li><a href="#fig-1-hash-store">每路一个哈希项和 valid</a> 回填会写入新行对应的哈希项。如果同组已有相同的哈希，一个实施例清掉较早项的 valid。它没有因此逐出早先行的数据。</li><li><a href="#fig-1-result">比较电路产生一路预测</a> 查询读出同一组的多路哈希。只对有效项匹配；没有匹配时该级不提供预测路。部分标签另送图 2 的比较。</li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0023、0024、0025、0026、0028、0029、0030、0031、0032、0034；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US10157137B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>标签的两部分 A 和 B</dt><dd>202A、202B</dd></div><div><dt>缓存组索引</dt><dd>203</dd></div><div><dt>按路保存的哈希标签和有效状态</dt><dd>210、212</dd></div><div><dt>哈希计算与比较</dt><dd>220、230</dd></div><div><dt>部分标签和缓存状态阵列</dt><dd>310</dd></div><div><dt>按组、按路存放数据的阵列</dt><dd>130</dd></div></dl></details>
+</figure></section><section id="same-way-verification"><h2>把两个比较结果接到同一路的确认门</h2><p>预测路送入图 2 的逐路 AND。每路一根线，哈希预测与部分标签比较结果只有落到同一个路号，才会得到有效的确认路。两路分别匹配不能合成命中。</p><p>XOR 实现可从 A 和 H 恢复 B。因此同一路的 A、H 都相等时，这里比较的两部分标签也相同。两个不同标签可以单独碰撞 H，例如 (A,B)=(3,7) 和 (1,5) 都得到 4。当前请求使用第二个标签时，首个标签的路虽然可能被预测，却不能通过 A 的比较。其他哈希函数需要另核对同样条件下能否区分标签。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　逐路相交，只有两项匹配落在同一路才确认命中</h3>
+    <p id="fig-2-basis">原图 3 的每路 AND，把哈希候选和部分标签的匹配信号相交。左边的两个比较使用同一组索引。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="逐路相交，只有两项匹配落在同一路才确认命中" style="--figure-width:1370px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1370 700" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">逐路相交，只有两项匹配落在同一路才确认命中</title>
+<desc id="fig-2-svg-desc">原图 3 的每路 AND，把哈希候选和部分标签的匹配信号相交。左边的两个比较使用同一组索引。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-p1" d="M 311 161 L 420 161" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-a1" d="M 311 422 L 351 422 Q 359 422 359 414 L 359 204 Q 359 196 367 196 L 420 196" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-final" d="M 872 148 L 983 148" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-why" d="M 872 395 L 983 395" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-given" d="M 637 549 L 637 458" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-case-check" d="M 620 227 L 620 333" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<rect x="332" y="117" width="66" height="18" fill="#f5f5f5"/><text x="365" y="131" class="arrow-label" text-anchor="middle">第 j 位</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="890" y="103" width="70" height="18" fill="#f5f5f5"/><text x="925" y="117" class="arrow-label" text-anchor="middle">true[j]</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="663.5" y="272" width="197" height="18" fill="#f5f5f5"/><text x="762" y="286" class="arrow-label" text-anchor="middle">把相交规则用于下面两路</text>
+<g id="fig-2-p"><rect x="41" y="119" width="270" height="100" rx="6" fill="#f5f5f5"/><rect x="41" y="119" width="270" height="100" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="176" y="145" class="node-name" text-anchor="middle">哈希比较结果</text><text x="176" y="167" class="node-detail" text-anchor="middle">每路计算 H 相等且 valid</text><text x="176" y="185" class="node-detail" text-anchor="middle">产生 N 位预测线</text></g>
+<g id="fig-2-a"><rect x="41" y="377" width="270" height="107" rx="6" fill="#f5f5f5"/><rect x="41" y="377" width="270" height="107" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="176" y="403" class="node-name" text-anchor="middle">部分标签比较结果</text><text x="176" y="425" class="node-detail" text-anchor="middle">同组逐路比较 A</text><text x="176" y="443" class="node-detail" text-anchor="middle">带对应有效状态</text></g>
+<g id="fig-2-lane"><rect x="420" y="90" width="452" height="137" rx="6" fill="#f5f5f5"/><rect x="420" y="90" width="452" height="137" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="646" y="116" class="node-name" text-anchor="middle">任意一路 j 的确认位</text><text x="646" y="138" class="node-detail" text-anchor="middle">predict[j] = (H == H[j]) 且有效</text><text x="646" y="156" class="node-detail" text-anchor="middle">tag_match[j] = (A == A[j]) 且有效</text><text x="646" y="174" class="node-detail" text-anchor="middle">true[j] = predict[j] AND tag_match[j]</text></g>
+<g id="fig-2-collide"><rect x="420" y="333" width="452" height="125" rx="6" fill="#f5f5f5"/><rect x="420" y="333" width="452" height="125" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="646" y="359" class="node-name" text-anchor="middle">碰撞时两路信号对不上</text><text x="646" y="381" class="node-detail" text-anchor="middle">路 2：predict=1，tag_match=0</text><text x="646" y="399" class="node-detail" text-anchor="middle">路 3：predict=0，tag_match=1</text><text x="646" y="417" class="node-detail" text-anchor="middle">两路都不设 true 位</text></g>
+<g id="fig-2-out"><rect x="983" y="91" width="349" height="136" rx="6" fill="#f5f5f5"/><rect x="983" y="91" width="349" height="136" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1157.5" y="117" class="node-name" text-anchor="middle">确认结果 true[0…N−1]</text><text x="1157.5" y="139" class="node-detail" text-anchor="middle">有任一路被置位：可供数据门控</text><text x="1157.5" y="157" class="node-detail" text-anchor="middle">全为零：本次投机结果无效</text></g>
+<g id="fig-2-recover"><rect x="983" y="330" width="349" height="123" rx="6" fill="#f5f5f5"/><rect x="983" y="330" width="349" height="123" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1157.5" y="356" class="node-name" text-anchor="middle">XOR 例的可辨识条件</text><text x="1157.5" y="378" class="node-detail" text-anchor="middle">同一路 H、A 均匹配时</text><text x="1157.5" y="396" class="node-detail" text-anchor="middle">由 B = H XOR A 得到 B</text></g>
+<g id="fig-2-meta"><rect x="420" y="549" width="912" height="89" rx="6" fill="#f5f5f5"/><rect x="420" y="549" width="912" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="876" y="575" class="node-name" text-anchor="middle">碰撞示例（教学值）</text><text x="876" y="597" class="node-detail" text-anchor="middle">路 2 的 (A,B)=(3,7)，路 3 的 (A,B)=(1,5)，两路 XOR 均为 4。访问路 3 的标签。</text></g>
+<text x="41" y="44" class="signal-title" text-anchor="start">固定路号做相交，不能把两路的匹配拼成一个命中</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-lane">同一路的两根比较线接到一个 AND</a> 列 j 表示固定的路号。路预测可以输出 N 位 one-hot 编码；验证端只接收同一路的结果。</li><li><a href="#fig-2-collide">只通过哈希比较的一路无法放行</a> 例子中两个不同标签都生成 H=4。路 2 的 H 项有效却未通过 A 比较，不能把路 3 的部分标签匹配借给路 2。</li><li><a href="#fig-2-recover">为何 XOR 例里能确认完整标签</a> 同一路上 A 与 H 都相同，B 可从 A XOR H 求出，因此两个标签部分都相同。一般哈希函数需另行检查和 A 组合后的可辨识性。</li></ul>
+  <p class="figure-evidence">原图 2、3；说明书归档段 0022、0030、0031、0032、0033、0034、0035、0036、0037；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00016" aria-label="原文权利要求 16">16</a> <a href="../diagrams/US10157137B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>预测路的逐路信号</dt><dd>112</dd></div><div><dt>部分标签、比较器与逐路匹配结果</dt><dd>312、320、322</dd></div><div><dt>同一路位置的 AND 门</dt><dd>330</dd></div><div><dt>经验证的实际路信号</dt><dd>122</dd></div></dl></details>
+</figure></section><section id="issue-and-return"><h2>读取与确认并行，响应只在验证后放行</h2><p>图 3 依照原图 4 画出数据表、MUX、OR 规约和输出门。索引和偏移已到，MUX 可使用预测路提前选中一段数据。实际确认向量中存在置位，OR 才打开数据门。全为零时本轮数据不可见，并可由反相器给出缺失指示。该原图示例中的数据表可提供多路片段，无法据此得出只开启一路阵列或省去其余 SRAM 读出的结论。</p><p>图 4 固定请求时点 t0、预测 t1、确认 t3、阵列读两周期。预测正确时，读数据和验证重叠，返回最早在 t3。等确认才开始读要到 t5。在该模型中，早读完全隐藏了两个读取周期；确认更早到达或发生重放时，差值随之改变。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　数据 MUX 提前选路，确认位决定输出门是否打开</h3>
+    <p id="fig-3-basis">重绘原图 4 的数据路径。预测路作为 MUX 选择，确认路向量由 OR 规约后控制数据能否送到请求方。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="数据 MUX 提前选路，确认位决定输出门是否打开" style="--figure-width:1395px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1395 708" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">数据 MUX 提前选路，确认位决定输出门是否打开</title>
+<desc id="fig-3-svg-desc">重绘原图 4 的数据路径。预测路作为 MUX 选择，确认路向量由 OR 规约后控制数据能否送到请求方。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-idx" d="M 269 145 L 357 145" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-all" d="M 618 145 L 728 145" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-pick" d="M 618 307 L 837 307 Q 845 307 845 299 L 845 206" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-3-arrow-control)"/>
+<path id="fig-3-early" d="M 959 157 L 1011 157 Q 1019 157 1019 165 L 1019 271 Q 1019 279 1027 279 L 1072 279" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-truev" d="M 269 492 L 357 492" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-en" d="M 489 448 L 489 404 Q 489 396 497 396 L 1202 396 Q 1210 396 1210 388 L 1210 367" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-miss" d="M 618 513 L 728 513" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-ret" d="M 1210 245 L 1210 175" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="638" y="107" width="70" height="18" fill="#f5f5f5"/><text x="673" y="121" class="arrow-label" text-anchor="middle">各路片段</text>
+<rect x="714" y="265" width="46" height="18" fill="#f5f5f5"/><text x="737" y="279" class="arrow-label" text-anchor="middle">选路</text>
+<rect x="972" y="194" width="70" height="18" fill="#f5f5f5"/><text x="1007" y="208" class="arrow-label" text-anchor="middle">早读数据</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="919" y="359" width="70" height="18" fill="#f5f5f5"/><text x="954" y="373" class="arrow-label" text-anchor="middle">确认命中</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="1246" y="207" width="84" height="18" fill="#f5f5f5"/><text x="1288" y="221" class="arrow-label" text-anchor="middle">验证后返回</text>
+<g id="fig-3-address"><rect x="44" y="92" width="225" height="94" rx="6" fill="#f5f5f5"/><rect x="44" y="92" width="225" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="156.5" y="118" class="node-name" text-anchor="middle">组索引与偏移</text><text x="156.5" y="140" class="node-detail" text-anchor="middle">定位这一组的行片段</text></g>
+<g id="fig-3-data"><rect x="357" y="92" width="261" height="108" rx="6" fill="#f5f5f5"/><rect x="357" y="92" width="261" height="108" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="487.5" y="118" class="node-name" text-anchor="middle">数据表</text><text x="487.5" y="140" class="node-detail" text-anchor="middle">路 0 · 路 1 · … · 路 N−1</text><text x="487.5" y="158" class="node-detail" text-anchor="middle">各路对应同组定位</text></g>
+<g id="fig-3-predict"><rect x="357" y="267" width="261" height="91" rx="6" fill="#f5f5f5"/><rect x="357" y="267" width="261" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="487.5" y="293" class="node-name" text-anchor="middle">预测路向量</text><text x="487.5" y="315" class="node-detail" text-anchor="middle">例如第 j 路有效</text></g>
+<g id="fig-3-mux"><rect x="728" y="94" width="231" height="112" rx="6" fill="#f5f5f5"/><rect x="728" y="94" width="231" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="843.5" y="120" class="node-name" text-anchor="middle">数据 MUX</text><text x="843.5" y="142" class="node-detail" text-anchor="middle">先选第 j 路行片段</text><text x="843.5" y="160" class="node-detail" text-anchor="middle">请求方还看不到数据</text></g>
+<g id="fig-3-true"><rect x="44" y="448" width="225" height="92" rx="6" fill="#f5f5f5"/><rect x="44" y="448" width="225" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="156.5" y="474" class="node-name" text-anchor="middle">实际路向量</text><text x="156.5" y="496" class="node-detail" text-anchor="middle">逐路双比较的结果</text></g>
+<g id="fig-3-reduce"><rect x="357" y="448" width="261" height="92" rx="6" fill="#f5f5f5"/><rect x="357" y="448" width="261" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="487.5" y="474" class="node-name" text-anchor="middle">N 路 OR 规约</text><text x="487.5" y="496" class="node-detail" text-anchor="middle">有确认路则输出 1</text></g>
+<g id="fig-3-invert"><rect x="728" y="472" width="231" height="96" rx="6" fill="#f5f5f5"/><rect x="728" y="472" width="231" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="843.5" y="498" class="node-name" text-anchor="middle">反相器</text><text x="843.5" y="520" class="node-detail" text-anchor="middle">无确认路 → 本次 miss</text></g>
+<g id="fig-3-gate"><rect x="1072" y="245" width="277" height="122" rx="6" fill="#f5f5f5"/><rect x="1072" y="245" width="277" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1210.5" y="271" class="node-name" text-anchor="middle">数据输出门</text><text x="1210.5" y="293" class="node-detail" text-anchor="middle">确认值为 1 才允许通过</text><text x="1210.5" y="311" class="node-detail" text-anchor="middle">为 0 时阻止错误数据</text></g>
+<g id="fig-3-out"><rect x="1072" y="91" width="277" height="84" rx="6" fill="#f5f5f5"/><rect x="1072" y="91" width="277" height="84" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1210.5" y="117" class="node-name" text-anchor="middle">响应请求方</text><text x="1210.5" y="139" class="node-detail" text-anchor="middle">收到已验证的数据</text></g>
+<text x="44" y="44" class="signal-title" text-anchor="start">取数可投机，返回受确认位约束</text>
+<text x="44" y="661" class="signal-title" text-anchor="start">原图还允许用队列保留早读结果，用确认路校验后再出队。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-mux">MUX 先选预测路的行片段</a> 行内偏移选择字节位置，数据表按相同的组索引提供多路列。这个实施例先取行片段再用 MUX，专利未证明只开启一路 SRAM。</li><li><a href="#fig-3-reduce">只对确认向量做 OR</a> 任何一路经过前面两项校验才给出确认信号。没有确认路则数据门关闭。反相器仍能指示本轮 miss。</li><li><a href="#fig-3-gate">放行的是经过验证的早读结果</a> 确认位到达前可在数据路径中开展读取；确认位为零时，不把已读的数据交给请求端。</li></ul>
+  <p class="figure-evidence">原图 1、3、4；说明书归档段 0027、0037、0039、0040、0041、0042；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US10157137B1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>同时提供同组行片段的数据表</dt><dd>410</dd></div><div><dt>同组各路的行片段</dt><dd>412</dd></div><div><dt>依预测路选片段的 MUX</dt><dd>420</dd></div><div><dt>数据门、确认向量 OR 规约、miss 指示反相器</dt><dd>430、440、450</dd></div><div><dt>请求数据与本次 miss 指示</dt><dd>132、133</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　用命中例展示提前取数隐藏了哪一段延迟</h3>
+    <p id="fig-4-basis">横轴是同一请求的模型周期。两条策略共用数据阵列读两周期、确认在 t3 可用的设定。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="用命中例展示提前取数隐藏了哪一段延迟" style="--figure-width:1290px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 593" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">用命中例展示提前取数隐藏了哪一段延迟</title>
+<desc id="fig-4-svg-desc">横轴是同一请求的模型周期。两条策略共用数据阵列读两周期、确认在 t3 可用的设定。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<text x="24" y="28" class="signal-title" text-anchor="start">教学时序｜同一请求，命中且预测正确</text>
+<g id="fig-4-window"><rect x="479" y="166" width="355" height="107" rx="3" fill="rgba(191,69,32,.08)" stroke="transparent"/><text x="658" y="237" class="arrow-label" text-anchor="middle">数据读取与确认判断重叠</text></g>
+<line x1="300" x2="300" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="300" y="66" class="arrow-label" text-anchor="middle">t0 请求</text>
+<line x1="479" x2="479" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="479" y="66" class="arrow-label" text-anchor="middle">t1 预测</text>
+<line x1="657" x2="657" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="657" y="66" class="arrow-label" text-anchor="middle">t2</text>
+<line x1="834" x2="834" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="834" y="66" class="arrow-label" text-anchor="middle">t3 确认</text>
+<line x1="1012" x2="1012" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="1012" y="66" class="arrow-label" text-anchor="middle">t4</text>
+<line x1="1189" x2="1189" y1="75" y2="538" stroke="#4f5d75" opacity=".18"/>
+<text x="1189" y="66" class="arrow-label" text-anchor="middle">t5</text>
+<g id="fig-4-valid"><text x="24" y="137" class="node-name" text-anchor="start">确认命中位</text>
+<polyline points="240,149 834,149 834,110 1218,110" fill="none" stroke="#2e5aa8" stroke-width="2"/></g>
+<g id="fig-4-overlap-read"><text x="24" y="234" class="node-name" text-anchor="start">预测后读数据</text>
+<polyline points="240,249 479,249 479,205 834,205 834,249 1218,249" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="fig-4-early-return"><text x="24" y="332" class="node-name" text-anchor="start">预测路径的返回</text>
+<polyline points="240,352 834,352 834,308 1218,308" fill="none" stroke="#bf4520" stroke-width="2"/></g>
+<g id="fig-4-late-read"><text x="24" y="414" class="node-name" text-anchor="start">确认后读数据</text>
+<polyline points="240,430 834,430 834,390 1189,390 1189,430 1218,430" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-4-waiting"><text x="24" y="503" class="node-name" text-anchor="start">等待确认后的返回</text>
+<polyline points="240,512 1189,512 1189,475 1218,475" fill="none" stroke="#4f5d75" stroke-width="2"/></g>
+<g id="fig-4-read-early"><circle cx="479" cy="205" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="485" y="176" width="88" height="18" fill="#f5f5f5"/><text x="529" y="190" class="arrow-label" text-anchor="middle">启动读取</text></g>
+<g id="fig-4-release"><circle cx="834" cy="308" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="843" y="275" width="100" height="18" fill="#f5f5f5"/><text x="893" y="289" class="arrow-label" text-anchor="middle">数据可返回</text></g>
+<g id="fig-4-baseline"><circle cx="1189" cy="475" r="4.5" fill="#bf4520" stroke="#f5f5f5"/><rect x="1140.5" y="441" width="57" height="18" fill="#f5f5f5"/><text x="1169" y="455" class="arrow-label" text-anchor="middle">返回</text></g>
+<text x="24" y="565" class="legend" text-anchor="start">每条路径的延迟从请求 t0 计到数据可向请求方返回。周期和读数组耗时为模型设定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-read-early">t1 预测路出来，启动数据读取</a> 数据读取与标签确认可以重叠。此时响应门仍未打开。</li><li><a href="#fig-4-release">t3 确认路与早读都就绪</a> 只有确认命中可让早读结果提交。若预测错，即使读完也不允许对请求方可见。</li><li><a href="#fig-4-baseline">等待确认才读数组需要再等两周期</a> 同样的数据路径此时要等 t5。相差两周期来自这组模型时序假设。</li></ul>
+  <p class="figure-evidence">原图 1、4、5；说明书归档段 0020、0027、0041、0042、0043、0045、0046；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00014" aria-label="原文权利要求 14">14</a> <a href="../diagrams/US10157137B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>提前选路的预测信号</dt><dd>112</dd></div><div><dt>决定是否能放行的确认信号</dt><dd>122</dd></div><div><dt>数据阵列与返回数据</dt><dd>130、132</dd></div></dl></details>
+</figure></section><section id="incorrect-prediction"><h2>不一致时先拦住错路数据，再看是否要重放</h2><p>图 5 把路 2 哈希候选与路 3 的部分标签命中接到重放流程。该实施例允许使造成错误预测的项失效，把当前 H 与路 3 关联后重新发起请求。预测器没有候选而部分标签匹配时，说明书也允许补写预测项并重放。只有哈希候选而无部分标签匹配时，可以进入普通缺失处理。</p><p>部分标签同时匹配多路时，说明书未给出完整的重放候选选择逻辑。原型验证只覆盖正确命中、一个明确不同路候选及无候选的分支。标签小模型枚举了两半各 3 位时的所有查询和存储标签组合。单独比较 H 时存在碰撞；同一路的 H、A 都匹配时，比较结果与完整标签相等。</p><p>权利要求 1、13 都要求组合两次比较的结果。XOR 是权利要求 3、16 的从属限制；权利要求 9、10 进一步列出错项失效、插入新项和重放。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　投机结果被挡住后，区分碰撞重放和真实缺失</h3>
+    <p id="fig-5-basis">原图 3 的说明讨论预测路与部分标签结果不一致时的几种分支。图中沿路 2 与路 3 的示例画出重放。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="投机结果被挡住后，区分碰撞重放和真实缺失" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 613" role="img" aria-labelledby="fig-5-svg-title fig-5-svg-desc">
+<title id="fig-5-svg-title">投机结果被挡住后，区分碰撞重放和真实缺失</title>
+<desc id="fig-5-svg-desc">原图 3 的说明讨论预测路与部分标签结果不一致时的几种分支。图中沿路 2 与路 3 的示例画出重放。</desc>
+<defs><marker id="fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-5-guard" d="M 308 300 L 402 300" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<path id="fig-5-tag" d="M 678 277 L 711 277 Q 719 277 719 269 L 719 160 Q 719 152 727 152 L 768 152" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-tagno" d="M 678 328 L 714 328 Q 722 328 722 336 L 722 448 Q 722 456 730 456 L 768 456" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-5-arrow-data)"/>
+<path id="fig-5-fix" d="M 1066 157 L 1131 157" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-5-arrow-control)"/>
+<path id="fig-5-again" d="M 1240 221 L 1240 283" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-5-arrow-main)"/>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="590" y="176" width="112" height="18" fill="#f5f5f5"/><text x="646" y="190" class="arrow-label" text-anchor="middle">部分标签有候选</text>
+<rect x="610" y="403" width="70" height="18" fill="#f5f5f5"/><text x="645" y="417" class="arrow-label" text-anchor="middle">没有候选</text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<rect x="0" y="-14" width="0" height="18" fill="#f5f5f5"/><text x="0" y="0" class="arrow-label" text-anchor="middle"></text>
+<g id="fig-5-result"><rect x="44" y="247" width="264" height="109" rx="6" fill="#f5f5f5"/><rect x="44" y="247" width="264" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="176" y="273" class="node-name" text-anchor="middle">比较结果不一致</text><text x="176" y="295" class="node-detail" text-anchor="middle">哈希预测与部分标签</text><text x="176" y="313" class="node-detail" text-anchor="middle">未在同一路形成确认位</text></g>
+<g id="fig-5-hold"><rect x="402" y="247" width="276" height="109" rx="6" fill="#f5f5f5"/><rect x="402" y="247" width="276" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="540" y="273" class="node-name" text-anchor="middle">关闭早读输出</text><text x="540" y="295" class="node-detail" text-anchor="middle">路 2 数据不送出</text></g>
+<g id="fig-5-conflict"><rect x="768" y="97" width="298" height="117" rx="6" fill="#f5f5f5"/><rect x="768" y="97" width="298" height="117" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="917" y="123" class="node-name" text-anchor="middle">部分标签指出路 3</text><text x="917" y="145" class="node-detail" text-anchor="middle">读到的是不同路的匹配</text><text x="917" y="163" class="node-detail" text-anchor="middle">也可能没有预测候选</text></g>
+<g id="fig-5-miss"><rect x="768" y="407" width="298" height="105" rx="6" fill="#f5f5f5"/><rect x="768" y="407" width="298" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="917" y="433" class="node-name" text-anchor="middle">部分标签无匹配</text><text x="917" y="455" class="node-detail" text-anchor="middle">可作为缺失处理</text></g>
+<g id="fig-5-repair"><rect x="1131" y="94" width="222" height="127" rx="6" fill="#f5f5f5"/><rect x="1131" y="94" width="222" height="127" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1242" y="120" class="node-name" text-anchor="middle">修正哈希项</text><text x="1242" y="142" class="node-detail" text-anchor="middle">失效错路项（若有）</text><text x="1242" y="160" class="node-detail" text-anchor="middle">为路 3 插入当前 H</text></g>
+<g id="fig-5-replay"><rect x="1131" y="283" width="222" height="107" rx="6" fill="#f5f5f5"/><rect x="1131" y="283" width="222" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1242" y="309" class="node-name" text-anchor="middle">重放原访问</text><text x="1242" y="331" class="node-detail" text-anchor="middle">重新取哈希候选和标签</text><text x="1242" y="349" class="node-detail" text-anchor="middle">再执行图 2 的确认</text></g>
+<text x="44" y="43" class="signal-title" text-anchor="start">没有确认位时，先阻止读取结果提交</text>
+<text x="44" y="566" class="signal-title" text-anchor="start">哈希项失效只修改预测元数据。数据行的存在性由缓存状态和标签规则决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-5-hold">先阻止把错路数据交给请求方</a> 路 2 已被投机读取。确认向量没有置位，所以原图 4 的数据输出门不会放行。</li><li><a href="#fig-5-repair">部分标签给出不同的路时更新哈希项</a> 所示变体使造成错误预测的路 2 项失效，把当前 H 与路 3 关联，再把原请求发回流水线。若预测器没有给出路，且部分标签给出一路，也可填入并重放。</li><li><a href="#fig-5-miss">没有部分标签的候选可走缺失处理</a> 在说明书的这一分支，哈希有候选而部分标签没有匹配，可以作为缓存缺失处理。部分标签多路匹配时如何选候选，原文未给完整实现。</li></ul>
+  <p class="figure-evidence">原图 2、3、4、5；说明书归档段 0027、0030、0037、0038、0042、0046；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> <a href="../diagrams/US10157137B1/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>保存和修正的哈希标签项</dt><dd>210、212</dd></div><div><dt>部分标签比较器与匹配路</dt><dd>320、322</dd></div><div><dt>确认门与数据输出门</dt><dd>330、430</dd></div><div><dt>重放重新经过预测、标签和数据流水线</dt><dd>110、120、130</dd></div></dl></details>
+</figure></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US10157137B1</code><span>美国授权专利</span><time datetime="2018-12-18">2018-12-18</time></p>
-  <h1>组相联缓存的双重标签比较与路预测</h1>
-  <p class="english-title" lang="en">Cache way prediction</p>
-  <p class="document-question">组相联缓存如何并行读取预测路并确定实际命中路？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">预测电路先比较标签并给出候选路，标签阵列再将部分标签同各路片段比较，两项结果共同决定命中。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>可提前读取候选路。只有确认成功才可交付预读数据。误选后还可能在缓存的另一条路命中。</dd></div><div><dt>验证方法</dt><dd>相同命中轨迹分别运行全标签确认后读数据和预测路先读。按预测正确、需改选和下层缺失分组，记录首次数据阵列激活与正确响应之间的时间。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US10157137B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">组相联缓存需要确定目标数据在哪一路。标签完全确定后再读数据会增加串行等待，同时开启多路数据阵列又会增加阵列活动。</p>
-    <p>预测电路先比较标签并给出候选路。标签阵列将请求标签的一部分与各路保存的片段比较，并用两项结果确认是否命中。若采用权利要求 7 所述的提前读取，候选路在标签确认前便可启动数据读取。</p>
-    <ol class="walkthrough"><li><h3>用索引找到缓存组</h3><p>地址索引限定候选组，标签用于区分该组内的各条数据。说明书示例还从地址中抽取 bank、pipe 和 offset，各字段可随实现变化。</p></li><li><h3>先用标签哈希预测缓存路</h3><p>部分实施例在回填时按路保存标签哈希。新请求计算哈希，与该组内有效的已存哈希比较。预测结果可用来启动该路的数据阵列读取。</p></li><li><h3>把候选路与部分标签比较结果合并</h3><p>标签阵列把请求标签片段与各路保存的片段比较。原图 3 把比较结果与哈希候选逐路合并，给出确认结果。</p></li><li><h3>确认后交付候选数据</h3><p>预测路确认命中后，可交付已读数据。若实际路与预测不同，先停止初读，权利要求 9–10 进一步规定更新哈希并重发。真正的缓存缺失由常规缺失路径处理。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00002" aria-label="原文权利要求 2">2</a> 到权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00004" aria-label="原文权利要求 4">4</a> 的一组实现用标签两部分异或得到哈希，另保存半个标签的片段。第二比较与预测输出一起判定，标签片段或哈希单独匹配都不足以交付。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>部分标签</dt><dd>标签阵列保存的请求标签片段，与候选路一起参加命中判定。</dd></div><div><dt>组相联缓存路</dt><dd>每个缓存组中的一个条目位置。索引选组，路号选中该组的一路。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">预测路选择与标签确认</a></li><li><a href="#fig-2">确认标签时先读候选路</a></li><li><a href="#fig-3">预测正确、误选和真正缺失</a></li><li><a href="#fig-4">多路并读、确认后读和预测先读</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">预测路选择与标签确认</h3></div>
-    <a class="paper-open" href="../mechanisms/US10157137B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="预测路选择与标签确认">
-    <img class="paper-image native-image" src="../mechanisms/US10157137B1/fig-1/diagram.svg" width="900" height="420"
-         style="--paper-width:900px" alt="预测路选择与标签确认。第一次比较给出候选路，旁路可以先启动该路的数据读取。第二次比较结合候选路确认命中，控制初读数据能否返回。">
-  </div>
-  <figcaption>
-    <span>第一次比较给出候选路，旁路可以先启动该路的数据读取。第二次比较结合候选路确认命中，控制初读数据能否返回。</span>
-    <span class="figure-evidence">原文图 1–5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/68/6b/b1/d9a5dc79369c1d/US10157137.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">流水线时序</p><h3 id="fig-2-title">确认标签时先读候选路</h3></div>
-    <a class="paper-open" href="../mechanisms/US10157137B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="确认标签时先读候选路">
-    <img class="paper-image native-image" src="../mechanisms/US10157137B1/fig-2/diagram.svg" width="530" height="440"
-         style="--paper-width:530px" alt="确认标签时先读候选路。预测路先启动数据阵列，期间标签电路进行确认。横轴表示相对阶段，阶段占据的宽度不对应固定周期数。">
-  </div>
-  <figcaption>
-    <span>预测路先启动数据阵列，期间标签电路进行确认。横轴表示相对阶段，阶段占据的宽度不对应固定周期数。</span>
-    <span class="figure-evidence">图 3–5，权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>。横轴按逻辑阶段分段。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/68/6b/b1/d9a5dc79369c1d/US10157137.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">预测正确、误选和真正缺失</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">验证结果</th><th scope="col">当前读</th><th scope="col">后续</th></tr></thead><tbody><tr><th scope="row">预测路命中</th><td>可交付初读数据</td><td>完成访问</td></tr><tr><th scope="row">实际命中其他路</th><td class="emphasis">停止预测路读取</td><td>具体实施例可更新哈希并重发</td></tr><tr><th scope="row">判为缺失</th><td>不交付初读数据</td><td>发起常规缺失处理</td></tr></tbody></table>
-  <figcaption>
-    <span>预测正确可直接使用初读结果。误选时可修正并重发，真正缺失则向下层取数。</span>
-    <span class="figure-evidence">权 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>；说明书图 4–5。 · <a href="https://patentimages.storage.googleapis.com/68/6b/b1/d9a5dc79369c1d/US10157137.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">多路并读、确认后读和预测先读</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">策略</th><th scope="col">首轮启动的数据路</th><th scope="col">代价</th></tr></thead><tbody><tr><th scope="row">多路并读</th><td>多条候选路</td><td>激活多路数据阵列</td></tr><tr><th scope="row">确认后读</th><td>一条已确认路</td><td>标签确认与数据读取串行</td></tr><tr><th scope="row">预测路先读</th><td>一条预测路</td><td class="emphasis">预测错误后可能需要重读</td></tr></tbody></table>
-  <figcaption>
-    <span>三种读法的首轮阵列活动不同。预测先读可只开一路，但误选后还要修正。</span>
-    <span class="figure-evidence">图 1、4–5，教学对照，仅描述阵列活动。 · <a href="https://patentimages.storage.googleapis.com/68/6b/b1/d9a5dc79369c1d/US10157137.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>预测路提前读取</dt><dd>重叠标签与取数 <span class="subdued">原图 4、权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></span></dd></div><div><dt>确认结果控制返回</dt><dd>阻止错误路交付 <span class="subdued">原图 3–5、权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>哈希阵列可以比完整标签更早提供候选路，只激活一路数据阵列也能降低阵列活动。若候选频繁需要改选，额外读取和纠错会重新进入响应的关键路径。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>同一缓存组内，两条地址可能有相同的异或哈希。权利要求 12 允许在回填发现哈希冲突时停用旧哈希。若预测仍指向错误路，第二项比较必须阻止交付误读的数据。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定某组有四路，预测器两次都先选 way 2。第一次访问的后续确认也得到 way 2，第二次则没有确认该位置。</dd></div><div><dt>处理结果</dt><dd>第一次可在确认标签时并行读数据，确认后交付。第二次须阻止交付初读结果，再按实际判定改读或走缺失路径。</dd></div><div><dt>结果解读</dt><dd>部分标签是确认所需的一个输入。重新读取要等多久，由实现和后续判定决定。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、13 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>权利要求 1。原图 1–3 给出预测和标签阵列两条路径，确认逻辑共同使用其结果。</p>
+  <p>权利要求 1。原图 1–3 给出预测和标签阵列两条路径，确认逻辑共同使用其结果。提前选出将要读取的候选路。实际缓存命中仍依据后续标签比较结果确认。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=a%20memory%20device%20including%20a%20set-associative%20cache%20configured%20to%20receive%20a%20request%20for%20a%20data%20block">F1</a></th><td>组相联缓存接收指向一条缓存路中数据的请求。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Hashed%20tags%20array%20210%20%2C%20in%20one%20embodiment%2C%20is%20a%20memory%20configured%20to%20store%20hashed%20tags">说明书 0029</a> · 原图 1 · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=wherein%20the%20request%20specifies%20an%20address%2C%20a%20portion%20of%20which%20is%20a%20tag%20value">F2</a></th><td>请求地址含用于区分同组条目的标签。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=perform%20a%20first%20tag%20comparison%20using%20the%20tag%20value%3B%20and%20predict%2C%20based%20on%20the%20first%20tag">F3</a></th><td>预测电路比较请求标签，据此选出候选路。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Hashed%20tags%20array%20210%20%2C%20in%20one%20embodiment%2C%20is%20a%20memory%20configured%20to%20store%20hashed%20tags">说明书 0029</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=perform%20a%20second%20tag%20comparison%20by%20comparing%20a%20portion%20of%20the%20tag%20value%20with%20a%20set">F4</a></th><td>标签阵列把请求标签片段与各路中保存的对应片段比较。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%203%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20tag%20circuit%20120">说明书 0033</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Comparator%20320%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20compare%20the%20tag%20portion%20202%20A%20specified">说明书 0035</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=determine%20whether%20the%20request%20hits%20in%20the%20cache%20based%20on%20the%20predicted%20way%20and%20an%20output">F5</a></th><td>合并候选路和第二次比较结果，判定缓存命中。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Comparator%20320%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20compare%20the%20tag%20portion%20202%20A%20specified">说明书 0035</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=AND%20gate%20330%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20determine%20the%20actual%2F%20true%20way%20122">说明书 0036</a> · 原图 3 · 原图 5</td></tr></tbody>
@@ -127,48 +210,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=use%20the%20index%20value%20to%20retrieve%20a%20set%20of%20stored%20hash%20values">F6</a></th><td>按地址索引选出缓存组，读取该组各路的标签哈希。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Hashed%20tags%20array%20210%20%2C%20in%20one%20embodiment%2C%20is%20a%20memory%20configured%20to%20store%20hashed%20tags">说明书 0029</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=perform%20a%20first%20comparison%20of%20the%20set%20of%20stored%20hash%20values%20with%20a%20hash%20value%20computed">F7</a></th><td>把当前请求的标签哈希与该组已存的哈希比较。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Hashed%20tags%20array%20210%20%2C%20in%20one%20embodiment%2C%20is%20a%20memory%20configured%20to%20store%20hashed%20tags">说明书 0029</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=based%20on%20the%20first%20comparison%2C%20predict%20which%20one%20of%20the%20N%20locations%20stores%20the%20set%20of">F8</a></th><td>根据哈希比较结果预测数据所在的路。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%202%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20way%20prediction%20circuit">说明书 0028</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=perform%20a%20second%20comparison%20of%20a%20portion%20of%20the%20tag%20value%20with%20a%20set%20of%20previously">F9</a></th><td>标签电路把请求标签片段与保存的片段比较。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Turning%20now%20to%20FIG.%203%20%2C%20a%20block%20diagram%20of%20one%20embodiment%20of%20tag%20circuit%20120">说明书 0033</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Comparator%20320%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20compare%20the%20tag%20portion%20202%20A%20specified">说明书 0035</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=determine%2C%20based%20on%20the%20second%20comparison%20and%20the%20predicted%20location%2C%20an%20actual%20location%20that%20stores%20the">F10</a></th><td>结合标签片段匹配结果和预测位置，确认实际存放位置。</td><td><a href="https://patents.google.com/patent/US10157137B1/en#:~:text=Comparator%20320%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20compare%20the%20tag%20portion%20202%20A%20specified">说明书 0035</a> · <a href="https://patents.google.com/patent/US10157137B1/en#:~:text=AND%20gate%20330%20%2C%20in%20one%20embodiment%2C%20is%20configured%20to%20determine%20the%20actual%2F%20true%20way%20122">说明书 0036</a> · 原图 3 · 原图 5</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>第一次标签比较预测缓存路，第二次比较部分标签，合并结果确认命中。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>具体以请求标签哈希与各路所存哈希的匹配产生路预测。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>进一步把所计算的哈希限定为标签两个部分的异或。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-3">3</a></td><td>标签阵列保存的片段占标签位数的一半。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-2">2</a></td><td>预测时还检查已存哈希的有效状态。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>部分标签命中的路与预测路一致时，判定缓存命中。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-1">1</a></td><td>提前把预测路送给数据阵列读取，同时由标签阵列确定实际路。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>实际路与预测路不同时，停止读取预测路的数据。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>误选时使导致预测的哈希无效，并插入新哈希。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>重发请求时，预测器使用新插入的哈希预测实际路。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>缺失回填时，在数据阵列、预测电路和标签阵列分别写入数据、哈希和标签片段。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>回填的哈希与已存哈希冲突时，使旧哈希无效。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td>独立项</td><td>权利要求 13。原图 2、3 给出按组索引读取哈希以及用部分标签比较和候选路确定实际位置。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-13">13</a></td><td>在标签电路确定实际位置前，把预测位置交给数据阵列。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-13">13</a></td><td>实际位置与预测不同，将请求重新送入预测和标签流水线。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-13">13</a></td><td>将标签的两个或更多片段异或以生成哈希。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></dt><dd>第一项比较产生预测 way。部分标签阵列给出第二项比较，控制器用两项结果共同判定命中和实际位置。</dd></div><div><dt>说明书图 2–5</dt><dd>实施例把哈希预测、标签片段比较和数据预读接到同一次访问中。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US10157137B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></dt><dd>读预测 way 可先开始。实际位置与预测不符时，可停止初读、修正哈希并重放。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US10157137B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US12423235B2.html#engineering">在缓存代理保存一致性目录路指示</a>
-<p>组相联缓存先用标签比较预测一路并启动数据读，再确认实际命中 way，误选时放弃原读。目录的候选子集随缓存块分配下发，逐出时由代理带回，目录在这几路中核对块标识。前者预测一次数据读该开哪路，后者把先前的目录分配结果作为后续查询的提示。</p></li></ul>
-    <p><a href="../index.html?patent=US10157137B1#knowledge">在全量关系图上定位 US10157137B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2015-09-22</dd></div>
-    <div><dt>美国申请日</dt><dd>2015-09-22</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2018-12-18</dd></div>
-    <div><dt>美国申请号</dt><dd>US14/861,470</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Prashant Jain、Jason M. Kassoff、Sandeep Gupta</dd></div><div><dt>分类号</dt><dd>G06F12/0864、G06F3/0604、G06F3/061、G06F3/064、G06F3/0683、G06F2212/1016、G06F2212/1021、G06F2212/6032、G06F2212/6082</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US10157137B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US10157137B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 56 个说明书段落、16 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 4、图 5、图 6。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US10157137B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

@@ -1,119 +1,139 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US11567861B2 按页访问率迁移热页，使部分物理内存进入自刷新 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>迁移高访问率页后，让原内存 slice 进入低功耗 · US11567861B2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US11567861B2</code> · <a href="https://patents.google.com/patent/US11567861B2/en">专利全文</a></p>
+<h1>迁移高访问率页后，让原内存 slice 进入低功耗</h1><p class="reading-question">如果仅少量页仍在使用，为何可以停用其余页所在的内存 slice？重新访问未迁走的页时怎样恢复？</p>
+<p class="reading-answer">监测软件找出可停用的物理内存 slice。先阻止向它新分配页，再把超过页访问率阈值的物理页复制到活动 slice，更新这些页的 VA→PA 映射。其余页仍指原 PA，触发访问时可使原 slice 恢复。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2023-01-31</dd></div><div><dt>申请号</dt><dd>US17/519,284</dd></div><div><dt>最早优先权</dt><dd>2021-04-26</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Steven Fishwick、Jeffry E. Gonion、Per H. Hammarlund、Eran Tamari、Lior Zimet、Gerard R. Williams, III</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#roles">页分配、映射和数据复制分别发生在哪里</a></li><li><a href="#selection">两个访问率阈值分别用于 slice 选择和页迁移</a></li><li><a href="#order">先完成选中物理页的复制，再改变其映射</a></li><li><a href="#wake">再次访问仍指向源 slice 的页时，可以恢复资源</a></li><li><a href="#scope">停用 slice 的电源状态与整机收益取决于实施方式</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="roles"><h2>页分配、映射和数据复制分别发生在哪里</h2><p>图 1 上方由 OS 内存监测与页分配器处理。待折叠 slice 停止接收新的物理页分配。活动 slice 提供迁移目的页。控制面只更新选中页对应的虚实地址转换。</p><p>下方是数据复制方向。内存 slice 是可独立进入低功耗的物理资源。专利举例可按控制器或内存通道划分。实现若让一个页的各块跨多个 slice 交错，需让这些 slice 作为一组折叠，或采用页内仍落在同一 slice 的映射。说明书 ¶0071 给出这几种组织选择。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　页分配／映射控制路径和跨 slice 页数据复制</h3>
+    <p id="fig-1-basis">把更新 VA→PA 的控制路径与页内容的复制路径分开。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="页分配／映射控制路径和跨 slice 页数据复制" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 592" role="img" aria-labelledby="us11567861b2-fig-1-svg-title us11567861b2-fig-1-svg-desc">
+<title id="us11567861b2-fig-1-svg-title">页分配／映射控制路径和跨 slice 页数据复制</title>
+<desc id="us11567861b2-fig-1-svg-desc">把更新 VA→PA 的控制路径与页内容的复制路径分开。</desc>
+<defs><marker id="us11567861b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11567861b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11567861b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11567861b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11567861b2-fig-1-inhibit" d="M 244 160 L 370 160" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-1-arrow-control)"/>
+<path id="us11567861b2-fig-1-update" d="M 578 160 L 711 160" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-1-arrow-main)"/>
+<path id="us11567861b2-fig-1-choose" d="M 154 215 L 154 399" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-1-arrow-control)"/>
+<path id="us11567861b2-fig-1-permit" d="M 468 215 L 468 287 Q 468 295 476 295 L 802 295 Q 810 295 810 303 L 810 399" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-1-arrow-control)"/>
+<path id="us11567861b2-fig-1-copy" d="M 278 455 L 691 455" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-1-arrow-main)"/>
+<rect x="254" y="131" width="106" height="18" fill="#f5f5f5"/><text x="307" y="145" class="arrow-label" text-anchor="middle">限制新页分配</text>
+<rect x="579.5" y="131" width="131" height="18" fill="#f5f5f5"/><text x="645" y="145" class="arrow-label" text-anchor="middle">更新迁移页映射</text>
+<rect x="106.5" y="300" width="97" height="18" fill="#f5f5f5"/><text x="155" y="314" class="arrow-label" text-anchor="middle">标定源 slice</text>
+<rect x="582.5" y="265" width="105" height="18" fill="#f5f5f5"/><text x="635" y="279" class="arrow-label" text-anchor="middle">指定新物理页</text>
+<rect x="376" y="425" width="212" height="18" fill="#f5f5f5"/><text x="482" y="439" class="arrow-label" text-anchor="middle">复制活跃物理页的内容</text>
+<g id="us11567861b2-fig-1-monitor"><rect x="42" y="107" width="202" height="108" rx="6" fill="#f5f5f5"/><rect x="42" y="107" width="202" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="143" y="133" class="node-name" text-anchor="middle">OS 内存监测</text><text x="143" y="155" class="node-detail" text-anchor="middle">观察访问率与需求</text><text x="143" y="173" class="node-detail" text-anchor="middle">选择是否折叠 slice</text></g>
+<g id="us11567861b2-fig-1-allocator"><rect x="370" y="107" width="208" height="108" rx="6" fill="#f5f5f5"/><rect x="370" y="107" width="208" height="108" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="474" y="133" class="node-name" text-anchor="middle">物理页分配器</text><text x="474" y="155" class="node-detail" text-anchor="middle">禁止在原 slice 新分配</text><text x="474" y="173" class="node-detail" text-anchor="middle">从活动 slice 取得目标页</text></g>
+<g id="us11567861b2-fig-1-pgt"><rect x="711" y="107" width="212" height="108" rx="6" fill="#f5f5f5"/><rect x="711" y="107" width="212" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="817" y="133" class="node-name" text-anchor="middle">虚实地址转换结构</text><text x="817" y="155" class="node-detail" text-anchor="middle">已迁移的 VA 改指新 PA</text><text x="817" y="173" class="node-detail" text-anchor="middle">其余 VA 映射原样</text></g>
+<g id="us11567861b2-fig-1-source"><rect x="42" y="399" width="236" height="112" rx="6" fill="#f5f5f5"/><rect x="42" y="399" width="236" height="112" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="160" y="425" class="node-name" text-anchor="middle">源 slice 的控制器与 DRAM</text><text x="160" y="447" class="node-detail" text-anchor="middle">复制选中的活跃页</text><text x="160" y="465" class="node-detail" text-anchor="middle">未选中的物理页留在原处</text></g>
+<g id="us11567861b2-fig-1-destination"><rect x="691" y="399" width="232" height="112" rx="6" fill="#f5f5f5"/><rect x="691" y="399" width="232" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="807" y="425" class="node-name" text-anchor="middle">保持活动的目标 slice</text><text x="807" y="447" class="node-detail" text-anchor="middle">接收复制到新物理页的内容</text><text x="807" y="465" class="node-detail" text-anchor="middle">继续服务这些 VA</text></g>
+<text x="42" y="59" class="signal-title" text-anchor="start">OS 选择哪些页迁移，物理内存之间传输被选页的数据</text>
+<text x="42" y="559" class="legend" text-anchor="start">复制路径画数据的去向。说明书未为页拷贝指定固定 DMA 机制，复制与改映射是两个动作。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11567861b2-fig-1-inhibit">在待折叠 slice 暂停新分配</a> 新的物理页分配绕开源 slice。</li><li><a href="#us11567861b2-fig-1-copy">从源 slice 复制选中页</a> 只有选中的活跃页数据送往仍工作的目标 slice。</li><li><a href="#us11567861b2-fig-1-update">只更新被迁页的虚实映射</a> 使用方 VA 不因迁移本身改变。</li><li><a href="#us11567861b2-fig-1-source">源 slice 的未选中页</a> 未迁页保留原物理位置，可在恢复后访问。</li></ul>
+  <p class="figure-evidence">原图 8、9、10、11；说明书归档段 0064、0066、0068、0070、0071、0072、0079、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00022" aria-label="原文权利要求 22">22</a> <a href="../diagrams/US11567861B2/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存控制器</dt><dd>12A–12H</dd></div><div><dt>DRAM 器件</dt><dd>28</dd></div><div><dt>内存位置配置寄存器</dt><dd>22A–22H、22J–22N、22P</dd></div><div><dt>内存访问与系统状态监测</dt><dd>90</dd></div><div><dt>禁止对待折叠 slice 分配新页</dt><dd>102</dd></div><div><dt>复制高访问率物理页</dt><dd>132</dd></div><div><dt>更新对应虚实地址映射</dt><dd>134</dd></div></dl></details>
+</figure></section><section id="selection"><h2>两个访问率阈值分别用于 slice 选择和页迁移</h2><p>图 5 前一个判断比较整个 slice 的访问率，低于第一个阈值才开始折叠。暂停给该 slice 分配新页后，软件在一段时间内观察原有物理页。高于第二个阈值的页构成迁移子集。第 8–10 项分别写到双阈值、禁用新页分配和观察顺序。</p><p>原图 9 进一步区分活跃脏页与活跃干净页。说明书允许先搬脏页；将活跃干净页留在源 slice 可能导致稍后访问使它提前恢复。是否等待 wired page 解除常驻、是否把 copy-on-write 页优先分配在保持活动的 slice 属于实施选择。两种门限没有规定统一单位、观测窗或具体数值。</p><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">图 5　整 slice 低于阈值才开始折叠，高访问率页仍迁出</h3>
+    <p id="fig-5-basis">区分是否折叠物理资源和哪些物理页要移动两个判断。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="整 slice 低于阈值才开始折叠，高访问率页仍迁出" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 582" role="img" aria-labelledby="us11567861b2-fig-5-svg-title us11567861b2-fig-5-svg-desc">
+<title id="us11567861b2-fig-5-svg-title">整 slice 低于阈值才开始折叠，高访问率页仍迁出</title>
+<desc id="us11567861b2-fig-5-svg-desc">区分是否折叠物理资源和哪些物理页要移动两个判断。</desc>
+<defs><marker id="us11567861b2-fig-5-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11567861b2-fig-5-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11567861b2-fig-5-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11567861b2-fig-5-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11567861b2-fig-5-notfold" d="M 267 163 L 352 163" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-5-arrow-return)"/>
+<path id="us11567861b2-fig-5-allow-fold" d="M 162 216 L 162 291" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-5-arrow-main)"/>
+<path id="us11567861b2-fig-5-sample" d="M 264 343 L 353 343" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-5-arrow-data)"/>
+<path id="us11567861b2-fig-5-hot" d="M 563 343 L 638 343 Q 646 343 646 335 L 646 269 Q 646 261 654 261 L 709 261" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-5-arrow-main)"/>
+<path id="us11567861b2-fig-5-cold" d="M 458 398 L 458 449 Q 458 457 466 457 L 709 457" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-5-arrow-control)"/>
+<rect x="252" y="133" width="114" height="18" fill="#f5f5f5"/><text x="309" y="147" class="arrow-label" text-anchor="middle">未达折叠条件</text>
+<rect x="119.5" y="239" width="81" height="18" fill="#f5f5f5"/><text x="160" y="253" class="arrow-label" text-anchor="middle">低于 Tₛ</text>
+<rect x="309" y="314" width="0" height="18" fill="#f5f5f5"/><text x="309" y="328" class="arrow-label" text-anchor="middle"></text>
+<rect x="618" y="232" width="84" height="18" fill="#f5f5f5"/><text x="660" y="246" class="arrow-label" text-anchor="middle">高于 Tₚ</text>
+<rect x="541.5" y="428" width="101" height="18" fill="#f5f5f5"/><text x="592" y="442" class="arrow-label" text-anchor="middle">未超过 Tₚ</text>
+<g id="us11567861b2-fig-5-aggregate"><polygon points="162,110 267,163 162,216 57,163" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="162" y="160" class="node-name" text-anchor="middle">slice 访问率低？</text><text x="162" y="181" class="node-detail" text-anchor="middle">比较阈值 Tₛ</text></g>
+<g id="us11567861b2-fig-5-defer"><rect x="352" y="116" width="202" height="94" rx="6" fill="#f5f5f5"/><rect x="352" y="116" width="202" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="453" y="142" class="node-name" text-anchor="middle">保持可分配</text><text x="453" y="164" class="node-detail" text-anchor="middle">继续监测 slice 访问</text></g>
+<g id="us11567861b2-fig-5-gate"><rect x="55" y="291" width="209" height="106" rx="6" fill="#f5f5f5"/><rect x="55" y="291" width="209" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="159.5" y="317" class="node-name" text-anchor="middle">暂停新页分配</text><text x="159.5" y="339" class="node-detail" text-anchor="middle">记录所选 slice 的页</text></g>
+<g id="us11567861b2-fig-5-page"><polygon points="458,288 563,343 458,398 353,343" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="458" y="340" class="node-name" text-anchor="middle">页访问率高？</text><text x="458" y="361" class="node-detail" text-anchor="middle">逐页比较 Tₚ</text></g>
+<g id="us11567861b2-fig-5-migrate"><rect x="709" y="209" width="210" height="105" rx="6" fill="#f5f5f5"/><rect x="709" y="209" width="210" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="814" y="235" class="node-name" text-anchor="middle">加入迁移子集</text><text x="814" y="257" class="node-detail" text-anchor="middle">复制到活动 slice</text><text x="814" y="275" class="node-detail" text-anchor="middle">改该 VA 的映射</text></g>
+<g id="us11567861b2-fig-5-remain"><rect x="709" y="408" width="210" height="104" rx="6" fill="#f5f5f5"/><rect x="709" y="408" width="210" height="104" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="814" y="434" class="node-name" text-anchor="middle">留在原 slice</text><text x="814" y="456" class="node-detail" text-anchor="middle">保留 VA 对原 PA 的映射</text></g>
+<text x="55" y="58" class="signal-title" text-anchor="start">先看整组资源是否空闲，再筛出仍在使用的物理页</text>
+<text x="55" y="550" class="legend" text-anchor="start">按权利要求 8–10 和原图 9、11。Tₛ 用于判断整个 slice，Tₚ 用于选择要迁移的页。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11567861b2-fig-5-aggregate">用 Tₛ 评估整个 slice</a> 低于门限可以进入下一步。</li><li><a href="#us11567861b2-fig-5-gate">先禁止向源 slice 分配</a> 获得一段对原有页的观察窗口。</li><li><a href="#us11567861b2-fig-5-page">用 Tₚ 判断每一页</a> 访问率超过门限的页加入迁移子集。</li><li><a href="#us11567861b2-fig-5-remain">未入选页保留原位置</a> 没有该页的重映射动作。</li></ul>
+  <p class="figure-evidence">原图 8、9、11；说明书归档段 0065、0066、0067、0069、0070、0072、0082、0083；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00019" aria-label="原文权利要求 19">19</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00020" aria-label="原文权利要求 20">20</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00021" aria-label="原文权利要求 21">21</a> <a href="../diagrams/US11567861B2/fig-5.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存访问与系统状态监测</dt><dd>90</dd></div><div><dt>启动内存折叠</dt><dd>94</dd></div><div><dt>禁止对待折叠 slice 分配新页</dt><dd>102</dd></div><div><dt>观察该 slice 的物理页访问</dt><dd>104</dd></div><div><dt>判断目标 slice 是否停用</dt><dd>130</dd></div><div><dt>复制高访问率物理页</dt><dd>132</dd></div><div><dt>更新对应虚实地址映射</dt><dd>134</dd></div></dl></details>
+</figure></section><section id="order"><h2>先完成选中物理页的复制，再改变其映射</h2><p>图 2 从禁用新分配开始，依次显示源页观察、在仍活动的 slice 获得目标物理页、复制、修改页表和停用源 slice。原图 11 的关键条件是只改选中页的地址映射。要把这套流程用于实际内核，还须按实现保证复制期间的写入与转换可见性。</p><p>表 3 按选中和未选中拆开观察地址。用三页模型检查，三页观察计数为 2、11、5 次，门限为同一观察窗的 7 次。只有中间一页迁到活动 slice 并改指新 PA；其余两页仍指待折叠 slice，直接服务这两页需要让它恢复。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　先复制并重映射选中页，再停用原 slice</h3>
+    <p id="fig-2-basis">按事件顺序追踪原 slice 何时停止被分配、何时复制内容和何时进入低功耗。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="先复制并重映射选中页，再停用原 slice" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 511" role="img" aria-labelledby="us11567861b2-fig-2-svg-title us11567861b2-fig-2-svg-desc">
+<title id="us11567861b2-fig-2-svg-title">先复制并重映射选中页，再停用原 slice</title>
+<desc id="us11567861b2-fig-2-svg-desc">按事件顺序追踪原 slice 何时停止被分配、何时复制内容和何时进入低功耗。</desc>
+<defs><marker id="us11567861b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11567861b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11567861b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11567861b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="452" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11567861b2-fig-2-qualify"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-data)"/><rect x="100.5" y="96" width="273" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">开始折叠，先停止在源 slice 分配新页</text></g>
+<g id="us11567861b2-fig-2-sample"><path d="M 116 168 L 601 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-data)"/><rect x="261" y="144" width="195" height="18" fill="#f5f5f5"/><text x="358.5" y="158" class="arrow-label" text-anchor="middle">在随后一段时间观察原有页的访问</text></g>
+<g id="us11567861b2-fig-2-newpa"><path d="M 358 216 L 844 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-data)"/><rect x="510" y="192" width="182" height="18" fill="#f5f5f5"/><text x="601" y="206" class="arrow-label" text-anchor="middle">为选中的活跃页分配目标物理页</text></g>
+<g id="us11567861b2-fig-2-copy"><path d="M 601 264 L 844 264" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-main)"/><rect x="670.5" y="240" width="104" height="18" fill="#f5f5f5"/><text x="722.5" y="254" class="arrow-label" text-anchor="middle">复制选中页的数据</text></g>
+<g id="us11567861b2-fig-2-pte"><path d="M 358 306 L 382 306 Q 390 306 390 314 L 390 316 Q 390 324 382 324 L 358 324" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-control)"/><rect x="374.5" y="282" width="195" height="18" fill="#f5f5f5"/><text x="472" y="296" class="arrow-label" text-anchor="middle">将迁移页 VA 指向目标 PA</text></g>
+<g id="us11567861b2-fig-2-keep"><path d="M 116 360 L 358 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11567861b2-fig-2-arrow-return)"/><rect x="159" y="336" width="156" height="18" fill="#f5f5f5"/><text x="237" y="350" class="arrow-label" text-anchor="middle">其余 VA 仍指原 PA</text></g>
+<g id="us11567861b2-fig-2-disable"><path d="M 116 408 L 601 408" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-2-arrow-main)"/><rect x="157" y="384" width="403" height="18" fill="#f5f5f5"/><text x="358.5" y="398" class="arrow-label" text-anchor="middle">停用源 slice；DRAM 可进入 self-refresh</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">OS 内存监测</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">页分配器／页表</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">待折叠 slice</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">保持活动的 slice</text>
+<text x="28" y="484" class="legend" text-anchor="start">从原图 9、11 组合。页迁移的可见性、写入同步和 TLB 维护按具体系统实现。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11567861b2-fig-2-qualify">停止源 slice 的新页分配</a> 针对指定物理资源的页分配资格作调整。</li><li><a href="#us11567861b2-fig-2-copy">迁移所选高访问率页</a> 在目标 slice 保存同一数据。</li><li><a href="#us11567861b2-fig-2-pte">修改所选页映射</a> 目标新 PA 为活动 slice，未选中的 VA→PA 保留。</li><li><a href="#us11567861b2-fig-2-disable">随后让原资源停用</a> DRAM 可主动或在空闲后进入 self-refresh。</li></ul>
+  <p class="figure-evidence">原图 9、11；说明书归档段 0070、0071、0072、0073、0082、0083；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00012" aria-label="原文权利要求 12">12</a> <a href="../diagrams/US11567861B2/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>禁止对待折叠 slice 分配新页</dt><dd>102</dd></div><div><dt>观察该 slice 的物理页访问</dt><dd>104</dd></div><div><dt>复制高访问率物理页</dt><dd>132</dd></div><div><dt>更新对应虚实地址映射</dt><dd>134</dd></div><div><dt>停用原 slice</dt><dd>136</dd></div><div><dt>使 DRAM 进入 self-refresh</dt><dd>110</dd></div><div><dt>可选降低控制器功耗状态</dt><dd>112</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">表 3　迁移页和未迁页之后访问哪个物理位置</h3>
+    <p id="fig-3-basis">比较相同虚拟地址在迁移和保留时的物理位置与之后服务路径。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">迁移判定</th><th scope="col">目标 VA 在折叠前后指向</th><th scope="col">折叠期间再次访问</th></tr></thead><tbody><tr id="fig-3-table-row-1"><th scope="row">活跃并被选中</th><td>由源 slice 的 PA 改为活动 slice 的新 PA</td><td>走新物理页</td></tr><tr id="fig-3-table-row-2"><th scope="row">未选中</th><td>保留目标 VA → 源 slice 的原 PA</td><td>先等源 slice 恢复或触发恢复</td></tr><tr id="fig-3-table-row-3"><th scope="row">活跃但 clean 且本实施方式未迁</th><td>仍指向源 slice 的原 PA</td><td>可能提前唤醒，缩短低功耗驻留</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-3-basis">映射值观察口径</a> 每个地址的 VA 保持，检查 PA 是否换到活动 slice。</li></ul>
+  <p class="figure-evidence">原图 9、10、11；说明书归档段 0072、0073、0077、0078、0082；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a> </p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>复制高访问率物理页</dt><dd>132</dd></div><div><dt>更新对应虚实地址映射</dt><dd>134</dd></div><div><dt>使 DRAM 进入 self-refresh</dt><dd>110</dd></div><div><dt>控制器升态或 DRAM 退出 self-refresh</dt><dd>122</dd></div></dl></details>
+</figure></section><section id="wake"><h2>再次访问仍指向源 slice 的页时，可以恢复资源</h2><p>图 4 对照原图 10。触发因素可能是一次落在原物理页的访问，也可能是带宽或容量需求上升。软件选择要恢复的 slice。控制器和 DRAM 可以主动升态，或在硬件允许的情况下由新访存触发。</p><p>恢复后，页分配器可把该 slice 的物理页重新放回可分配集合。说明书允许逐渐增加新页分配，也允许按需迁回以前迁走的页。若迁走的页在新位置已有修改，迁回时须保存现有内容。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　低功耗 slice 恢复后重新开放物理页分配</h3>
+    <p id="fig-4-basis">标出访问或需求信号、硬件升态、恢复页分配，以及可选的迁回。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="低功耗 slice 恢复后重新开放物理页分配" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 465" role="img" aria-labelledby="us11567861b2-fig-4-svg-title us11567861b2-fig-4-svg-desc">
+<title id="us11567861b2-fig-4-svg-title">低功耗 slice 恢复后重新开放物理页分配</title>
+<desc id="us11567861b2-fig-4-svg-desc">标出访问或需求信号、硬件升态、恢复页分配，以及可选的迁回。</desc>
+<defs><marker id="us11567861b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11567861b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11567861b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11567861b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11567861b2-fig-4-trigger"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-data)"/><rect x="107" y="96" width="260" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">检测到折叠 slice 的访问或需求增加</text></g>
+<g id="us11567861b2-fig-4-choose"><path d="M 358 162 L 382 162 Q 390 162 390 170 L 390 172 Q 390 180 382 180 L 358 180" fill="none" stroke="#2e5aa8" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-control)"/><rect x="394" y="138" width="156" height="18" fill="#f5f5f5"/><text x="472" y="152" class="arrow-label" text-anchor="middle">选择恢复哪个 slice</text></g>
+<g id="us11567861b2-fig-4-active"><path d="M 358 216 L 601 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-main)"/><rect x="278" y="192" width="403" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">可主动使控制器升态或 DRAM 退出 self-refresh</text></g>
+<g id="us11567861b2-fig-4-passive"><path d="M 116 264 L 601 264" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-data)"/><rect x="267.5" y="240" width="182" height="18" fill="#f5f5f5"/><text x="358.5" y="254" class="arrow-label" text-anchor="middle">另一实施方式由新访存触发升态</text></g>
+<g id="us11567861b2-fig-4-available"><path d="M 358 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-main)"/><rect x="490.5" y="288" width="221" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">重新加入该 slice 的可分配页</text></g>
+<g id="us11567861b2-fig-4-newpage"><path d="M 844 360 L 601 360" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11567861b2-fig-4-arrow-main)"/><rect x="618.5" y="336" width="208" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">可分配新页，也可重新迁回以前页面</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">访问／需求监测</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">折叠控制软件</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">控制器与 DRAM</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">页分配器</text>
+<text x="28" y="436" class="legend" text-anchor="start">主动恢复和访存触发是两种方式。原图 10 允许逐渐使用物理页；存量页何时回迁由实现决定。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#us11567861b2-fig-4-trigger">观察到访问或新的内存需求</a> 可触发恢复指定 slice。</li><li><a href="#us11567861b2-fig-4-active">主动退出低功耗</a> 软件可请求升态，亦允许访问触发的实现。</li><li><a href="#us11567861b2-fig-4-available">重新允许分配物理页</a> 页分配器得到 slice 可用的信息。</li><li><a href="#us11567861b2-fig-4-newpage">之后逐步分配或迁回</a> 迁回不是恢复地址可用性的必要步骤。</li></ul>
+  <p class="figure-evidence">原图 8、10；说明书归档段 0066、0067、0075、0076、0077、0078 <a href="../diagrams/US11567861B2/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>内存访问与系统状态监测</dt><dd>90</dd></div><div><dt>启动解折叠</dt><dd>98</dd></div><div><dt>选择待恢复的 slice</dt><dd>120</dd></div><div><dt>控制器升态或 DRAM 退出 self-refresh</dt><dd>122</dd></div><div><dt>让页分配器重新使用 slice</dt><dd>124</dd></div><div><dt>逐渐向恢复的 slice 分配或迁回页面</dt><dd>126</dd></div></dl></details>
+</figure></section><section id="scope"><h2>停用 slice 的电源状态与整机收益取决于实施方式</h2><p>授权第 1、14、22 项均限定复制高访问页、只修改所选页的映射、随后停用源 slice。第 3、15 项涉及主动使 DRAM 进入 self-refresh，第 4、16 项涉及因无访问而进入 self-refresh。说明书另外描述长时间无访问时可断电的 hard fold。</p><p>要评估手机 SoC 的低功耗收益，可将首次迁移数据量、低功耗驻留时间、未迁页触发恢复次数以及恢复延迟分别计量。原说明书提供软折叠的控制路径，节省的能量取决于这些量和实际电源状态。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=slc#catalog">SLC 与内存控制器</a></p>
-  <p class="document-id"><code>US11567861B2</code><span>美国授权专利</span><time datetime="2023-01-31">2023-01-31</time></p>
-  <h1>按页访问率迁移热页，使部分物理内存进入自刷新</h1>
-  <p class="english-title" lang="en">Hashing with soft memory folding</p>
-  <p class="document-question">准备让部分 DRAM 进入低功耗状态时，哪些页要迁移，哪些页可保留原映射？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">准备停用内存切片时，系统先迁移访问率超过门槛的页，再更新这些页的虚拟到物理映射。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>未达到门槛的页保留原映射，电源收益需要覆盖迁移过程的复制和维护成本。</dd></div><div><dt>验证方法</dt><dd>固定访问流，分别将门槛设在候选页的观测访问率上下两侧。记录复制字节数、页表更新事件、切片进入低功耗状态的时点和稳定后功耗。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US11567861B2/en#CLM-00001">原文权利要求 1</a><a href="#fig-2">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">物理内存切片绑定一组物理页。将整个切片的内容全部搬走可能使低功耗转换过慢。权利要求按页访问率选择需要迁移的子集。</p>
-    <p>准备停用一个物理切片时，先把超过访问率阈值的页复制到另一切片，再修改这些页的虚拟到物理映射。其余页保留映射。之后停用原切片，从属项列举主动或因无访问而进入自刷新。</p>
-    <ol class="walkthrough"><li><h3>选择可停用切片</h3><p>监视内存访问和容量需求。在适合低活动状态时选择候选物理资源。</p></li><li><h3>迁移访问率超过阈值的页</h3><p>复制到不会被此次停用的切片。阈值作用于页的访问率。</p></li><li><h3>更新迁移页映射</h3><p>迁移完成后为对应虚拟地址改用新物理页。其他地址的映射保持原位置。</p></li><li><h3>调整原切片状态</h3><p>停止持续访问该资源。实施例允许 DRAM 因空闲进入自刷新或由控制逻辑显式请求自刷新。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00008" aria-label="原文权利要求 8">8</a> 至 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00010" aria-label="原文权利要求 10">10</a> 把两级访问率判定与页分配器串起来。切片整体访问率低于第一阈值时，先停止向该切片分配物理页，再识别超过第二阈值的页。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>物理内存切片</dt><dd>映射多个物理页的物理资源，可以是一个控制器或内存通道。</dd></div><div><dt>折叠</dt><dd>本件指降低或停用部分内存切片的操作。说明书区分 DRAM 自刷新和更激进的断电。</dd></div><div><dt>自刷新</dt><dd>DRAM 自己维持数据的低功耗模式，访问前要退出。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-2">迁移页的映射在数据复制后更新</a></li><li><a href="#fig-1">页热度影响迁移，物理切片影响功耗</a></li><li><a href="#fig-4">重新访问原切片时怎样恢复分配</a></li><li><a href="#fig-3">不同页保留不同的物理归属</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">迁移页的映射在数据复制后更新</h3></div>
-    <a class="paper-open" href="../mechanisms/US11567861B2/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="迁移页的映射在数据复制后更新">
-    <img class="paper-image native-image" src="../mechanisms/US11567861B2/fig-2/diagram.svg" width="920" height="386"
-         style="--paper-width:920px" alt="迁移页的映射在数据复制后更新。冷页不进入此次复制过程。">
-  </div>
-  <figcaption>
-    <span>冷页不进入此次复制过程。</span>
-    <span class="figure-evidence">原图 9、图 11，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/3c/6a/89322fb16cc807/US11567861.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">页热度影响迁移，物理切片影响功耗</h3></div>
-    <a class="paper-open" href="../mechanisms/US11567861B2/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="页热度影响迁移，物理切片影响功耗">
-    <img class="paper-image native-image" src="../mechanisms/US11567861B2/fig-1/diagram.svg" width="743" height="332"
-         style="--paper-width:743px" alt="页热度影响迁移，物理切片影响功耗。软件负责筛选和地址重映射，内存控制器负责访问物理切片。">
-  </div>
-  <figcaption>
-    <span>软件负责筛选和地址重映射，内存控制器负责访问物理切片。</span>
-    <span class="figure-evidence">原图 8–11，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/3c/6a/89322fb16cc807/US11567861.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-4-title">重新访问原切片时怎样恢复分配</h3></div>
-    <a class="paper-open" href="../mechanisms/US11567861B2/fig-4/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="重新访问原切片时怎样恢复分配">
-    <img class="paper-image native-image" src="../mechanisms/US11567861B2/fig-4/diagram.svg" width="920" height="444"
-         style="--paper-width:920px" alt="重新访问原切片时怎样恢复分配。未迁页再次被访问时可选择恢复原切片。内存控制器或 DRAM 恢复后，软件让页分配器再次使用该切片。是否迁回旧页取决于实现。">
-  </div>
-  <figcaption>
-    <span>未迁页再次被访问时可选择恢复原切片。内存控制器或 DRAM 恢复后，软件让页分配器再次使用该切片。是否迁回旧页取决于实现。</span>
-    <span class="figure-evidence">原图 10，说明书 0075、0077–0078；解除折叠实施例 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/09/3c/6a/89322fb16cc807/US11567861.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">不同页保留不同的物理归属</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">对象</th><th scope="col">物理位置</th><th scope="col">映射动作</th></tr></thead><tbody><tr><th scope="row">访问率大于阈值的页</th><td>复制到活动切片</td><td>改为新物理页</td></tr><tr><th scope="row">不在该子集的页</th><td>保留原切片</td><td>保留物理映射</td></tr><tr><th scope="row">被停用的切片</th><td>原有物理资源</td><td>实现可进入自刷新</td></tr></tbody></table>
-  <figcaption>
-    <span>迁移前后虚拟地址一致。迁移页改指新物理位置，未迁页保留原映射。</span>
-    <span class="figure-evidence">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00004" aria-label="原文权利要求 4">4</a>。</span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>仅迁移高访问率页</dt><dd>降低原切片访问活跃度 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>；原图 9、11</span></dd></div><div><dt>维持未迁页地址映射</dt><dd>减少复制与重映射量 <span class="subdued">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00022" aria-label="原文权利要求 22">22</a>；原图 11</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>禁止新分配有助于稳定待迁移的页集合，随后的复制则占用其他切片的可用页和内存带宽。可分开统计停止分配后的物理页分配去向、实际迁移字节及各切片进入自刷新的次数。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>若停用后，一个此前低于阈值、仍留在原切片的页突然变热，原切片可能频繁退出自刷新。可在迁移后改变访问热点，测量新增退出次数和稳定期能量，判断热度统计是否仍有效。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>教学场景中切片 A 的页 P 活跃，页 Q 较冷。切片 B 有可用于迁移的物理页。</dd></div><div><dt>处理结果</dt><dd>先复制 P 至 B，再更新对应地址翻译；Q 维持原映射。A 可以按实现进入低活动状态。</dd></div><div><dt>结果解读</dt><dd>保留映射的页之后若再次被访问，需要考虑恢复该切片的延迟。页迁移也有复制和刷新旧地址转换的成本。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、14、22 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
@@ -137,48 +157,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=A%20non-transitory%20computer%20readable%20storage%20medium%20storing%20a%20plurality%20of%20instructions%20which%2C%20when%20executed%20by%20one">F17</a></th><td>非暂态介质保存内存系统相应处理器可执行的指令。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=In%20accordance%20with%20the%20above%2C%20a%20system%20may%20comprise%20one%20or%20more%20memory%20controllers%20coupled%20to">说明书 0084</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=detecting%20that%20a%20first%20memory%20slice%20of%20a%20plurality%20of%20memory%20slices%20in%20the%20memory%20system">F18</a></th><td>检测物理内存切片需要停用。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=a%20given%20memory%20slice%20of%20the%20plurality%20of%20memory%20slices%20is%20a%20physical%20memory%20resource%20to">F19</a></th><td>多个物理页映射到一个物理内存切片。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20slice%20may%20be%20defined%20as%20previously%20described%20with%20regard%20to%20FIG.%202%20%28e.g.%2C%20a%20slice">说明书 0079</a> · 原图 8–11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=copying%20data%20from%20a%20first%20subset%20of%20physical%20pages%20within%20the%20first%20memory%20slice%20to%20a">F20</a></th><td>将一部分页的数据从待停用切片复制到另一切片。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=data%20in%20the%20first%20subset%20of%20physical%20pages%20are%20being%20accessed%20at%20greater%20than%20a%20threshold">F21</a></th><td>所选页面的数据访问率超过阈值。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=During%20the%20transition%20period%20when%20a%20slice%20is%20being%20folded%2C%20the%20pages%20in%20the%20selected%20%28folding%29">说明书 0072</a> · <a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 9、11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=remapping%20virtual%20addresses%20from%20first%20physical%20addresses%20of%20the%20first%20subset%20of%20physical%20pages%20to%20second">F22</a></th><td>在地址翻译结构中，把已迁移页的虚拟地址改指目标物理页。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=the%20remapping%20excludes%20remapping%20of%20virtual%20addresses%20that%20are%20mapped%20to%20remaining%20physical%20addresses%20that%20are">F23</a></th><td>原切片中未选页保留当前虚拟地址映射。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=During%20the%20transition%20period%20when%20a%20slice%20is%20being%20folded%2C%20the%20pages%20in%20the%20selected%20%28folding%29">说明书 0072</a> · <a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 9、11</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=disabling%20the%20first%20memory%20slice">F24</a></th><td>完成所选页的复制和重映射后停用原切片。</td><td><a href="https://patents.google.com/patent/US11567861B2/en#:~:text=Once%20the%20above%20is%20complete%20the%20memory%20devices%2028%20%28e.g.%2C%20DRAMs%29%20in%20the%20slice%20may%20be">说明书 0073</a> · <a href="https://patents.google.com/patent/US11567861B2/en#:~:text=The%20method%20may%20include%20detecting%20whether%20or%20not%20a%20first%20memory%20slice%20of%20a%20plurality%20of">说明书 0082</a> · 原图 9、11</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
     <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>方法选择要停用的物理切片，将高访问率页复制到另一切片，更新所选页映射而保留其他页映射，停用原切片。见原图 11。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>一次停用多个切片，数量为 2 的幂。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-1">1</a></td><td>停用切片可通过主动让其中一个或多个 DRAM 进入自刷新。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>也可允许该切片的 DRAM 因缺少访问自行进入自刷新。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-1">1</a></td><td>切片物理资源至少包含一个内存控制器。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-1">1</a></td><td>切片至少包含一个内存通道，DRAM 连接相应通道。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-6">6</a></td><td>将切片进一步限定为一个内存通道。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-1">1</a></td><td>检测切片访问率低于第一阈值，再找页访问率超过第二阈值的页。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td><a href="#claim-8">8</a></td><td>切片访问率低于第一阈值时，阻止页分配器新分配该切片的页。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>先停新分配，再识别切片中的高访问率页。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-1">1</a></td><td>所复制的子集包含数据在内存中已被修改的页。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-11">11</a></td><td>复制已修改页后，再复制所选子集的剩余页。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-1">1</a></td><td>根据会降低系统功耗的一项或多项因素选择停用。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td>独立项</td><td>系统含内存控制器、内存器件、处理器和非暂态程序介质。执行指令实现切片停用前的选择性复制与重映射。见原图 8–11、说明书 0084。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-14">14</a></td><td>主动使切片的一台或多台 DRAM 进入自刷新。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td><a href="#claim-14">14</a></td><td>由长期没有访问触发切片 DRAM 进入自刷新。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-14">14</a></td><td>切片物理资源至少包含一个内存控制器。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-14">14</a></td><td>切片至少包含一个内存通道，DRAM 连接相应通道。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-14">14</a></td><td>检测切片访问率低于第一阈值，再找页访问率超过第二阈值的页。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-19">19</a></td><td>切片访问率低于第一阈值时，阻止页分配器新分配该切片的页。</td></tr><tr id="claim-21"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00021" aria-label="原文权利要求 21">21</a></th><td><a href="#claim-20">20</a></td><td>先停新分配，再识别切片中的高访问率页。</td></tr><tr id="claim-22"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></th><td>独立项</td><td>程序介质权项以所存指令限定检测、只迁高访问率页、选择性重映射和停用。见原图 11、说明书 0084。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00022" aria-label="原文权利要求 22">22</a></dt><dd>按阈值筛选页，复制后改地址翻译，并保持其他页原映射。</dd></div><div><dt>权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00003" aria-label="原文权利要求 3">3</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US11567861B2/en#CLM-00004" aria-label="原文权利要求 4">4</a></dt><dd>分别给出主动进入 DRAM 自刷新和通过减少访问进入自刷新。</dd></div><div><dt>原图 8–11</dt><dd>覆盖切片监测、折叠和解除折叠。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US11567861B2/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US20230367510A1.html#engineering">用可编程多粒度地址散列选择内存控制器</a>
-<p>两份文献的说明书均列出美国临时申请 63/179,666，各自的继续申请链经过不同母案。US20230367510A1 的公开权利要求 26 涉及页内分散和多粒度散列，US11567861B2 的权利要求 1 涉及迁移高访问率的页、更新虚拟地址映射并停用原内存切片。</p></li></ul>
-    <p><a href="../index.html?patent=US11567861B2#knowledge">在全量关系图上定位 US11567861B2</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2021-04-26</dd></div>
-    <div><dt>美国申请日</dt><dd>2021-11-04</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2023-01-31</dd></div>
-    <div><dt>美国申请号</dt><dd>US17/519,284</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Steven Fishwick、Jeffry E. Gonion、Per H. Hammarlund、Eran Tamari、Lior Zimet、Gerard R. Williams, III</dd></div><div><dt>分类号</dt><dd>G06F13/1668、G06F3/0655、G06F12/0238、G06F12/0646、G06F12/0871、G06F12/0882、G06F12/1018、G06F12/1054、G06F12/1063、G06F12/1072、G06F12/109、G06F3/0604、G06F3/061、G06F3/0611、G06F3/0613、G06F3/0659、G06F3/0683、G06F12/0284、G06F2212/1024、G06F2212/1028、G06F2212/657、Y02D10/00</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US11567861B2/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US11567861B2/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国授权专利全文，覆盖 127 个说明书段落、22 项权利要求。</p>
-  <p>核对过的图号为 1、2、3、4、5、6、7、8、9、10、11、12、13、14、15。</p>
-  </details>
-  <h2>同族对照</h2><ul class="related"><li><a href="US20230367510A1.html"><code>US20230367510A1</code> 用可编程多粒度地址散列选择内存控制器</a></li></ul>
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US11567861B2#knowledge">在专利关系图中定位</a></p>
+</main></body></html>

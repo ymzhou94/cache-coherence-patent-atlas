@@ -1,120 +1,163 @@
 <!doctype html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>US12222875B1 由关键性选择插入与提升向量 · 芯片架构与功耗专利图谱</title>
-<link rel="stylesheet" href="../assets/site.css?edition=full-review">
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用插入与提升向量更新缓存替换顺序 · US12222875B1</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<link rel="stylesheet" href="../assets/site.css"><link rel="stylesheet" href="../assets/redesign.css">
+</head><body><main class="frame redesigned">
+<nav class="reading-site" aria-label="专利图谱"><a href="../index.html#catalog">专利目录</a></nav>
+<header id="engineering"><p><code>US12222875B1</code> · <a href="https://patents.google.com/patent/US12222875B1/en">专利全文</a></p>
+<h1>用插入与提升向量更新缓存替换顺序</h1><p class="reading-question">缓存命中为什么未必提升到 MRU？对关键行和非关键行配置不同策略时，硬件拿什么选择向量，又怎样只移动必要的组内记录？</p>
+<p class="reading-answer">关键性选择一套插入／提升向量（IPV）。命中用当前 rank 索引 P 元素，回填使用 I 元素。更新电路再根据目标 rank 生成掩码，让各位置保持、接收相邻位置的记录，或放入被移动的行。</p>
+<details><summary>专利著录</summary><dl class="record-details"><div><dt>公开／授权</dt><dd>2025-02-11</dd></div><div><dt>申请号</dt><dd>US18/361,169</dd></div><div><dt>最早优先权</dt><dd>2022-12-22</dd></div><div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler J. Huberty、Henry A. Pellerin、Daniel A. Jimenez</dd></div></dl></details></header>
+<nav class="reading-toc" aria-label="本页内容"><ul><li><a href="#which-vector">先选策略，再根据事件读向量元素</a></li><li><a href="#implement">多路选择器如何更新一组替换数据</a></li><li><a href="#trace-rank">沿着一笔 rank 3 命中跟踪每个位置</a></li><li><a href="#partition">近远分区让排名变化可能带来数据搬运</a></li><li><a href="#scope">授权范围与可编程策略的关系</a></li><li><a href="#claims">权利要求</a></li></ul></nav>
+<div id="mechanism"><section id="which-vector"><h2>先选策略，再根据事件读向量元素</h2><p>图 1 中，命中可以从标签拿已保存的关键等级。缺失回填时，控制器按请求来源及队列条件定关键性。选择器据此从时钟存储元件中选一套 IPV。可以为不同等级分配不同向量，也可以共享。</p><p>一套向量包含每个当前排名的 P 元素和专用于回填的 I 元素。命中时才有当前 rank，例如命中 rank 3 就查 P3。回填没有当前 rank，读取 I。原图 4A 的 LRU 向量把 P 与 I 都设为 MRU，原图 4B 示范不同目标，甚至可让命中的行靠近逐出端。</p><figure class="exhibit" id="fig-1">
+  <figcaption><h3 id="fig-1-title">图 1　关键性选择策略向量，当前排名只在命中时作索引</h3>
+    <p id="fig-1-basis">关键等级确定使用哪套 IPV。命中从该向量读取当前排名的更新值，回填则读取独立的插入值。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="关键性选择策略向量，当前排名只在命中时作索引" style="--figure-width:1430px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1430 653" role="img" aria-labelledby="fig-1-svg-title fig-1-svg-desc">
+<title id="fig-1-svg-title">关键性选择策略向量，当前排名只在命中时作索引</title>
+<desc id="fig-1-svg-desc">关键等级确定使用哪套 IPV。命中从该向量读取当前排名的更新值，回填则读取独立的插入值。</desc>
+<defs><marker id="fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-1-identify" d="M 273 259 L 339 259 Q 347 259 347 251 L 347 128 Q 347 120 355 120 L 438 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-rank-list" d="M 273 293 L 357 293 Q 365 293 365 301 L 365 325 Q 365 333 373 333 L 438 333" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-1-arrow-data)"/>
+<path id="fig-1-policy" d="M 773 118 L 1061 118" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-index" d="M 773 334 L 1061 334" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-hit-vector" d="M 1217 184 L 1217 275" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<path id="fig-1-fill-route" d="M 773 549 L 1061 549" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-1-arrow-main)"/>
+<path id="fig-1-fill-vector" d="M 1374 135 L 1394 135 Q 1402 135 1402 143 L 1402 542 Q 1402 550 1394 550 L 1374 550" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-1-arrow-control)"/>
+<rect x="287" y="89" width="112" height="18" fill="#f5f5f5"/><text x="343" y="103" class="arrow-label" text-anchor="middle">分类当前缓存行</text>
+<rect x="315" y="342" width="112" height="18" fill="#f5f5f5"/><text x="371" y="356" class="arrow-label" text-anchor="middle">读组内替换状态</text>
+<rect x="833" y="82" width="168" height="18" fill="#f5f5f5"/><text x="917" y="96" class="arrow-label" text-anchor="middle">按关键等级选择整套向量</text>
+<rect x="838" y="298" width="156" height="18" fill="#f5f5f5"/><text x="916" y="312" class="arrow-label" text-anchor="middle">用当前 rank 索引 P</text>
+<rect x="1260" y="217" width="98" height="18" fill="#f5f5f5"/><text x="1309" y="231" class="arrow-label" text-anchor="middle">已选中的向量</text>
+<rect x="825.5" y="511" width="175" height="18" fill="#f5f5f5"/><text x="913" y="525" class="arrow-label" text-anchor="middle">没有旧 rank，直接取 I</text>
+<rect x="1276" y="426" width="86" height="18" fill="#f5f5f5"/><text x="1319" y="440" class="arrow-label" text-anchor="middle">同一套 IPV</text>
+<g id="fig-1-access"><rect x="46" y="229" width="227" height="94" rx="6" fill="#f5f5f5"/><rect x="46" y="229" width="227" height="94" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="159.5" y="255" class="node-name" text-anchor="middle">缓存访问</text><text x="159.5" y="277" class="node-detail" text-anchor="middle">命中或缺失回填</text></g>
+<g id="fig-1-status"><rect x="438" y="68" width="335" height="107" rx="6" fill="#f5f5f5"/><rect x="438" y="68" width="335" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="605.5" y="94" class="node-name" text-anchor="middle">当前行的关键性</text><text x="605.5" y="116" class="node-detail" text-anchor="middle">命中读标签上的关键等级</text><text x="605.5" y="134" class="node-detail" text-anchor="middle">回填按本次条件分类</text></g>
+<g id="fig-1-select"><rect x="1061" y="62" width="313" height="122" rx="6" fill="#f5f5f5"/><rect x="1061" y="62" width="313" height="122" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1217.5" y="88" class="node-name" text-anchor="middle">按等级选择 IPV</text><text x="1217.5" y="110" class="node-detail" text-anchor="middle">从向量寄存器取一套策略</text><text x="1217.5" y="128" class="node-detail" text-anchor="middle">包含 P0…P(N−1) 与 I</text></g>
+<g id="fig-1-oldrank"><rect x="438" y="288" width="335" height="91" rx="6" fill="#f5f5f5"/><rect x="438" y="288" width="335" height="91" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="605.5" y="314" class="node-name" text-anchor="middle">该组的当前替换顺序</text><text x="605.5" y="336" class="node-detail" text-anchor="middle">命中时知道该行的 rank</text></g>
+<g id="fig-1-hit"><rect x="1061" y="275" width="313" height="106" rx="6" fill="#f5f5f5"/><rect x="1061" y="275" width="313" height="106" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1217.5" y="301" class="node-name" text-anchor="middle">命中读取 P[rank]</text><text x="1217.5" y="323" class="node-detail" text-anchor="middle">给已有行选择新的位置</text></g>
+<g id="fig-1-fill"><rect x="1061" y="498" width="313" height="99" rx="6" fill="#f5f5f5"/><rect x="1061" y="498" width="313" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1217.5" y="524" class="node-name" text-anchor="middle">回填读取 I</text><text x="1217.5" y="546" class="node-detail" text-anchor="middle">给新回填行选择初始位置</text></g>
+<g id="fig-1-fill-event"><rect x="438" y="502" width="335" height="92" rx="6" fill="#f5f5f5"/><rect x="438" y="502" width="335" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="605.5" y="528" class="node-name" text-anchor="middle">缓存缺失后的回填</text><text x="605.5" y="550" class="node-detail" text-anchor="middle">已有可分配条目和填入数据</text></g>
+<text x="47" y="43" class="signal-title" text-anchor="start">缓存行关键性与替换顺序是两个不同输入</text>
+<text x="47" y="623" class="signal-title" text-anchor="start">目标位置只决定替换状态。命中时不会因此改写同组的缓存行内容。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-1-status">从缓存访问得到关键性</a> 命中读出标签里已有的关键等级。回填时按缺失来源及队列状态分类。</li><li><a href="#fig-1-select">按等级选择已配置向量</a> 非关键与多个关键等级可使用不同向量，也可以让若干等级共享同一向量。</li><li><a href="#fig-1-hit">命中从当前排名读取 P 元素</a> 例如命中 rank 3，则读取 P3，而非假定所有命中都移动到 MRU。</li><li><a href="#fig-1-fill">回填读取独立插入元素 I</a> 新行没有旧排名。插入位置由缺失回填时选中的 I 元素决定。</li></ul>
+  <p class="figure-evidence">原图 1、2、3、6、7；说明书归档段 0017、0018、0022、0024、0025、0026、0027、0028、0039、0042、0043、0065、0067；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00015" aria-label="原文权利要求 15">15</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00018" aria-label="原文权利要求 18">18</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00020" aria-label="原文权利要求 20">20</a> <a href="../diagrams/US12222875B1/fig-1.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>缓存标签与关键性字段</dt><dd>28 / 44</dd></div><div><dt>组内替换顺序状态</dt><dd>32</dd></div><div><dt>可存储的 IPV</dt><dd>34 / 50</dd></div><div><dt>按关键性选 IPV</dt><dd>620</dd></div><div><dt>按旧排名查提升位置或按 I 查插入位置</dt><dd>64 / 72</dd></div></dl></details>
+</figure></section><section id="implement"><h2>多路选择器如何更新一组替换数据</h2><p>图 2 放大组内一个排名位置 i。P/I 掩码标出唯一要直接接收当前行的位置。移动掩码标出其余需要挪动的位置。比较目标与旧位置，生成表示移动方向的位。</p><p>从图左侧逐项看，位置 i 可以接收 Wi−1、保持 Wi 或接收 Wi+1。P/I 置位时选当前命中／填入行的替换记录。每个位置有相应选择器，各自算完后形成同一组的新顺序。命中更新的是替换记录。缓存行数据并不随这些小记录的更新而在物理路之间交换。</p><figure class="exhibit" id="fig-2">
+  <figcaption><h3 id="fig-2-title">图 2　每个排名位置用一只多路选择器计算下一状态</h3>
+    <p id="fig-2-basis">向量输出目标位置后，硬件生成放置掩码、移动掩码和方向。每个位置可接收新行、相邻位置的行，或者保持原值。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="每个排名位置用一只多路选择器计算下一状态" style="--figure-width:1440px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 711" role="img" aria-labelledby="fig-2-svg-title fig-2-svg-desc">
+<title id="fig-2-svg-title">每个排名位置用一只多路选择器计算下一状态</title>
+<desc id="fig-2-svg-desc">向量输出目标位置后，硬件生成放置掩码、移动掩码和方向。每个位置可接收新行、相邻位置的行，或者保持原值。</desc>
+<defs><marker id="fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-2-control" d="M 376 134 L 927 134 Q 935 134 935 142 L 935 300" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-2-arrow-control)"/>
+<path id="fig-2-previous" d="M 247 302 L 581 302 Q 589 302 589 310 L 589 315 Q 589 323 597 323 L 782 323" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-persist" d="M 247 412 L 638 412 Q 646 412 646 404 L 646 361 Q 646 353 654 353 L 782 353" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-next" d="M 247 517 L 674 517 Q 682 517 682 509 L 682 395 Q 682 387 690 387 L 782 387" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-2-arrow-data)"/>
+<path id="fig-2-chosen" d="M 376 626 L 711 626 Q 719 626 719 618 L 719 430 Q 719 422 727 422 L 782 422" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<path id="fig-2-update" d="M 1069 370 L 1191 370" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-2-arrow-main)"/>
+<rect x="577" y="97" width="210" height="18" fill="#f5f5f5"/><text x="682" y="111" class="arrow-label" text-anchor="middle">P/I[i]、shift[i]、方向位</text>
+<rect x="431" y="268" width="98" height="18" fill="#f5f5f5"/><text x="480" y="282" class="arrow-label" text-anchor="middle">接收左邻记录</text>
+<rect x="444" y="374" width="112" height="18" fill="#f5f5f5"/><text x="500" y="388" class="arrow-label" text-anchor="middle">继续使用原记录</text>
+<rect x="449" y="482" width="98" height="18" fill="#f5f5f5"/><text x="498" y="496" class="arrow-label" text-anchor="middle">接收右邻记录</text>
+<rect x="492" y="589" width="126" height="18" fill="#f5f5f5"/><text x="555" y="603" class="arrow-label" text-anchor="middle">被移动或插入的行</text>
+<rect x="1106" y="334" width="52" height="18" fill="#f5f5f5"/><text x="1132" y="348" class="arrow-label" text-anchor="middle">写回</text>
+<g id="fig-2-masks"><rect x="47" y="78" width="329" height="117" rx="6" fill="#f5f5f5"/><rect x="47" y="78" width="329" height="117" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="211.5" y="104" class="node-name" text-anchor="middle">目标位置与移动范围生成</text><text x="211.5" y="126" class="node-detail" text-anchor="middle">由旧排名、目标 rank 和访问类型生成</text><text x="211.5" y="144" class="node-detail" text-anchor="middle">输出 P/I、shift 和方向</text></g>
+<g id="fig-2-lower"><rect x="47" y="263" width="200" height="81" rx="6" fill="#f5f5f5"/><rect x="47" y="263" width="200" height="81" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="289" class="node-name" text-anchor="middle">旧位置 Wi−1</text><text x="147" y="311" class="node-detail" text-anchor="middle">提升时可右移</text></g>
+<g id="fig-2-same"><rect x="47" y="371" width="200" height="81" rx="6" fill="#f5f5f5"/><rect x="47" y="371" width="200" height="81" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="397" class="node-name" text-anchor="middle">旧位置 Wi</text><text x="147" y="419" class="node-detail" text-anchor="middle">未参与移动时保留</text></g>
+<g id="fig-2-higher"><rect x="47" y="479" width="200" height="80" rx="6" fill="#f5f5f5"/><rect x="47" y="479" width="200" height="80" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="505" class="node-name" text-anchor="middle">旧位置 Wi+1</text><text x="147" y="527" class="node-detail" text-anchor="middle">降低时可左移</text></g>
+<g id="fig-2-incoming"><rect x="47" y="584" width="329" height="85" rx="6" fill="#f5f5f5"/><rect x="47" y="584" width="329" height="85" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="211.5" y="610" class="node-name" text-anchor="middle">命中行或回填行的替换记录</text><text x="211.5" y="632" class="node-detail" text-anchor="middle">填入 P/I 指定位置</text></g>
+<g id="fig-2-selector"><rect x="782" y="300" width="287" height="153" rx="6" fill="#f5f5f5"/><rect x="782" y="300" width="287" height="153" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="925.5" y="326" class="node-name" text-anchor="middle">位置 i 的多路选择器</text><text x="925.5" y="348" class="node-detail" text-anchor="middle">按 P/I 优先放置目标行</text><text x="925.5" y="366" class="node-detail" text-anchor="middle">按 shift 和方向取相邻值</text><text x="925.5" y="384" class="node-detail" text-anchor="middle">其余位置保留原值</text></g>
+<g id="fig-2-state"><rect x="1191" y="306" width="211" height="131" rx="6" fill="#f5f5f5"/><rect x="1191" y="306" width="211" height="131" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1296.5" y="332" class="node-name" text-anchor="middle">新排名状态 Wi′</text><text x="1296.5" y="354" class="node-detail" text-anchor="middle">同一逻辑复制</text><text x="1296.5" y="372" class="node-detail" text-anchor="middle">到组内各位置</text></g>
+<text x="42" y="46" class="signal-title" text-anchor="start">一个组内位置的真实状态馈通</text>
+<text x="877" y="610" class="signal-title" text-anchor="start">位于端点的选择器省去不存在的邻居输入。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-2-masks">生成两个独立掩码</a> P/I 掩码选目标位置，shift mask 选需要接收相邻值的位置。方向位根据旧位置与新位置比较得到。</li><li><a href="#fig-2-selector">位置 i 的四路选择</a> 优先按该位置的 P/I 选择输入行。如果该位置需要移动，再按方向从左邻或右邻取值。否则保持 Wi。</li><li><a href="#fig-2-incoming">被移动或填入的行</a> 命中时输入已有行的替换记录；缺失回填时输入新行的替换记录。没有必要搬动标签的数据载荷。</li><li><a href="#fig-2-state">把所有位置的下一状态同时写回</a> 同一组的替换状态是一组相对排名。所有受影响的位置组合后写回这组的替换状态。</li></ul>
+  <p class="figure-evidence">原图 2、3、6；说明书归档段 0020、0039、0042、0043、0064、0065、0066、0068、0069、0070、0071、0072、0076；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00004" aria-label="原文权利要求 4">4</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00007" aria-label="原文权利要求 7">7</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00009" aria-label="原文权利要求 9">9</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00016" aria-label="原文权利要求 16">16</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00018" aria-label="原文权利要求 18">18</a> <a href="../diagrams/US12222875B1/fig-2.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>移动范围与掩码生成</dt><dd>630</dd></div><div><dt>提升／降低方向</dt><dd>635</dd></div><div><dt>放置与移动掩码</dt><dd>640 / 650</dd></div><div><dt>每个排名位置的多路选择器</dt><dd>M0–M7</dd></div><div><dt>更新前与更新后的替换状态</dt><dd>632 / 632′</dd></div><div><dt>被移动或插入的缓存行记录</dt><dd>665</dd></div></dl></details>
+</figure></section><section id="trace-rank"><h2>沿着一笔 rank 3 命中跟踪每个位置</h2><p>图 3 采用原图 4B 的 P3=1，只展开受影响的前四个排名。D 命中前在 rank 3。P/I 选择让 D 写入 rank 1。rank 2、3 的移动掩码打开，各自填入旧的左邻记录 B、C。rank 0 的 A 不动，更靠近逐出端的其他位置也保持原有顺序。</p><p>换成原图 4A 的 LRU 向量，D 则到 rank 0，A、B、C 都后移。若新位置比旧位置更靠近逐出端，受影响的记录往另一方向移。例如原图 4B 的 rank 5 命中可以降到 rank 6。两幅原图都以 rank 0 表示 MRU。</p><figure class="exhibit" id="fig-3">
+  <figcaption><h3 id="fig-3-title">图 3　rank 3 命中时，只有目标与原位置之间的记录要移动</h3>
+    <p id="fig-3-basis">初始顺序为 A、B、C、D。原图 4B 的 P3=1 让 D 到 rank 1，B 和 C 各后移一步。A 保持原位。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="rank 3 命中时，只有目标与原位置之间的记录要移动" style="--figure-width:1390px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1390 602" role="img" aria-labelledby="fig-3-svg-title fig-3-svg-desc">
+<title id="fig-3-svg-title">rank 3 命中时，只有目标与原位置之间的记录要移动</title>
+<desc id="fig-3-svg-desc">初始顺序为 A、B、C、D。原图 4B 的 P3=1 让 D 到 rank 1，B 和 C 各后移一步。A 保持原位。</desc>
+<defs><marker id="fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-3-unchanged" d="M 242 179 L 242 400" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-move-d" d="M 1195 179 L 1195 216 Q 1195 224 1187 224 L 539 224 Q 531 224 531 232 L 531 400" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-3-arrow-main)"/>
+<path id="fig-3-push-b" d="M 456 179 L 456 262 Q 456 270 464 270 L 785 270 Q 793 270 793 278 L 793 400" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<path id="fig-3-push-c" d="M 844 179 L 844 332 Q 844 340 852 340 L 1130 340 Q 1138 340 1138 348 L 1138 400" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-3-arrow-data)"/>
+<rect x="257" y="297" width="52" height="18" fill="#f5f5f5"/><text x="283" y="311" class="arrow-label" text-anchor="middle">保持</text>
+<rect x="869.5" y="188" width="109" height="18" fill="#f5f5f5"/><text x="924" y="202" class="arrow-label" text-anchor="middle">D → rank 1</text>
+<rect x="581.5" y="239" width="109" height="18" fill="#f5f5f5"/><text x="636" y="253" class="arrow-label" text-anchor="middle">B → rank 2</text>
+<rect x="961.5" y="305" width="109" height="18" fill="#f5f5f5"/><text x="1016" y="319" class="arrow-label" text-anchor="middle">C → rank 3</text>
+<g id="fig-3-a"><rect x="55" y="100" width="218" height="79" rx="6" fill="#f5f5f5"/><rect x="55" y="100" width="218" height="79" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="164" y="126" class="node-name" text-anchor="middle">rank 0：A</text><text x="164" y="148" class="node-detail" text-anchor="middle">最先保留</text></g>
+<g id="fig-3-b"><rect x="385" y="100" width="218" height="79" rx="6" fill="#f5f5f5"/><rect x="385" y="100" width="218" height="79" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="494" y="126" class="node-name" text-anchor="middle">rank 1：B</text><text x="494" y="148" class="node-detail" text-anchor="middle">在被移动区间</text></g>
+<g id="fig-3-c"><rect x="715" y="100" width="218" height="79" rx="6" fill="#f5f5f5"/><rect x="715" y="100" width="218" height="79" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="824" y="126" class="node-name" text-anchor="middle">rank 2：C</text><text x="824" y="148" class="node-detail" text-anchor="middle">在被移动区间</text></g>
+<g id="fig-3-d"><rect x="1045" y="100" width="218" height="79" rx="6" fill="#f5f5f5"/><rect x="1045" y="100" width="218" height="79" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1154" y="126" class="node-name" text-anchor="middle">rank 3：D</text><text x="1154" y="148" class="node-detail" text-anchor="middle">命中，读取 P3</text></g>
+<g id="fig-3-a-new"><rect x="55" y="400" width="218" height="92" rx="6" fill="#f5f5f5"/><rect x="55" y="400" width="218" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="164" y="426" class="node-name" text-anchor="middle">rank 0：A</text><text x="164" y="448" class="node-detail" text-anchor="middle">原位保持</text></g>
+<g id="fig-3-d-new"><rect x="385" y="400" width="218" height="92" rx="6" fill="#f5f5f5"/><rect x="385" y="400" width="218" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="494" y="426" class="node-name" text-anchor="middle">rank 1：D</text><text x="494" y="448" class="node-detail" text-anchor="middle">从位置 3 写入目标</text></g>
+<g id="fig-3-b-new"><rect x="715" y="400" width="218" height="92" rx="6" fill="#f5f5f5"/><rect x="715" y="400" width="218" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="824" y="426" class="node-name" text-anchor="middle">rank 2：B</text><text x="824" y="448" class="node-detail" text-anchor="middle">取左邻的旧记录</text></g>
+<g id="fig-3-c-new"><rect x="1045" y="400" width="218" height="92" rx="6" fill="#f5f5f5"/><rect x="1045" y="400" width="218" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1154" y="426" class="node-name" text-anchor="middle">rank 3：C</text><text x="1154" y="448" class="node-detail" text-anchor="middle">取左邻的旧记录</text></g>
+<text x="57" y="52" class="signal-title" text-anchor="start">命中前的替换顺序</text>
+<text x="55" y="374" class="signal-title" text-anchor="start">命中后的替换顺序</text>
+<text x="56" y="555" class="signal-title" text-anchor="start">rank 0 在本例表示 MRU。图中位置属于替换顺序，和实际缓存路编号分开。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-3-d">命中的是 D</a> D 位于 rank 3。当前策略读取 P3=1，目标位置的 P/I 置位。</li><li><a href="#fig-3-d-new">把命中记录放进 rank 1</a> 被写入的是替换记录。当前并没有数据回填，也没有逐出。</li><li><a href="#fig-3-b-new">B、C 各移动一个位置</a> 原位置 1 与 3 之间的记录从左邻输入移到新位置。移动掩码对位置 2、3 生效。</li><li><a href="#fig-3-a-new">A 未处于移动范围</a> A 保持 rank 0。若改用原图 4A 的 LRU 向量，D 会移到 rank 0，对相邻记录的影响更大。</li></ul>
+  <p class="figure-evidence">原图 4A、4B、5B、6；说明书归档段 0045、0046、0048、0052、0053、0063、0070、0071、0072、0076；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00005" aria-label="原文权利要求 5">5</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00006" aria-label="原文权利要求 6">6</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US12222875B1/fig-3.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>非 LRU 示例：命中原 rank 3</dt><dd>456-3</dd></div><div><dt>向量中的 rank 3 元素 P3</dt><dd>470-3</dd></div><div><dt>目标位置与受影响位置掩码</dt><dd>640 / 650</dd></div></dl></details>
+</figure></section><section id="partition"><h2>近远分区让排名变化可能带来数据搬运</h2><p>基本的 IPV 更新针对组内排名。若实现有访问延迟不同的 near／far 分区，排名还可能决定数据留在哪个物理分区。图 4 展开这个可选实施例。排名在原分区内移动时可以只改替换状态。跨分界时才会产生相应数据移动。图中的 C 进入 near 后，原先的 B 被推到 far，因而跨界的有两条行记录所对应的数据。</p><p>选择向量时，关键性判断错误可能让低复用行进入高保留位置。表 5 固定总访问和逐出端，只改向量分配，观察 A、B 能否保留。模型不计算分区迁移。若评估分区实现，还需分别记录跨界搬运量、近端命中与远端命中延迟。</p><figure class="exhibit" id="fig-4">
+  <figcaption><h3 id="fig-4-title">图 4　替换顺序跨过 near／far 分界时才涉及分区迁移</h3>
+    <p id="fig-4-basis">有近远分区的实施例可把保留优先级高的行放在 near。只改逻辑排名时不一定搬数据，跨分界时才需要考虑对应物理位置变化。</p></figcaption>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="替换顺序跨过 near／far 分界时才涉及分区迁移" style="--figure-width:1460px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1460 685" role="img" aria-labelledby="fig-4-svg-title fig-4-svg-desc">
+<title id="fig-4-svg-title">替换顺序跨过 near／far 分界时才涉及分区迁移</title>
+<desc id="fig-4-svg-desc">有近远分区的实施例可把保留优先级高的行放在 near。只改逻辑排名时不一定搬数据，跨分界时才需要考虑对应物理位置变化。</desc>
+<defs><marker id="fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="fig-4-new-old" d="M 329 173 L 487 173" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-local" d="M 811 155 L 936 155 Q 944 155 944 147 L 944 127 Q 944 119 952 119 L 1065 119" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-move" d="M 811 192 L 945 192 Q 953 192 953 200 L 953 304 Q 953 312 961 312 L 1065 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-arrange" d="M 1236 366 L 1236 490" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<path id="fig-4-data-c" d="M 1065 532 L 815 532" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#fig-4-arrow-main)"/>
+<path id="fig-4-data-b" d="M 815 568 L 1065 568" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#fig-4-arrow-data)"/>
+<path id="fig-4-count" d="M 485 544 L 329 544" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#fig-4-arrow-control)"/>
+<rect x="349" y="139" width="112" height="18" fill="#f5f5f5"/><text x="405" y="153" class="arrow-label" text-anchor="middle">旧位置和新位置</text>
+<rect x="844" y="121" width="70" height="18" fill="#f5f5f5"/><text x="879" y="135" class="arrow-label" text-anchor="middle">未跨分界</text>
+<rect x="969" y="274" width="56" height="18" fill="#f5f5f5"/><text x="997" y="288" class="arrow-label" text-anchor="middle">跨分界</text>
+<rect x="1294" y="413" width="98" height="18" fill="#f5f5f5"/><text x="1343" y="427" class="arrow-label" text-anchor="middle">变更分区放置</text>
+<rect x="863" y="495" width="150" height="18" fill="#f5f5f5"/><text x="938" y="509" class="arrow-label" text-anchor="middle">C 从 far 到 near</text>
+<rect x="865" y="583" width="150" height="18" fill="#f5f5f5"/><text x="940" y="597" class="arrow-label" text-anchor="middle">B 从 near 到 far</text>
+<rect x="371" y="508" width="70" height="18" fill="#f5f5f5"/><text x="406" y="522" class="arrow-label" text-anchor="middle">记录移动</text>
+<g id="fig-4-promote"><rect x="49" y="123" width="280" height="105" rx="6" fill="#f5f5f5"/><rect x="49" y="123" width="280" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="189" y="149" class="node-name" text-anchor="middle">读出该行的新 rank</text><text x="189" y="171" class="node-detail" text-anchor="middle">例示 C 由 rank 2 提升至 rank 1</text></g>
+<g id="fig-4-check"><rect x="487" y="123" width="324" height="105" rx="6" fill="#f5f5f5"/><rect x="487" y="123" width="324" height="105" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="649" y="149" class="node-name" text-anchor="middle">检查 near／far 分界</text><text x="649" y="171" class="node-detail" text-anchor="middle">例中 near 包含 rank 0、1</text><text x="649" y="189" class="node-detail" text-anchor="middle">far 包含 rank 2、3</text></g>
+<g id="fig-4-only"><rect x="1065" y="70" width="339" height="98" rx="6" fill="#f5f5f5"/><rect x="1065" y="70" width="339" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1234.5" y="96" class="node-name" text-anchor="middle">仍在原分区</text><text x="1234.5" y="118" class="node-detail" text-anchor="middle">只需更新组内替换顺序</text></g>
+<g id="fig-4-exchange"><rect x="1065" y="259" width="339" height="107" rx="6" fill="#f5f5f5"/><rect x="1065" y="259" width="339" height="107" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1234.5" y="285" class="node-name" text-anchor="middle">跨分界，需要重新安置数据</text><text x="1234.5" y="307" class="node-detail" text-anchor="middle">本次 C 进入 near</text><text x="1234.5" y="325" class="node-detail" text-anchor="middle">原 near 行 B 必须移到 far</text></g>
+<g id="fig-4-near"><rect x="485" y="490" width="330" height="118" rx="6" fill="#f5f5f5"/><rect x="485" y="490" width="330" height="118" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="650" y="516" class="node-name" text-anchor="middle">near 分区</text><text x="650" y="538" class="node-detail" text-anchor="middle">当前 A、B</text><text x="650" y="556" class="node-detail" text-anchor="middle">迁移后 A、C</text></g>
+<g id="fig-4-far"><rect x="1065" y="490" width="339" height="118" rx="6" fill="#f5f5f5"/><rect x="1065" y="490" width="339" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1234.5" y="516" class="node-name" text-anchor="middle">far 分区</text><text x="1234.5" y="538" class="node-detail" text-anchor="middle">当前 C、D</text><text x="1234.5" y="556" class="node-detail" text-anchor="middle">迁移后 B、D</text></g>
+<g id="fig-4-measure"><rect x="49" y="490" width="280" height="118" rx="6" fill="#f5f5f5"/><rect x="49" y="490" width="280" height="118" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="189" y="516" class="node-name" text-anchor="middle">核对实际代价</text><text x="189" y="538" class="node-detail" text-anchor="middle">记录跨界搬运的数据量</text><text x="189" y="556" class="node-detail" text-anchor="middle">以及后续各分区命中等待</text></g>
+<text x="48" y="48" class="signal-title" text-anchor="start">可选实施例：替换 rank 映射到不同延迟的物理分区</text>
+<text x="48" y="652" class="signal-title" text-anchor="start">A、B、C、D 为说明搬运边界的例示缓存行。行交换示意依据说明书 0040。</text>
+</svg></div>
+  <ul class="figure-reading"><li><a href="#fig-4-promote">向量允许不同的移动幅度</a> 若一次升迁只发生在原分区内，可以只更新替换顺序。</li><li><a href="#fig-4-check">判断目标 rank 属于哪个物理分区</a> 本图把 rank 与分区对应作为说明书示例。可配置为不同分区用不同向量和迁移政策。</li><li><a href="#fig-4-exchange">需要跨近远分区时迁移</a> 例中 C 从 rank 2 变为 rank 1，进入 near。B 被替换顺序推到 rank 2，转入 far。只更新排名并不能完成这个分区实例中的搬运。</li><li><a href="#fig-4-measure">区分分区延迟和迁移流量</a> 近分区命中可更快，但控制策略还需考虑迁移次数与占用的数据通路。</li></ul>
+  <p class="figure-evidence">原图 1、2、4B；说明书归档段 0022、0025、0026、0039、0040、0052、0054、0056；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a> <a href="../diagrams/US12222875B1/fig-4.html">打开独立图稿</a></p>
+  <details class="component-index"><summary>原图标号对照</summary><dl><div><dt>可以划分为 near／far 的缓存</dt><dd>12</dd></div><div><dt>控制移动目标的 IPV</dt><dd>50</dd></div><div><dt>不同分区的时延和跨界数据搬运</dt><dd>说明书 0040</dd></div></dl></details>
+</figure><figure class="exhibit" id="fig-5">
+  <figcaption><h3 id="fig-5-title">表 5　同一组访问中，关键性误标会改变哪些行的保留</h3>
+    <p id="fig-5-basis">模型从 rank 0 到 3 初始是 A、B、C、D，逐出最后一项。固定请求 X、Y、Z、W、A、B 两轮。较强向量 P=(0,0,0,0)、I=0，较弱向量 P=(0,1,1,2)、I=2。所有地址同组。</p></figcaption>
+  <table class="comparison-table" aria-labelledby="fig-5-title"><thead><tr><th scope="col">两套向量的分配</th><th scope="col">12 次访问的缺失数</th><th scope="col">A、B 的缺失数</th></tr></thead><tbody><tr id="fig-5-all-strong"><th scope="row">全部用较强向量（LRU）</th><td>12</td><td>4</td></tr><tr id="fig-5-accurate"><th scope="row">仅 A、B 用较强向量</th><td>8</td><td>0</td></tr><tr id="fig-5-error"><th scope="row">误把 X、Y 也分到较强向量</th><td>10</td><td>4</td></tr></tbody></table>
+  <ul class="figure-reading"><li><a href="#fig-5-all-strong">所有回填都获最强保留</a> 新行每次进 rank 0。四个新块足以顺序挤走 A、B，后续它们不得不重新取入。</li><li><a href="#fig-5-accurate">对 X、Y、Z、W 用低插入位置</a> 四个流式块主要占较后的位置。A、B 两轮都命中，外来的流式请求仍可能经常缺失。</li><li><a href="#fig-5-error">把 X、Y 错标进强向量</a> 这两行已获得头部插入位置，叠加其他流式缺失后，A、B 两轮又各出现缺失。改变的是替换优先级。</li></ul>
+  <p class="figure-evidence">原图 3、4A、4B、5A、5B；说明书归档段 0020、0021、0042、0043、0047、0048、0052、0053、0056、0063；权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00008" aria-label="原文权利要求 8">8</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00012" aria-label="原文权利要求 12">12</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00014" aria-label="原文权利要求 14">14</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00015" aria-label="原文权利要求 15">15</a> </p>
+  
+</figure></section><section id="scope"><h2>授权范围与可编程策略的关系</h2><p>独立权利要求 1、9、16 关注按关键性选择存储的 IPV 并更新替换数据。权利要求 2、10–12 分别写入排名元素与插入元素的用法。不同关键等级可以各有向量，也可共享。near／far 分区及搬运属于说明书举出的实现条件。</p></section></div>
 
-</head>
-<body>
-<a class="skip" href="#main">跳到正文</a>
-<header class="topbar"><div class="frame topbar-inner">
-  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
-  <nav class="top-nav" aria-label="主导航">
-    <a href="../index.html#knowledge">关系图谱</a>
-    <a href="../index.html#catalog">专利目录</a>
-    <a href="../lab.html">原型实验室</a>
-  </nav>
-</div></header>
-<main id="main">
-<div class="article-title">
-<div class="frame">
-  <p class="crumb"><a href="../index.html#catalog">专利目录</a><span aria-hidden="true">/</span><a href="../index.html?topic=cpu#catalog">CPU 缓存与 LSU</a></p>
-  <p class="document-id"><code>US12222875B1</code><span>美国授权专利</span><time datetime="2025-02-11">2025-02-11</time></p>
-  <h1>由关键性选择插入与提升向量</h1>
-  <p class="english-title" lang="en">Insertion/promotion vectors to update replacement data in caches based on criticality</p>
-  <p class="document-question">同一个旧排名下，关键行和普通行命中后能升到不同位置吗？</p>
-</div>
-</div>
-<div class="frame article-layout">
-<div class="article-content">
-  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
-  <section class="engineering" id="engineering" aria-labelledby="engineering-title">
-    <h2 id="engineering-title">工程要点</h2>
-    <p class="engineering-change">替换控制器按被访问行的关键性选择插入／提升向量，再据所选向量更新替换排名。</p>
-    <dl class="explanation engineering-tests"><div><dt>成立条件</dt><dd>命中时向量按旧排名指定新排名。填充时使用向量规定的插入位置。</dd></div><div><dt>验证方法</dt><dd>固定访问轨迹、关键性标签和初始排名，以所有行使用同一向量为对照。记录同一旧排名的提升目标、移动范围，以及各类行下次被选为逐出对象的顺序。</dd></div></dl>
-    <p class="engineering-sources"><a href="https://patents.google.com/patent/US12222875B1/en#CLM-00001">原文权利要求 1</a><a href="#fig-1">对应工程图解</a></p>
-  </section>
-  <section class="mechanism article-section" id="mechanism" aria-labelledby="mechanism-title">
-    <h2 id="mechanism-title">工作机制</h2>
-    <p class="section-intro">普通 LRU 将命中的行提升到同一位置。这里，同为旧 rank 3 的两行可以因为关键性不同，得到不同的新排名。</p>
-    <p>替换控制器根据本次访问所涉缓存行的关键性选一套插入／提升向量（IPV）。向量为每个旧排名指定提升位置，也给新行指定插入位置。部分实施例还在向量中给出逐出位置。</p>
-    <ol class="walkthrough"><li><h3>确定访问的关键性等级</h3><p>缓存给出命中结果和位置，关键性电路判断此次访问涉及哪一等级。实现可以只分关键与普通，也可设置多个关键等级。</p></li><li><h3>查找相应的 IPV</h3><p>控制器从时钟存储元件中取出该等级的向量。向量包含各旧位置的提升值和新行的插入位置，有些向量还包含逐出位置。</p></li><li><h3>命中查 P，填充查 I</h3><p>命中时用旧 rank 索引 P 元素。缺失需要填充时，取 I 元素决定插入位置。图 4A 把 rank 0 定为 MRU。图 4B 中，从 rank 3 命中的行可以停在更低的位置。</p></li><li><h3>写回排名</h3><p>主条目换位后，控制器相应更新新旧位置之间各行的相对排名。图 6 用掩码和多路选择器生成新的替换数据。</p></li></ol>
-    <div class="analysis-note"><h3>权项与实施例约束</h3><p>权 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>、<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a> 为提升和插入分别定义向量元素。一个有效命中要用该行的旧排名索引提升元素，缺失回填才用额外的插入元素，这两个索引来源不同。</p></div>
-    <details class="article-terms"><summary>文中术语</summary><dl class="explanation"><div><dt>IPV</dt><dd>Insertion and Promotion Vector，插入和提升向量。命中查对应旧排名，填充查插入元素。</dd></div><div><dt>位移掩码</dt><dd>表示排名更新中从相邻位置接收原值的元素。</dd></div></dl></details>
-  </section>
-  <section class="figure-section" id="figures" aria-labelledby="figures-title">
-    <h2 id="figures-title">图解与对照</h2>
-    <nav class="figure-jump" aria-label="跳到图解或对照表"><ul><li><a href="#fig-1">关键性选择 IPV，旧排名查向量</a></li><li><a href="#fig-2">命中时先选向量，再取 P 元素</a></li><li><a href="#fig-3">从 rank 3 命中时的两种提升幅度</a></li><li><a href="#fig-4">重排时，写入位置与位移区间使用不同掩码</a></li></ul></nav>
-    <p class="paper-on-mobile">图太宽时，在图内左右滑动。</p>
-    
-<figure class="exhibit paper-exhibit" id="fig-1" aria-labelledby="fig-1-title">
-  <div class="exhibit-title"><div><p class="eyebrow">微架构与信号</p><h3 id="fig-1-title">关键性选择 IPV，旧排名查向量</h3></div>
-    <a class="paper-open" href="../mechanisms/US12222875B1/fig-1/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="关键性选择 IPV，旧排名查向量">
-    <img class="paper-image native-image" src="../mechanisms/US12222875B1/fig-1/diagram.svg" width="287" height="710"
-         style="--paper-width:287px" alt="关键性选择 IPV，旧排名查向量。控制器先用关键性选择一套 IPV，再用旧位置查对应元素，最后写回新排名。">
-  </div>
-  <figcaption>
-    <span>控制器先用关键性选择一套 IPV，再用旧位置查对应元素，最后写回新排名。</span>
-    <span class="figure-evidence">说明书图 1–3、6，权 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a>。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/32/c2/af/863481a48e7616/US12222875.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit paper-exhibit" id="fig-2" aria-labelledby="fig-2-title">
-  <div class="exhibit-title"><div><p class="eyebrow">事务时序</p><h3 id="fig-2-title">命中时先选向量，再取 P 元素</h3></div>
-    <a class="paper-open" href="../mechanisms/US12222875B1/fig-2/diagram.html" target="_blank" rel="noopener">查看交互图</a>
-  </div>
-  <div class="paper-viewport" tabindex="0" role="region" aria-label="命中时先选向量，再取 P 元素">
-    <img class="paper-image native-image" src="../mechanisms/US12222875B1/fig-2/diagram.svg" width="920" height="396"
-         style="--paper-width:920px" alt="命中时先选向量，再取 P 元素。关键性选择向量后，命中位置 r 读取对应的 P[r]。比较新旧位置可确定移动方向和要位移的排名范围。">
-  </div>
-  <figcaption>
-    <span>关键性选择向量后，命中位置 r 读取对应的 P[r]。比较新旧位置可确定移动方向和要位移的排名范围。</span>
-    <span class="figure-evidence">原文图 2–3、6。 · <a href="#claim-features">权利要求与出处</a> · <a href="https://patentimages.storage.googleapis.com/32/c2/af/863481a48e7616/US12222875.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-3" aria-labelledby="fig-3-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-3-title">从 rank 3 命中时的两种提升幅度</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-3-title"><thead><tr><th scope="col">访问</th><th scope="col">LRU 示例</th><th scope="col">非 LRU 示例</th></tr></thead><tbody><tr><th scope="row">命中旧排名 3</th><td>升至 0</td><td class="emphasis">可升至 1</td></tr><tr><th scope="row">新行回填</th><td>插到 0</td><td>可插到 3</td></tr><tr><th scope="row">其他受影响的行</th><td>在移动区间内位移</td><td>按提升或降级方向位移</td></tr></tbody></table>
-  <figcaption>
-    <span>严格 LRU 将命中行升到 rank 0。图 4B 示例只升到 rank 1，原本排在最高位的行留在那里。</span>
-    <span class="figure-evidence">说明书图 4A–4B。图中 rank 0 是 MRU。 · <a href="https://patentimages.storage.googleapis.com/32/c2/af/863481a48e7616/US12222875.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-<figure class="exhibit table-exhibit" id="fig-4" aria-labelledby="fig-4-title">
-  <div class="exhibit-title"><div><p class="eyebrow">条件与状态</p><h3 id="fig-4-title">重排时，写入位置与位移区间使用不同掩码</h3></div>
-    
-  </div>
-  <table class="comparison-table" aria-labelledby="fig-4-title"><thead><tr><th scope="col">排名操作</th><th scope="col">目标位置掩码置位</th><th scope="col">位移掩码置位</th></tr></thead><tbody><tr><th scope="row">从 5 提升到 2</th><td>2</td><td class="emphasis">3、4、5</td></tr><tr><th scope="row">从 3 降级到 5</th><td>5</td><td class="emphasis">3、4</td></tr><tr><th scope="row">缺失行插到 I</th><td>I</td><td>I 之后的位置</td></tr></tbody></table>
-  <figcaption>
-    <span>原图 6 的位置掩码标明当前行的新位置。位移掩码标明哪些原位置要从相邻槽位取值。</span>
-    <span class="figure-evidence">原图 6，说明书 0066、0068–0071。 · <a href="https://patentimages.storage.googleapis.com/32/c2/af/863481a48e7616/US12222875.pdf">专利 PDF</a></span>
-  </figcaption>
-</figure>
-  </section>
-  <section class="article-section" id="evaluation" aria-labelledby="evaluation-title">
-    <h2 id="evaluation-title">工程推演与验证</h2>
-    <h3>技术手段与功效</h3><dl class="explanation"><div><dt>按关键性选择向量</dt><dd>区分提升和插入规则 <span class="subdued">原图 6，权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></span></dd></div><div><dt>只移动受影响排名</dt><dd>保留其他行相对顺序 <span class="subdued">原图 6，说明书 0066、0071</span></dd></div></dl>
-    <div class="analysis-note"><h3>收益与开销</h3><p>对一套向量来说，提升位置与旧位置越接近，更新需要经过的排名区间就越短。可单独比较状态位翻转和逐出选择，避免用总体命中率掩盖两项变化。</p></div>
-    <div class="analysis-note"><h3>边界场景</h3><p>一条反复被访问但错误标为普通的行，如果每次只提升一位，可能在两次访问之间被同组的填充逐出。这样的轨迹可单独暴露保守提升的代价。</p></div>
-    <div id="example" class="article-example">
-      <h3>条件推演</h3>
-      <dl class="explanation example"><div><dt>初始条件</dt><dd>假定 rank 0 至 3 依次是 A、B、C、D。D 在 rank 3 命中，用图 4A 和图 4B 的规则分别更新一次。</dd></div><div><dt>处理结果</dt><dd>按 LRU 示例，D 升到 rank 0，顺序变为 D、A、B、C。按非 LRU 示例，D 只升到 rank 1，顺序为 A、D、B、C。</dd></div><div><dt>结果解读</dt><dd>算例把列表缩为四项。两个目标 rank（0 和 1）沿用说明书示例，更新时各行仍留在原来的物理 way。</dd></div></dl>
-    </div>
-    
-  </section>
-  <section class="claim-section" id="claims" aria-labelledby="claims-title">
-    <h2 id="claims-title">权利要求与出处</h2>
-    <p class="subdued">独立权利要求为第 1、9、16 项。</p>
-    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+<section id="claims"><h2>权利要求与出处</h2><section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
   <h3 id="claim-features-title">独立权利要求</h3>
   <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
   <h4 id="independent-1-title">权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></h4>
-  <p>原图 1–3、6。控制器从时钟存储元件读所选关键等级的向量，再更新替换数据。</p>
+  <p>原图 1–3、6。控制器从时钟存储元件读所选关键等级的向量，再更新替换数据。用于更新缓存替换数据的规则。插入对应回填，提升对应改变既有行的替换优先级。</p>
   <table class="comparison-table" aria-labelledby="independent-1-title">
     <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=a%20plurality%20of%20clocked%20storage%20devices%20configured%20to%20store%20a%20plurality%20of%20insertion%20and%20promotion%20vectors">F1</a></th><td>用多组时钟存储元件保存插入和提升向量</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=In%20an%20embodiment%2C%20a%20cache%20may%20comprise%20a%20cache%20memory%20configured%20to%20store%20a%20plurality%20of">说明书 0023</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=maintain%20replacement%20data%20corresponding%20to%20the%20cache%20memory%20based%20on%20the%20plurality%20of%20IPVs">F2</a></th><td>根据向量维护缓存替换状态</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=FIG.%203%20is%20a%20flowchart%20illustrating%20update%20of%20replacement%20data%20according%20to%20one%20embodiment.">说明书 0009</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=select%20a%20selected%20IPV%20of%20the%20plurality%20of%20IPVs%20to%20update%20the%20replacement%20data">F3</a></th><td>选择一组向量执行当前访问的状态更新</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=When%20a%20cache%20miss%20occurs%2C%20the%20replacement%20data%20may%20be%20consulted%20and%20a%20currently%20stored%20cache">说明书 0020</a> · 原图 4B</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=based%20on%20a%20criticality%20level%20of%20a%20particular%20cache%20line%20accessed%20by%20the%20given%20access%20request">F4</a></th><td>访问行的关键性决定使用哪组向量</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=FIG.%207%20is%20a%20flow%20diagram%20illustrating%20one%20embodiment%20of%20method%20for%20selecting%20an%20insertion%2Fpromotion%20vector">说明书 0013</a> · 原图 6</td></tr></tbody>
@@ -134,49 +177,12 @@
     <tbody><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=hardware%20description%20language%20stored%20thereon">F9</a></th><td>介质中存硬件描述语言。</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=generate%20a%20computer%20simulation%20model">F10</a></th><td>生成模拟相应硬件电路的模型。</td><td></td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=a%20plurality%20of%20clocked%20storage%20devices%20configured%20to%20store%20a%20plurality%20of%20insertion%20and%20promotion%20vectors">F11</a></th><td>仿真模型包含用于保存向量的时钟存储电路。</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=IPV%2050%20A%20may%2C%20in%20some%20embodiments%2C%20be%20stored%20in%20a%20clocked%20storage%20device%20%28e.g.%2C%20a">说明书 0050</a> · <a href="https://patents.google.com/patent/US12222875B1/en#:~:text=Old%20%28or%20current%29%20replacement%20data%20632%20is%20composed%20of%20elements%20W%200%20-W%207%20each%20containing">说明书 0066</a> · 原图 4A · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=maintain%20replacement%20data%20corresponding%20to%20the%20cache%20memory%20based%20on%20the%20plurality%20of%20IPVs">F12</a></th><td>模拟缓存替换状态由这些向量更新。</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=FIG.%206%20is%20a%20block%20diagram%20of%20one%20embodiment%20of%20internals%20of%20replacement%20control%20circuit%2030">说明书 0064</a> · <a href="https://patents.google.com/patent/US12222875B1/en#:~:text=Old%20%28or%20current%29%20replacement%20data%20632%20is%20composed%20of%20elements%20W%200%20-W%207%20each%20containing">说明书 0066</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=based%20on%20a%20criticality%20level%20of%20a%20particular%20cache%20line%20accessed%20by%20the%20given%20access%20request">F13</a></th><td>模拟按被访问行的关键性选择向量。</td><td><a href="https://patents.google.com/patent/US12222875B1/en#:~:text=Criticality%20circuit%20610%20%2C%20as%20shown%2C%20is%20configured%20to%20use%20cache%20hit%20data%20520%20%2C%20fill">说明书 0067</a> · 原图 6</td></tr></tbody>
   </table>
 </section>
-</section>
-    <details class="claim-dependency">
+</section><details class="claim-dependency">
   <summary id="claim-dependency-title">权项依赖与新增限定</summary>
   <table class="comparison-table" aria-labelledby="claim-dependency-title">
     <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
-    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 1–3、6。控制器从时钟存储元件读所选关键等级的向量，再更新替换数据。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>替换数据记录缓存行的相对排名，向量给出各旧位置的更新值。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>在向量中增加一个元素，专门规定缺失填充时的新行插入位置。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>关键行和非关键行分别使用不同向量。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>非关键和多个递增的关键性等级分别配置向量。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>多个关键等级可共用同一个向量，非关键单用一套。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-4">4</a></td><td>第一向量规定 LRU 替换规则。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>第二向量规定非 LRU 替换规则。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>访问时判定缓存行关键性，据所选向量更新替换数据。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>向量为每个排名位置存元素，命中时可查当前位置对应的提升目标。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>实际命中后按查得的位置提升所访问的行。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>用独立插入元素给缺失回填的新行安排初始位置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>关键和非关键分别对应至少一套不同向量。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>多个递增的关键程度分别对应各自向量。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>多个不同关键等级共用至少一套向量。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>硬件描述语言生成仿真模型，模拟按关键性择 IPV 并维护替换数据的电路。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>模拟每个旧排名位置有提升元素，命中时将行更新到该位置。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>模拟缺失回填时用向量的插入元素决定新行位置。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>模拟关键与非关键各自的向量关联。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>模拟非关键与多个递增的关键等级，为关键等级各配置对应向量。</td></tr></tbody>
+    <tbody><tr id="claim-1"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></th><td>独立项</td><td>原图 1–3、6。控制器从时钟存储元件读所选关键等级的向量，再更新替换数据。用于更新缓存替换数据的规则。插入对应回填，提升对应改变既有行的替换优先级。</td></tr><tr id="claim-2"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a></th><td><a href="#claim-1">1</a></td><td>替换数据记录缓存行的相对排名，向量给出各旧位置的更新值。</td></tr><tr id="claim-3"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></th><td><a href="#claim-2">2</a></td><td>在向量中增加一个元素，专门规定缺失填充时的新行插入位置。</td></tr><tr id="claim-4"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00004" aria-label="原文权利要求 4">4</a></th><td><a href="#claim-1">1</a></td><td>关键行和非关键行分别使用不同向量。</td></tr><tr id="claim-5"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00005" aria-label="原文权利要求 5">5</a></th><td><a href="#claim-4">4</a></td><td>非关键和多个递增的关键性等级分别配置向量。</td></tr><tr id="claim-6"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00006" aria-label="原文权利要求 6">6</a></th><td><a href="#claim-4">4</a></td><td>多个关键等级可共用同一个向量，非关键单用一套。</td></tr><tr id="claim-7"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00007" aria-label="原文权利要求 7">7</a></th><td><a href="#claim-4">4</a></td><td>第一向量规定 LRU 替换规则。</td></tr><tr id="claim-8"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00008" aria-label="原文权利要求 8">8</a></th><td><a href="#claim-7">7</a></td><td>第二向量规定非 LRU 替换规则。</td></tr><tr id="claim-9"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00009" aria-label="原文权利要求 9">9</a></th><td>独立项</td><td>访问时判定缓存行关键性，据所选向量更新替换数据。</td></tr><tr id="claim-10"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00010" aria-label="原文权利要求 10">10</a></th><td><a href="#claim-9">9</a></td><td>向量为每个排名位置存元素，命中时可查当前位置对应的提升目标。</td></tr><tr id="claim-11"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00011" aria-label="原文权利要求 11">11</a></th><td><a href="#claim-10">10</a></td><td>实际命中后按查得的位置提升所访问的行。</td></tr><tr id="claim-12"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00012" aria-label="原文权利要求 12">12</a></th><td><a href="#claim-10">10</a></td><td>用独立插入元素给缺失回填的新行安排初始位置。</td></tr><tr id="claim-13"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00013" aria-label="原文权利要求 13">13</a></th><td><a href="#claim-9">9</a></td><td>关键和非关键分别对应至少一套不同向量。</td></tr><tr id="claim-14"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00014" aria-label="原文权利要求 14">14</a></th><td><a href="#claim-9">9</a></td><td>多个递增的关键程度分别对应各自向量。</td></tr><tr id="claim-15"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00015" aria-label="原文权利要求 15">15</a></th><td><a href="#claim-9">9</a></td><td>多个不同关键等级共用至少一套向量。</td></tr><tr id="claim-16"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00016" aria-label="原文权利要求 16">16</a></th><td>独立项</td><td>硬件描述语言生成仿真模型，模拟按关键性择 IPV 并维护替换数据的电路。</td></tr><tr id="claim-17"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00017" aria-label="原文权利要求 17">17</a></th><td><a href="#claim-16">16</a></td><td>模拟每个旧排名位置有提升元素，命中时将行更新到该位置。</td></tr><tr id="claim-18"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00018" aria-label="原文权利要求 18">18</a></th><td><a href="#claim-17">17</a></td><td>模拟缺失回填时用向量的插入元素决定新行位置。</td></tr><tr id="claim-19"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00019" aria-label="原文权利要求 19">19</a></th><td><a href="#claim-16">16</a></td><td>模拟关键与非关键各自的向量关联。</td></tr><tr id="claim-20"><th scope="row"><a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00020" aria-label="原文权利要求 20">20</a></th><td><a href="#claim-16">16</a></td><td>模拟非关键与多个递增的关键等级，为关键等级各配置对应向量。</td></tr></tbody>
   </table>
-</details>
-    <h3 class="evidence-heading">原文位置</h3>
-    <dl class="explanation evidence"><div><dt>独立权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00001" aria-label="原文权利要求 1">1</a></dt><dd>控制器按被访问行的关键性，从存储的 IPV 中选一套，更新替换数据。</dd></div><div><dt>说明书图 4A、4B</dt><dd>旧位置都是 rank 3，两个示例分别提升到 rank 0 和 rank 1。</dd></div><div><dt>从属权利要求 <a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00002" aria-label="原文权利要求 2">2</a>–<a class="claim-anchor" href="https://patents.google.com/patent/US12222875B1/en#CLM-00003" aria-label="原文权利要求 3">3</a></dt><dd>向量可以给每个旧位置指定更新值，还可包含逐出位置。</dd></div></dl>
-    <p class="source-links"><a href="https://patents.google.com/patent/US12222875B1/en">专利原文</a></p>
-  </section>
-  <section class="article-section" id="related" aria-labelledby="related-title">
-    <h2 id="related-title">关联专利</h2>
-    <ul class="article-related"><li><a href="US11921640B2.html#engineering">停止优先保留不再关键的行</a>
-<p>US12222875B1 先按缓存行的关键性选 IPV，再用旧排名查新位置。旧排名相同的行也可能因关键性不同而获得不同的新排名。US11921640B2 另用关键行命中率等信号决定何时停止优先保留。退出后继续使用独立的替换数据。</p></li><li><a href="US11144476B2.html#engineering">多端口缓存的 LRU 排名更新</a>
-<p>多端口缓存同拍命中同组两路时，先比较两路旧排名与阈值，让控制器决定本次更新哪一路。IPV 方案针对已经确定的访问行，按该行关键性选向量，再由旧排名查新排名。一个解决同拍写替换状态的争用，另一个定义这次更新的幅度。</p></li></ul>
-    <p><a href="../index.html?patent=US12222875B1#knowledge">在全量关系图上定位 US12222875B1</a></p>
-  </section>
-</div>
-<aside class="record-panel" aria-label="专利记录与来源">
-  <nav class="article-jump desktop-jump" aria-label="本页导览">
-    <h2>本页内容</h2><ul><li><a href="#engineering">工程要点</a></li><li><a href="#mechanism">工作机制</a></li><li><a href="#figures">图解与对照</a></li><li><a href="#evaluation">工程验证</a></li><li><a href="#claims">权项与出处</a></li><li><a href="#related">关联专利</a></li></ul>
-  </nav>
-  <h2>专利记录</h2>
-  <dl class="record-details">
-    <div><dt>最早优先权</dt><dd>2022-12-22</dd></div>
-    <div><dt>美国申请日</dt><dd>2023-07-28</dd></div>
-    <div><dt>公开 / 授权日</dt><dd>2025-02-11</dd></div>
-    <div><dt>美国申请号</dt><dd>US18/361,169</dd></div>
-    <div><dt>申请人／原始受让人</dt><dd>Apple Inc</dd></div><div><dt>发明人</dt><dd>Tyler J. Huberty、Henry A. Pellerin、Daniel A. Jimenez</dd></div><div><dt>分类号</dt><dd>G06F12/126、G06F12/123、G06F12/128、G06F2212/1021</dd></div><div><dt>著录来源</dt><dd><a href="https://patents.google.com/patent/US12222875B1/en">原始记录</a></dd></div>
-  </dl>
-  <p><a href="https://patents.google.com/patent/US12222875B1/en">打开审读全文</a></p>
-  <details><summary>全文审读记录</summary>
-  <p>子 agent 已核对美国专利授权全文，Google Patents 转载，覆盖 139 个说明书段落、20 项权利要求。</p>
-  <p>核对过的图号为 图 1、图 2、图 3、图 6、图 7、图 8、图 9、图 10、图 4A、图 4B、图 5A、图 5B。</p>
-  </details>
-  
-</aside>
-</div></main>
-<footer class="footer"><div class="frame">
-  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
-  <span>资料截至 2026-11-24</span>
-</div></footer>
-</body>
-</html>
+</details></section>
+<p id="related"><a href="../index.html?patent=US12222875B1#knowledge">在专利关系图中定位</a></p>
+</main></body></html>
