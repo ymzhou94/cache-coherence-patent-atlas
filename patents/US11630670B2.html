@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US11630670B2 用两种控制流签名预测指令缓存缺失 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-latency" href="../index.html?topic=latency#catalog">访存延迟与预取</a>
+  </nav>
+  <p class="document-id">
+    <code>US11630670B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2023-04-18">2023-04-18</time>
+    <a class="hero-source-link" href="https://www.lens.org/lens/patent/US_11630670_B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>用两种控制流签名预测指令缓存缺失</h1>
+  <p class="english-title" lang="en">Multi-table signature prefetch</p>
+  <p class="document-question">同一个 taken branch 可从不同调用路径进入，如何提前取回正确的指令缓存行，同时减少为相同目标重复训练的表项？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#signature">分支目标相同的路径可以有不同调用历史</a></li><li><a href="#selection">表项命中门槛和训练去重各控制什么</a></li><li><a href="#outputs">预取指令行与预取控制转移目标影响不同前端等待</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">CPU 前端分别维护两种签名，可用 taken branch 给出短签名，用 call 和 return 给出另一种签名。当默认表已有命中、仍出现缺失时，可用后一种签名训练另一张表。运行中两表可同时用于预测。</p>
+  </section>
+  <div id="mechanism"><section id="signature" class="article-section reading-chapter" aria-labelledby="signature-title"><h2 id="signature-title">分支目标相同的路径可以有不同调用历史</h2><p>0046、0048–0049 以移动 SoC CPU compute complex 为例，说明这些预取表可进入执行 OS 与用户态程序的 CPU 前端。0055–0056 列出手机应用。权利要求具体落在处理器流水线和控制转移签名的生成与训练。</p><p>图 1 将短签名和调用历史签名画成两条独立更新和查询路径。说明书以 taken branch 和 call／return 两组样本为例。尤其在调用路径汇合后，单个 branch 目标可能无法区分后来取不同指令的路径。长历史可以区分一部分路径，也会把访问同一目标的历史分到多个表项。</p><p>图 2 从实际缺失解释默认表命中为何会换表。当表已有相同 tag，而缺失的地址和已覆盖目标不同，继续训练同一签名可能让多个目标争用同一个表示。改用另一类签名可降低这种冲突。一次训练写一张表，平时查询可读两张。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">前端并行维护两套控制流签名</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630670B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">相同的执行路径事件可以用不同方式采样。读出签名表的一路或两路命中都可提交预取请求。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="前端并行维护两套控制流签名" style="--figure-width:1250px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1250 471" role="img" aria-labelledby="us11630670b2-fig-1-svg-title us11630670b2-fig-1-svg-desc">
+<title id="us11630670b2-fig-1-svg-title">前端并行维护两套控制流签名</title>
+<desc id="us11630670b2-fig-1-svg-desc">相同的执行路径事件可以用不同方式采样。读出签名表的一路或两路命中都可提交预取请求。</desc>
+<defs><marker id="us11630670b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11630670b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11630670b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11630670b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11630670b2-fig-1-bs" d="M 229 223 L 268 223 Q 276 223 276 215 L 276 140 Q 276 132 284 132 L 331 132" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-data)"/>
+<path id="us11630670b2-fig-1-cs" d="M 229 266 L 268 266 Q 276 266 276 274 L 276 339 Q 276 347 284 347 L 331 347" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-data)"/>
+<path id="us11630670b2-fig-1-a" d="M 539 132 L 646 132" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-data)"/>
+<path id="us11630670b2-fig-1-b" d="M 539 347 L 646 347" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-data)"/>
+<path id="us11630670b2-fig-1-ar" d="M 860 132 L 923 132 Q 931 132 931 140 L 931 211 Q 931 219 939 219 L 996 219" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-main)"/>
+<path id="us11630670b2-fig-1-br" d="M 860 347 L 923 347 Q 931 347 931 339 L 931 276 Q 931 268 939 268 L 996 268" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-1-arrow-main)"/>
+<rect x="254.5" y="104" width="75" height="18" fill="#f5f5f5"/><text x="292" y="118" class="arrow-label" text-anchor="middle">分支采样</text>
+<rect x="247.5" y="319" width="87" height="18" fill="#f5f5f5"/><text x="291" y="333" class="arrow-label" text-anchor="middle">调用路径采样</text>
+<rect x="549" y="104" width="80" height="18" fill="#f5f5f5"/><text x="589" y="118" class="arrow-label" text-anchor="middle">签名 A</text>
+<rect x="549" y="319" width="80" height="18" fill="#f5f5f5"/><text x="589" y="333" class="arrow-label" text-anchor="middle">签名 B</text>
+<rect x="861" y="102" width="78" height="18" fill="#f5f5f5"/><text x="900" y="116" class="arrow-label" text-anchor="middle">目标地址</text>
+<rect x="861" y="318" width="78" height="18" fill="#f5f5f5"/><text x="900" y="332" class="arrow-label" text-anchor="middle">目标地址</text>
+<g id="us11630670b2-fig-1-decode"><rect x="34" y="191" width="195" height="101" rx="6" fill="#f5f5f5"/><rect x="34" y="191" width="195" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="131.5" y="217" class="node-name" text-anchor="middle">CPU 取指和译码</text><text x="131.5" y="239" class="node-detail" text-anchor="middle">产生控制流事件</text></g>
+<g id="us11630670b2-fig-1-short"><rect x="331" y="84" width="208" height="95" rx="6" fill="#f5f5f5"/><rect x="331" y="84" width="208" height="95" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="435" y="110" class="node-name" text-anchor="middle">签名 A 更新</text><text x="435" y="132" class="node-detail" text-anchor="middle">示例：taken branch</text></g>
+<g id="us11630670b2-fig-1-long"><rect x="331" y="299" width="208" height="95" rx="6" fill="#f5f5f5"/><rect x="331" y="299" width="208" height="95" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="435" y="325" class="node-name" text-anchor="middle">签名 B 更新</text><text x="435" y="347" class="node-detail" text-anchor="middle">示例：call、return</text></g>
+<g id="us11630670b2-fig-1-ta"><rect x="646" y="84" width="214" height="95" rx="6" fill="#f5f5f5"/><rect x="646" y="84" width="214" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="753" y="110" class="node-name" text-anchor="middle">第一签名预取表</text><text x="753" y="132" class="node-detail" text-anchor="middle">签名 A → 目标地址</text></g>
+<g id="us11630670b2-fig-1-tb"><rect x="646" y="299" width="214" height="95" rx="6" fill="#f5f5f5"/><rect x="646" y="299" width="214" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="753" y="325" class="node-name" text-anchor="middle">第二签名预取表</text><text x="753" y="347" class="node-detail" text-anchor="middle">签名 B → 目标地址</text></g>
+<g id="us11630670b2-fig-1-pref"><rect x="996" y="191" width="223" height="101" rx="6" fill="#f5f5f5"/><rect x="996" y="191" width="223" height="101" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1107.5" y="217" class="node-name" text-anchor="middle">预取控制</text><text x="1107.5" y="239" class="node-detail" text-anchor="middle">接收命中表给出的请求</text></g>
+<text x="30" y="440" class="legend" text-anchor="start">图示为签名表读取路径。预取训练由独立的缺失或预测失败事件触发。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630670b2-fig-1-short" data-reading-target="us11630670b2-fig-1-short">A 的输入示例是 taken branch</a><p>单个 branch 的目标地址也符合说明书的签名定义。相同 branch 目标可能对应多条调用路径。</p></li><li><a href="#us11630670b2-fig-1-long" data-reading-target="us11630670b2-fig-1-long">B 可由 call 和 return 形成不同历史</a><p>原文给出多地址 XOR 示例。历史长度与采样点可独立设计。</p></li><li><a href="#us11630670b2-fig-1-pref" data-reading-target="us11630670b2-fig-1-pref">任意表签名命中都可发预取</a><p>签名表 tag 命中表示找到训练时记录的预取地址，仍需等请求回填才能覆盖随后的指令缓存缺失。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3；说明书归档段 0007、0008、0009、0010、0016、0017、0021、0022、0023、0038、0039、0040、0041；权利要求 1、2、4、10、11、12</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>签名更新电路</dt><dd>原图 3 · 310、320</dd></div><div><dt>签名表</dt><dd>原图 3 · 112、122</dd></div><div><dt>译码与预取控制</dt><dd>原图 2 · 230、240</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">同一短签名漏掉第二个目标时，训练转向另一张表</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630670B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">路径甲和乙出现同一个短签名，但取不同缓存行。漏掉乙的缺失使训练电路有机会把乙登记到区分调用历史的表。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一短签名漏掉第二个目标时，训练转向另一张表" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 458" role="img" aria-labelledby="us11630670b2-fig-2-svg-title us11630670b2-fig-2-svg-desc">
+<title id="us11630670b2-fig-2-svg-title">同一短签名漏掉第二个目标时，训练转向另一张表</title>
+<desc id="us11630670b2-fig-2-svg-desc">路径甲和乙出现同一个短签名，但取不同缓存行。漏掉乙的缺失使训练电路有机会把乙登记到区分调用历史的表。</desc>
+<defs><marker id="us11630670b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11630670b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11630670b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11630670b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us11630670b2-fig-2-miss_a"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-2-arrow-data)"/><rect x="165.5" y="96" width="143" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">路径甲缺失，目标为行甲</text></g>
+<g id="us11630670b2-fig-2-train_short"><path d="M 358 168 L 601 168" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-2-arrow-main)"/><rect x="421" y="144" width="117" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">训练 A → 行甲</text></g>
+<g id="us11630670b2-fig-2-miss_b"><path d="M 116 216 L 358 216" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-2-arrow-data)"/><rect x="165.5" y="192" width="143" height="18" fill="#f5f5f5"/><text x="237" y="206" class="arrow-label" text-anchor="middle">路径乙缺失，目标为行乙</text></g>
+<g id="us11630670b2-fig-2-read_short"><path d="M 601 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-2-arrow-return)"/><rect x="388.5" y="240" width="182" height="18" fill="#f5f5f5"/><text x="479.5" y="254" class="arrow-label" text-anchor="middle">A 已存在，表内目标仍为行甲</text></g>
+<g id="us11630670b2-fig-2-train_long"><path d="M 358 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-2-arrow-main)"/><rect x="536" y="288" width="130" height="18" fill="#f5f5f5"/><text x="601" y="302" class="arrow-label" text-anchor="middle">训练 B乙 → 行乙</text></g>
+<g id="us11630670b2-fig-2-next_use"><path d="M 844 360 L 116 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-2-arrow-return)"/><rect x="395.5" y="336" width="169" height="18" fill="#f5f5f5"/><text x="480" y="350" class="arrow-label" text-anchor="middle">以后重现 B乙，可预取行乙</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">取指前端</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">训练／查询控制</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">T0 短签名表</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">T1 调用历史表</text>
+<text x="28" y="436" class="legend" text-anchor="start">甲和乙是逻辑示例。图中的事件间隔不表示流水线周期。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630670b2-fig-2-train_short" data-reading-target="us11630670b2-fig-2-train_short">第一个缺失登记到 T0</a><p>示例采用命中门槛为一个，签名间隔和训练地址差异满足示例的去重门槛。</p></li><li><a href="#us11630670b2-fig-2-read_short" data-reading-target="us11630670b2-fig-2-read_short">路径乙在 T0 存在相同 tag</a><p>T0 所记目标为缓存行甲，乙的指令缺失仍触发训练。tag 命中不等于缺失已覆盖。</p></li><li><a href="#us11630670b2-fig-2-train_long" data-reading-target="us11630670b2-fig-2-train_long">以路径乙的签名 B 在 T1 登记缓存行乙</a><p>训练启动时生成两种签名。此例仅修改 T1。后续仍允许 T0、T1 同时读出预取目标。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、6；说明书归档段 0006、0011、0012、0022、0025、0028、0029、0040、0041、0042；权利要求 1、4、6、9、10、12</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">2 项</span></summary><dl><div><dt>T0 默认训练与阈值判断</dt><dd>原图 4 · 450、460</dd></div><div><dt>T1 训练</dt><dd>原图 4 · 470、480</dd></div></dl></details>
+</figure></section><section id="selection" class="article-section reading-chapter" aria-labelledby="selection-title"><h2 id="selection-title">表项命中门槛和训练去重各控制什么</h2><p>图 3 分开两个门。训练地址靠得过近时可抑制两表。每一张表还可根据近期训练签名独立抑制。其后默认表的 tag 命中门槛用于选择训练位置。第一表未被选中、第二表未被抑制时，可训练第二表。</p><p>每表可用组相联结构，把签名的一部分用作索引，另一部分用作 tag。说明书还允许一个表项覆盖多个邻近目标、按目标维护计数，以及在同签名同目标的情形合并训练。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">先检查重复训练，再决定这次更新哪张表</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630670B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">地址过近可抑制两张表。同一签名近期反复训练可独立抑制相应表。若默认表仍允许写，tag 命中数决定是否改选 T1。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="先检查重复训练，再决定这次更新哪张表" style="--figure-width:1554px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1554 425" role="img" aria-labelledby="us11630670b2-fig-3-svg-title us11630670b2-fig-3-svg-desc">
+<title id="us11630670b2-fig-3-svg-title">先检查重复训练，再决定这次更新哪张表</title>
+<desc id="us11630670b2-fig-3-svg-desc">地址过近可抑制两张表。同一签名近期反复训练可独立抑制相应表。若默认表仍允许写，tag 命中数决定是否改选 T1。</desc>
+<defs><marker id="us11630670b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11630670b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11630670b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11630670b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11630670b2-fig-3-flag01" d="M 233 249 L 338 249" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-3-arrow-control)"/>
+<path id="us11630670b2-fig-3-flag1" d="M 556 249 L 675 249" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-3-arrow-control)"/>
+<path id="us11630670b2-fig-3-lo" d="M 923 225 L 973 225 Q 981 225 981 217 L 981 129 Q 981 121 989 121 L 1041 121" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-3-arrow-main)"/>
+<path id="us11630670b2-fig-3-hi" d="M 923 270 L 973 270 Q 981 270 981 278 L 981 321 Q 981 329 989 329 L 1041 329" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-3-arrow-data)"/>
+<path id="us11630670b2-fig-3-w1" d="M 1239 329 L 1352 329" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-3-arrow-main)"/>
+<rect x="236" y="219" width="94" height="18" fill="#f5f5f5"/><text x="283" y="233" class="arrow-label" text-anchor="middle">两表抑制位</text>
+<rect x="560.5" y="219" width="111" height="18" fill="#f5f5f5"/><text x="616" y="233" class="arrow-label" text-anchor="middle">独立抑制状态</text>
+<rect x="992.5" y="91" width="35" height="18" fill="#f5f5f5"/><text x="1010" y="105" class="arrow-label" text-anchor="middle">是</text>
+<rect x="992.5" y="299" width="35" height="18" fill="#f5f5f5"/><text x="1010" y="313" class="arrow-label" text-anchor="middle">否</text>
+<rect x="1278.5" y="299" width="35" height="18" fill="#f5f5f5"/><text x="1296" y="313" class="arrow-label" text-anchor="middle">是</text>
+<g id="us11630670b2-fig-3-addr"><rect x="28" y="199" width="205" height="98" rx="6" fill="#f5f5f5"/><rect x="28" y="199" width="205" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="130.5" y="225" class="node-name" text-anchor="middle">地址范围检查</text><text x="130.5" y="247" class="node-detail" text-anchor="middle">过近时抑制 T0、T1</text></g>
+<g id="us11630670b2-fig-3-sig"><rect x="338" y="199" width="218" height="98" rx="6" fill="#f5f5f5"/><rect x="338" y="199" width="218" height="98" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="447" y="225" class="node-name" text-anchor="middle">近期签名检查</text><text x="447" y="247" class="node-detail" text-anchor="middle">分别产生两表抑制位</text></g>
+<g id="us11630670b2-fig-3-t0"><rect x="675" y="199" width="248" height="98" rx="6" fill="#f5f5f5"/><rect x="675" y="199" width="248" height="98" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="799" y="225" class="node-name" text-anchor="middle">T0 未抑制且 tag 未达阈值？</text><text x="799" y="247" class="node-detail" text-anchor="middle">读表后决定训练位置</text></g>
+<g id="us11630670b2-fig-3-wr0"><rect x="1041" y="77" width="198" height="88" rx="6" fill="#f5f5f5"/><rect x="1041" y="77" width="198" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1140" y="103" class="node-name" text-anchor="middle">训练 T0</text><text x="1140" y="125" class="node-detail" text-anchor="middle">分配表项或更新</text></g>
+<g id="us11630670b2-fig-3-t1"><rect x="1041" y="284" width="198" height="88" rx="6" fill="#f5f5f5"/><rect x="1041" y="284" width="198" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1140" y="310" class="node-name" text-anchor="middle">T1 未抑制？</text><text x="1140" y="332" class="node-detail" text-anchor="middle">否则跳过本次训练</text></g>
+<g id="us11630670b2-fig-3-wr1"><rect x="1352" y="284" width="171" height="88" rx="6" fill="#f5f5f5"/><rect x="1352" y="284" width="171" height="88" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1437.5" y="310" class="node-name" text-anchor="middle">训练 T1</text><text x="1437.5" y="332" class="node-detail" text-anchor="middle">写入签名 B 与目标</text></g>
+<text x="30" y="394" class="legend" text-anchor="start">图示为原图 4 的基本选择。说明书另有可优先合并同签名、同目标表项的变体。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630670b2-fig-3-addr" data-reading-target="us11630670b2-fig-3-addr">地址距离门槛可以同时抑制两张表</a><p>原图 4 的步骤可以按实施例省略，例如 next fetch predictor 的变体。</p></li><li><a href="#us11630670b2-fig-3-sig" data-reading-target="us11630670b2-fig-3-sig">各表独立检测近期训练签名</a><p>近期签名的比较数和达到抑制的门槛可以不同。</p></li><li><a href="#us11630670b2-fig-3-t0" data-reading-target="us11630670b2-fig-3-t0">T0 同时满足未抑制及 tag 命中数低于阈值才训练</a><p>默认表已碰到阈值，或已被抑制时，才评估 T1。若 T1 也被抑制，本次可两张都不训练。</p></li></ul>
+  <p class="figure-evidence">原图 4、6；说明书归档段 0024、0025、0026、0027、0028、0029、0035、0043、0044、0045；权利要求 1、6、7、8、14、17</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>地址、签名抑制</dt><dd>原图 4 · 420、410</dd></div><div><dt>保存历史与查表</dt><dd>原图 4 · 430、440</dd></div><div><dt>T0／T1 训练选择</dt><dd>原图 4 · 450–490</dd></div></dl></details>
+</figure></section><section id="outputs" class="article-section reading-chapter" aria-labelledby="outputs-title"><h2 id="outputs-title">预取指令行与预取控制转移目标影响不同前端等待</h2><p>图 4 连接两类预取目标。指令缓存若较早填到目标行，可减少随后取指缺失。下一取指预测器若较早得到控制转移目标，可更快选择后继取指地址；其训练触发可以是预测失败。</p><p>评估时将表容量、索引和预取带宽固定，分别记录训练写入、过晚到达、使用前逐出，以及提前供给 CPU 前端的缓存行。下一取指预测器的目标准确率单独统计。原文允许调高签名预取行的插入优先级，这也可能增加对其他活跃行的替换压力。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">指令缓存和下一取指预测器分别接收预取结果</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US11630670B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">指令缓存缺失用于训练缓存行预取器。next fetch predictor 预测失败可训练控制转移目标预取器。两条路径缓解的停顿不同。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="指令缓存和下一取指预测器分别接收预取结果" style="--figure-width:1527px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1527 481" role="img" aria-labelledby="us11630670b2-fig-4-svg-title us11630670b2-fig-4-svg-desc">
+<title id="us11630670b2-fig-4-svg-title">指令缓存和下一取指预测器分别接收预取结果</title>
+<desc id="us11630670b2-fig-4-svg-desc">指令缓存缺失用于训练缓存行预取器。next fetch predictor 预测失败可训练控制转移目标预取器。两条路径缓解的停顿不同。</desc>
+<defs><marker id="us11630670b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11630670b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11630670b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11630670b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11630670b2-fig-4-traini" d="M 220 129 L 328 129" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-4-arrow-control)"/>
+<path id="us11630670b2-fig-4-trainf" d="M 220 354 L 328 354" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11630670b2-fig-4-arrow-control)"/>
+<path id="us11630670b2-fig-4-reqi" d="M 554 129 L 603 129 Q 611 129 611 137 L 611 213 Q 611 221 619 221 L 666 221" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-4-arrow-main)"/>
+<path id="us11630670b2-fig-4-reqf" d="M 554 354 L 603 354 Q 611 354 611 346 L 611 273 Q 611 265 619 265 L 666 265" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-4-arrow-main)"/>
+<path id="us11630670b2-fig-4-fill" d="M 868 221 L 916 221 Q 924 221 924 213 L 924 137 Q 924 129 932 129 L 982 129" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-4-arrow-main)"/>
+<path id="us11630670b2-fig-4-tgt" d="M 868 265 L 916 265 Q 924 265 924 273 L 924 346 Q 924 354 932 354 L 982 354" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11630670b2-fig-4-arrow-main)"/>
+<path id="us11630670b2-fig-4-pred" d="M 1185 354 L 1297 354" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11630670b2-fig-4-arrow-data)"/>
+<rect x="229.5" y="99" width="89" height="18" fill="#f5f5f5"/><text x="274" y="113" class="arrow-label" text-anchor="middle">缺失行地址</text>
+<rect x="229.5" y="324" width="89" height="18" fill="#f5f5f5"/><text x="274" y="338" class="arrow-label" text-anchor="middle">预测失败</text>
+<rect x="574.5" y="101" width="85" height="18" fill="#f5f5f5"/><text x="617" y="115" class="arrow-label" text-anchor="middle">缓存行</text>
+<rect x="558" y="326" width="104" height="18" fill="#f5f5f5"/><text x="610" y="340" class="arrow-label" text-anchor="middle">控制转移目标</text>
+<rect x="874" y="101" width="100" height="18" fill="#f5f5f5"/><text x="924" y="115" class="arrow-label" text-anchor="middle">指令行回填</text>
+<rect x="878" y="326" width="92" height="18" fill="#f5f5f5"/><text x="924" y="340" class="arrow-label" text-anchor="middle">目标信息</text>
+<rect x="1196" y="324" width="90" height="18" fill="#f5f5f5"/><text x="1241" y="338" class="arrow-label" text-anchor="middle">预测目标</text>
+<g id="us11630670b2-fig-4-imiss"><rect x="29" y="84" width="191" height="90" rx="6" fill="#f5f5f5"/><rect x="29" y="84" width="191" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="124.5" y="110" class="node-name" text-anchor="middle">指令缓存缺失</text><text x="124.5" y="132" class="node-detail" text-anchor="middle">训练触发示例</text></g>
+<g id="us11630670b2-fig-4-fm"><rect x="29" y="309" width="191" height="90" rx="6" fill="#f5f5f5"/><rect x="29" y="309" width="191" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="124.5" y="335" class="node-name" text-anchor="middle">下一取指预测失败</text><text x="124.5" y="357" class="node-detail" text-anchor="middle">训练触发示例</text></g>
+<g id="us11630670b2-fig-4-cline"><rect x="328" y="84" width="226" height="90" rx="6" fill="#f5f5f5"/><rect x="328" y="84" width="226" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="441" y="110" class="node-name" text-anchor="middle">签名指令预取器</text><text x="441" y="132" class="node-detail" text-anchor="middle">训练地址对应指令缓存行</text></g>
+<g id="us11630670b2-fig-4-target"><rect x="328" y="309" width="226" height="90" rx="6" fill="#f5f5f5"/><rect x="328" y="309" width="226" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="441" y="335" class="node-name" text-anchor="middle">签名下一取指预取器</text><text x="441" y="357" class="node-detail" text-anchor="middle">训练控制转移目标</text></g>
+<g id="us11630670b2-fig-4-ctrl"><rect x="666" y="196" width="202" height="90" rx="6" fill="#f5f5f5"/><rect x="666" y="196" width="202" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="767" y="222" class="node-name" text-anchor="middle">预取控制</text><text x="767" y="244" class="node-detail" text-anchor="middle">按不同结果类型取回</text></g>
+<g id="us11630670b2-fig-4-ic"><rect x="982" y="84" width="203" height="90" rx="6" fill="#f5f5f5"/><rect x="982" y="84" width="203" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1083.5" y="110" class="node-name" text-anchor="middle">指令缓存</text><text x="1083.5" y="132" class="node-detail" text-anchor="middle">接收指令缓存行</text></g>
+<g id="us11630670b2-fig-4-nfp"><rect x="982" y="309" width="203" height="90" rx="6" fill="#f5f5f5"/><rect x="982" y="309" width="203" height="90" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1083.5" y="335" class="node-name" text-anchor="middle">next fetch predictor</text><text x="1083.5" y="357" class="node-detail" text-anchor="middle">获得预测所需目标</text></g>
+<g id="us11630670b2-fig-4-sel"><rect x="1297" y="309" width="198" height="90" rx="6" fill="#f5f5f5"/><rect x="1297" y="309" width="198" height="90" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1396" y="335" class="node-name" text-anchor="middle">取指地址选择</text><text x="1396" y="357" class="node-detail" text-anchor="middle">选择下一取指地址</text></g>
+<text x="30" y="450" class="legend" text-anchor="start">原图允许只配一类签名预取器，同时配置时两类可以有各自的训练参数。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us11630670b2-fig-4-cline" data-reading-target="us11630670b2-fig-4-cline">指令预取器给出应提前填入的指令缓存行</a><p>原文允许给这类数据设不同替换优先级。提高驻留时间也会占用缓存容量。</p></li><li><a href="#us11630670b2-fig-4-target" data-reading-target="us11630670b2-fig-4-target">控制转移目标可提前供 next fetch predictor 使用</a><p>这是预测器所用的目标信息，用来改善选择下一取指地址。</p></li><li><a href="#us11630670b2-fig-4-nfp" data-reading-target="us11630670b2-fig-4-nfp">预测器结果进入下一取指地址选择</a><p>该预测器的逻辑可以比晚一级的分支预测器更简单，说明书指出目标预取可帮助重新获得很久没有见到的控制流目标。</p></li></ul>
+  <p class="figure-evidence">原图 2、5；说明书归档段 0017、0018、0019、0020、0030、0031、0032、0033、0034、0035、0036、0039、0045、0046；权利要求 2、3、4、5、8、13</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>签名指令预取电路</dt><dd>原图 5 · 110</dd></div><div><dt>签名下一取指预取电路</dt><dd>原图 5 · 515</dd></div><div><dt>预取控制、下一取指预测</dt><dd>原图 5 · 240、550</dd></div><div><dt>地址选择</dt><dd>原图 5 · 510</dd></div></dl></details>
+</figure></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、14、15 项；全文核对覆盖 93 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>处理器沿控制流路径运行，两表分别索引不同方法生成的签名。其中第一技术使用至少一种第二技术不使用的控制转移操作。训练事件取得两签名，选择一张表训练。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=first%20signature%20prefetch%20table%20circuitry%20that%20indicates%20prefetch%20addresses%20for%20signatures%20generated%20using%20a%20first%20signature">F1</a></th><td>第一表将第一类签名关联到预取地址。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=In%20the%20illustrated%20embodiment%2C%20signature%20prefetch%20circuitry%20110%20includes%20first%20signature%20update%20circuitry%20310%2C%20second%20signature">说明书 0021</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=the%20first%20signature%20generation%20technique%20uses%20a%20type%20of%20control%20transfer%20instruction%20that%20specifies%20a%20different">F2</a></th><td>第一技术须至少使用一种第二技术未用的控制转移操作。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20630%2C%20in%20the%20illustrated%20embodiment%2C%20second%20signature%20prefetch%20table%20circuitry%20stores%20prefetch%20addresses%20for%20signatures">说明书 0038</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=select%20one%20but%20not%20both%20of%20the%20first%20and%20second%20signature%20prefetch%20table%20circuitry%20to%20train">F3</a></th><td>一次预取训练事件只选择一张表。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20640%2C%20in%20the%20illustrated%20embodiment%2C%20prefetch%20circuitry%20determines%20a%20first%20signature%2C%20in%20response%20to%20a">说明书 0042</a> · 原图 6</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-14" aria-labelledby="independent-14-title">
+  <h4 id="independent-14-title">权利要求 14</h4>
+  <p>方法形式。执行程序、分表保存预取地址，触发训练时生成两签名并选择一表。</p>
+  <table class="comparison-table" aria-labelledby="independent-14-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=storing%2C%20by%20the%20computing%20device%20in%20a%20second%20signature%20prefetch%20table%2C%20prefetch%20addresses%20for%20signatures%20generated">F4</a></th><td>分表保存按第二种技术生成的签名所对应的预取地址。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20630%2C%20in%20the%20illustrated%20embodiment%2C%20second%20signature%20prefetch%20table%20circuitry%20stores%20prefetch%20addresses%20for%20signatures">说明书 0038</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=the%20first%20signature%20generation%20technique%20uses%20a%20type%20of%20control%20transfer%20instruction%20that%20specifies%20a%20different">F5</a></th><td>第一技术须至少使用一种第二技术未用的控制转移操作。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20630%2C%20in%20the%20illustrated%20embodiment%2C%20second%20signature%20prefetch%20table%20circuitry%20stores%20prefetch%20addresses%20for%20signatures">说明书 0038</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=selecting%20one%20but%20not%20both%20of%20the%20first%20and%20second%20signature%20prefetch%20tables%20to%20train%20using">F6</a></th><td>从两表中选择一张训练。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20640%2C%20in%20the%20illustrated%20embodiment%2C%20prefetch%20circuitry%20determines%20a%20first%20signature%2C%20in%20response%20to%20a">说明书 0042</a> · 原图 6</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-15" aria-labelledby="independent-15-title">
+  <h4 id="independent-15-title">权利要求 15</h4>
+  <p>半导体制造系统能识别的设计信息存储介质。设计指定执行路径、两种签名表和训练选表电路。</p>
+  <table class="comparison-table" aria-labelledby="independent-15-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=design%20information%20that%20specifies%20a%20design%20of%20at%20least%20a%20portion%20of%20a%20hardware%20integrated%20circuit">F7</a></th><td>存储的是半导体制造系统可识别的电路设计信息。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=In%20the%20illustrated%20embodiment%20semiconductor%20fabrication%20system%20920%20is%20configured%20to%20process%20the%20design%20information%20915">说明书 0061</a> · 原图 9</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=the%20first%20signature%20generation%20technique%20uses%20a%20type%20of%20control%20transfer%20instruction%20that%20specifies%20a%20different">F8</a></th><td>第一技术须至少使用一种第二技术未用的控制转移操作。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20630%2C%20in%20the%20illustrated%20embodiment%2C%20second%20signature%20prefetch%20table%20circuitry%20stores%20prefetch%20addresses%20for%20signatures">说明书 0038</a> · 原图 6</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=select%20one%20but%20not%20both%20of%20the%20first%20and%20second%20signature%20prefetch%20table%20circuitry%20to%20train">F9</a></th><td>设计信息指定每个训练事件选择一张表。</td><td><a href="https://www.lens.org/lens/patent/US_11630670_B2#:~:text=At%20640%2C%20in%20the%20illustrated%20embodiment%2C%20prefetch%20circuitry%20determines%20a%20first%20signature%2C%20in%20response%20to%20a">说明书 0042</a> · 原图 6</td></tr></tbody>
+  </table>
+</section>
+</section><details class="claim-dependency">
+  <summary id="claim-dependency-title">权项依赖与新增限定</summary>
+  <table class="comparison-table" aria-labelledby="claim-dependency-title">
+    <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>处理器沿控制流路径运行，两表分别索引不同方法生成的签名。其中第一技术使用至少一种第二技术不使用的控制转移操作。训练事件取得两签名，选择一张表训练。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>运行中生成当前签名。在至少一张表命中时可预取数据。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>所预取的内容为控制转移目标。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-2">2</a></td><td>所预取的内容为指令缓存行。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>预取训练事件可以是缓存缺失或预测失败。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>T0 是默认表，已有当前签名的表项时可改选 T1。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-1">1</a></td><td>训练地址过近时同时抑制两表，最近签名重复时分别抑制。结合 T0 命中阈值与两表抑制状态选表。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>第一表中同签名、同目标的候选项可以按这次训练事件更新。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-1">1</a></td><td>为所选表分配训练地址及其签名组成的表项。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>第一签名用 taken branch 的 PC，第二签名用 call 和 return。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-1">1</a></td><td>两套签名技术可使用不同预取提前量。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-1">1</a></td><td>两套签名技术使用不同长度的实际执行路径历史。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-1">1</a></td><td>特定签名预取数据插入缓存时可以用有别于其他数据的替换策略值。</td></tr><tr id="claim-14"><th scope="row">14</th><td>独立项</td><td>方法形式。执行程序、分表保存预取地址，触发训练时生成两签名并选择一表。</td></tr><tr id="claim-15"><th scope="row">15</th><td>独立项</td><td>半导体制造系统能识别的设计信息存储介质。设计指定执行路径、两种签名表和训练选表电路。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-15">15</a></td><td>存储介质形式的第一表默认与匹配时改选第二表。</td></tr><tr id="claim-17"><th scope="row">17</th><td><a href="#claim-15">15</a></td><td>存储介质形式的地址与签名去重，以及 T0 匹配门槛与选表逻辑。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-15">15</a></td><td>存储介质形式的同签名、同训练地址表项合并。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-15">15</a></td><td>存储介质形式的不同预取提前量。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-15">15</a></td><td>存储介质形式的不同执行路径历史长度。</td></tr></tbody>
+  </table>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US11630670B2#knowledge">在关系图谱中定位 US11630670B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US20260203067A1</code>
+  </div>
+  <h3><a href="US20260203067A1.html">在指令缓存回填时计算 PC 相对 load 地址</a></h3>
+  <p class="related-edge-label">地址生成预取与已训练控制流签名</p>
+  <p class="related-edge-summary">US20260203067A1 从 PC 相对指令及后继操作编码推导预取地址。US11630670B2 用执行历史签名查训练表取出候选目标，两类触发逻辑分别受可识别的指令模式和训练覆盖约束。</p>
+<p class="related-evidence"><a href="US20260203067A1.html#claim-1">对照篇权项 1</a><a href="US20260203067A1.html#fig-1">对照篇图表 1</a><a href="#claim-1">本篇权项 1</a><a href="#fig-1">本篇图表 1</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#signature">分支目标相同的路径可以有不同调用历史</a></li><li><a href="#selection">表项命中门槛和训练去重各控制什么</a></li><li><a href="#outputs">预取指令行与预取控制转移目标影响不同前端等待</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2023-04-18</dd></div>
+      <div><dt>最早优先权</dt><dd>2021-07-21</dd></div>
+      <div><dt>美国申请日</dt><dd>2021-07-21</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US17/382,123</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>APPLE INC</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/3804、G06F9/3806、G06F9/38</dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>HOLMAN DOUGLAS C、KOUNTANIS IAN D、KUMAR AMIT、AL-OTOOM MUAWYA M</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://www.lens.org/lens/patent/US_11630670_B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US11630670B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-26</span>
+</div></footer>
+</body>
+</html>

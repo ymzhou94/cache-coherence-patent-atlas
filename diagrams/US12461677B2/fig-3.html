@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>迁移端有两种选择域：分区内最老再轮询，或跨分区选全局最老</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1337px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:1273px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
+.node-name{font-weight:600;font-size:17px}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
+.signal-title{font-weight:600;font-size:16px}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
+svg :target{scroll-margin:1rem}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
+</style>
+</head>
+<body><main>
+<h1>迁移端有两种选择域：分区内最老再轮询，或跨分区选全局最老</h1>
+<p>原图 2 为每个主分区选最老的 delinquent store，然后跨分区轮询。原图 3 用可看遍分区的逻辑直接挑全局最老者。</p>
+<figure>
+<div class="diagram-container" tabindex="0" role="region" aria-label="迁移端有两种选择域：分区内最老再轮询，或跨分区选全局最老"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1273 520" role="img" aria-labelledby="us12461677b2-fig-3-svg-title us12461677b2-fig-3-svg-desc">
+<title id="us12461677b2-fig-3-svg-title">迁移端有两种选择域：分区内最老再轮询，或跨分区选全局最老</title>
+<desc id="us12461677b2-fig-3-svg-desc">原图 2 为每个主分区选最老的 delinquent store，然后跨分区轮询。原图 3 用可看遍分区的逻辑直接挑全局最老者。</desc>
+<defs><marker id="us12461677b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12461677b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12461677b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12461677b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12461677b2-fig-3-local-read" d="M 280 234 L 352 234 Q 360 234 360 226 L 360 137 Q 360 129 368 129 L 444 129" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12461677b2-fig-3-arrow-data)"/>
+<path id="us12461677b2-fig-3-global-read" d="M 280 280 L 352 280 Q 360 280 360 288 L 360 374 Q 360 382 368 382 L 444 382" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12461677b2-fig-3-arrow-data)"/>
+<path id="us12461677b2-fig-3-rr" d="M 751 129 L 844 129 Q 852 129 852 137 L 852 224 Q 852 232 860 232 L 968 232" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12461677b2-fig-3-arrow-main)"/>
+<path id="us12461677b2-fig-3-oldest" d="M 751 382 L 844 382 Q 852 382 852 374 L 852 289 Q 852 281 860 281 L 968 281" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12461677b2-fig-3-arrow-main)"/>
+<rect x="331.5" y="101" width="123" height="18" fill="#f5f5f5"/><text x="393" y="115" class="arrow-label" text-anchor="middle">分区候选集合</text>
+<rect x="329.5" y="354" width="123" height="18" fill="#f5f5f5"/><text x="391" y="368" class="arrow-label" text-anchor="middle">全局候选集合</text>
+<rect x="783" y="101" width="134" height="18" fill="#f5f5f5"/><text x="850" y="115" class="arrow-label" text-anchor="middle">一种选择实现</text>
+<rect x="781.5" y="353" width="139" height="18" fill="#f5f5f5"/><text x="851" y="367" class="arrow-label" text-anchor="middle">另一种选择实现</text>
+<g id="us12461677b2-fig-3-part"><rect x="34" y="200" width="246" height="115" rx="6" fill="#f5f5f5"/><rect x="34" y="200" width="246" height="115" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="157" y="226" class="node-name" text-anchor="middle">主保留站的多分区</text><text x="157" y="248" class="node-detail" text-anchor="middle">每分区多项 delinquent store</text></g>
+<g id="us12461677b2-fig-3-local"><rect x="444" y="75" width="307" height="109" rx="6" fill="#f5f5f5"/><rect x="444" y="75" width="307" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="597.5" y="101" class="node-name" text-anchor="middle">本地最老 ＋ 分区轮询</text><text x="597.5" y="123" class="node-detail" text-anchor="middle">每分区产生一个候选</text><text x="597.5" y="141" class="node-detail" text-anchor="middle">组间 round-robin 仲裁</text></g>
+<g id="us12461677b2-fig-3-global"><rect x="444" y="328" width="307" height="109" rx="6" fill="#f5f5f5"/><rect x="444" y="328" width="307" height="109" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="597.5" y="354" class="node-name" text-anchor="middle">跨分区全局最老</text><text x="597.5" y="376" class="node-detail" text-anchor="middle">跨组查找最早在途 store</text></g>
+<g id="us12461677b2-fig-3-reserve"><rect x="968" y="203" width="264" height="110" rx="6" fill="#f5f5f5"/><rect x="968" y="203" width="264" height="110" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1100" y="229" class="node-name" text-anchor="middle">次级入口</text><text x="1100" y="251" class="node-detail" text-anchor="middle">写入获选项的数据源元数据</text></g>
+<text x="28" y="490" class="legend" text-anchor="start">两条路径是原图 2 与 3 的可选方案。它们均可以与不同发射选择结构配合。</text>
+</svg></div>
+<figcaption>依据 US12461677B2 原图 2、3、6，说明书归档段 0022、0023、0024、0025、0026、0027、0028、0029、0043、0044、0045，权利要求 2、3、4、5、8、9、11、12、15、16、18、19</figcaption>
+</figure>
+<ol aria-label="图中机制"><li><a href="#us12461677b2-fig-3-part">进入候选集合需仍符合迁移条件</a><span>主阵列以 partitions 分组，每分区可能同时有多个地址就绪且数据未到的项目。</span></li><li><a href="#us12461677b2-fig-3-local">分区先本地找最老候选</a><span>每分区的 MUX 只输出一个位置，第二级轮询授予某一分区搬移端口。</span></li><li><a href="#us12461677b2-fig-3-global">跨分区年龄选择是另一实现</a><span>比较的范围扩大到参与选取的主阵列分区，所得一项是全局最老。选择结构的门数和时序成本需实现评估。</span></li><li><a href="#us12461677b2-fig-3-reserve">选中项还要取得可接收的存储 credit</a><span>两种选择都把获选的数据描述交给次级输入，头部排序仍需与发射时的选择区分。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>分区选择 MUX 与跨区 MUX</dt><dd>原图 2：202–205</dd></div><div><dt>跨分区选择</dt><dd>原图 3：302</dd></div><div><dt>次级存储入口</dt><dd>原图 2、3：103</dd></div></dl></details>
+</main></body>
+</html>

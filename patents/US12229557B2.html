@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12229557B2 预测原子操作是否写入，减少错误转发与流水线回滚 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-latency" href="../index.html?topic=latency#catalog">访存延迟与预取</a>
+  </nav>
+  <p class="document-id">
+    <code>US12229557B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2025-02-18">2025-02-18</time>
+    <a class="hero-source-link" href="https://www.lens.org/lens/patent/US_12229557_B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>预测原子操作是否写入，减少错误转发与流水线回滚</h1>
+  <p class="english-title" lang="en">Atomic operation predictor to predict whether an atomic operation will complete successfully</p>
+  <p class="document-question">条件原子操作尚未确认是否会写入时，年轻同址 load 应先走 store queue，还是等 data cache？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#source">同址命中之后还需知道条件 store 是否会提交</a></li><li><a href="#predict">按实际完成和是否发生转发调整预测</a></li><li><a href="#pressure">权限申请、数据转发和上游节流应分别计量</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">原子预测器提前判断条件写是否会执行。预测写入时可投机转发或争取 exclusive。预测不写时可延迟 load、取缓存旧值、请求 shared 或让上游节流。实际提交仍由原子操作规定。</p>
+  </section>
+  <div id="mechanism"><section id="source" class="article-section reading-chapter" aria-labelledby="source-title"><h2 id="source-title">同址命中之后还需知道条件 store 是否会提交</h2><p>0022–0024 将预测器放在 CPU LSU，0091 明确手机 SoC 可实现该 CPU，0092–0093 给出手机及低功耗 DDR 实施例。独立权项覆盖 CPU 流水线电路的预测及功耗控制。</p><p>CAS 读取旧值并比较，只有比较满足条件才写回。若年轻 load 与条件 store 同址，store queue 即使有新数据也未必可安全交付。图 1 连接预测与状态发送点。store queue 可把预测和待写数据一起存放。</p><p>图 2 表示错误转发的代价。预测会写且转发新值后，真实比较失败，使用了错误数据的 load 及后续执行需要恢复。预测失败时可等相应 store 离队，然后重放 load 并从 data cache 读。说明书还允许部分设计更早投机读 data cache。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">预测位随条件 store 进入存储队列</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12229557B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">相同地址的年轻 load 要判断数据来源。执行部件负责得到原子操作的真实结果，预测只提前影响转发与流水线节流。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预测位随条件 store 进入存储队列" style="--figure-width:1305px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1305 527" role="img" aria-labelledby="us12229557b2-fig-1-svg-title us12229557b2-fig-1-svg-desc">
+<title id="us12229557b2-fig-1-svg-title">预测位随条件 store 进入存储队列</title>
+<desc id="us12229557b2-fig-1-svg-desc">相同地址的年轻 load 要判断数据来源。执行部件负责得到原子操作的真实结果，预测只提前影响转发与流水线节流。</desc>
+<defs><marker id="us12229557b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229557b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229557b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229557b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229557b2-fig-1-iss" d="M 264 266 L 386 266" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-1-arrow-data)"/>
+<path id="us12229557b2-fig-1-op" d="M 477 218 L 477 156" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-1-arrow-control)"/>
+<path id="us12229557b2-fig-1-q" d="M 587 266 L 730 266" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-1-arrow-data)"/>
+<path id="us12229557b2-fig-1-pred" d="M 590 109 L 830 109 Q 838 109 838 117 L 838 218" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-1-arrow-main)"/>
+<path id="us12229557b2-fig-1-fwd" d="M 946 266 L 1079 266" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-1-arrow-main)"/>
+<path id="us12229557b2-fig-1-rd" d="M 493 314 L 493 380" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-1-arrow-data)"/>
+<rect x="287.5" y="235" width="75" height="18" fill="#f5f5f5"/><text x="325" y="249" class="arrow-label" text-anchor="middle">发射</text>
+<rect x="491" y="176" width="98" height="18" fill="#f5f5f5"/><text x="540" y="190" class="arrow-label" text-anchor="middle">原子操作信息</text>
+<rect x="610.5" y="235" width="93" height="18" fill="#f5f5f5"/><text x="657" y="249" class="arrow-label" text-anchor="middle">待写数据</text>
+<rect x="633" y="79" width="158" height="18" fill="#f5f5f5"/><text x="712" y="93" class="arrow-label" text-anchor="middle">预测结果随 store 存放</text>
+<rect x="957.5" y="235" width="107" height="18" fill="#f5f5f5"/><text x="1011" y="249" class="arrow-label" text-anchor="middle">转发或重放</text>
+<rect x="502" y="333" width="64" height="18" fill="#f5f5f5"/><text x="534" y="347" class="arrow-label" text-anchor="middle">查缓存</text>
+<g id="us12229557b2-fig-1-issue"><rect x="30" y="218" width="234" height="96" rx="6" fill="#f5f5f5"/><rect x="30" y="218" width="234" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="244" class="node-name" text-anchor="middle">来自 reservation station</text><text x="147" y="266" class="node-detail" text-anchor="middle">发射原子操作与 load</text></g>
+<g id="us12229557b2-fig-1-exe"><rect x="386" y="218" width="201" height="96" rx="6" fill="#f5f5f5"/><rect x="386" y="218" width="201" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="486.5" y="244" class="node-name" text-anchor="middle">LSU 执行电路</text><text x="486.5" y="266" class="node-detail" text-anchor="middle">处理 load 与条件 store</text></g>
+<g id="us12229557b2-fig-1-predict"><rect x="385" y="63" width="205" height="93" rx="6" fill="#f5f5f5"/><rect x="385" y="63" width="205" height="93" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="487.5" y="89" class="node-name" text-anchor="middle">原子操作预测器</text><text x="487.5" y="111" class="node-detail" text-anchor="middle">提前决定是否可能写入</text></g>
+<g id="us12229557b2-fig-1-sq"><rect x="730" y="218" width="216" height="96" rx="6" fill="#f5f5f5"/><rect x="730" y="218" width="216" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="838" y="244" class="node-name" text-anchor="middle">store queue</text><text x="838" y="266" class="node-detail" text-anchor="middle">地址、写数据与预测位</text></g>
+<g id="us12229557b2-fig-1-lq"><rect x="1079" y="218" width="194" height="96" rx="6" fill="#f5f5f5"/><rect x="1079" y="218" width="194" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1176" y="244" class="node-name" text-anchor="middle">load queue</text><text x="1176" y="266" class="node-detail" text-anchor="middle">同地址 load 数据或重放</text></g>
+<g id="us12229557b2-fig-1-dc"><rect x="384" y="380" width="207" height="89" rx="6" fill="#f5f5f5"/><rect x="384" y="380" width="207" height="89" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="487.5" y="406" class="node-name" text-anchor="middle">data cache</text><text x="487.5" y="428" class="node-detail" text-anchor="middle">已提交的缓存数据</text></g>
+<text x="30" y="496" class="legend" text-anchor="start">data cache 原文简称 DCache。预测器不提交数据，本图不限定比较与缓存访问的实现周期。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12229557b2-fig-1-exe" data-reading-target="us12229557b2-fig-1-exe">执行部件依据实际 load 数据判定是否执行条件 store</a><p>原子操作的失败在这里定义为不执行 store。比较、测试或算术条件决定架构结果。</p></li><li><a href="#us12229557b2-fig-1-predict" data-reading-target="us12229557b2-fig-1-predict">预测电路提前产生 pass／fail 信息</a><p>它可依据此前运行结果，并把本次预测写入 store queue 的相应表项。</p></li><li><a href="#us12229557b2-fig-1-sq" data-reading-target="us12229557b2-fig-1-sq">年轻 load 同地址命中时，预测与可用性共同决定数据来源</a><p>预测成功使待写数据可投机转发。失败分支可以等待，稍后从 data cache 取得已验证的数据。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、9；说明书归档段 0002、0003、0004、0005、0006、0007、0022、0023、0024、0033、0034、0038、0040、0041、0044、0047、0048、0049、0052、0099、0100；权利要求 1、2、3、4、8、9、17</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>预测器与执行电路</dt><dd>原图 1 · 36、34</dd></div><div><dt>load queue 和 store queue</dt><dd>原图 1 · 30、32</dd></div><div><dt>data cache</dt><dd>原图 1 · 16</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 事务时序</p>
+        <h3 id="fig-2-title">预测成功却未写入时，已转发的年轻 load 需要恢复</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12229557B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">对同一个内存位置，年轻 load 可以先收到条件 store 的数据。条件实际失败后，已使用该数据的后续执行必须恢复。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预测成功却未写入时，已转发的年轻 load 需要恢复" style="--figure-width:960px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 458" role="img" aria-labelledby="us12229557b2-fig-2-svg-title us12229557b2-fig-2-svg-desc">
+<title id="us12229557b2-fig-2-svg-title">预测成功却未写入时，已转发的年轻 load 需要恢复</title>
+<desc id="us12229557b2-fig-2-svg-desc">对同一个内存位置，年轻 load 可以先收到条件 store 的数据。条件实际失败后，已使用该数据的后续执行必须恢复。</desc>
+<defs><marker id="us12229557b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229557b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229557b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229557b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<line x1="116" y1="80" x2="116" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="358" y1="80" x2="358" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="601" y1="80" x2="601" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<line x1="844" y1="80" x2="844" y2="404" stroke="#4f5d75" stroke-dasharray="4,6" opacity=".6"/>
+<g id="us12229557b2-fig-2-pred"><path d="M 116 120 L 358 120" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-2-arrow-data)"/><rect x="198" y="96" width="78" height="18" fill="#f5f5f5"/><text x="237" y="110" class="arrow-label" text-anchor="middle">记录成功预测</text></g>
+<g id="us12229557b2-fig-2-hit"><path d="M 601 168 L 358 168" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-2-arrow-data)"/><rect x="395" y="144" width="169" height="18" fill="#f5f5f5"/><text x="479.5" y="158" class="arrow-label" text-anchor="middle">匹配同地址、老 store</text></g>
+<g id="us12229557b2-fig-2-data"><path d="M 358 216 L 601 216" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-2-arrow-main)"/><rect x="427.5" y="192" width="104" height="18" fill="#f5f5f5"/><text x="479.5" y="206" class="arrow-label" text-anchor="middle">投机转发待写新值</text></g>
+<g id="us12229557b2-fig-2-match"><path d="M 116 264 L 358 264" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-2-arrow-return)"/><rect x="139.5" y="240" width="195" height="18" fill="#f5f5f5"/><text x="237" y="254" class="arrow-label" text-anchor="middle">比较失败，取消条件 store</text></g>
+<g id="us12229557b2-fig-2-flush"><path d="M 116 312 L 844 312" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-2-arrow-main)"/><rect x="382.5" y="288" width="195" height="18" fill="#f5f5f5"/><text x="480" y="302" class="arrow-label" text-anchor="middle">已消费错误数据，发 flush</text></g>
+<g id="us12229557b2-fig-2-replay"><path d="M 844 360 L 601 360" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-2-arrow-return)"/><rect x="644.5" y="336" width="156" height="18" fill="#f5f5f5"/><text x="722.5" y="350" class="arrow-label" text-anchor="middle">重新取指与执行 load</text></g>
+<rect x="28" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="116" y="63" class="node-name" text-anchor="middle">LSU 执行</text>
+<rect x="270" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="358" y="63" class="node-name" text-anchor="middle">store queue</text>
+<rect x="513" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="601" y="63" class="node-name" text-anchor="middle">年轻同址 load</text>
+<rect x="756" y="32" width="176" height="48" rx="6" fill="#f5f5f5" stroke="#4f5d75"/><text x="844" y="63" class="node-name" text-anchor="middle">CPU 前端</text>
+<text x="28" y="436" class="legend" text-anchor="start">图示保持地址和实际原子语义相同，只展示一次预测失误的后续依赖路径。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12229557b2-fig-2-data" data-reading-target="us12229557b2-fig-2-data">投机转发早于条件 store 的真实结果</a><p>对年轻 load，store queue 命中且数据可用时，成功预测允许把新值交给消费者。</p></li><li><a href="#us12229557b2-fig-2-match" data-reading-target="us12229557b2-fig-2-match">比较仍按实际内存值执行</a><p>CAS 比较失败意味着此原子操作不更新目标。先前投机使用新值的路径必须撤销。</p></li><li><a href="#us12229557b2-fig-2-replay" data-reading-target="us12229557b2-fig-2-replay">若预测失败，可等待有关 store 离队再由缓存返回正确值</a><p>说明书还允许在某些实现中预测失败时先让 load 读 DCache。恢复粒度取决于实现。</p></li></ul>
+  <p class="figure-evidence">原图 1、2；说明书归档段 0004、0005、0006、0024、0038、0039、0048、0049、0060、0061、0062、0063、0066、0067、0068、0069；权利要求 2、3、4、6、7、12、13</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>转发与重放分支</dt><dd>原图 2 · 50–60</dd></div><div><dt>实际结果与转发记录</dt><dd>原图 2 · 62–68</dd></div><div><dt>前端恢复</dt><dd>原图 1 · LSU Flush</dd></div></dl></details>
+</figure></section><section id="predict" class="article-section reading-chapter" aria-labelledby="predict-title"><h2 id="predict-title">按实际完成和是否发生转发调整预测</h2><p>图 3 比较全局计数与索引表。全局历史会把不同原子操作合并。按 PC 等信息索引可分开不同调用点的偏向。碰撞、初始化和执行阶段切换都可能降低精度。</p><p>实施例着重惩罚导致错误转发的失败，未转发的数据可按同权重、较低权重或不更新处理。权利要求 6、10、19 用 written 描述附加条件，说明书的更新图用 forwarded。对照原文保留两种表述，区分条件写提交与投机转发。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">预测训练可以选择全局历史或按原子指令索引</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12229557B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">全局计数器体积小。按指令或操作数索引的表可区分同时存在的成功与失败偏向，仍需考虑别名。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="预测训练可以选择全局历史或按原子指令索引" style="--figure-width:1290px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1290 436" role="img" aria-labelledby="us12229557b2-fig-3-svg-title us12229557b2-fig-3-svg-desc">
+<title id="us12229557b2-fig-3-svg-title">预测训练可以选择全局历史或按原子指令索引</title>
+<desc id="us12229557b2-fig-3-svg-desc">全局计数器体积小。按指令或操作数索引的表可区分同时存在的成功与失败偏向，仍需考虑别名。</desc>
+<defs><marker id="us12229557b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229557b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229557b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229557b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229557b2-fig-3-index" d="M 228 255 L 344 255" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-3-arrow-data)"/>
+<path id="us12229557b2-fig-3-rd" d="M 575 255 L 693 255" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-3-arrow-data)"/>
+<path id="us12229557b2-fig-3-exec" d="M 905 255 L 1033 255" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-3-arrow-main)"/>
+<path id="us12229557b2-fig-3-fb" d="M 1151 304 L 1151 365 Q 1151 373 1143 373 L 463 373 Q 455 373 455 365 L 455 304" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-3-arrow-return)"/>
+<rect x="231" y="225" width="108" height="18" fill="#f5f5f5"/><text x="285" y="239" class="arrow-label" text-anchor="middle">查全局或表项</text>
+<rect x="592.5" y="225" width="83" height="18" fill="#f5f5f5"/><text x="634" y="239" class="arrow-label" text-anchor="middle">旧状态</text>
+<rect x="923" y="225" width="88" height="18" fill="#f5f5f5"/><text x="967" y="239" class="arrow-label" text-anchor="middle">预测信息</text>
+<rect x="685.5" y="343" width="231" height="18" fill="#f5f5f5"/><text x="801" y="357" class="arrow-label" text-anchor="middle">按实际结果与消费情况更新</text>
+<g id="us12229557b2-fig-3-key"><rect x="34" y="205" width="194" height="99" rx="6" fill="#f5f5f5"/><rect x="34" y="205" width="194" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="131" y="231" class="node-name" text-anchor="middle">历史选择</text><text x="131" y="253" class="node-detail" text-anchor="middle">全局／按 PC 等索引</text></g>
+<g id="us12229557b2-fig-3-counts"><rect x="344" y="205" width="231" height="99" rx="6" fill="#f5f5f5"/><rect x="344" y="205" width="231" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="459.5" y="231" class="node-name" text-anchor="middle">预测存储</text><text x="459.5" y="253" class="node-detail" text-anchor="middle">计数器／预测表</text></g>
+<g id="us12229557b2-fig-3-cmp"><rect x="693" y="205" width="212" height="99" rx="6" fill="#f5f5f5"/><rect x="693" y="205" width="212" height="99" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="799" y="231" class="node-name" text-anchor="middle">阈值比较</text><text x="799" y="253" class="node-detail" text-anchor="middle">产生 AFwdCtl</text></g>
+<g id="us12229557b2-fig-3-complete"><rect x="1033" y="205" width="225" height="99" rx="6" fill="#f5f5f5"/><rect x="1033" y="205" width="225" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1145.5" y="231" class="node-name" text-anchor="middle">实际完成回报</text><text x="1145.5" y="253" class="node-detail" text-anchor="middle">完成结果和转发记录</text></g>
+<text x="30" y="405" class="legend" text-anchor="start">回路里的实际失败与预测失败时间不同。按索引时还需匹配正确的历史表项。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12229557b2-fig-3-key" data-reading-target="us12229557b2-fig-3-key">选择按全局状态或按索引读取预测</a><p>后者可从 PC、操作数、操作类型等建立索引。允许直接别名，也可用 tag 区分。</p></li><li><a href="#us12229557b2-fig-3-counts" data-reading-target="us12229557b2-fig-3-counts">用旧状态给 AFwdCtl，真实完成再更新</a><p>成功可提高计数；一些实现只在失败且曾转发新值时降低计数，以优先识别会造成实际恢复的失败。</p></li><li><a href="#us12229557b2-fig-3-complete" data-reading-target="us12229557b2-fig-3-complete">把完成信息关联到当初选用的表项</a><p>store queue 可保存预测及相应索引。表项计数饱和、阈值和初始值均属设计参数。</p></li></ul>
+  <p class="figure-evidence">原图 3、4、5、6；说明书归档段 0044、0045、0046、0067、0068、0069、0070、0071、0072、0073、0074、0075、0076、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086、0088、0089、0090；权利要求 5、6、7、10、14、15、19、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>全局计数器</dt><dd>原图 3 · 70、72</dd></div><div><dt>计数器更新</dt><dd>原图 4 · 90–96</dd></div><div><dt>按索引的预测表</dt><dd>原图 5 · 100、102</dd></div><div><dt>查表与更新</dt><dd>原图 6 · 110–122</dd></div></dl></details>
+</figure></section><section id="pressure" class="article-section reading-chapter" aria-labelledby="pressure-title"><h2 id="pressure-title">权限申请、数据转发和上游节流应分别计量</h2><p>图 4 从 CPU 内部预测接到一致性。提前取得 exclusive 可减少实际写入的升级等待；正确预测失败时保留 shared，可以少发一次不必要的升级。独权 1、9、17 的共同限制是用失败预测降低流水线功耗，两个缓存状态及数据转发是在部分从权中加入的。</p><p>在 OS 同步原语和用户态运行库中，可用相同地址的负载构造成功或失败偏向阶段，量出流水线恢复、已取消的转发、年轻 load 重放，以及一致性权限请求。控制变量应包含竞争核心数及队列深度。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">同一预测可影响缓存行获取的权限与上游功耗</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12229557B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">预测将写入时，提前争取 exclusive。预计不写时可持有 shared，并调低上游投机工作量。两类路径改善的是不同开销。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="同一预测可影响缓存行获取的权限与上游功耗" style="--figure-width:1085px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1085 588" role="img" aria-labelledby="us12229557b2-fig-4-svg-title us12229557b2-fig-4-svg-desc">
+<title id="us12229557b2-fig-4-svg-title">同一预测可影响缓存行获取的权限与上游功耗</title>
+<desc id="us12229557b2-fig-4-svg-desc">预测将写入时，提前争取 exclusive。预计不写时可持有 shared，并调低上游投机工作量。两类路径改善的是不同开销。</desc>
+<defs><marker id="us12229557b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12229557b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12229557b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12229557b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12229557b2-fig-4-success" d="M 269 240 L 323 240 Q 331 240 331 232 L 331 137 Q 331 129 339 129 L 405 129" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-4-arrow-main)"/>
+<path id="us12229557b2-fig-4-failure" d="M 269 294 L 325 294 Q 331 294 331 300 L 331 300 Q 331 306 337 306 L 405 306" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12229557b2-fig-4-arrow-main)"/>
+<path id="us12229557b2-fig-4-th" d="M 159 318 L 159 478 Q 159 486 167 486 L 405 486" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-4-arrow-control)"/>
+<path id="us12229557b2-fig-4-w" d="M 694 129 L 756 129 Q 764 129 764 137 L 764 196 Q 764 204 772 204 L 828 204" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-4-arrow-data)"/>
+<path id="us12229557b2-fig-4-r" d="M 694 318 L 756 318 Q 764 318 764 310 L 764 258 Q 764 250 772 250 L 828 250" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12229557b2-fig-4-arrow-data)"/>
+<path id="us12229557b2-fig-4-limit" d="M 694 486 L 828 486" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12229557b2-fig-4-arrow-control)"/>
+<rect x="318" y="99" width="98" height="18" fill="#f5f5f5"/><text x="367" y="113" class="arrow-label" text-anchor="middle">预测执行 store</text>
+<rect x="326.5" y="277" width="85" height="18" fill="#f5f5f5"/><text x="369" y="291" class="arrow-label" text-anchor="middle">预测不执行</text>
+<rect x="229" y="456" width="96" height="18" fill="#f5f5f5"/><text x="277" y="470" class="arrow-label" text-anchor="middle">预测失败</text>
+<rect x="720" y="100" width="88" height="18" fill="#f5f5f5"/><text x="764" y="114" class="arrow-label" text-anchor="middle">申请独占</text>
+<rect x="718" y="319" width="88" height="18" fill="#f5f5f5"/><text x="762" y="333" class="arrow-label" text-anchor="middle">共享读取</text>
+<rect x="714" y="457" width="90" height="18" fill="#f5f5f5"/><text x="759" y="471" class="arrow-label" text-anchor="middle">上游节流</text>
+<g id="us12229557b2-fig-4-ap"><rect x="34" y="219" width="235" height="99" rx="6" fill="#f5f5f5"/><rect x="34" y="219" width="235" height="99" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="151.5" y="245" class="node-name" text-anchor="middle">原子操作预测器</text><text x="151.5" y="267" class="node-detail" text-anchor="middle">推测条件 store 是否执行</text></g>
+<g id="us12229557b2-fig-4-upgrade"><rect x="405" y="83" width="289" height="92" rx="6" fill="#f5f5f5"/><rect x="405" y="83" width="289" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="549.5" y="109" class="node-name" text-anchor="middle">data cache 请求 exclusive</text><text x="549.5" y="131" class="node-detail" text-anchor="middle">缺失或 shared 命中可请求</text></g>
+<g id="us12229557b2-fig-4-shared"><rect x="405" y="268" width="289" height="92" rx="6" fill="#f5f5f5"/><rect x="405" y="268" width="289" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="549.5" y="294" class="node-name" text-anchor="middle">data cache 保留或请求 shared</text><text x="549.5" y="316" class="node-detail" text-anchor="middle">避免提前请求写入权限</text></g>
+<g id="us12229557b2-fig-4-throttle"><rect x="405" y="440" width="289" height="92" rx="6" fill="#f5f5f5"/><rect x="405" y="440" width="289" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="549.5" y="466" class="node-name" text-anchor="middle">上游流水线调节</text><text x="549.5" y="488" class="node-detail" text-anchor="middle">限制投机工作以节省功耗</text></g>
+<g id="us12229557b2-fig-4-coherence"><rect x="828" y="174" width="225" height="102" rx="6" fill="#f5f5f5"/><rect x="828" y="174" width="225" height="102" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="940.5" y="200" class="node-name" text-anchor="middle">一致性路径</text><text x="940.5" y="222" class="node-detail" text-anchor="middle">在需要时取得写入权限</text></g>
+<g id="us12229557b2-fig-4-save"><rect x="828" y="440" width="225" height="92" rx="6" fill="#f5f5f5"/><rect x="828" y="440" width="225" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="940.5" y="466" class="node-name" text-anchor="middle">流水线活动</text><text x="940.5" y="488" class="node-detail" text-anchor="middle">减少被撤销的在途操作</text></g>
+<text x="30" y="557" class="legend" text-anchor="start">图中 shared 和 exclusive 沿用原文，不把本实施例转写为某一一致性协议的固定状态机。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12229557b2-fig-4-upgrade" data-reading-target="us12229557b2-fig-4-upgrade">预测有 store 时提前申请 exclusive</a><p>可从缺失请求 exclusive，或将当前 shared 升级。若真的要写，届时往往无需再发权限升级。</p></li><li><a href="#us12229557b2-fig-4-shared" data-reading-target="us12229557b2-fig-4-shared">预测不写时，缺失可取 shared、命中可保留 shared</a><p>减少不必要的独占请求，有潜力减轻其他核心争用。若后来需要写，仍须得到写入所需权限。</p></li><li><a href="#us12229557b2-fig-4-throttle" data-reading-target="us12229557b2-fig-4-throttle">独权关心预测失败时减少流水线功耗</a><p>说明书举上游节流，并允许把同一预测给下游分支预测。原子语义仍依据执行与一致性保证。</p></li></ul>
+  <p class="figure-evidence">原图 1、9；说明书归档段 0004、0006、0050、0051、0052、0099、0100；权利要求 1、8、9、11、17、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>共享／独占权限选择</dt><dd>原图 9 · 134、138</dd></div><div><dt>上游流水线节流</dt><dd>原图 9 · 136</dd></div><div><dt>LSU 及 DCache</dt><dd>原图 1 · 42、16</dd></div></dl></details>
+</figure></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、9、17 项；全文核对覆盖 111 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>LSU 预测条件原子操作是否完成写入，在预测不写入时降低至少一个流水线电路的功耗。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=a%20load%2Fstore%20unit%20configured%20to%20execute%20atomic%20operations">F1</a></th><td>原子操作在 LSU 中执行。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=The%20results%20of%20ops%20that%20have%20target%20registers%20may%20be%20written%20to%20the%20register%20file%2030">说明书 0034</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=wherein%20the%20store%20operation%20is%20conditional%20on%20a%20result%20of%20the%20data%20operation">F2</a></th><td>真实 store 是否执行取决于实际比较或数据运算。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=In%20other%20embodiments%2C%20the%20data%20operation%20may%20be%20performed%20in%20the%20execution%20units%2028%20A-%2028">说明书 0040</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=wherein%20the%20atomic%20operation%20is%20defined%20to%20complete%20unsuccessfully%20based%20on%20the%20store%20operation%20not%20being">F3</a></th><td>原子失败以未执行条件 store 定义。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=The%20atomic%20operation%20is%20defined%20to%20complete%20unsuccessfully%20based%20on%20the%20store%20operation%2Fwrite%20not%20being%20performed%2C">说明书 0041</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=pipeline%20circuits%20configured%20to%20reduce%20power%20consumption%20based%20on%20the%20prediction%20indicating%20that%20the%20atomic%20operation">F4</a></th><td>失败预测约束流水线功耗。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=In%20the%20illustrated%20embodiment%2C%20if%20the%20processor%2012%20executes%20an%20atomic%20operation%20%28decision%20block%20130%2C%20%E2%80%9Cyes%E2%80%9D">说明书 0099</a> · 原图 9</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-9" aria-labelledby="independent-9-title">
+  <h4 id="independent-9-title">权利要求 9</h4>
+  <p>方法形式，对条件 store 作预测，并在预测不写入时降低流水线功耗。</p>
+  <table class="comparison-table" aria-labelledby="independent-9-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=a%20store%20operation%20to%20write%20second%20data%20to%20the%20memory%20location%20based%20on%20a%20result%20of">F5</a></th><td>运算结果约束同一内存位置的条件写回。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=In%20other%20embodiments%2C%20the%20data%20operation%20may%20be%20performed%20in%20the%20execution%20units%2028%20A-%2028">说明书 0040</a> · 原图 2</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=generating%20a%20prediction%20on%20whether%20the%20store%20operation%20will%20be%20performed">F6</a></th><td>在获得真实结果前预测是否写入。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=The%20atomic%20predictor%20circuit%2036%20may%20be%20configured%20to%20predict%20the%20success%20or%20lack%20of%20success">说明书 0044</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=reducing%20power%20consumption%20of%20one%20or%20more%20pipeline%20circuits%20based%20on%20the%20prediction%20indicating%20that%20the">F7</a></th><td>失败预测用于减少流水线功耗。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=In%20the%20illustrated%20embodiment%2C%20if%20the%20processor%2012%20executes%20an%20atomic%20operation%20%28decision%20block%20130%2C%20%E2%80%9Cyes%E2%80%9D">说明书 0099</a> · 原图 9</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
+  <h4 id="independent-17-title">权利要求 17</h4>
+  <p>处理器装置以执行、预测和流水线电路实现预测失败时降低功耗。</p>
+  <table class="comparison-table" aria-labelledby="independent-17-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=an%20execute%20circuit%20configured%20to%20execute%20atomic%20operations">F8</a></th><td>处理器含原子操作执行电路。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=If%20the%20op%20in%20the%20queue%2030%20-%2032%20needs%20to%20finish%20later%20than%20an%20op">说明书 0039</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=wherein%20the%20atomic%20operation%20is%20defined%20to%20complete%20unsuccessfully%20based%20on%20the%20store%20operation%20not%20being">F9</a></th><td>失败定义为没有实际条件写。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=The%20atomic%20operation%20is%20defined%20to%20complete%20unsuccessfully%20based%20on%20the%20store%20operation%2Fwrite%20not%20being%20performed%2C">说明书 0041</a> · 原图 1</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=the%20processor%20is%20configured%20to%20reduce%20power%20consumption%20of%20the%20one%20or%20more%20pipeline%20circuits%20based">F10</a></th><td>装置利用失败预测降低流水线电路功耗。</td><td><a href="https://www.lens.org/lens/patent/US_12229557_B2#:~:text=In%20the%20illustrated%20embodiment%2C%20if%20the%20processor%2012%20executes%20an%20atomic%20operation%20%28decision%20block%20130%2C%20%E2%80%9Cyes%E2%80%9D">说明书 0099</a> · 原图 9</td></tr></tbody>
+  </table>
+</section>
+</section><details class="claim-dependency">
+  <summary id="claim-dependency-title">权项依赖与新增限定</summary>
+  <table class="comparison-table" aria-labelledby="claim-dependency-title">
+    <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>LSU 预测条件原子操作是否完成写入，在预测不写入时降低至少一个流水线电路的功耗。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>store queue 保存待写操作和预测位，可在预测成功时向后续同地址 load 转发第二数据。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-1">1</a></td><td>预测不成功时，LSU 可从 data cache 为后续 load 转发。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-3">3</a></td><td>从权 3 收紧至至少等待该 store 退出 store queue。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>保存计数值，按执行过的原子操作更新用于预测的状态。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-5">5</a></td><td>原文同时使用失败和数据已写入该位置的表述。说明书的计数器例子按 store 未提交但数据已投机转发给年轻 load 处理。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-5">5</a></td><td>原文在失败且没有发生第二数据写入时保持计数。说明书的该例检查有无向后续 load 转发。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>后续分支预测可使用原子操作的结果预测。</td></tr><tr id="claim-9"><th scope="row">9</th><td>独立项</td><td>方法形式，对条件 store 作预测，并在预测不写入时降低流水线功耗。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-9">9</a></td><td>方法用另一原子操作及另一地址更新计数。此权项的 written 与失败并列，说明书的训练例子实际观察的是失败且发生投机转发。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-9">9</a></td><td>方法中，一个预测不写入的操作取得 shared，另一预测会写入的操作可能取得 exclusive。</td></tr><tr id="claim-12"><th scope="row">12</th><td><a href="#claim-9">9</a></td><td>预测不写入时可为年轻 load 转发 data cache 数据。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-9">9</a></td><td>对第二原子操作，预测会写入时可向匹配的后续 load 转发第三数据。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-9">9</a></td><td>按标识第一原子操作的若干因素生成索引，从相应历史表项生成预测。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-9">9</a></td><td>用原子操作的操作数值参与预测。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-9">9</a></td><td>待写数据可来自指令操作数、预定值或数据运算结果。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>处理器装置以执行、预测和流水线电路实现预测失败时降低功耗。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>预测写入时取得 exclusive，预计不写时取得 shared。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>原文将失败和第二数据已写入并列规定为递减计数条件。说明书对应实现的递减条件是失败且 store 数据已转发。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>预测器历史存储含多个表项，按操作标识因素选项并生成预测。</td></tr></tbody>
+  </table>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12229557B2#knowledge">在关系图谱中定位 US12229557B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US11175917B1</code>
+  </div>
+  <h3><a href="US11175917B1.html">在 store 数据操作发射时提前启动 load 重放</a></h3>
+  <p class="related-edge-label">本应转发但数据未就绪与条件写未验证</p>
+  <p class="related-edge-summary">US11175917B1 用独立重放缓冲配对等候 store 数据的 load。US12229557B2 的年轻 load 也可能重放，此时的等待是原子条件写尚未验证，即使转发数据已到 store queue。</p>
+<p class="related-evidence"><a href="US11175917B1.html#claim-1">对照篇权项 1</a><a href="US11175917B1.html#fig-1">对照篇图表 1</a><a href="#claim-4">本篇权项 4</a><a href="#fig-2">本篇图表 2</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#source">同址命中之后还需知道条件 store 是否会提交</a></li><li><a href="#predict">按实际完成和是否发生转发调整预测</a></li><li><a href="#pressure">权限申请、数据转发和上游节流应分别计量</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2025-02-18</dd></div>
+      <div><dt>最早优先权</dt><dd>2020-06-19</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-03-11</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/601,640</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>APPLE INC</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F9/3004、G06F9/3826、G06F9/3834 <details class="inline-more"><summary>其余 11 项</summary><span>G06F9/528、G06F2209/521、G06F9/3824、G06F9/30043、G06F9/3842、G06F9/321、G06F9/30087、G06F9/30、G06F9/38、G06F9/32、G06F9/52</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>MESTAN BRIAN R、LEVINSKY GIDEON N、KARM MICHAEL L</dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://www.lens.org/lens/patent/US_12229557_B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12229557B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-26</span>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>系统缓存控制器把可纠错计数与不可纠错日志分开</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1448px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:1384px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
+.node-name{font-weight:600;font-size:17px}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
+.signal-title{font-weight:600;font-size:16px}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
+svg :target{scroll-margin:1rem}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
+</style>
+</head>
+<body><main>
+<h1>系统缓存控制器把可纠错计数与不可纠错日志分开</h1>
+<p>AP 的 DRAM、缓存和一致性路径可提供错误状态。系统缓存控制器将事件交给各自的记录电路，再向处理器发出可见信号。</p>
+<figure>
+<div class="diagram-container" tabindex="0" role="region" aria-label="系统缓存控制器把可纠错计数与不可纠错日志分开"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1384 498" role="img" aria-labelledby="us11934265b2-fig-1-svg-title us11934265b2-fig-1-svg-desc">
+<title id="us11934265b2-fig-1-svg-title">系统缓存控制器把可纠错计数与不可纠错日志分开</title>
+<desc id="us11934265b2-fig-1-svg-desc">AP 的 DRAM、缓存和一致性路径可提供错误状态。系统缓存控制器将事件交给各自的记录电路，再向处理器发出可见信号。</desc>
+<defs><marker id="us11934265b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us11934265b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us11934265b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us11934265b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us11934265b2-fig-1-mem" d="M 260 132 L 302 132 Q 310 132 310 140 L 310 217 Q 310 225 318 225 L 385 225" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11934265b2-fig-1-arrow-data)"/>
+<path id="us11934265b2-fig-1-bus" d="M 260 378 L 302 378 Q 310 378 310 370 L 310 287 Q 310 279 318 279 L 385 279" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11934265b2-fig-1-arrow-data)"/>
+<path id="us11934265b2-fig-1-track" d="M 624 224 L 685 224 Q 693 224 693 216 L 693 129 Q 693 121 701 121 L 757 121" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11934265b2-fig-1-arrow-main)"/>
+<path id="us11934265b2-fig-1-log" d="M 624 271 L 685 271 Q 693 271 693 279 L 693 377 Q 693 385 701 385 L 757 385" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us11934265b2-fig-1-arrow-data)"/>
+<path id="us11934265b2-fig-1-count" d="M 986 124 L 1045 124 Q 1053 124 1053 132 L 1053 217 Q 1053 225 1061 225 L 1120 225" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us11934265b2-fig-1-arrow-main)"/>
+<path id="us11934265b2-fig-1-alert" d="M 986 383 L 1045 383 Q 1053 383 1053 375 L 1053 285 Q 1053 277 1061 277 L 1120 277" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us11934265b2-fig-1-arrow-control)"/>
+<rect x="301" y="198" width="88" height="18" fill="#f5f5f5"/><text x="345" y="212" class="arrow-label" text-anchor="middle">DRAM 状态</text>
+<rect x="303" y="253" width="84" height="18" fill="#f5f5f5"/><text x="345" y="267" class="arrow-label" text-anchor="middle">互连状态</text>
+<rect x="703" y="95" width="48" height="18" fill="#f5f5f5"/><text x="727" y="109" class="arrow-label" text-anchor="middle">CE</text>
+<rect x="704" y="357" width="48" height="18" fill="#f5f5f5"/><text x="728" y="371" class="arrow-label" text-anchor="middle">UE</text>
+<rect x="1034.5" y="198" width="97" height="18" fill="#f5f5f5"/><text x="1083" y="212" class="arrow-label" text-anchor="middle">次数或占用</text>
+<rect x="1044" y="250" width="84" height="18" fill="#f5f5f5"/><text x="1086" y="264" class="arrow-label" text-anchor="middle">错误日志</text>
+<g id="us11934265b2-fig-1-dram"><rect x="34" y="80" width="226" height="105" rx="6" fill="#f5f5f5"/><rect x="34" y="80" width="226" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="106" class="node-name" text-anchor="middle">LPDDR 与内存控制器</text><text x="147" y="128" class="node-detail" text-anchor="middle">DRAM 地址与 DSF</text></g>
+<g id="us11934265b2-fig-1-fabric"><rect x="34" y="326" width="226" height="105" rx="6" fill="#f5f5f5"/><rect x="34" y="326" width="226" height="105" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="147" y="352" class="node-name" text-anchor="middle">AP 缓存／互连事件</text><text x="147" y="374" class="node-detail" text-anchor="middle">缓存读或 snoop 响应</text><text x="147" y="392" class="node-detail" text-anchor="middle">携带错误状态</text></g>
+<g id="us11934265b2-fig-1-events"><rect x="385" y="203" width="239" height="103" rx="6" fill="#f5f5f5"/><rect x="385" y="203" width="239" height="103" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="504.5" y="229" class="node-name" text-anchor="middle">系统缓存控制器</text><text x="504.5" y="251" class="node-detail" text-anchor="middle">按 CE／UE 分派</text></g>
+<g id="us11934265b2-fig-1-ce"><rect x="757" y="68" width="229" height="108" rx="6" fill="#f5f5f5"/><rect x="757" y="68" width="229" height="108" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="871.5" y="94" class="node-name" text-anchor="middle">可纠错追踪表</text><text x="871.5" y="116" class="node-detail" text-anchor="middle">按位置计数</text><text x="871.5" y="134" class="node-detail" text-anchor="middle">带 client 字段</text></g>
+<g id="us11934265b2-fig-1-ue"><rect x="757" y="330" width="229" height="108" rx="6" fill="#f5f5f5"/><rect x="757" y="330" width="229" height="108" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="871.5" y="356" class="node-name" text-anchor="middle">不可纠错日志</text><text x="871.5" y="378" class="node-detail" text-anchor="middle">记录来源和地址</text><text x="871.5" y="396" class="node-detail" text-anchor="middle">条目可不按地址聚合</text></g>
+<g id="us11934265b2-fig-1-software"><rect x="1120" y="203" width="230" height="103" rx="6" fill="#f5f5f5"/><rect x="1120" y="203" width="230" height="103" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1235" y="229" class="node-name" text-anchor="middle">处理器上的软件</text><text x="1235" y="251" class="node-detail" text-anchor="middle">按信号读取记录</text></g>
+<text x="30" y="467" class="legend" text-anchor="start">原图 6 的追踪位置见原图 4、13 的 AP 访存路径。CPU 软件与硬件纠错是两个观测层。</text>
+</svg></div>
+<figcaption>依据 US11934265B2 原图 4、6、13，说明书归档段 0010、0024、0025、0029、0030、0048、0049、0050、0051、0075、0076、0077、0084，权利要求 1、6、7、8、11</figcaption>
+</figure>
+<ol aria-label="图中机制"><li><a href="#us11934265b2-fig-1-events">多路错误在缓存控制器汇合</a><span>输入源可为 DRAM 数据、系统缓存数据，以及附带 poison 的 snoop 响应。某些项的物理通道地址只在此能看到。</span></li><li><a href="#us11934265b2-fig-1-ce">CE tracker 按位置汇总次数</a><span>纠错后的数据仍可使用，跟踪条目记录此位置上的可纠错事件次数和近期 client。</span></li><li><a href="#us11934265b2-fig-1-ue">UE logger 记录导致不可纠错事件的来源</a><span>可记录内存、缓存或 snoop 响应。该日志实施例没有 CE 表那样的同地址聚合。</span></li><li><a href="#us11934265b2-fig-1-software">处理器得到阈值或日志信息</a><span>固件或 OS 可读取记录。离线页等处置由软件另行决定。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>系统缓存控制器</dt><dd>原图 6 · 410</dd></div><div><dt>不可纠错日志</dt><dd>原图 6 · 610</dd></div><div><dt>可纠错追踪表</dt><dd>原图 6 · 620</dd></div></dl></details>
+</main></body>
+</html>

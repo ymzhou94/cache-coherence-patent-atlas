@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>短后跳把循环体追加一份，减少同一循环地址的重复取指</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:clamp(1rem,3vw,2.2rem);background:#f5f8f6;color:#2d3142;font:15.5px/1.65 "PingFang SC","Microsoft YaHei",system-ui,-apple-system,sans-serif}
+main{max-width:min(1274px,100%);margin:auto;min-width:0;background:#fff;border:1px solid #d4e0da;border-radius:16px;padding:clamp(1.1rem,3vw,2rem);box-shadow:0 2px 10px rgba(16,45,38,.04)}
+h1{font-size:clamp(1.35rem,2.6vw,1.85rem);line-height:1.3;margin:0 0 .55rem;letter-spacing:-.015em}
+p{margin:.4rem 0 .8rem;color:#3d534b}
+figure{margin:1.15rem 0}
+.diagram-container{overflow-x:auto;width:100%;max-width:100%;min-width:0;border:1px solid #cddbd4;border-radius:10px;background:#f5f5f5}
+svg{display:block;width:100%;min-width:1210px;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;fill:#2d3142}
+.node-name{font-weight:600;font-size:17px}
+.node-detail,.arrow-label,.legend{font:14px "Cascadia Mono",Consolas,"PingFang SC","Microsoft YaHei",monospace;fill:#4f5d75}
+.signal-title{font-weight:600;font-size:16px}
+figcaption{margin-top:.55rem;font-size:.86rem;color:#076047}
+ol{padding:0;margin:1rem 0;list-style:none;display:grid;gap:.55rem}
+li{display:grid;gap:.18rem;padding:.65rem .85rem;border:1px solid #dce7e1;border-radius:10px;background:#f8fbf9}
+li a{color:#076047;font-weight:650;text-underline-offset:.19em;width:fit-content}
+li a:hover{color:#054735}
+li span{font-size:.93rem;color:#2c4039}
+.component-index{margin-top:1rem;border-top:1px solid #dce7e1;padding-top:.8rem}
+.component-index summary{cursor:pointer;font-weight:650;color:#076047;font-size:.9rem}
+.component-count{font-weight:500;color:#4c625a;font-size:.82rem;margin-left:.25rem}
+.component-index dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,13.5rem),1fr));gap:.5rem;margin:.7rem 0 0}
+.component-index dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;padding:.45rem .65rem;border:1px solid #dce7e1;border-radius:8px;background:#f9fbfa}
+.component-index dt{font-weight:600;font-size:.88rem}
+.component-index dd{margin:0;font:600 .8rem "Cascadia Mono",Consolas,monospace;color:#076047;background:#e6f4ee;padding:.1rem .4rem;border-radius:5px;white-space:nowrap}
+svg :target{scroll-margin:1rem}
+svg path:target,svg g:target :is(rect[stroke],path[stroke],line[stroke],polygon[stroke],polyline[stroke],circle[stroke]){stroke:#076047;stroke-width:3.2;filter:drop-shadow(0 0 5px rgba(7,96,71,.45))}
+@media print{body{background:#fff;padding:0}main{border:0;box-shadow:none;padding:0}.diagram-container{overflow-x:visible}svg{min-width:0}}
+</style>
+</head>
+<body><main>
+<h1>短后跳把循环体追加一份，减少同一循环地址的重复取指</h1>
+<p>组头到后跳包含第一次循环。另复制目标到后跳的区间作为第二次。回跳目标必须在本组内，部分从属权项另外要求连续 taken 次数超过门槛。</p>
+<figure>
+<div class="diagram-container" tabindex="0" role="region" aria-label="短后跳把循环体追加一份，减少同一循环地址的重复取指"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1210 491" role="img" aria-labelledby="us12373215b2-fig-4-svg-title us12373215b2-fig-4-svg-desc">
+<title id="us12373215b2-fig-4-svg-title">短后跳把循环体追加一份，减少同一循环地址的重复取指</title>
+<desc id="us12373215b2-fig-4-svg-desc">组头到后跳包含第一次循环。另复制目标到后跳的区间作为第二次。回跳目标必须在本组内，部分从属权项另外要求连续 taken 次数超过门槛。</desc>
+<defs><marker id="us12373215b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12373215b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12373215b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12373215b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12373215b2-fig-4-train" d="M 301 227 L 363 227 Q 371 227 371 219 L 371 134 Q 371 126 379 126 L 441 126" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12373215b2-fig-4-arrow-data)"/>
+<path id="us12373215b2-fig-4-copy" d="M 301 275 L 360 275 Q 368 275 368 283 L 368 346 Q 368 354 376 354 L 441 354" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12373215b2-fig-4-arrow-main)"/>
+<path id="us12373215b2-fig-4-allow" d="M 563 176 L 563 296" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12373215b2-fig-4-arrow-control)"/>
+<path id="us12373215b2-fig-4-emit" d="M 739 354 L 932 354" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12373215b2-fig-4-arrow-main)"/>
+<rect x="358.5" y="98" width="93" height="18" fill="#f5f5f5"/><text x="405" y="112" class="arrow-label" text-anchor="middle">后跳历史</text>
+<rect x="354.5" y="327" width="95" height="18" fill="#f5f5f5"/><text x="402" y="341" class="arrow-label" text-anchor="middle">组内数据</text>
+<rect x="597" y="223" width="158" height="18" fill="#f5f5f5"/><text x="676" y="237" class="arrow-label" text-anchor="middle">达到门槛时允许复制</text>
+<rect x="765" y="327" width="156" height="18" fill="#f5f5f5"/><text x="843" y="341" class="arrow-label" text-anchor="middle">两段按预测路径消费</text>
+<g id="us12373215b2-fig-4-src"><rect x="36" y="200" width="265" height="109" rx="6" fill="#f5f5f5"/><rect x="36" y="200" width="265" height="109" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="168.5" y="226" class="node-name" text-anchor="middle">I-cache 取指组</text><text x="168.5" y="248" class="node-detail" text-anchor="middle">组头—回跳目标—循环体—后跳</text></g>
+<g id="us12373215b2-fig-4-guard"><rect x="441" y="75" width="248" height="101" rx="6" fill="#f5f5f5"/><rect x="441" y="75" width="248" height="101" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="565" y="101" class="node-name" text-anchor="middle">可选后跳训练门槛</text><text x="565" y="123" class="node-detail" text-anchor="middle">连续 taken 计数</text></g>
+<g id="us12373215b2-fig-4-buf"><rect x="441" y="296" width="298" height="112" rx="6" fill="#f5f5f5"/><rect x="441" y="296" width="298" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="590" y="322" class="node-name" text-anchor="middle">指令缓冲两次写入</text><text x="590" y="344" class="node-detail" text-anchor="middle">首次保留组前缀</text><text x="590" y="362" class="node-detail" text-anchor="middle">第二次只复制循环区间</text></g>
+<g id="us12373215b2-fig-4-out"><rect x="932" y="296" width="240" height="112" rx="6" fill="#f5f5f5"/><rect x="932" y="296" width="240" height="112" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1052" y="322" class="node-name" text-anchor="middle">预测消费顺序</text><text x="1052" y="344" class="node-detail" text-anchor="middle">同组供两次循环</text><text x="1052" y="362" class="node-detail" text-anchor="middle">后续继续取指或更正</text></g>
+<text x="28" y="460" class="legend" text-anchor="start">这是指令缓冲的动态复制，与编译器重写循环机器码的 loop unrolling 是不同层次。</text>
+</svg></div>
+<figcaption>依据 US12373215B2 原图 3、8，说明书归档段 0022、0042、0043、0044、0045、0046、0047、0092、0093、0094、0095，权利要求 3、4、11、12、18、19</figcaption>
+</figure>
+<ol aria-label="图中机制"><li><a href="#us12373215b2-fig-4-src">现取指组内已经有回跳的整个循环体</a><span>循环从组中部的目标开始；第一次路径仍保留目标前的组头指令。</span></li><li><a href="#us12373215b2-fig-4-guard">策略可要求连续 taken 达到门槛</a><span>连续多次回跳时节省较容易抵消退出恢复。门槛是部分实施例及从属权的条件。</span></li><li><a href="#us12373215b2-fig-4-buf">缓冲写入两次循环区间</a><span>首段写组头到回跳，第二段只写目标到回跳。前者的组前缀不会在第二段被重复。</span></li><li><a href="#us12373215b2-fig-4-out">预测继续执行第二份，直到遇到需要新取指的边界</a><span>循环退出时多写入的一份可能被清除，成本取决于退出预测及缓冲压力。</span></li></ol>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">4 项</span></summary><dl><div><dt>回跳目标及指令</dt><dd>原图 3：375、370</dd></div><div><dt>首段与第二次循环体</dt><dd>原图 3：365a、365b</dd></div><div><dt>连续 taken 判定</dt><dd>原图 8：820</dd></div><div><dt>写入两个部分</dt><dd>原图 8：830</dd></div></dl></details>
+</main></body>
+</html>

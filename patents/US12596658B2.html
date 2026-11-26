@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>US12596658B2 按命令与数据 beat 组合调度手机 AP 互连 · 芯片架构与功耗专利图谱</title>
+<link rel="stylesheet" href="../assets/site.css?edition=figure-reading-v2">
+<link rel="stylesheet" href="../assets/redesign.css?v=3">
+<script defer src="../assets/redesign-reading.js?v=2"></script>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="topbar"><div class="frame topbar-inner">
+  <a class="brand" href="../index.html"><span class="brand-mark" aria-hidden="true"></span>芯片架构与功耗专利图谱</a>
+  <nav class="top-nav" aria-label="主导航">
+    <a href="../index.html#knowledge">关系图谱</a>
+    <a href="../index.html#catalog">专利目录</a>
+    <a href="../lab.html">原型实验室</a>
+  </nav>
+</div></header>
+<main id="main">
+<div class="article-title redesigned-hero">
+<div class="frame">
+  <nav class="crumb" aria-label="面包屑导航">
+    <a href="../index.html#catalog">专利目录</a>
+    <span aria-hidden="true">/</span>
+    <a class="category category-latency" href="../index.html?topic=latency#catalog">访存延迟与预取</a>
+  </nav>
+  <p class="document-id">
+    <code>US12596658B2</code>
+    <span class="doc-kind">美国授权专利</span>
+    <time datetime="2026-04-07">2026-04-07</time>
+    <a class="hero-source-link" href="https://www.lens.org/lens/patent/US_12596658_B2" target="_blank" rel="noopener">专利全文 ↗</a>
+  </p>
+  <h1>按命令与数据 beat 组合调度手机 AP 互连</h1>
+  <p class="english-title" lang="en">Mechanisms for arbitrating among packets in one or more co-packaged integrated circuits</p>
+  <p class="document-question">一条写消息的数据占两个周期，读请求只用命令线。怎样让两条总线在等待空隙里同时有效工作？</p>
+</div>
+</div>
+<div class="frame article-layout redesigned-layout">
+<div class="article-content redesigned-content">
+  <nav class="article-jump mobile-jump" aria-label="本页导览"><ul><li><a href="#engineering">核心结论</a></li><li><a href="#buses">命令只占一个位置，数据可能还要继续传输</a></li><li><a href="#choice">前轮有无赢家，以及下游能否吸收发包，决定是否切换规则</a></li><li><a href="#qos">组内 QoS 份额由虚拟通道计数管理</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul></nav>
+  <section class="engineering reading-summary" id="engineering" aria-labelledby="engineering-title">
+    <div class="summary-head">
+      <h2 id="engineering-title">核心结论</h2>
+
+    </div>
+    <p class="reading-answer">fabric 把纯命令和带数据包分开仲裁。发现相邻上一轮空闲且下游通路允许时，参考更早的历史再选带数据包，留下下一数据 beat 所在的命令槽供纯命令使用。</p>
+  </section>
+  <div id="mechanism"><section id="buses" class="article-section reading-chapter" aria-labelledby="buses-title"><h2 id="buses-title">命令只占一个位置，数据可能还要继续传输</h2><p>0022–0033 说明手机 SoC 的 CPU 与内存控制器可经各自 fabric 跨 die 访存，0038–0040 明确 application processors 和 L2。0051–0052 的仲裁可在接口、交换机、代理或内存控制器。0170–0175 给出电池移动设备和 LPDDR 实施例。</p><p>图 1 给出 AP 内存请求经过网络接口的一段。纯命令和带数据的包分开排队。上行读请求可能没有数据，写请求可能有写数据。下行读响应通常带数据。内存控制器的 DRAM 命令调度在后面，图中的周期属于 fabric。</p><p>图 2 重建说明书举例。最早的写包已占 t0、t1 的数据槽，t1 没有读请求可补。t2 两类都有效时，LRG 可能先选读，数据线就有空拍。先发第二个写包，t3 可以用命令线发读，同时传剩余写数据。这个例子的最后数据 beat 提前一周期。</p><p>逐周期模型固定三笔到达和两拍写数据。允许两轮历史触发切换时，数据空拍从 1 拍降到 0 拍，读命令从立即发出变成等待 1 拍。将历史窗扩大到四轮后，同一序列不再触发这次切换。模型记录 fabric 发包与数据续拍，量化的是这组输入下的仲裁取舍。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-1" aria-labelledby="fig-1-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 1 · 微架构与信号</p>
+        <h3 id="fig-1-title">AP fabric 接口分别在命令和数据通道排队</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12596658B2/fig-1.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-1-basis" class="exhibit-takeaway">CPU 等代理通过网络接口向内存控制器发包。带数据包的命令和数据进入不同队列，仲裁器可以在数据续拍期间安排另一条命令。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="AP fabric 接口分别在命令和数据通道排队" style="--figure-width:1596px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1596 453" role="img" aria-labelledby="us12596658b2-fig-1-svg-title us12596658b2-fig-1-svg-desc">
+<title id="us12596658b2-fig-1-svg-title">AP fabric 接口分别在命令和数据通道排队</title>
+<desc id="us12596658b2-fig-1-svg-desc">CPU 等代理通过网络接口向内存控制器发包。带数据包的命令和数据进入不同队列，仲裁器可以在数据续拍期间安排另一条命令。</desc>
+<defs><marker id="us12596658b2-fig-1-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12596658b2-fig-1-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12596658b2-fig-1-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12596658b2-fig-1-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12596658b2-fig-1-from-agents" d="M 265 250 L 370 250" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-data)"/>
+<path id="us12596658b2-fig-1-lc" d="M 584 222 L 645 222 Q 653 222 653 214 L 653 153 Q 653 145 661 145 L 718 145" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-main)"/>
+<path id="us12596658b2-fig-1-ld" d="M 584 277 L 645 277 Q 653 277 653 285 L 653 339 Q 653 347 661 347 L 718 347" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-data)"/>
+<path id="us12596658b2-fig-1-rc" d="M 905 145 L 966 145 Q 974 145 974 153 L 974 214 Q 974 222 982 222 L 1041 222" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-main)"/>
+<path id="us12596658b2-fig-1-rd" d="M 905 347 L 966 347 Q 974 347 974 339 L 974 286 Q 974 278 982 278 L 1041 278" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-data)"/>
+<path id="us12596658b2-fig-1-outgoing" d="M 1239 249 L 1368 249" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-1-arrow-main)"/>
+<rect x="274" y="220" width="84" height="18" fill="#f5f5f5"/><text x="316" y="234" class="arrow-label" text-anchor="middle">候选包</text>
+<rect x="594.5" y="115" width="115" height="18" fill="#f5f5f5"/><text x="652" y="129" class="arrow-label" text-anchor="middle">本地命令总线</text>
+<rect x="592.5" y="318" width="115" height="18" fill="#f5f5f5"/><text x="650" y="332" class="arrow-label" text-anchor="middle">本地数据总线</text>
+<rect x="912.5" y="115" width="117" height="18" fill="#f5f5f5"/><text x="971" y="129" class="arrow-label" text-anchor="middle">远端命令总线</text>
+<rect x="911.5" y="319" width="117" height="18" fill="#f5f5f5"/><text x="970" y="333" class="arrow-label" text-anchor="middle">远端数据总线</text>
+<rect x="1252" y="219" width="106" height="18" fill="#f5f5f5"/><text x="1305" y="233" class="arrow-label" text-anchor="middle">发送对应包</text>
+<g id="us12596658b2-fig-1-sources"><rect x="34" y="201" width="231" height="96" rx="6" fill="#f5f5f5"/><rect x="34" y="201" width="231" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="149.5" y="227" class="node-name" text-anchor="middle">AP CPU complex 等代理</text><text x="149.5" y="249" class="node-detail" text-anchor="middle">产生内存事务包</text></g>
+<g id="us12596658b2-fig-1-arb"><rect x="370" y="201" width="214" height="96" rx="6" fill="#f5f5f5"/><rect x="370" y="201" width="214" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="477" y="227" class="node-name" text-anchor="middle">网络接口仲裁器</text><text x="477" y="249" class="node-detail" text-anchor="middle">协调候选包与总线占用</text></g>
+<g id="us12596658b2-fig-1-cq"><rect x="718" y="100" width="187" height="88" rx="6" fill="#f5f5f5"/><rect x="718" y="100" width="187" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="126" class="node-name" text-anchor="middle">命令队列</text><text x="811.5" y="148" class="node-detail" text-anchor="middle">纯命令与数据包头</text></g>
+<g id="us12596658b2-fig-1-dq"><rect x="718" y="303" width="187" height="88" rx="6" fill="#f5f5f5"/><rect x="718" y="303" width="187" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="811.5" y="329" class="node-name" text-anchor="middle">数据队列</text><text x="811.5" y="351" class="node-detail" text-anchor="middle">数据包的写入或返回值</text></g>
+<g id="us12596658b2-fig-1-cd"><rect x="1041" y="201" width="198" height="96" rx="6" fill="#f5f5f5"/><rect x="1041" y="201" width="198" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1140" y="227" class="node-name" text-anchor="middle">fabric 交换机</text><text x="1140" y="249" class="node-detail" text-anchor="middle">可接到跨 die 链路</text></g>
+<g id="us12596658b2-fig-1-mc"><rect x="1368" y="201" width="195" height="96" rx="6" fill="#f5f5f5"/><rect x="1368" y="201" width="195" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1465.5" y="227" class="node-name" text-anchor="middle">内存控制器</text><text x="1465.5" y="249" class="node-detail" text-anchor="middle">执行目标内存访问</text></g>
+<text x="30" y="422" class="legend" text-anchor="start">网络接口可用于 die 内或延伸到跨 die 网络。命令和数据固定相对位置适用于耦合总线实施例。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12596658b2-fig-1-sources" data-reading-target="us12596658b2-fig-1-sources">CPU 和 GPU 的事务拆成多包</a><p>请求、响应和一致性消息分别排队。读请求通常是纯命令，下行的读返回可携带命令和数据。</p></li><li><a href="#us12596658b2-fig-1-arb" data-reading-target="us12596658b2-fig-1-arb">仲裁依据两种包在各自总线上的占用</a><p>在两条总线耦合的例子里，数据相对于命令有固定的周期位置，带数据包需预留后续数据 beat。</p></li><li><a href="#us12596658b2-fig-1-cd" data-reading-target="us12596658b2-fig-1-cd">本地总线和远端总线由队列连接</a><p>网络接口一侧和交换机一侧可处于不同频率。队列可保留顺序、吸收暂时的读出速度差。</p></li></ul>
+  <p class="figure-evidence">原图 1、2、3、4；说明书归档段 0007、0010、0022、0023、0028、0029、0033、0038、0039、0045、0047、0050、0051、0052、0053、0054、0055、0060、0061、0062、0063、0064、0065、0066、0067、0068、0069、0071；权利要求 1、6、7、8、9、10、11、17、19、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>CPU complex 和封装内互连</dt><dd>原图 1 · 134、140</dd></div><div><dt>网络接口与交换机</dt><dd>原图 2 · 230、220</dd></div><div><dt>本地及远端命令、数据总线</dt><dd>原图 3 · 334、344、336、346</dd></div></dl></details>
+</figure><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-2" aria-labelledby="fig-2-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 2 · 同轴时序</p>
+        <h3 id="fig-2-title">在第二个数据 beat 旁边发一个独立命令</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12596658B2/fig-2.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-2-basis" class="exhibit-takeaway">输入相同。首个写请求已经发送，下一周期暂无读命令。t2 读请求与第二个写请求同时就绪，选择先写允许 t3 填入读命令。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="在第二个数据 beat 旁边发一个独立命令" style="--figure-width:900px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 555" role="img" aria-labelledby="us12596658b2-fig-2-svg-title us12596658b2-fig-2-svg-desc">
+<title id="us12596658b2-fig-2-svg-title">在第二个数据 beat 旁边发一个独立命令</title>
+<desc id="us12596658b2-fig-2-svg-desc">输入相同。首个写请求已经发送，下一周期暂无读命令。t2 读请求与第二个写请求同时就绪，选择先写允许 t3 填入读命令。</desc>
+<defs><marker id="us12596658b2-fig-2-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12596658b2-fig-2-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12596658b2-fig-2-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12596658b2-fig-2-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<g id="us12596658b2-fig-2-axis">
+<line x1="192" y1="76" x2="192" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="192" y="64" class="arrow-label" text-anchor="middle">t0</text>
+<line x1="321.6" y1="76" x2="321.6" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="321.6" y="64" class="arrow-label" text-anchor="middle">t1</text>
+<line x1="451.2" y1="76" x2="451.2" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="451.2" y="64" class="arrow-label" text-anchor="middle">t2</text>
+<line x1="580.8" y1="76" x2="580.8" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="580.8" y="64" class="arrow-label" text-anchor="middle">t3</text>
+<line x1="710.4" y1="76" x2="710.4" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="710.4" y="64" class="arrow-label" text-anchor="middle">t4</text>
+<line x1="840" y1="76" x2="840" y2="488" stroke="#4f5d75" opacity=".27"/>
+<text x="840" y="64" class="arrow-label" text-anchor="middle">结束</text>
+<text x="24" y="64" class="arrow-label" text-anchor="start">时间（fabric 周期）</text>
+</g>
+<g id="us12596658b2-fig-2-base-cmd"><text x="24" y="136" class="node-name" text-anchor="start">LRG 命令</text>
+<rect x="192" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="136" class="arrow-label" text-anchor="middle">写 A</text>
+<rect x="321.6" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="136" class="arrow-label" text-anchor="middle">空</text>
+<rect x="451.2" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="136" class="arrow-label" text-anchor="middle">读</text>
+<rect x="580.8" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="136" class="arrow-label" text-anchor="middle">写 B</text>
+<rect x="710.4" y="112" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="136" class="arrow-label" text-anchor="middle">空</text>
+<circle cx="840" cy="131" r="5" fill="#4f5d75"/>
+<text x="840" y="171" class="arrow-label" text-anchor="end">五周期窗口</text></g>
+<g id="us12596658b2-fig-2-base-data"><text x="24" y="228" class="node-name" text-anchor="start">LRG 数据</text>
+<rect x="192" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="228" class="arrow-label" text-anchor="middle">写 A · 首 beat</text>
+<rect x="321.6" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="228" class="arrow-label" text-anchor="middle">写 A · 续 beat</text>
+<rect x="451.2" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="228" class="arrow-label" text-anchor="middle">空</text>
+<rect x="580.8" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="228" class="arrow-label" text-anchor="middle">写 B · 首 beat</text>
+<rect x="710.4" y="204" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="775.2" y="228" class="arrow-label" text-anchor="middle">写 B · 续 beat</text>
+<circle cx="840" cy="223" r="5" fill="#4f5d75"/>
+<text x="840" y="263" class="arrow-label" text-anchor="end">数据总线收尾</text></g>
+<g id="us12596658b2-fig-2-pack-cmd"><text x="24" y="320" class="node-name" text-anchor="start">切换策略 · 命令</text>
+<rect x="192" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="320" class="arrow-label" text-anchor="middle">写 A</text>
+<rect x="321.6" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="320" class="arrow-label" text-anchor="middle">空</text>
+<rect x="451.2" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="320" class="arrow-label" text-anchor="middle">写 B</text>
+<rect x="580.8" y="296" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="320" class="arrow-label" text-anchor="middle">读</text>
+<circle cx="710.4" cy="315" r="5" fill="#4f5d75"/>
+<text x="710.4" y="355" class="arrow-label" text-anchor="end">四周期窗口</text></g>
+<g id="us12596658b2-fig-2-pack-data"><text x="24" y="412" class="node-name" text-anchor="start">切换策略 · 数据</text>
+<rect x="192" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="256.8" y="412" class="arrow-label" text-anchor="middle">写 A · 首 beat</text>
+<rect x="321.6" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="386.4" y="412" class="arrow-label" text-anchor="middle">写 A · 续 beat</text>
+<rect x="451.2" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="516" y="412" class="arrow-label" text-anchor="middle">写 B · 首 beat</text>
+<rect x="580.8" y="388" width="129.6" height="38" rx="2" fill="#ececec" stroke="#4f5d75"/>
+<text x="645.6" y="412" class="arrow-label" text-anchor="middle">写 B · 续 beat</text>
+<circle cx="710.4" cy="407" r="5" fill="#bf4520"/>
+<text x="710.4" y="447" class="arrow-label" text-anchor="end">数据总线收尾</text></g>
+<text x="24" y="512" class="legend" text-anchor="start">原文时序例假设写数据占 2 beat、读命令占 1 beat，不计读返回和 DRAM 服务时间。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12596658b2-fig-2-base-data" data-reading-target="us12596658b2-fig-2-base-data">LRG 会先选更久未获服务的纯命令</a><p>在示例里 t2 发读，数据 bus 空一个周期。第二个写包自 t3 开始占两个数据 beat。</p></li><li><a href="#us12596658b2-fig-2-pack-cmd" data-reading-target="us12596658b2-fig-2-pack-cmd">t2 可再次安排带数据包</a><p>若历史窗内第一笔仍可见、前一拍无获胜者且下游有余量，非 LRG 可让第二笔写请求先进入。</p></li><li><a href="#us12596658b2-fig-2-pack-data" data-reading-target="us12596658b2-fig-2-pack-data">t3 的续拍与独立读命令可以并行</a><p>读请求没有随附数据。相同的待发包从 t0 到最后数据 beat，占用窗口从五个周期缩至四个周期。</p></li></ul>
+  <p class="figure-evidence">原图 3、6、12；说明书归档段 0009、0010、0011、0012、0013、0020、0021、0066、0067、0068、0069、0086、0088、0090、0144、0145、0146、0147；权利要求 3、8、9、17、18、20</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>命令与数据并行传输</dt><dd>原图 3 · 334、344</dd></div><div><dt>前轮无赢家且第二笔仍可打包</dt><dd>原图 6 · 固定历史窗 600</dd></div><div><dt>维持带数据包的最小发送间隔</dt><dd>原图 12 · 1220</dd></div></dl></details>
+</figure></section><section id="choice" class="article-section reading-chapter" aria-labelledby="choice-title"><h2 id="choice-title">前轮有无赢家，以及下游能否吸收发包，决定是否切换规则</h2><p>图 3 按权利要求 2 和说明书原图 6 标出切换条件。紧邻前轮有赢家时，可沿用 LRG 选择另一类别。若前轮空闲，只有频差未达阈值且最旧的固定窗轮次已有赢家，才可用 non-LRG。下游缓冲 token 可以作为判断不同速率带来回压的一个信号。</p><p>说明书 0070 对较慢远端的描述举过非 LRG 的相反例子。图 5、6、0083–0092 以及权利要求 2 给出了更具体的有 token 与无 token 规则。本图按这些具体证据。最早轮次为纯命令时，下行还可能使用不同选择。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-3" aria-labelledby="fig-3-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 3 · 微架构与信号</p>
+        <h3 id="fig-3-title">上一轮结果和下游缓冲 token 决定是否切换仲裁</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12596658B2/fig-3.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-3-basis" class="exhibit-takeaway">两种包都可选时才涉及策略选择。前一轮有赢家沿用 LRG。前一轮空闲时，可根据频率差或 token 等信号和固定历史窗转用另一策略。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="上一轮结果和下游缓冲 token 决定是否切换仲裁" style="--figure-width:1317px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1317 454" role="img" aria-labelledby="us12596658b2-fig-3-svg-title us12596658b2-fig-3-svg-desc">
+<title id="us12596658b2-fig-3-svg-title">上一轮结果和下游缓冲 token 决定是否切换仲裁</title>
+<desc id="us12596658b2-fig-3-svg-desc">两种包都可选时才涉及策略选择。前一轮有赢家沿用 LRG。前一轮空闲时，可根据频率差或 token 等信号和固定历史窗转用另一策略。</desc>
+<defs><marker id="us12596658b2-fig-3-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12596658b2-fig-3-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12596658b2-fig-3-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12596658b2-fig-3-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12596658b2-fig-3-recent-check" d="M 241 273 L 350 273" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12596658b2-fig-3-arrow-control)"/>
+<path id="us12596658b2-fig-3-yes-recent" d="M 470 226 L 470 137 Q 470 129 478 129 L 1060 129" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-3-arrow-main)"/>
+<path id="us12596658b2-fig-3-no-recent" d="M 582 273 L 697 273" fill="none" stroke="#2e5aa8" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12596658b2-fig-3-arrow-control)"/>
+<path id="us12596658b2-fig-3-block-lrg" d="M 936 251 L 987 251 Q 995 251 995 243 L 995 157 Q 995 149 1003 149 L 1060 149" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-3-arrow-data)"/>
+<path id="us12596658b2-fig-3-pack-allowed" d="M 936 293 L 987 293 Q 995 293 995 301 L 995 333 Q 995 341 1003 341 L 1060 341" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-3-arrow-main)"/>
+<rect x="245.5" y="244" width="97" height="18" fill="#f5f5f5"/><text x="294" y="258" class="arrow-label" text-anchor="middle">检查相邻轮</text>
+<rect x="707.5" y="99" width="75" height="18" fill="#f5f5f5"/><text x="745" y="113" class="arrow-label" text-anchor="middle">有赢家</text>
+<rect x="591.5" y="243" width="93" height="18" fill="#f5f5f5"/><text x="638" y="257" class="arrow-label" text-anchor="middle">前轮空闲</text>
+<rect x="959" y="220" width="70" height="18" fill="#f5f5f5"/><text x="994" y="234" class="arrow-label" text-anchor="middle">未通过</text>
+<rect x="961" y="313" width="68" height="18" fill="#f5f5f5"/><text x="995" y="327" class="arrow-label" text-anchor="middle">通过</text>
+<g id="us12596658b2-fig-3-eligible"><rect x="33" y="226" width="208" height="95" rx="6" fill="#f5f5f5"/><rect x="33" y="226" width="208" height="95" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="137" y="252" class="node-name" text-anchor="middle">两类包均已就绪</text><text x="137" y="274" class="node-detail" text-anchor="middle">各取一个候选</text></g>
+<g id="us12596658b2-fig-3-recent"><rect x="350" y="226" width="232" height="95" rx="6" fill="#f5f5f5"/><rect x="350" y="226" width="232" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="466" y="252" class="node-name" text-anchor="middle">紧邻上轮已有赢家？</text><text x="466" y="274" class="node-detail" text-anchor="middle">读取近期结果</text></g>
+<g id="us12596658b2-fig-3-gate"><rect x="697" y="226" width="239" height="95" rx="6" fill="#f5f5f5"/><rect x="697" y="226" width="239" height="95" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="816.5" y="252" class="node-name" text-anchor="middle">是否允许切换？</text><text x="816.5" y="274" class="node-detail" text-anchor="middle">频差阈值或 token</text><text x="816.5" y="292" class="node-detail" text-anchor="middle">且固定窗口的最老轮有赢家</text></g>
+<g id="us12596658b2-fig-3-lrg"><rect x="1060" y="84" width="224" height="92" rx="6" fill="#f5f5f5"/><rect x="1060" y="84" width="224" height="92" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="1172" y="110" class="node-name" text-anchor="middle">LRG</text><text x="1172" y="132" class="node-detail" text-anchor="middle">优先较久未获发放的类型</text></g>
+<g id="us12596658b2-fig-3-fill"><rect x="1060" y="295" width="224" height="92" rx="6" fill="#f5f5f5"/><rect x="1060" y="295" width="224" height="92" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="1172" y="321" class="node-name" text-anchor="middle">可用 non-LRG</text><text x="1172" y="343" class="node-detail" text-anchor="middle">用历史取得打包机会</text></g>
+<text x="30" y="423" class="legend" text-anchor="start">图示按原图 5–6 及权利要求 2。原文用 token 描述的是接收侧空位，设计可另行直接检测频率。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12596658b2-fig-3-recent" data-reading-target="us12596658b2-fig-3-recent">看紧邻的前一仲裁轮</a><p>两类均可选且前一轮已有赢家时按 LRG。仅一种包存在时直接选择可发包。</p></li><li><a href="#us12596658b2-fig-3-gate" data-reading-target="us12596658b2-fig-3-gate">前一轮空闲时检查窗口与频率</a><p>图 5、6 把接收侧 buffer token 用作表明下游消化能力的代理信号，缺少 token 时用 LRG。权利要求 2 以总线频差阈值表达。</p></li><li><a href="#us12596658b2-fig-3-fill" data-reading-target="us12596658b2-fig-3-fill">非 LRG 可以重复选择固定窗内最老赢家的包类型</a><p>上行例选择 command-data 可延续数据占用。说明书还列出下行或整个历史窗口为空时的变体。</p></li></ul>
+  <p class="figure-evidence">原图 5、6、10、11；说明书归档段 0015、0016、0017、0077、0078、0079、0080、0081、0082、0083、0084、0085、0086、0087、0088、0089、0090、0091、0092、0093、0094、0128、0130、0131、0132、0135、0136、0137、0138、0139、0140、0141；权利要求 1、2、3、4、5、12、13、14、15、16、18</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>策略与仲裁历史</dt><dd>原图 5 · 512、514、520</dd></div><div><dt>缓冲区 token</dt><dd>原图 5 · 530</dd></div><div><dt>两周期固定窗的示例</dt><dd>原图 6 · 600、610A–610C</dd></div></dl></details>
+</figure></section><section id="qos" class="article-section reading-chapter" aria-labelledby="qos-title"><h2 id="qos-title">组内 QoS 份额由虚拟通道计数管理</h2><p>图 4 把 pure command 和 command-data 分成两个仲裁组。每组可以按 VC 计数选择候选，有多个 subchannel 时还可先做组内 LRG。权重作为这次获选后计数递增量，较小权重可让较严格时延的 VC 更频繁回到低计数。</p><p>测试应同时看命令占用、data beat 空槽、读请求等待和相同配置下各 VC 的服务份额。遇到下游变慢时还要量化缓冲水位和 token 归还，判断换策略是否把空拍变成回压。</p><figure class="exhibit redesigned-exhibit diagram-exhibit" id="fig-4" aria-labelledby="fig-4-title">
+  <figcaption class="exhibit-head">
+    <div class="exhibit-title">
+      <div>
+        <p class="eyebrow">图 4 · 微架构与信号</p>
+        <h3 id="fig-4-title">两套低级仲裁各自维护虚拟通道权重</h3>
+      </div>
+<a class="paper-open-btn" href="../diagrams/US12596658B2/fig-4.html" target="_blank" rel="noopener">独立图稿 ↗</a>
+    </div>
+    <p id="fig-4-basis" class="exhibit-takeaway">纯命令和带数据候选分别从不同 VC 选出，再由上级决定包类型。下级可用计数器维持 QoS 类之间的发送份额。</p>
+  </figcaption>
+  <p class="diagram-selected" hidden><span class="diagram-selection" role="status"></span><button type="button" class="diagram-clear">清除高亮</button></p>
+  <div class="diagram-container" tabindex="0" role="region" aria-label="两套低级仲裁各自维护虚拟通道权重" style="--figure-width:1045px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1045 650" role="img" aria-labelledby="us12596658b2-fig-4-svg-title us12596658b2-fig-4-svg-desc">
+<title id="us12596658b2-fig-4-svg-title">两套低级仲裁各自维护虚拟通道权重</title>
+<desc id="us12596658b2-fig-4-svg-desc">纯命令和带数据候选分别从不同 VC 选出，再由上级决定包类型。下级可用计数器维持 QoS 类之间的发送份额。</desc>
+<defs><marker id="us12596658b2-fig-4-arrow-main" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#bf4520"/></marker><marker id="us12596658b2-fig-4-arrow-data" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker><marker id="us12596658b2-fig-4-arrow-control" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#2e5aa8"/></marker><marker id="us12596658b2-fig-4-arrow-return" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#4f5d75"/></marker></defs>
+<rect width="100%" height="100%" fill="#f5f5f5"/>
+<path id="us12596658b2-fig-4-cand-c" d="M 253 141 L 370 141" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-4-arrow-data)"/>
+<path id="us12596658b2-fig-4-cand-d" d="M 253 362 L 370 362" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-4-arrow-data)"/>
+<path id="us12596658b2-fig-4-cout" d="M 604 141 L 674 141 Q 682 141 682 149 L 682 213 Q 682 221 690 221 L 755 221" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-4-arrow-main)"/>
+<path id="us12596658b2-fig-4-dout" d="M 604 362 L 674 362 Q 682 362 682 354 L 682 281 Q 682 273 690 273 L 755 273" fill="none" stroke="#bf4520" stroke-width="1.6" marker-end="url(#us12596658b2-fig-4-arrow-main)"/>
+<path id="us12596658b2-fig-4-count" d="M 458 410 L 458 502" fill="none" stroke="#4f5d75" stroke-width="1.6" marker-end="url(#us12596658b2-fig-4-arrow-data)"/>
+<path id="us12596658b2-fig-4-rcounter" d="M 520 502 L 520 410" fill="none" stroke="#4f5d75" stroke-width="1.6" stroke-dasharray="5,4" marker-end="url(#us12596658b2-fig-4-arrow-return)"/>
+<rect x="262" y="111" width="96" height="18" fill="#f5f5f5"/><text x="310" y="125" class="arrow-label" text-anchor="middle">按 VC 候选</text>
+<rect x="262" y="332" width="96" height="18" fill="#f5f5f5"/><text x="310" y="346" class="arrow-label" text-anchor="middle">按 VC 候选</text>
+<rect x="626" y="111" width="106" height="18" fill="#f5f5f5"/><text x="679" y="125" class="arrow-label" text-anchor="middle">纯命令候选</text>
+<rect x="627.5" y="333" width="105" height="18" fill="#f5f5f5"/><text x="680" y="347" class="arrow-label" text-anchor="middle">带数据候选</text>
+<rect x="371" y="437" width="74" height="18" fill="#f5f5f5"/><text x="408" y="451" class="arrow-label" text-anchor="middle">计数结果</text>
+<rect x="525" y="450" width="52" height="18" fill="#f5f5f5"/><text x="551" y="464" class="arrow-label" text-anchor="middle">复位</text>
+<g id="us12596658b2-fig-4-cmd-vc"><rect x="31" y="94" width="222" height="96" rx="6" fill="#f5f5f5"/><rect x="31" y="94" width="222" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="142" y="120" class="node-name" text-anchor="middle">纯命令的虚拟通道</text><text x="142" y="142" class="node-detail" text-anchor="middle">bulk／low latency</text><text x="142" y="160" class="node-detail" text-anchor="middle">real-time</text></g>
+<g id="us12596658b2-fig-4-data-vc"><rect x="31" y="314" width="222" height="96" rx="6" fill="#f5f5f5"/><rect x="31" y="314" width="222" height="96" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="142" y="340" class="node-name" text-anchor="middle">带数据的虚拟通道</text><text x="142" y="362" class="node-detail" text-anchor="middle">各路可设独立权重</text></g>
+<g id="us12596658b2-fig-4-weighted-c"><rect x="370" y="94" width="234" height="96" rx="6" fill="#f5f5f5"/><rect x="370" y="94" width="234" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="487" y="120" class="node-name" text-anchor="middle">命令组的加权仲裁</text><text x="487" y="142" class="node-detail" text-anchor="middle">读取并更新本组计数</text></g>
+<g id="us12596658b2-fig-4-weighted-d"><rect x="370" y="314" width="234" height="96" rx="6" fill="#f5f5f5"/><rect x="370" y="314" width="234" height="96" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="487" y="340" class="node-name" text-anchor="middle">带数据组的加权仲裁</text><text x="487" y="362" class="node-detail" text-anchor="middle">读取并更新本组计数</text></g>
+<g id="us12596658b2-fig-4-reset"><rect x="370" y="502" width="234" height="88" rx="6" fill="#f5f5f5"/><rect x="370" y="502" width="234" height="88" rx="6" fill="#f5f5f5" stroke="#4f5d75" stroke-width="1.2"/><text x="487" y="528" class="node-name" text-anchor="middle">计数饱和检查</text><text x="487" y="550" class="node-detail" text-anchor="middle">示例：阈值后复位组内计数</text></g>
+<g id="us12596658b2-fig-4-selector"><rect x="755" y="198" width="257" height="100" rx="6" fill="#f5f5f5"/><rect x="755" y="198" width="257" height="100" rx="6" fill="rgba(191,69,32,.08)" stroke="#bf4520" stroke-width="1.2"/><text x="883.5" y="224" class="node-name" text-anchor="middle">跨类型的上级仲裁</text><text x="883.5" y="246" class="node-detail" text-anchor="middle">结合总线可用性与历史</text></g>
+<text x="30" y="619" class="legend" text-anchor="start">饱和检查示意带数据组。纯命令组也可独立选择计数和复位规则。</text>
+</svg></div>
+  <ul class="figure-reading" aria-label="读图要点"><li><a href="#us12596658b2-fig-4-weighted-c" data-reading-target="us12596658b2-fig-4-weighted-c">组内比较有候选包的 VC 计数</a><p>各 VC 可用 subchannel 仲裁。加权组内选较低计数者，再按该 VC 的权重增加其计数。</p></li><li><a href="#us12596658b2-fig-4-weighted-d" data-reading-target="us12596658b2-fig-4-weighted-d">权重小可获得更高的重复获选频率</a><p>由于每次获选时增加得更少，real-time 的计数可连续维持在较低水平。平手的处理和饱和阈值按实施例而定。</p></li><li><a href="#us12596658b2-fig-4-reset" data-reading-target="us12596658b2-fig-4-reset">计数到门槛时可复位本组状态</a><p>限制历史差值，减小某个 VC 长时间独占链路之后重新有竞争时的阻塞。该层与上层填充数据 beat 的规则分开。</p></li></ul>
+  <p class="figure-evidence">原图 4、7、8、9；说明书归档段 0018、0019、0049、0072、0073、0074、0075、0076、0094、0095、0096、0097、0098、0099、0100、0101、0102、0103、0104、0105、0106、0107、0108、0110、0111、0112、0113、0114、0115、0116、0117、0118、0119、0120、0121、0122、0123、0150、0151、0152、0153、0154、0155、0156、0157；权利要求 6、7、19</p>
+<details class="component-index"><summary>原图标号对照 <span class="component-count">3 项</span></summary><dl><div><dt>两组低级仲裁</dt><dd>原图 4 · 430A、430B</dd></div><div><dt>虚拟通道分组</dt><dd>原图 7 · 710A–710F、730A、730B</dd></div><div><dt>权重与计数、复位</dt><dd>原图 8 · 810、820、830</dd></div></dl></details>
+</figure></section></div>
+  <section id="claims" class="claim-section" aria-labelledby="claims-title">
+    <h2 id="claims-title">权利要求与出处</h2>
+    <p class="subdued">独立权利要求为第 1、12、17 项；全文核对覆盖 227 个说明书归档段与 20 项权利要求。</p>
+    <section class="claim-features" id="claim-features" aria-labelledby="claim-features-title">
+  <h3 id="claim-features-title">独立权利要求</h3>
+  <section class="independent-claim" id="independent-1" aria-labelledby="independent-1-title">
+  <h4 id="independent-1-title">权利要求 1</h4>
+  <p>封装内 AP agent、内存控制器与 fabric 接口队列。两种包同轮到齐且前一轮无赢家时，仲裁器按总线频率等条件在至少两种策略间选择。</p>
+  <table class="comparison-table" aria-labelledby="independent-1-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=a%20command-data%20packet%20includes%20a%20command%20and%20data%2C%20and%20a%20command%20packet%20includes%20a%20command%20without">F1</a></th><td>按是否包含数据将包分成两类。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=Individual%20communications%20that%20make%20up%20a%20given%20transaction%20are%20referred%20to%20as%20%E2%80%9Cpackets%E2%80%9D%E2%80%94the%20given%20transaction%20%28e.g.%2C">说明书 0007</a> · 原图 3</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=select%20a%20winning%20packet%20from%20one%20or%20more%20packets%20during%20a%20given%20arbitration%20cycle%20based%20on">F2</a></th><td>输出选择以近期历史为输入。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=After%20selecting%20a%20winning%20packet%20210%20or%20detecting%20that%20there%20is%20no%20winning%20packet%20210%20%28e.g.%2C">说明书 0081</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=based%20on%20frequencies%20of%20a%20plurality%20of%20buses%20of%20the%20communication%20fabric%2C%20one%20of%20at%20least">F3</a></th><td>可能依总线频率选用不同仲裁策略。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=When%20arbitration%20circuit%20150%20is%20operating%20at%20a%20higher%20frequency%2C%20using%20non-LRG%20arbitration%20scheme%20514%20may">说明书 0084</a> · 原图 5</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=when%20an%20immediately%20preceding%20attribution%20cycle%20to%20the%20particular%20arbitration%20cycle%20has%20no%20winning%20packet">F4</a></th><td>保留授权原文的 attribution 拼写，机制指紧邻前一仲裁轮没有赢家。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=But%20when%20the%20immediately%20preceding%20arbitration%20cycle%20610%20B%20does%20not%20have%20a%20winning%20packet%2C%20higher-level">说明书 0089</a> · 原图 6</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-12" aria-labelledby="independent-12-title">
+  <h4 id="independent-12-title">权利要求 12</h4>
+  <p>方法分两个仲裁轮。在前一轮无赢家时选 non-LRG，另一个前一轮有赢家时选 LRG。</p>
+  <table class="comparison-table" aria-labelledby="independent-12-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=based%20on%20an%20immediately%20preceding%20arbitration%20cycle%20to%20the%20first%20arbitration%20cycle%20having%20no%20winning%20packet">F5</a></th><td>第一个仲裁轮前的紧邻周期没有发送获胜包。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=In%20step%201120%2C%20based%20on%20an%20immediately%20preceding%20arbitration%20cycle%20having%20no%20winning%20packet%2C%20the%20arbitration">说明书 0136</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=selecting%2C%20in%20accordance%20with%20a%20non-least-recently-granted%20%28non-LRG%29%20arbitration%20scheme">F6</a></th><td>第一轮使用非 LRG 策略选择。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=In%20step%201120%2C%20based%20on%20an%20immediately%20preceding%20arbitration%20cycle%20having%20no%20winning%20packet%2C%20the%20arbitration">说明书 0136</a> · 原图 11</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=based%20on%20an%20immediately%20preceding%20arbitration%20cycle%20to%20the%20second%20arbitration%20cycle%20having%20a%20winning%20packet">F7</a></th><td>后续用于 LRG 的仲裁轮具有紧邻历史赢家。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=In%20step%201150%2C%20based%20on%20an%20immediately%20preceding%20arbitration%20cycle%20to%20the%20second%20arbitration%20cycle%20having">说明书 0139</a> · 原图 11</td></tr></tbody>
+  </table>
+</section><section class="independent-claim" id="independent-17" aria-labelledby="independent-17-title">
+  <h4 id="independent-17-title">权利要求 17</h4>
+  <p>片上 agent 和 fabric 对命令包分组。数据分多个 beat 发送形成最小间隔；能再选带数据包以维持间隔，即便最近一次胜出也是此类。</p>
+  <table class="comparison-table" aria-labelledby="independent-17-title">
+    <thead><tr><th scope="col">权项原文</th><th scope="col">技术限定</th><th scope="col">说明书与附图</th></tr></thead>
+    <tbody><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=transmit%20data%20of%20a%20given%20command-data%20packet%20as%20a%20plurality%20of%20beats">F8</a></th><td>带数据包占用多个 data beat。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=The%20system%20may%20include%20a%20first%20lower-level%20arbitration%20circuit%20configured%20to%20arbitrate%20among%20a%20first%20set">说明书 0144</a> · 原图 12</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=the%20plurality%20of%20beats%20defines%20a%20minimum%20cadence">F9</a></th><td>多个 beat 界定最小发包间隔。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=The%20system%20may%20include%20a%20first%20lower-level%20arbitration%20circuit%20configured%20to%20arbitrate%20among%20a%20first%20set">说明书 0144</a> · 原图 12</td></tr><tr><th scope="row"><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=a%20command-data%20packet%20to%20maintain%20the%20minimum%20cadence%20even%20in%20the%20event%20that%20the%20most%20recently">F10</a></th><td>保持发送间隔可以连续选择同类带数据包。</td><td><a href="https://www.lens.org/lens/patent/US_12596658_B2#:~:text=In%20step%201220%2C%20the%20system%20selects%2C%20as%20a%20winning%20packet%20for%20a%20particular%20arbitration%20cycle%2C%20the">说明书 0145</a> · 原图 12</td></tr></tbody>
+  </table>
+</section>
+</section><details class="claim-dependency">
+  <summary id="claim-dependency-title">权项依赖与新增限定</summary>
+  <table class="comparison-table" aria-labelledby="claim-dependency-title">
+    <thead><tr><th scope="col">权项</th><th scope="col">直接引用</th><th scope="col">本项新增限定</th></tr></thead>
+    <tbody><tr id="claim-1"><th scope="row">1</th><td>独立项</td><td>封装内 AP agent、内存控制器与 fabric 接口队列。两种包同轮到齐且前一轮无赢家时，仲裁器按总线频率等条件在至少两种策略间选择。</td></tr><tr id="claim-2"><th scope="row">2</th><td><a href="#claim-1">1</a></td><td>细化为 LRG 与 non-LRG。前轮空闲且频差达到阈值用 LRG；频差未达并且固定窗内的最老轮有赢家时使用 non-LRG。</td></tr><tr id="claim-3"><th scope="row">3</th><td><a href="#claim-2">2</a></td><td>采用 non-LRG 时，若历史窗最老轮赢家是 command-data，可再选 command-data。</td></tr><tr id="claim-4"><th scope="row">4</th><td><a href="#claim-1">1</a></td><td>固定历史窗内无赢家时用 LRG。</td></tr><tr id="claim-5"><th scope="row">5</th><td><a href="#claim-1">1</a></td><td>紧邻前一仲裁轮已有赢家时用 LRG。</td></tr><tr id="claim-6"><th scope="row">6</th><td><a href="#claim-1">1</a></td><td>两组队列各绑定一组虚拟通道，分别存带数据与纯命令包。</td></tr><tr id="claim-7"><th scope="row">7</th><td><a href="#claim-6">6</a></td><td>两个低级仲裁器各至多送上一个带数据或纯命令候选。</td></tr><tr id="claim-8"><th scope="row">8</th><td><a href="#claim-1">1</a></td><td>带数据包的命令与首段数据同轮或采用固定间隔发送。</td></tr><tr id="claim-9"><th scope="row">9</th><td><a href="#claim-8">8</a></td><td>后续轮发送另一条纯命令，以及既有带数据包的下一段数据，允许固定周期偏移。</td></tr><tr id="claim-10"><th scope="row">10</th><td><a href="#claim-1">1</a></td><td>上行的纯命令可对应读请求，带数据可对应写请求。下行分别对应写响应和读响应。</td></tr><tr id="claim-11"><th scope="row">11</th><td><a href="#claim-1">1</a></td><td>代理包含 CPU 处理器电路及 GPU 处理器电路。</td></tr><tr id="claim-12"><th scope="row">12</th><td>独立项</td><td>方法分两个仲裁轮。在前一轮无赢家时选 non-LRG，另一个前一轮有赢家时选 LRG。</td></tr><tr id="claim-13"><th scope="row">13</th><td><a href="#claim-12">12</a></td><td>non-LRG 在最老一轮赢家是纯命令时再选纯命令。</td></tr><tr id="claim-14"><th scope="row">14</th><td><a href="#claim-12">12</a></td><td>方法把前轮无赢家、频差未达门槛和最老轮已有赢家并列为 non-LRG 条件。</td></tr><tr id="claim-15"><th scope="row">15</th><td><a href="#claim-12">12</a></td><td>另一仲裁轮两类包同在但前轮无赢家，且频差已达门槛时使用 LRG。</td></tr><tr id="claim-16"><th scope="row">16</th><td><a href="#claim-12">12</a></td><td>固定历史窗内始终无赢家时，另一轮按 LRG。</td></tr><tr id="claim-17"><th scope="row">17</th><td>独立项</td><td>片上 agent 和 fabric 对命令包分组。数据分多个 beat 发送形成最小间隔；能再选带数据包以维持间隔，即便最近一次胜出也是此类。</td></tr><tr id="claim-18"><th scope="row">18</th><td><a href="#claim-17">17</a></td><td>在紧邻前轮有赢家、或整个固定窗均无赢家两种情况下使用 LRG。</td></tr><tr id="claim-19"><th scope="row">19</th><td><a href="#claim-17">17</a></td><td>两组低级仲裁各为命令或带数据提供候选。</td></tr><tr id="claim-20"><th scope="row">20</th><td><a href="#claim-17">17</a></td><td>一个带数据包的命令和首段数据、后续纯命令和剩余数据在同轮或固定周期偏移并行传输。</td></tr></tbody>
+  </table>
+</details>
+  </section>
+  <section id="related" class="article-section related-section" aria-labelledby="related-title">
+  <div class="section-head-row">
+    <h2 id="related-title">关联专利</h2>
+    <a class="outline-link" href="../index.html?patent=US12596658B2#knowledge">在关系图谱中定位 US12596658B2 →</a>
+  </div>
+  <ul class="related-grid"><li class="related-card">
+  <div class="related-card-meta">
+    <span class="knowledge-kind kind-contrast">机制对照</span>
+    <code>US12436586B2</code>
+  </div>
+  <h3><a href="US12436586B2.html">互连降频与按 QoS 选择性限速</a></h3>
+  <p class="related-edge-label">fabric 降频限流与包级仲裁受下游速率约束</p>
+  <p class="related-edge-summary">US12436586B2 因电流事件改变互连频率并按 QoS 限流。US12596658B2 在每个仲裁轮把频率差或其缓冲代理信号用于选择发包规则，逻辑作用点在接口与队列。</p>
+<p class="related-evidence"><a href="US12436586B2.html#claim-1">对照篇权项 1</a><a href="US12436586B2.html#fig-1">对照篇图表 1</a><a href="#claim-2">本篇权项 2</a><a href="#fig-3">本篇图表 3</a></p>
+</li></ul>
+</section>
+</div>
+<aside class="record-panel redesigned-sidebar" aria-label="本页导览与专利著录">
+  <nav class="article-jump desktop-jump" aria-label="本页导览">
+    <h2>本页导览</h2>
+    <ul><li><a href="#engineering">核心结论</a></li><li><a href="#buses">命令只占一个位置，数据可能还要继续传输</a></li><li><a href="#choice">前轮有无赢家，以及下游能否吸收发包，决定是否切换规则</a></li><li><a href="#qos">组内 QoS 份额由虚拟通道计数管理</a></li><li><a href="#claims">权利要求与出处</a></li><li><a href="#related">关联专利</a></li></ul>
+  </nav>
+  <section class="sidebar-record">
+    <h2>专利著录</h2>
+    <dl class="record-details redesigned-meta">
+      <div><dt>公开 / 授权日</dt><dd>2026-04-07</dd></div>
+      <div><dt>最早优先权</dt><dd>2024-09-13</dd></div>
+      <div><dt>美国申请日</dt><dd>2024-09-13</dd></div>
+      <div><dt>美国申请号</dt><dd><code>US18/884,795</code></dd></div>
+      <div class="meta-stack"><dt>申请人 / 原始受让人</dt><dd>APPLE INC</dd></div>
+      <div class="meta-stack"><dt>分类号</dt><dd>G06F3/0659、G06F3/067、G06F13/1642 <details class="inline-more"><summary>其余 4 项</summary><span>G06F3/061、G06F13/1626、G06F3/06、G06F13/16</span></details></dd></div>
+      <div class="meta-stack"><dt>发明人</dt><dd>LEVY-RUBIN LITAL、BECKER DANIEL U、ALTAHAN MOTI、ACHLAUG NABEEL <details class="inline-more"><summary>其余 3 位</summary><span>VIVAS MAEDA RAFAEL K、SHIN JEONGHEE、UZIEL ROI</span></details></dd></div>
+    </dl>
+    <div class="sidebar-actions"><a class="sidebar-btn" href="https://www.lens.org/lens/patent/US_12596658_B2" target="_blank" rel="noopener">审读全文 ↗</a><a class="sidebar-btn" href="../index.html?patent=US12596658B2#knowledge">关系图谱定位</a></div>
+  </section>
+
+</aside>
+</div></main>
+<footer class="footer"><div class="frame">
+  <span>独立技术研究。Apple 是 Apple Inc. 的商标。解读和图稿使用 AI 辅助整理。</span>
+  <span>资料截至 2026-11-26</span>
+</div></footer>
+</body>
+</html>
